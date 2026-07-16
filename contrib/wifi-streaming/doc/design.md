@@ -126,18 +126,38 @@ constant-rate UDP, controller-gated bursty UDP, or TCP bulk traffic. Direction
 is uplink, downlink, or alternating (`mixed`). Streaming/AP devices use
 `--wifiStandard`; background stations independently use
 `--backgroundStandard0` and `--backgroundStandard1` (`inherit` by default).
-Each helper has its own `ConstantRateWifiManager` fixed at VHT, HE, or EHT MCS
-5. The fixed dual-interface channel plan is 2.4 GHz plus 5 GHz, so VHT is
+Each helper has its own `ConstantRateWifiManager` fixed at HT, VHT, HE, or EHT
+MCS 5. The fixed dual-interface channel plan is 2.4 GHz plus 5 GHz, so VHT is
 rejected on link 0 and allowed on link 1. A background standard cannot be newer
 than its AP standard. Heterogeneous standards are uplink-only: downlink and
 mixed directions are rejected because one fixed AP data mode cannot safely
 serve legacy stations. Invalid combinations abort before simulation.
 
-Resolved background counts, per-link standards, direction, traffic kind, rates, placement,
-controller means/durations, trace, and stream base are written under
-`background` in `resolved_config.json`. `summary.json` adds background offered
-and delivered bytes and delivered throughput. Existing CSV columns are
-unchanged.
+`--backgroundProfile=legacy_mixed8` installs eight independent non-MLD
+contenders on each active link. The 2.4 GHz set contains HT, HE, and EHT
+stations but no VHT station; the 5 GHz set contains HT, VHT, HE, and EHT
+stations. Every station is installed by a separate `WifiHelper` on the same
+`MultiModelSpectrumChannel` as the streaming radio and uses its standard's
+fixed MCS 5. Each station runs one uplink-only `OnOffApplication` with
+independent exponential ON and OFF random variables. The application consumes
+two explicit streams starting at `--backgroundStreamBase`; the ON/OFF means
+are set by `--randomOnMeanMs` and `--randomOffMeanMs`.
+
+For native MLO, AP MLD beacon generation is enabled and the non-MLD stations
+passively associate to the AP link whose channel matches their PHY. The
+streaming MLD association remains static. This is the ns-3.48-supported path:
+using `WifiStaticSetupHelper` for a non-MLD station and AP MLD reaches an
+invalid remote-station-manager link during data transmission. Dual-interface
+and MLO runs therefore use the same station standards, channels, traffic
+parameters, application streams, and physical contenders, while association
+mechanics necessarily differ.
+
+Resolved background profile, counts, per-link and per-station standards,
+association mode, direction, traffic kind, rates, placement, controller
+means/durations, trace, stream base, per-application streams, and random
+ON/OFF means are written under `background` in `resolved_config.json`.
+`summary.json` adds offered and delivered bytes in total, per link, and per
+station, plus delivered throughput. Existing CSV columns are unchanged.
 
 Controller behavior is covered by deterministic, common-versus-local, trace,
 and independent-versus-common tests in the module suite. The controlled
@@ -152,8 +172,8 @@ ID, and successful MPDUs plus PHY TX occupancy on both links.
 
 ## Current boundaries
 
-- Native MLO background traffic is rejected in this phase. STR is implemented;
-  EMLSR is not configured or implied.
+- Native MLO background traffic is supported only by the `legacy_mixed8`
+  uplink profile. STR is implemented; EMLSR is not configured or implied.
 - ns-3.48 reports successful MPDUs and their service times per MLD link, but
   failed MPDUs and retry-limit drops only per device. Those device-level
   failure totals are placed on MLO link row 0 to avoid double-counting;

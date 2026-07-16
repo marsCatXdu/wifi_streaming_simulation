@@ -1,0 +1,40 @@
+name: legacy-contention-dual-vs-mlo
+output_root: results/legacy_contention
+workers: 1
+
+base:
+  stream:
+    source: synthetic
+    duration: 0.5
+    fps: 30
+    frame_size: 12000
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  propagation:
+    fixed_rss_dbm: -50
+  wifi:
+    wifi_standard: eht
+  background:
+    background_profile: legacy_mixed8
+    background_rate_mbps: 2
+    background_packet_size: 1200
+    background_stream_base: 4000
+    random_on_mean_ms: 100
+    random_off_mean_ms: 100
+
+seeds: [19]
+runs: [1, 2]
+
+topologies:
+  - name: dual_interface
+  - name: mlo_str
+
+policies:
+  - name: fixed_link_0
+    topologies: [mlo_str]
+  - name: full_duplication
+    topologies: [dual_interface]
+
+sweep:
+  wifi.queue_max_packets: [500]

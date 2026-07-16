@@ -95,6 +95,10 @@ CountBackgroundTx(uint64_t* bytes, Ptr<const Packet> packet)
 WifiStandard
 ParseWifiStandard(const std::string& name)
 {
+    if (name == "ht")
+    {
+        return WIFI_STANDARD_80211n;
+    }
     if (name == "vht")
     {
         return WIFI_STANDARD_80211ac;
@@ -107,26 +111,42 @@ ParseWifiStandard(const std::string& name)
     {
         return WIFI_STANDARD_80211be;
     }
-    NS_ABORT_MSG("Wi-Fi standard must be vht, he, or eht: " << name);
+    NS_ABORT_MSG("Wi-Fi standard must be ht, vht, he, or eht: " << name);
     return WIFI_STANDARD_80211ax;
 }
 
 std::string
 DataModeForStandard(const std::string& name)
 {
-    return name == "vht" ? "VhtMcs5" : (name == "eht" ? "EhtMcs5" : "HeMcs5");
+    return name == "ht"    ? "HtMcs5"
+           : name == "vht" ? "VhtMcs5"
+           : name == "eht" ? "EhtMcs5"
+                           : "HeMcs5";
 }
 
 std::string
 StandardLabel(const std::string& name)
 {
-    return name == "vht" ? "802.11ac" : (name == "eht" ? "802.11be" : "802.11ax");
+    return name == "ht"    ? "802.11n"
+           : name == "vht" ? "802.11ac"
+           : name == "eht" ? "802.11be"
+                           : "802.11ax";
 }
 
 uint8_t
 StandardRank(const std::string& name)
 {
-    return name == "vht" ? 0 : (name == "he" ? 1 : 2);
+    return name == "ht" ? 0 : (name == "vht" ? 1 : (name == "he" ? 2 : 3));
+}
+
+std::vector<std::string>
+LegacyMixed8Standards(uint32_t link, bool singleLink)
+{
+    if (!singleLink && link == 0)
+    {
+        return {"ht", "he", "eht", "ht", "he", "eht", "ht", "he"};
+    }
+    return {"ht", "vht", "he", "eht", "ht", "vht", "he", "eht"};
 }
 
 } // namespace
@@ -166,12 +186,13 @@ main(int argc, char* argv[])
     std::string wifiStandard = "eht";
     std::string backgroundStandard0 = "inherit";
     std::string backgroundStandard1 = "inherit";
+    std::string backgroundProfile = "none";
     std::string backgroundTraffic = "none";
     std::string backgroundDirection = "uplink";
     std::string correlationMode = "independent";
     std::string correlationTrace;
-    uint32_t backgroundStations0 = 0;
-    uint32_t backgroundStations1 = 0;
+    int32_t backgroundStations0Option = -1;
+    int32_t backgroundStations1Option = -1;
     double backgroundRateMbps = 20.0;
     uint32_t backgroundPacketSize = 1200;
     double backgroundNearDistanceM = 2.0;
@@ -185,6 +206,8 @@ main(int argc, char* argv[])
     double commonOffDurationMs = 0;
     double localOnDurationMs = 0;
     double localOffDurationMs = 0;
+    double randomOnMeanMs = 100;
+    double randomOffMeanMs = 100;
 
     CommandLine command(__FILE__);
     command.AddValue("seed", "ns-3 random seed", seed);
@@ -226,25 +249,28 @@ main(int argc, char* argv[])
                      "Fragmentation PSDU threshold bytes",
                      fragmentationThreshold);
     command.AddValue("guardIntervalNs", "HE guard interval in nanoseconds", guardIntervalNs);
-    command.AddValue("wifiStandard", "vht, he, or eht (fixed PHY rate)", wifiStandard);
+    command.AddValue("wifiStandard", "ht, vht, he, or eht (fixed PHY rate)", wifiStandard);
+    command.AddValue("backgroundProfile",
+                     "none or legacy_mixed8 deterministic contention profile",
+                     backgroundProfile);
     command.AddValue("backgroundStandard0",
-                     "Link-0 background standard: inherit, vht, he, or eht",
+                     "Link-0 background standard: inherit, ht, vht, he, or eht",
                      backgroundStandard0);
     command.AddValue("backgroundStandard1",
-                     "Link-1 background standard: inherit, vht, he, or eht",
+                     "Link-1 background standard: inherit, ht, vht, he, or eht",
                      backgroundStandard1);
     command.AddValue("backgroundTraffic",
-                     "none, udp_constant, udp_bursty, or tcp_bulk",
+                     "none, udp_constant, udp_bursty, udp_random_onoff, or tcp_bulk",
                      backgroundTraffic);
     command.AddValue("backgroundDirection",
                      "uplink, downlink, or mixed (alternates stations)",
                      backgroundDirection);
     command.AddValue("backgroundStations0",
                      "Background stations on link 0",
-                     backgroundStations0);
+                     backgroundStations0Option);
     command.AddValue("backgroundStations1",
                      "Background stations on link 1",
-                     backgroundStations1);
+                     backgroundStations1Option);
     command.AddValue("backgroundRateMbps",
                      "UDP offered rate per background station",
                      backgroundRateMbps);
@@ -282,11 +308,48 @@ main(int argc, char* argv[])
     command.AddValue("localOffDurationMs",
                      "Per-link deterministic OFF duration; zero selects exponential",
                      localOffDurationMs);
+    command.AddValue("randomOnMeanMs",
+                     "Per-station exponential ON mean for udp_random_onoff",
+                     randomOnMeanMs);
+    command.AddValue("randomOffMeanMs",
+                     "Per-station exponential OFF mean for udp_random_onoff",
+                     randomOffMeanMs);
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
+    NS_ABORT_MSG_IF(backgroundProfile != "none" && backgroundProfile != "legacy_mixed8",
+                    "backgroundProfile must be none or legacy_mixed8");
+    const uint32_t linkCount = topology == "single_link" ? 1 : 2;
+    if (backgroundProfile == "legacy_mixed8")
+    {
+        NS_ABORT_MSG_IF(backgroundStations0Option >= 0 && backgroundStations0Option != 8,
+                        "legacy_mixed8 requires backgroundStations0=8 when explicitly set");
+        NS_ABORT_MSG_IF(linkCount == 2 && backgroundStations1Option >= 0 &&
+                            backgroundStations1Option != 8,
+                        "legacy_mixed8 requires backgroundStations1=8 when explicitly set");
+        NS_ABORT_MSG_IF(linkCount == 1 && backgroundStations1Option > 0,
+                        "single_link cannot have backgroundStations1");
+        backgroundStations0Option = 8;
+        backgroundStations1Option = linkCount == 2 ? 8 : 0;
+        NS_ABORT_MSG_IF(wifiStandard != "eht",
+                        "legacy_mixed8 requires an EHT streaming station and AP");
+        NS_ABORT_MSG_IF(backgroundStandard0 != "inherit" ||
+                            backgroundStandard1 != "inherit",
+                        "legacy_mixed8 defines per-station standards; backgroundStandard0/1 "
+                        "must remain inherit");
+        NS_ABORT_MSG_IF(backgroundDirection != "uplink",
+                        "legacy_mixed8 supports uplink background traffic only");
+        NS_ABORT_MSG_IF(backgroundTraffic != "none" &&
+                            backgroundTraffic != "udp_random_onoff",
+                        "legacy_mixed8 requires backgroundTraffic=udp_random_onoff");
+        backgroundTraffic = "udp_random_onoff";
+    }
+    const uint32_t backgroundStations0 =
+        backgroundStations0Option < 0 ? 0 : static_cast<uint32_t>(backgroundStations0Option);
+    const uint32_t backgroundStations1 =
+        backgroundStations1Option < 0 ? 0 : static_cast<uint32_t>(backgroundStations1Option);
     const std::string resolvedBackgroundStandard0 =
         backgroundStandard0 == "inherit" ? wifiStandard : backgroundStandard0;
     const std::string resolvedBackgroundStandard1 =
@@ -312,16 +375,19 @@ main(int argc, char* argv[])
                     "source=trace requires --traceFile");
     NS_ABORT_MSG_IF(emissionMode != "burst" && emissionMode != "uniform_within_frame",
                     "Unknown emission mode " << emissionMode);
-    NS_ABORT_MSG_IF(wifiStandard != "vht" && wifiStandard != "he" && wifiStandard != "eht",
-                    "wifiStandard must be vht, he, or eht");
-    NS_ABORT_MSG_IF(resolvedBackgroundStandard0 != "vht" &&
+    NS_ABORT_MSG_IF(wifiStandard != "ht" && wifiStandard != "vht" && wifiStandard != "he" &&
+                        wifiStandard != "eht",
+                    "wifiStandard must be ht, vht, he, or eht");
+    NS_ABORT_MSG_IF(resolvedBackgroundStandard0 != "ht" &&
+                        resolvedBackgroundStandard0 != "vht" &&
                         resolvedBackgroundStandard0 != "he" &&
                         resolvedBackgroundStandard0 != "eht",
-                    "backgroundStandard0 must be inherit, vht, he, or eht");
-    NS_ABORT_MSG_IF(resolvedBackgroundStandard1 != "vht" &&
+                    "backgroundStandard0 must be inherit, ht, vht, he, or eht");
+    NS_ABORT_MSG_IF(resolvedBackgroundStandard1 != "ht" &&
+                        resolvedBackgroundStandard1 != "vht" &&
                         resolvedBackgroundStandard1 != "he" &&
                         resolvedBackgroundStandard1 != "eht",
-                    "backgroundStandard1 must be inherit, vht, he, or eht");
+                    "backgroundStandard1 must be inherit, ht, vht, he, or eht");
     NS_ABORT_MSG_IF(backgroundStations0 > 0 && resolvedBackgroundStandard0 == "vht" &&
                         topology == "dual_interface",
                     "VHT backgroundStandard0 is invalid on the 2.4 GHz link");
@@ -332,7 +398,9 @@ main(int argc, char* argv[])
                         StandardRank(resolvedBackgroundStandard1) > StandardRank(wifiStandard),
                     "backgroundStandard1 cannot be newer than the AP standard");
     NS_ABORT_MSG_IF(backgroundTraffic != "none" && backgroundTraffic != "udp_constant" &&
-                        backgroundTraffic != "udp_bursty" && backgroundTraffic != "tcp_bulk",
+                        backgroundTraffic != "udp_bursty" &&
+                        backgroundTraffic != "udp_random_onoff" &&
+                        backgroundTraffic != "tcp_bulk",
                     "Unknown backgroundTraffic " << backgroundTraffic);
     NS_ABORT_MSG_IF(correlationMode != "independent" &&
                         correlationMode != "common_bursts" &&
@@ -343,6 +411,7 @@ main(int argc, char* argv[])
                         backgroundDirection != "mixed",
                     "Unknown backgroundDirection " << backgroundDirection);
     const bool heterogeneousBackground =
+        backgroundProfile == "legacy_mixed8" ||
         (backgroundStations0 > 0 && resolvedBackgroundStandard0 != wifiStandard) ||
         (backgroundStations1 > 0 && resolvedBackgroundStandard1 != wifiStandard);
     NS_ABORT_MSG_IF(heterogeneousBackground && backgroundDirection != "uplink",
@@ -351,9 +420,10 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(topology == "single_link" && backgroundStations1 != 0,
                     "single_link cannot have backgroundStations1");
     NS_ABORT_MSG_IF(topology == "mlo_str" &&
+                        backgroundProfile != "legacy_mixed8" &&
                         (backgroundTraffic != "none" || backgroundStations0 != 0 ||
                          backgroundStations1 != 0),
-                    "Background traffic is not supported by mlo_str in this MVP");
+                    "mlo_str supports background traffic only through legacy_mixed8");
     NS_ABORT_MSG_IF(backgroundTraffic == "none" &&
                         (backgroundStations0 != 0 || backgroundStations1 != 0),
                     "Background station counts require non-none backgroundTraffic");
@@ -368,6 +438,8 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(commonOnMeanMs <= 0 || commonOffMeanMs <= 0 ||
                         localOnMeanMs <= 0 || localOffMeanMs <= 0,
                     "ON/OFF means must be positive");
+    NS_ABORT_MSG_IF(randomOnMeanMs <= 0 || randomOffMeanMs <= 0,
+                    "Random per-station ON/OFF means must be positive");
     NS_ABORT_MSG_IF(commonOnDurationMs < 0 || commonOffDurationMs < 0 ||
                         localOnDurationMs < 0 || localOffDurationMs < 0,
                     "Deterministic ON/OFF durations cannot be negative");
@@ -385,12 +457,26 @@ main(int argc, char* argv[])
     NodeContainer edge;
     edge.Create(1);
     const bool nativeMlo = topology == "mlo_str";
-    const uint32_t linkCount = topology == "single_link" ? 1 : 2;
     std::vector<NodeContainer> backgroundStations(linkCount);
     backgroundStations[0].Create(backgroundStations0);
     if (linkCount == 2)
     {
         backgroundStations[1].Create(backgroundStations1);
+    }
+    std::vector<std::vector<std::string>> backgroundStationStandards(linkCount);
+    for (uint32_t link = 0; link < linkCount; ++link)
+    {
+        if (backgroundProfile == "legacy_mixed8")
+        {
+            backgroundStationStandards[link] =
+                LegacyMixed8Standards(link, topology == "single_link");
+        }
+        else
+        {
+            backgroundStationStandards[link].assign(
+                backgroundStations[link].GetN(),
+                link == 0 ? resolvedBackgroundStandard0 : resolvedBackgroundStandard1);
+        }
     }
 
     Config::SetDefault("ns3::WifiMacQueue::MaxSize",
@@ -402,7 +488,7 @@ main(int argc, char* argv[])
     const WifiStandard standard = ParseWifiStandard(wifiStandard);
     const std::string dataMode = DataModeForStandard(wifiStandard);
     wifi.SetStandard(standard);
-    if (wifiStandard != "vht")
+    if (wifiStandard == "he" || wifiStandard == "eht")
     {
         wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
     }
@@ -418,10 +504,60 @@ main(int argc, char* argv[])
     NetDeviceContainer stationDevices;
     NetDeviceContainer apWifiDevices;
     std::vector<NetDeviceContainer> backgroundDevices(linkCount);
+    std::vector<Ptr<MultiModelSpectrumChannel>> wifiChannels(linkCount);
+    const auto installBackgroundLink = [&](const std::string& ssidName,
+                                           const std::string& channelSettings,
+                                           uint32_t link) {
+        for (uint32_t index = 0; index < backgroundStations[link].GetN(); ++index)
+        {
+            const std::string& stationStandard = backgroundStationStandards[link][index];
+            WifiHelper backgroundWifi;
+            backgroundWifi.SetStandard(ParseWifiStandard(stationStandard));
+            if (stationStandard == "he" || stationStandard == "eht")
+            {
+                backgroundWifi.ConfigHeOptions("GuardInterval",
+                                               TimeValue(NanoSeconds(guardIntervalNs)));
+            }
+            backgroundWifi.SetRemoteStationManager(
+                "ns3::ConstantRateWifiManager",
+                "DataMode",
+                StringValue(DataModeForStandard(stationStandard)),
+                "ControlMode",
+                StringValue("OfdmRate24Mbps"),
+                "RtsCtsThreshold",
+                UintegerValue(rtsCtsThreshold),
+                "FragmentationThreshold",
+                UintegerValue(fragmentationThreshold));
+            SpectrumWifiPhyHelper backgroundPhy;
+            backgroundPhy.SetChannel(wifiChannels[link]);
+            backgroundPhy.Set("ChannelSettings", StringValue(channelSettings));
+            backgroundPhy.Set("RxGain", DoubleValue(0));
+            WifiMacHelper backgroundMac;
+            backgroundMac.SetType("ns3::StaWifiMac",
+                                  "Ssid",
+                                  SsidValue(Ssid(ssidName)),
+                                  "ActiveProbing",
+                                  BooleanValue(false),
+                                  "FrameRetryLimit",
+                                  UintegerValue(frameRetryLimit),
+                                  "BE_MaxAmpduSize",
+                                  UintegerValue(maxAmpduSize),
+                                  "BE_MaxAmsduSize",
+                                  UintegerValue(maxAmsduSize));
+            backgroundMac.SetEdca(AC_BE,
+                                  "TxopLimits",
+                                  StringValue(std::to_string(txopLimitUs) + "us"));
+            backgroundDevices[link].Add(
+                backgroundWifi.Install(backgroundPhy,
+                                       backgroundMac,
+                                       backgroundStations[link].Get(index)));
+        }
+    };
     const auto installWifiLink = [&](const std::string& ssidName,
                                      const std::string& channelSettings,
                                      uint32_t link) {
         Ptr<MultiModelSpectrumChannel> channel = CreateObject<MultiModelSpectrumChannel>();
+        wifiChannels[link] = channel;
         Ptr<FixedRssLossModel> loss = CreateObject<FixedRssLossModel>();
         loss->SetRss(fixedRssDbm);
         channel->AddPropagationLossModel(loss);
@@ -450,28 +586,10 @@ main(int argc, char* argv[])
         stationDevices.Add(wifi.Install(phy, mac, station));
         if (backgroundStations[link].GetN() > 0)
         {
-            const std::string& backgroundStandard =
-                link == 0 ? resolvedBackgroundStandard0 : resolvedBackgroundStandard1;
-            wifi.SetStandard(ParseWifiStandard(backgroundStandard));
-            if (backgroundStandard != "vht")
-            {
-                wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
-            }
-            wifi.SetRemoteStationManager(
-                "ns3::ConstantRateWifiManager",
-                "DataMode",
-                StringValue(DataModeForStandard(backgroundStandard)),
-                "ControlMode",
-                StringValue("OfdmRate24Mbps"),
-                "RtsCtsThreshold",
-                UintegerValue(rtsCtsThreshold),
-                "FragmentationThreshold",
-                UintegerValue(fragmentationThreshold));
-            backgroundDevices[link] =
-                wifi.Install(phy, mac, backgroundStations[link]);
+            installBackgroundLink(ssidName, channelSettings, link);
         }
         wifi.SetStandard(standard);
-        if (wifiStandard != "vht")
+        if (wifiStandard == "he" || wifiStandard == "eht")
         {
             wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
         }
@@ -511,6 +629,7 @@ main(int argc, char* argv[])
     {
         Ptr<MultiModelSpectrumChannel> channel2Ghz =
             CreateObject<MultiModelSpectrumChannel>();
+        wifiChannels[0] = channel2Ghz;
         Ptr<FixedRssLossModel> loss2Ghz = CreateObject<FixedRssLossModel>();
         loss2Ghz->SetRss(fixedRssDbm);
         channel2Ghz->AddPropagationLossModel(loss2Ghz);
@@ -519,6 +638,7 @@ main(int argc, char* argv[])
 
         Ptr<MultiModelSpectrumChannel> channel5Ghz =
             CreateObject<MultiModelSpectrumChannel>();
+        wifiChannels[1] = channel5Ghz;
         Ptr<FixedRssLossModel> loss5Ghz = CreateObject<FixedRssLossModel>();
         loss5Ghz->SetRss(fixedRssDbm);
         channel5Ghz->AddPropagationLossModel(loss5Ghz);
@@ -584,7 +704,7 @@ main(int argc, char* argv[])
                     "Ssid",
                     SsidValue(ssid),
                     "BeaconGeneration",
-                    BooleanValue(false),
+                    BooleanValue(backgroundProfile == "legacy_mixed8"),
                     "FrameRetryLimit",
                     UintegerValue(frameRetryLimit),
                     "BE_MaxAmpduSize",
@@ -600,6 +720,15 @@ main(int argc, char* argv[])
         Ptr<WifiNetDevice> staMld = DynamicCast<WifiNetDevice>(stationDevices.Get(0));
         Ptr<WifiNetDevice> apMld = DynamicCast<WifiNetDevice>(apWifiDevices.Get(0));
         WifiStaticSetupHelper::SetStaticAssociation(apMld, staMld);
+        if (backgroundProfile == "legacy_mixed8")
+        {
+            installBackgroundLink("wifi-streaming-mld",
+                                  "{1, 20, BAND_2_4GHZ, 0}",
+                                  0);
+            installBackgroundLink("wifi-streaming-mld",
+                                  "{36, 20, BAND_5GHZ, 0}",
+                                  1);
+        }
         if (maxAmpduSize > 0)
         {
             WifiStaticSetupHelper::SetStaticBlockAck(apMld, staMld, 0);
@@ -646,7 +775,27 @@ main(int argc, char* argv[])
     std::vector<Ipv4Address> stationAddresses;
     std::vector<Ipv4Address> apAddresses;
     std::vector<std::vector<Ipv4Address>> backgroundAddresses(linkCount);
-    for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
+    if (nativeMlo)
+    {
+        NetDeviceContainer wifiNetwork(stationDevices.Get(0), apWifiDevices.Get(0));
+        for (const auto& devices : backgroundDevices)
+        {
+            wifiNetwork.Add(devices);
+        }
+        address.SetBase("10.1.0.0", "255.255.255.0");
+        const Ipv4InterfaceContainer interfaces = address.Assign(wifiNetwork);
+        stationAddresses.push_back(interfaces.GetAddress(0));
+        apAddresses.push_back(interfaces.GetAddress(1));
+        uint32_t interfaceIndex = 2;
+        for (uint32_t link = 0; link < linkCount; ++link)
+        {
+            for (uint32_t index = 0; index < backgroundDevices[link].GetN(); ++index)
+            {
+                backgroundAddresses[link].push_back(interfaces.GetAddress(interfaceIndex++));
+            }
+        }
+    }
+    else for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
     {
         NetDeviceContainer wifiPair(stationDevices.Get(path), apWifiDevices.Get(path));
         wifiPair.Add(backgroundDevices[path]);
@@ -710,16 +859,20 @@ main(int argc, char* argv[])
                                        apAddresses[path],
                                        interface,
                                        0);
-        for (uint32_t index = 0; index < backgroundStations[path].GetN(); ++index)
+    }
+    for (uint32_t link = 0; link < linkCount; ++link)
+    {
+        for (uint32_t index = 0; index < backgroundStations[link].GetN(); ++index)
         {
             Ptr<Ipv4> backgroundIpv4 =
-                backgroundStations[path].Get(index)->GetObject<Ipv4>();
+                backgroundStations[link].Get(index)->GetObject<Ipv4>();
             Ptr<Ipv4StaticRouting> backgroundRouting =
                 staticRoutingHelper.GetStaticRouting(backgroundIpv4);
             const uint32_t backgroundInterface =
-                backgroundIpv4->GetInterfaceForDevice(backgroundDevices[path].Get(index));
-            backgroundRouting->AddHostRouteTo(edgeDestinations[path],
-                                              apAddresses[path],
+                backgroundIpv4->GetInterfaceForDevice(backgroundDevices[link].Get(index));
+            const uint32_t destinationPath = nativeMlo ? 0 : link;
+            backgroundRouting->AddHostRouteTo(edgeDestinations[destinationPath],
+                                              apAddresses[destinationPath],
                                               backgroundInterface,
                                               0);
         }
@@ -779,6 +932,7 @@ main(int argc, char* argv[])
     resolved.staticLink0Score = staticLink0Score;
     resolved.staticLink1Score = staticLink1Score;
     resolved.packetEventLogsEnabled = false;
+    resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
     resolved.backgroundDirection = backgroundDirection;
     resolved.correlationMode = correlationMode;
@@ -787,10 +941,25 @@ main(int argc, char* argv[])
         linkCount == 1 ? std::vector<uint32_t>{backgroundStations0}
                        : std::vector<uint32_t>{backgroundStations0, backgroundStations1};
     resolved.backgroundStandards =
-        linkCount == 1
+        backgroundProfile == "legacy_mixed8"
+            ? std::vector<std::string>(linkCount, "mixed")
+        : linkCount == 1
             ? std::vector<std::string>{StandardLabel(resolvedBackgroundStandard0)}
             : std::vector<std::string>{StandardLabel(resolvedBackgroundStandard0),
                                        StandardLabel(resolvedBackgroundStandard1)};
+    resolved.backgroundStationStandards.resize(linkCount);
+    for (uint32_t link = 0; link < linkCount; ++link)
+    {
+        for (const auto& stationStandard : backgroundStationStandards[link])
+        {
+            resolved.backgroundStationStandards[link].push_back(
+                StandardLabel(stationStandard));
+        }
+    }
+    resolved.backgroundAssociationMode =
+        backgroundStations0 + backgroundStations1 == 0
+            ? "not_applicable"
+            : (nativeMlo ? "passive_scan_to_ap_mld_link" : "passive_scan");
     resolved.backgroundRateMbps = backgroundRateMbps;
     resolved.backgroundPacketSizeBytes = backgroundPacketSize;
     resolved.backgroundNearDistanceM = backgroundNearDistanceM;
@@ -804,7 +973,8 @@ main(int argc, char* argv[])
     resolved.commonOffDurationMs = commonOffDurationMs;
     resolved.localOnDurationMs = localOnDurationMs;
     resolved.localOffDurationMs = localOffDurationMs;
-    ExperimentOutput::WriteResolvedConfig(outputDir, resolved);
+    resolved.randomOnMeanMs = randomOnMeanMs;
+    resolved.randomOffMeanMs = randomOffMeanMs;
 
     if (projectGitCommit.empty())
     {
@@ -890,8 +1060,11 @@ main(int argc, char* argv[])
     sender->SetStartTime(warmup);
     sender->SetStopTime(Seconds(durationSeconds + 2));
 
-    uint64_t backgroundBytesSent = 0;
+    const uint32_t backgroundStationCount = backgroundStations0 + backgroundStations1;
+    std::vector<uint64_t> backgroundBytesSentPerStation(backgroundStationCount, 0);
+    std::vector<uint64_t> backgroundBytesReceivedPerStation(backgroundStationCount, 0);
     std::vector<Ptr<ControlledUdpApplication>> backgroundUdpSources;
+    std::vector<uint32_t> backgroundUdpOrdinals;
     std::vector<Ptr<PacketSink>> backgroundSinks;
     Ptr<CorrelatedLoadController> loadController;
     if (backgroundTraffic == "udp_bursty")
@@ -924,9 +1097,11 @@ main(int argc, char* argv[])
             const Ptr<Node> sinkNode =
                 uplink ? edge.Get(0) : backgroundStations[link].Get(index);
             const Ipv4Address destination =
-                uplink ? edgeDestinations[link] : backgroundAddresses[link][index];
+                uplink ? edgeDestinations[nativeMlo ? 0 : link]
+                       : backgroundAddresses[link][index];
             const Ipv4Address sourceAddress =
-                uplink ? backgroundAddresses[link][index] : edgeDestinations[link];
+                uplink ? backgroundAddresses[link][index]
+                       : edgeDestinations[nativeMlo ? 0 : link];
             const std::string protocol = backgroundTraffic == "tcp_bulk"
                                              ? "ns3::TcpSocketFactory"
                                              : "ns3::UdpSocketFactory";
@@ -950,7 +1125,44 @@ main(int argc, char* argv[])
                 application->SetStopTime(measurementStop);
                 application->TraceConnectWithoutContext(
                     "Tx",
-                    MakeBoundCallback(&CountBackgroundTx, &backgroundBytesSent));
+                    MakeBoundCallback(&CountBackgroundTx,
+                                      &backgroundBytesSentPerStation[backgroundOrdinal]));
+            }
+            else if (backgroundTraffic == "udp_random_onoff")
+            {
+                OnOffHelper onoff("ns3::UdpSocketFactory",
+                                  InetSocketAddress(destination, backgroundPort));
+                onoff.SetAttribute(
+                    "Local",
+                    AddressValue(InetSocketAddress(sourceAddress, 0)));
+                onoff.SetAttribute(
+                    "OnTime",
+                    StringValue("ns3::ExponentialRandomVariable[Mean=" +
+                                std::to_string(randomOnMeanMs / 1000.0) + "]"));
+                onoff.SetAttribute(
+                    "OffTime",
+                    StringValue("ns3::ExponentialRandomVariable[Mean=" +
+                                std::to_string(randomOffMeanMs / 1000.0) + "]"));
+                onoff.SetAttribute(
+                    "DataRate",
+                    DataRateValue(DataRate(static_cast<uint64_t>(backgroundRateMbps * 1e6))));
+                onoff.SetAttribute("PacketSize", UintegerValue(backgroundPacketSize));
+                auto application =
+                    DynamicCast<OnOffApplication>(onoff.Install(sourceNode).Get(0));
+                const int64_t applicationStream =
+                    backgroundStreamBase +
+                    static_cast<int64_t>(resolved.backgroundApplicationStreams.size()) * 2;
+                const int64_t consumed = application->AssignStreams(applicationStream);
+                NS_ABORT_MSG_IF(consumed != 2,
+                                "OnOffApplication random stream count changed; expected 2, got "
+                                    << consumed);
+                resolved.backgroundApplicationStreams.push_back(applicationStream);
+                application->SetStartTime(warmup);
+                application->SetStopTime(measurementStop);
+                application->TraceConnectWithoutContext(
+                    "Tx",
+                    MakeBoundCallback(&CountBackgroundTx,
+                                      &backgroundBytesSentPerStation[backgroundOrdinal]));
             }
             else
             {
@@ -965,6 +1177,7 @@ main(int argc, char* argv[])
                 application->SetStartTime(warmup);
                 application->SetStopTime(measurementStop);
                 backgroundUdpSources.push_back(application);
+                backgroundUdpOrdinals.push_back(backgroundOrdinal);
                 if (loadController)
                 {
                     loadController->AddApplication(link, application);
@@ -977,6 +1190,7 @@ main(int argc, char* argv[])
     {
         loadController->Start(warmup, measurementStop);
     }
+    ExperimentOutput::WriteResolvedConfig(outputDir, resolved);
 
     WifiTxStatsHelper txStats(warmup, measurementStop);
     txStats.Enable(stationDevices);
@@ -987,15 +1201,23 @@ main(int argc, char* argv[])
     Simulator::Stop(Seconds(durationSeconds + 3));
     Simulator::Run();
     metrics->FinalizeMissingFrames();
-    for (const auto& application : backgroundUdpSources)
+    for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)
     {
-        backgroundBytesSent += application->GetTotalTxBytes();
+        backgroundBytesSentPerStation[backgroundUdpOrdinals[i]] =
+            backgroundUdpSources[i]->GetTotalTxBytes();
     }
-    uint64_t backgroundBytesReceived = 0;
-    for (const auto& sink : backgroundSinks)
+    for (std::size_t i = 0; i < backgroundSinks.size(); ++i)
     {
-        backgroundBytesReceived += sink->GetTotalRx();
+        backgroundBytesReceivedPerStation[i] = backgroundSinks[i]->GetTotalRx();
     }
+    const uint64_t backgroundBytesSent =
+        std::accumulate(backgroundBytesSentPerStation.begin(),
+                        backgroundBytesSentPerStation.end(),
+                        uint64_t{0});
+    const uint64_t backgroundBytesReceived =
+        std::accumulate(backgroundBytesReceivedPerStation.begin(),
+                        backgroundBytesReceivedPerStation.end(),
+                        uint64_t{0});
 
     const auto successes = txStats.GetSuccessesByNodeDevice();
     const auto successesByLink = txStats.GetSuccessesByNodeDeviceLink();
@@ -1106,6 +1328,22 @@ main(int argc, char* argv[])
                                                     linkIntervals);
     summary.backgroundBytesSent = backgroundBytesSent;
     summary.backgroundBytesReceived = backgroundBytesReceived;
+    summary.backgroundBytesSentPerStation = backgroundBytesSentPerStation;
+    summary.backgroundBytesReceivedPerStation = backgroundBytesReceivedPerStation;
+    summary.backgroundBytesSentPerLink.assign(linkCount, 0);
+    summary.backgroundBytesReceivedPerLink.assign(linkCount, 0);
+    uint32_t stationOrdinal = 0;
+    for (uint32_t link = 0; link < linkCount; ++link)
+    {
+        for (uint32_t index = 0; index < backgroundStations[link].GetN();
+             ++index, ++stationOrdinal)
+        {
+            summary.backgroundBytesSentPerLink[link] +=
+                backgroundBytesSentPerStation[stationOrdinal];
+            summary.backgroundBytesReceivedPerLink[link] +=
+                backgroundBytesReceivedPerStation[stationOrdinal];
+        }
+    }
     summary.backgroundThroughputMbps =
         backgroundBytesReceived * 8.0 / durationSeconds / 1e6;
     ExperimentOutput::WriteSummary(outputDir, summary);

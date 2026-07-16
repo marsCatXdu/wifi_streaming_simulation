@@ -10,7 +10,7 @@ from pathlib import Path
 TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
-from run_experiments import derive_run_id, expand_config
+from run_experiments import cli_arguments, derive_run_id, expand_config
 from summarize_runs import summarize
 from validate_outputs import ValidationError, validate_run
 
@@ -99,6 +99,22 @@ class MatrixTests(unittest.TestCase):
         first = derive_run_id(config, 1, 2, "n", "p")
         self.assertEqual(first, derive_run_id({"nested": {"b": 2}, "a": 1}, 1, 2, "n", "p"))
         self.assertNotEqual(first, derive_run_id(config, 2, 2, "n", "p"))
+
+    def test_legacy_profile_cli_translation(self) -> None:
+        arguments = cli_arguments({
+            "topology": "mlo_str",
+            "policy": "fixed_link_0",
+            "background": {
+                "background_profile": "legacy_mixed8",
+                "background_stream_base": 4000,
+                "random_on_mean_ms": 75,
+                "random_off_mean_ms": 125,
+            },
+        }, Path("."))
+        self.assertIn("--backgroundProfile=legacy_mixed8", arguments)
+        self.assertIn("--backgroundStreamBase=4000", arguments)
+        self.assertIn("--randomOnMeanMs=75", arguments)
+        self.assertIn("--randomOffMeanMs=125", arguments)
 
 
 class OutputTests(unittest.TestCase):

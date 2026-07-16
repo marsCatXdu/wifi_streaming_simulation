@@ -64,11 +64,15 @@ struct StreamingRunConfig
     double staticLink0Score{0};
     double staticLink1Score{0};
     std::string backgroundTraffic{"none"};
+    std::string backgroundProfile{"none"};
     std::string backgroundDirection{"uplink"};
     std::string correlationMode{"independent"};
     std::string correlationTrace;
     std::vector<uint32_t> backgroundStations;
     std::vector<std::string> backgroundStandards;
+    std::vector<std::vector<std::string>> backgroundStationStandards;
+    std::vector<int64_t> backgroundApplicationStreams;
+    std::string backgroundAssociationMode{"not_applicable"};
     double backgroundRateMbps{0};
     uint32_t backgroundPacketSizeBytes{0};
     double backgroundNearDistanceM{0};
@@ -82,6 +86,8 @@ struct StreamingRunConfig
     double commonOffDurationMs{0};
     double localOnDurationMs{0};
     double localOffDurationMs{0};
+    double randomOnMeanMs{0};
+    double randomOffMeanMs{0};
 };
 
 /**
@@ -173,6 +179,10 @@ struct StreamingRunSummary
     uint64_t phyCcaBusyTimeUs{0};
     uint64_t backgroundBytesSent{0};
     uint64_t backgroundBytesReceived{0};
+    std::vector<uint64_t> backgroundBytesSentPerLink;
+    std::vector<uint64_t> backgroundBytesReceivedPerLink;
+    std::vector<uint64_t> backgroundBytesSentPerStation;
+    std::vector<uint64_t> backgroundBytesReceivedPerStation;
     double backgroundThroughputMbps{0};
 };
 

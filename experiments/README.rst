@@ -8,6 +8,17 @@ Run a batch from the repository root::
 
   python3 tools/run_experiments.py experiments/configs/smoke.yaml
 
+The matched legacy-contention comparison is available as::
+
+  python3 tools/run_experiments.py experiments/configs/legacy_contention.yaml
+
+It compares dual-interface full duplication with native STR MLO against the
+same eight seeded, independent mixed-standard UDP ON/OFF uplinks on each 2.4
+and 5 GHz channel.
+The 2.4 GHz contenders use HT/HE/EHT and the 5 GHz contenders use
+HT/VHT/HE/EHT.  Per-station standards, random streams, ON/OFF means, and
+per-link/per-station traffic totals are retained in run metadata.
+
 This command builds, executes, validates, summarizes, and writes the standard
 plot set.  The tools may also be invoked independently::
 
@@ -66,6 +77,11 @@ contract.  Calibrate RSS, MCS, aggregation, queue limits, and background load
 against measured devices.  Use multiple seeds and runs and inspect convergence
 of run-level confidence intervals.
 
+For the legacy profile, changing ``run`` selects different ns-3 substreams
+while preserving explicit stream numbers; repeating the same seed and run is
+reproducible.  Fair dual/MLO comparisons must keep the profile parameters,
+seed, and run matched.
+
 Limitations
 -----------
 
@@ -76,3 +92,6 @@ Cross-copy delay correlation and joint exceedance are available only for
 duplicated frames with the required copy timestamps.  Sparse plots explicitly
 state that data is insufficient.  The fixed-RSS smoke setup does not represent
 mobility, fading, encoder/decoder delay, or firmware processing.
+Non-MLD legacy stations associate dynamically to matching AP MLD links because
+the ns-3.48 static-association helper is not safe for this mixed device shape;
+the streaming MLD remains statically associated.

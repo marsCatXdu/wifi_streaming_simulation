@@ -299,6 +299,7 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  \"policy_settings\": {\"static_link_0_score\": " << config.staticLink0Score
            << ", \"static_link_1_score\": " << config.staticLink1Score << "},\n"
            << "  \"background\": {\n"
+           << "    \"profile\": \"" << JsonEscape(config.backgroundProfile) << "\",\n"
            << "    \"traffic\": \"" << JsonEscape(config.backgroundTraffic) << "\",\n"
            << "    \"direction\": \"" << JsonEscape(config.backgroundDirection) << "\",\n"
            << "    \"stations_per_link\": [";
@@ -314,11 +315,35 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << JsonEscape(config.backgroundStandards[i]) << '"';
     }
     output << "],\n"
+           << "    \"station_standards_per_link\": [";
+    for (std::size_t link = 0; link < config.backgroundStationStandards.size(); ++link)
+    {
+        output << (link == 0 ? "" : ", ") << '[';
+        for (std::size_t station = 0;
+             station < config.backgroundStationStandards[link].size();
+             ++station)
+        {
+            output << (station == 0 ? "" : ", ") << '"'
+                   << JsonEscape(config.backgroundStationStandards[link][station]) << '"';
+        }
+        output << ']';
+    }
+    output << "],\n"
+           << "    \"application_streams\": [";
+    for (std::size_t i = 0; i < config.backgroundApplicationStreams.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << config.backgroundApplicationStreams[i];
+    }
+    output << "],\n"
+           << "    \"association_mode\": \""
+           << JsonEscape(config.backgroundAssociationMode) << "\",\n"
            << "    \"rate_mbps_per_station\": " << config.backgroundRateMbps << ",\n"
            << "    \"packet_size_bytes\": " << config.backgroundPacketSizeBytes << ",\n"
            << "    \"near_distance_m\": " << config.backgroundNearDistanceM << ",\n"
            << "    \"far_distance_m\": " << config.backgroundFarDistanceM << ",\n"
            << "    \"random_stream_base\": " << config.backgroundStreamBase << ",\n"
+           << "    \"random_on_mean_ms\": " << config.randomOnMeanMs << ",\n"
+           << "    \"random_off_mean_ms\": " << config.randomOffMeanMs << ",\n"
            << "    \"correlation\": {\n"
            << "      \"mode\": \"" << JsonEscape(config.correlationMode) << "\",\n"
            << "      \"trace\": \"" << JsonEscape(config.correlationTrace) << "\",\n"
@@ -442,6 +467,30 @@ ExperimentOutput::WriteSummary(const std::string& outputDir,
            << "  \"phy_cca_busy_time_us\": " << summary.phyCcaBusyTimeUs << ",\n"
            << "  \"background_bytes_sent\": " << summary.backgroundBytesSent << ",\n"
            << "  \"background_bytes_received\": " << summary.backgroundBytesReceived << ",\n"
+           << "  \"background_bytes_sent_per_link\": [";
+    for (std::size_t i = 0; i < summary.backgroundBytesSentPerLink.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << summary.backgroundBytesSentPerLink[i];
+    }
+    output << "],\n"
+           << "  \"background_bytes_received_per_link\": [";
+    for (std::size_t i = 0; i < summary.backgroundBytesReceivedPerLink.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << summary.backgroundBytesReceivedPerLink[i];
+    }
+    output << "],\n"
+           << "  \"background_bytes_sent_per_station\": [";
+    for (std::size_t i = 0; i < summary.backgroundBytesSentPerStation.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << summary.backgroundBytesSentPerStation[i];
+    }
+    output << "],\n"
+           << "  \"background_bytes_received_per_station\": [";
+    for (std::size_t i = 0; i < summary.backgroundBytesReceivedPerStation.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << summary.backgroundBytesReceivedPerStation[i];
+    }
+    output << "],\n"
            << "  \"background_throughput_mbps\": " << summary.backgroundThroughputMbps << "\n"
            << "}\n";
 }

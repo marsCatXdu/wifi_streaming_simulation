@@ -37,6 +37,7 @@ CLI_KEYS = {
     "fragmentation_threshold": "fragmentationThreshold",
     "guard_interval_ns": "guardIntervalNs", "static_link_0_score": "staticLink0Score",
     "static_link_1_score": "staticLink1Score", "background_traffic": "backgroundTraffic",
+    "background_profile": "backgroundProfile",
     "background_direction": "backgroundDirection",
     "background_stations_0": "backgroundStations0",
     "background_stations_1": "backgroundStations1",
@@ -52,6 +53,8 @@ CLI_KEYS = {
     "common_off_duration_ms": "commonOffDurationMs",
     "local_on_duration_ms": "localOnDurationMs",
     "local_off_duration_ms": "localOffDurationMs",
+    "random_on_mean_ms": "randomOnMeanMs",
+    "random_off_mean_ms": "randomOffMeanMs",
 }
 
 
