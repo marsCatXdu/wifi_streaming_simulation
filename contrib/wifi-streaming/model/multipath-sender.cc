@@ -150,6 +150,7 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
 
     if (m_collector)
     {
+        m_collector->RegisterExpectedFrame(frame);
         PolicyDecisionRecord decision;
         decision.runId = m_collector->GetRunId();
         decision.frameId = frame.frameId;
@@ -208,6 +209,7 @@ MultipathSender::SendPacket(PathId pathId, Ptr<Packet> packet, bool redundant)
         if (redundant)
         {
             m_redundantBytesSent += bytes;
+            m_pathRedundantBytesSent[pathId] += bytes;
         }
     }
 }
@@ -234,6 +236,17 @@ uint64_t
 MultipathSender::GetPathBytesSent(PathId pathId) const
 {
     if (auto bytes = m_pathBytesSent.find(pathId); bytes != m_pathBytesSent.end())
+    {
+        return bytes->second;
+    }
+    return 0;
+}
+
+uint64_t
+MultipathSender::GetPathRedundantBytesSent(PathId pathId) const
+{
+    if (auto bytes = m_pathRedundantBytesSent.find(pathId);
+        bytes != m_pathRedundantBytesSent.end())
     {
         return bytes->second;
     }

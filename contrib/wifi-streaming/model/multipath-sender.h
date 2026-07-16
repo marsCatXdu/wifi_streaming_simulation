@@ -46,6 +46,7 @@ class MultipathSender : public Application
     uint64_t GetBytesSent() const;
     uint64_t GetRedundantBytesSent() const;
     uint64_t GetPathBytesSent(PathId pathId) const;
+    uint64_t GetPathRedundantBytesSent(PathId pathId) const;
 
   protected:
     void StartApplication() override;
@@ -78,6 +79,7 @@ class MultipathSender : public Application
     uint64_t m_bytesSent{0};
     uint64_t m_redundantBytesSent{0};
     std::map<PathId, uint64_t> m_pathBytesSent;
+    std::map<PathId, uint64_t> m_pathRedundantBytesSent;
     std::vector<EventId> m_events;
 };
 

@@ -66,6 +66,14 @@ MetricsCollector::SetOutputFiles(const std::string& framesFile, const std::strin
 }
 
 void
+MetricsCollector::RegisterExpectedFrame(const FrameDescriptor& frame)
+{
+    NS_ABORT_MSG_IF(m_expectedFrames.contains(frame.frameId),
+                    "Frame " << frame.frameId << " was registered more than once");
+    m_expectedFrames.emplace(frame.frameId, frame);
+}
+
+void
 MetricsCollector::WriteFrameHeader()
 {
     m_frames << "run_id,frame_id,generation_time_us,frame_size_bytes,packet_count,frame_type,"
@@ -97,6 +105,7 @@ MetricsCollector::RecordFrame(const FrameResult& result)
         stored.predictedDelayLink0 = decision->second.primaryScore;
         stored.predictedDelayLink1 = decision->second.secondaryScore;
     }
+    m_expectedFrames.erase(stored.frame.frameId);
     m_results.push_back(stored);
     if (!m_frames)
     {
@@ -138,6 +147,20 @@ MetricsCollector::RecordPolicyDecision(const PolicyDecisionRecord& decision)
                 << decision.secondaryLink << ',' << decision.reason << ',' << decision.primaryScore
                 << ',' << decision.secondaryScore << '\n';
     m_decisions.flush();
+}
+
+void
+MetricsCollector::FinalizeMissingFrames()
+{
+    while (!m_expectedFrames.empty())
+    {
+        FrameResult result;
+        result.runId = m_runId;
+        result.frame = m_expectedFrames.begin()->second;
+        result.incomplete = true;
+        result.deadlineMiss = result.frame.deadlineUs > 0;
+        RecordFrame(result);
+    }
 }
 
 const std::vector<FrameResult>&

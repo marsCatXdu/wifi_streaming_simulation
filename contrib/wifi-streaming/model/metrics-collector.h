@@ -66,8 +66,10 @@ class MetricsCollector : public Object
     void SetRunId(const std::string& runId);
     const std::string& GetRunId() const;
     void SetOutputFiles(const std::string& framesFile, const std::string& decisionsFile);
+    void RegisterExpectedFrame(const FrameDescriptor& frame);
     void RecordFrame(const FrameResult& result);
     void RecordPolicyDecision(const PolicyDecisionRecord& decision);
+    void FinalizeMissingFrames();
 
     const std::vector<FrameResult>& GetFrameResults() const;
 
@@ -80,6 +82,7 @@ class MetricsCollector : public Object
     std::ofstream m_decisions;
     std::vector<FrameResult> m_results;
     std::map<uint64_t, PolicyDecisionRecord> m_policyDecisions;
+    std::map<uint64_t, FrameDescriptor> m_expectedFrames;
 };
 
 } // namespace ns3

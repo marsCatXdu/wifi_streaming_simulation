@@ -34,6 +34,7 @@ class FrameReceiver : public Application
     void ProcessPacket(Ptr<Packet> packet);
     uint32_t GetPendingFrameCount() const;
     uint32_t GetFinalizedFrameCount() const;
+    uint64_t GetPathBytesReceived(uint8_t pathId) const;
 
   protected:
     void StartApplication() override;
@@ -67,6 +68,7 @@ class FrameReceiver : public Application
     Time m_cleanupTimeout{Seconds(1)};
     std::map<uint64_t, ReassemblyState> m_frames;
     std::set<uint64_t> m_finalizedFrameIds;
+    std::map<uint8_t, uint64_t> m_pathBytesReceived;
     uint32_t m_finalized{0};
 };
 

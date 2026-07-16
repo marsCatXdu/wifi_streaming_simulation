@@ -3,6 +3,7 @@
  */
 
 #include "ns3/csma-module.h"
+#include "ns3/experiment-output.h"
 #include "ns3/frame-packetizer.h"
 #include "ns3/frame-receiver.h"
 #include "ns3/frame-source.h"
@@ -19,7 +20,9 @@
 #include "ns3/udp-socket-factory.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
+#include <sstream>
 
 using namespace ns3;
 
@@ -224,6 +227,113 @@ class PolicyTestCase : public TestCase
                               true,
                               "Duplication secondary is absent");
         NS_TEST_ASSERT_MSG_EQ(*decision.secondaryPath, 1, "Wrong duplication secondary");
+    }
+};
+
+class OutputStatisticsTestCase : public TestCase
+{
+  public:
+    OutputStatisticsTestCase()
+        : TestCase("Output statistics, schemas, and accounting invariants")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        FrameResult first;
+        first.frame = {1, 0, 1000, 1, 100, FrameType::P_FRAME};
+        first.unionCompletionUs = 10;
+        FrameResult recovered;
+        recovered.frame = {2, 100000, 2000, 2, 100, FrameType::P_FRAME};
+        recovered.duplicated = true;
+        recovered.unionCompletionUs = 120;
+        recovered.copy0CompletionUs = 130;
+        FrameResult noBenefit;
+        noBenefit.frame = {3, 200000, 3000, 3, 100, FrameType::P_FRAME};
+        noBenefit.duplicated = true;
+        noBenefit.unionCompletionUs = 230;
+        noBenefit.copy0CompletionUs = 230;
+        FrameResult missing;
+        missing.frame = {4, 300000, 4000, 4, 100, FrameType::P_FRAME};
+        missing.duplicated = true;
+        missing.incomplete = true;
+        missing.deadlineMiss = true;
+
+        LinkIntervalRecord link;
+        link.successfulMpdus = 10;
+        link.failedMpdus = 2;
+        link.retransmissions = 3;
+        link.phyTxTimeUs = 40;
+        const auto summary = ExperimentOutput::ComputeSummary(
+            {first, recovered, noBenefit, missing},
+            1.0,
+            10000,
+            2500,
+            {link});
+        NS_TEST_ASSERT_MSG_EQ(summary.frameCount, 4, "Frame denominator is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.completeFrameCount, 3, "Complete count is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.incompleteFrameCount, 1, "Incomplete count is wrong");
+        NS_TEST_ASSERT_MSG_EQ_TOL(summary.completeRatio, 0.75, 1e-12, "Complete ratio is wrong");
+        NS_TEST_ASSERT_MSG_EQ_TOL(*summary.latencyP50Us, 20, 1e-12, "P50 is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.latencyP999Us.has_value(),
+                              false,
+                              "P99.9 was reported for an indefensible sample");
+        NS_TEST_ASSERT_MSG_EQ(summary.duplicateRecoveryCount, 1, "Recovery count is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.duplicateNoBenefitCount, 1, "No-benefit count is wrong");
+        NS_TEST_ASSERT_MSG_EQ_TOL(summary.redundantByteRatio,
+                                  0.25,
+                                  1e-12,
+                                  "Redundant ratio is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.successfulMpdus, 10, "MAC total is wrong");
+        NS_TEST_ASSERT_MSG_EQ(summary.phyTxTimeUs, 40, "Airtime total is wrong");
+
+        const std::string directory = "/tmp/ns3-wifi-streaming-output-test";
+        std::filesystem::remove_all(directory);
+        ExperimentOutput::PrepareRunDirectory(directory);
+        StreamingRunConfig config;
+        config.runId = "schema-test";
+        ExperimentOutput::WriteResolvedConfig(directory, config);
+        StreamingBuildInfo build;
+        build.ns3Version = "ns-3.48";
+        build.ns3UpstreamCommit = ExperimentOutput::NS3_UPSTREAM_COMMIT;
+        ExperimentOutput::WriteBuildInfo(directory, build);
+        ExperimentOutput::WriteLinkIntervals(directory, {link});
+        ExperimentOutput::WriteMacSummary(directory, {MacSummaryRecord{}});
+        ExperimentOutput::WriteSummary(directory, summary);
+        {
+            auto collector = CreateObject<MetricsCollector>();
+            collector->SetOutputFiles(directory + "/frames.csv",
+                                      directory + "/policy_decisions.csv");
+        }
+        const std::vector<std::string> required{"resolved_config.json",
+                                                "build_info.json",
+                                                "frames.csv",
+                                                "policy_decisions.csv",
+                                                "link_intervals.csv",
+                                                "mac_summary.csv",
+                                                "summary.json"};
+        for (const auto& name : required)
+        {
+            NS_TEST_ASSERT_MSG_EQ(std::filesystem::is_regular_file(
+                                      std::filesystem::path(directory) / name),
+                                  true,
+                                  "Missing required output " << name);
+        }
+        std::ifstream frames(directory + "/frames.csv");
+        std::string header;
+        std::getline(frames, header);
+        NS_TEST_ASSERT_MSG_EQ(header.find("union_latency_us") != std::string::npos,
+                              true,
+                              "frames.csv schema changed");
+        std::ifstream summaryFile(directory + "/summary.json");
+        std::stringstream contents;
+        contents << summaryFile.rdbuf();
+        NS_TEST_ASSERT_MSG_EQ(contents.str().find("\"latency_p99_9_us\": null") !=
+                                  std::string::npos,
+                              true,
+                              "Summary null semantics changed");
+        std::filesystem::remove_all(directory);
     }
 };
 
@@ -524,6 +634,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new OutputStatisticsTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);

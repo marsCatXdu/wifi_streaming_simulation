@@ -14,18 +14,75 @@
 #include "ns3/wifi-module.h"
 #include "ns3/wifi-streaming-module.h"
 
+#include <chrono>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <numeric>
+#include <unistd.h>
 
 using namespace ns3;
 
 namespace
 {
 
+#ifndef WIFI_STREAMING_PROJECT_COMMIT
+#define WIFI_STREAMING_PROJECT_COMMIT "unknown"
+#endif
+
 void
 PopulateNeighborCaches()
 {
     NeighborCacheHelper neighborCache;
     neighborCache.PopulateNeighborCache();
+}
+
+std::string
+UtcTimestamp()
+{
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm utc{};
+    gmtime_r(&time, &utc);
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &utc);
+    return buffer;
+}
+
+std::string
+HostName()
+{
+    char buffer[256] = {};
+    return gethostname(buffer, sizeof(buffer) - 1) == 0 ? buffer : "unknown";
+}
+
+std::string
+BuildProfile()
+{
+#if defined(NS3_BUILD_PROFILE_OPTIMIZED)
+    return "optimized";
+#elif defined(NS3_BUILD_PROFILE_RELEASE)
+    return "release";
+#elif defined(NS3_BUILD_PROFILE_DEBUG)
+    return "debug";
+#else
+    return "unknown";
+#endif
+}
+
+uint64_t
+GetStateDurationUs(const WifiCoTraceHelper::DeviceRecord& record,
+                   uint8_t phyLinkId,
+                   WifiPhyState state)
+{
+    const auto link = record.m_linkStateDurations.find(phyLinkId);
+    if (link == record.m_linkStateDurations.end())
+    {
+        return 0;
+    }
+    const auto duration = link->second.find(state);
+    return duration == link->second.end() ? 0 : duration->second.GetMicroSeconds();
 }
 
 } // namespace
@@ -44,9 +101,20 @@ main(int argc, char* argv[])
     std::string policyName = "fixed_link_0";
     double staticLink0Score = 0.0;
     double staticLink1Score = 1.0;
-    std::string framesFile = "frames.csv";
-    std::string decisionsFile = "policy_decisions.csv";
+    std::string outputDir;
+    std::string framesFile;
+    std::string decisionsFile;
+    std::string projectGitCommit;
     std::string runId = "single-link";
+    uint32_t queueMaxPackets = 500;
+    uint32_t queueMaxDelayMs = 500;
+    uint32_t maxAmpduSize = 65535;
+    uint32_t maxAmsduSize = 0;
+    uint32_t frameRetryLimit = 7;
+    uint32_t txopLimitUs = 0;
+    uint32_t rtsCtsThreshold = 4692480;
+    uint32_t fragmentationThreshold = 65535;
+    uint32_t guardIntervalNs = 800;
 
     CommandLine command(__FILE__);
     command.AddValue("duration", "Frame source duration in seconds", durationSeconds);
@@ -66,9 +134,24 @@ main(int argc, char* argv[])
     command.AddValue("staticLink1Score",
                      "Static link 1 score (lower is better)",
                      staticLink1Score);
-    command.AddValue("framesFile", "Per-frame CSV output", framesFile);
-    command.AddValue("decisionsFile", "Policy decision CSV output", decisionsFile);
+    command.AddValue("outputDir", "Required empty/new run output directory", outputDir);
+    command.AddValue("framesFile", "Optional legacy copy of frames.csv", framesFile);
+    command.AddValue("decisionsFile", "Optional legacy copy of policy_decisions.csv", decisionsFile);
+    command.AddValue("projectGitCommit",
+                     "Project commit (defaults to build-time repository commit)",
+                     projectGitCommit);
     command.AddValue("runId", "Run identifier stored in CSV output", runId);
+    command.AddValue("queueMaxPackets", "MAC queue maximum packets", queueMaxPackets);
+    command.AddValue("queueMaxDelayMs", "MAC queue maximum delay", queueMaxDelayMs);
+    command.AddValue("maxAmpduSize", "BE A-MPDU maximum bytes (0 disables)", maxAmpduSize);
+    command.AddValue("maxAmsduSize", "BE A-MSDU maximum bytes (0 disables)", maxAmsduSize);
+    command.AddValue("frameRetryLimit", "MAC frame transmission attempt limit", frameRetryLimit);
+    command.AddValue("txopLimitUs", "BE TXOP limit in microseconds", txopLimitUs);
+    command.AddValue("rtsCtsThreshold", "RTS/CTS PSDU threshold bytes", rtsCtsThreshold);
+    command.AddValue("fragmentationThreshold",
+                     "Fragmentation PSDU threshold bytes",
+                     fragmentationThreshold);
+    command.AddValue("guardIntervalNs", "HE guard interval in nanoseconds", guardIntervalNs);
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(topology != "single_link" && topology != "dual_interface",
                     "Unknown topology " << topology);
@@ -77,6 +160,10 @@ main(int argc, char* argv[])
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(topology == "single_link" && policyName != "fixed_link_0",
                     "single_link supports only fixed_link_0");
+    NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
+    NS_ABORT_MSG_IF(emissionMode != "burst" && emissionMode != "uniform_within_frame",
+                    "Unknown emission mode " << emissionMode);
+    ExperimentOutput::PrepareRunDirectory(outputDir);
 
     NodeContainer station;
     station.Create(1);
@@ -85,13 +172,23 @@ main(int argc, char* argv[])
     NodeContainer edge;
     edge.Create(1);
 
+    Config::SetDefault("ns3::WifiMacQueue::MaxSize",
+                       QueueSizeValue(QueueSize(std::to_string(queueMaxPackets) + "p")));
+    Config::SetDefault("ns3::WifiMacQueue::MaxDelay",
+                       TimeValue(MilliSeconds(queueMaxDelayMs)));
+
     WifiHelper wifi;
     wifi.SetStandard(WIFI_STANDARD_80211ax);
+    wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
     wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
                                  "DataMode",
                                  StringValue("HeMcs5"),
                                  "ControlMode",
-                                 StringValue("OfdmRate24Mbps"));
+                                 StringValue("OfdmRate24Mbps"),
+                                 "RtsCtsThreshold",
+                                 UintegerValue(rtsCtsThreshold),
+                                 "FragmentationThreshold",
+                                 UintegerValue(fragmentationThreshold));
     NetDeviceContainer stationDevices;
     NetDeviceContainer apWifiDevices;
     const auto installWifiLink = [&](const std::string& ssidName,
@@ -112,9 +209,29 @@ main(int argc, char* argv[])
                     "Ssid",
                     SsidValue(ssid),
                     "ActiveProbing",
-                    BooleanValue(false));
+                    BooleanValue(false),
+                    "FrameRetryLimit",
+                    UintegerValue(frameRetryLimit),
+                    "BE_MaxAmpduSize",
+                    UintegerValue(maxAmpduSize),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(maxAmsduSize));
+        mac.SetEdca(AC_BE,
+                    "TxopLimits",
+                    StringValue(std::to_string(txopLimitUs) + "us"));
         stationDevices.Add(wifi.Install(phy, mac, station));
-        mac.SetType("ns3::ApWifiMac", "Ssid", SsidValue(ssid));
+        mac.SetType("ns3::ApWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "FrameRetryLimit",
+                    UintegerValue(frameRetryLimit),
+                    "BE_MaxAmpduSize",
+                    UintegerValue(maxAmpduSize),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(maxAmsduSize));
+        mac.SetEdca(AC_BE,
+                    "TxopLimits",
+                    StringValue(std::to_string(txopLimitUs) + "us"));
         apWifiDevices.Add(wifi.Install(phy, mac, accessPoint));
     };
     if (topology == "single_link")
@@ -153,8 +270,22 @@ main(int argc, char* argv[])
     }
     address.SetBase("10.2.0.0", "255.255.255.0");
     Ipv4InterfaceContainer wiredInterfaces = address.Assign(wiredDevices);
+    std::vector<Ipv4Address> edgeDestinations{wiredInterfaces.GetAddress(1)};
 
     Ptr<Ipv4> apIpv4 = accessPoint.Get(0)->GetObject<Ipv4>();
+    Ptr<Ipv4> edgeIpv4 = edge.Get(0)->GetObject<Ipv4>();
+    const uint32_t apWiredInterface = apIpv4->GetInterfaceForDevice(wiredDevices.Get(0));
+    const uint32_t edgeWiredInterface = edgeIpv4->GetInterfaceForDevice(wiredDevices.Get(1));
+    for (uint32_t path = 1; path < stationDevices.GetN(); ++path)
+    {
+        const std::string prefix = "10.2." + std::to_string(path);
+        const Ipv4Mask mask("255.255.255.0");
+        apIpv4->AddAddress(apWiredInterface,
+                           Ipv4InterfaceAddress(Ipv4Address((prefix + ".1").c_str()), mask));
+        const Ipv4Address destination((prefix + ".2").c_str());
+        edgeIpv4->AddAddress(edgeWiredInterface, Ipv4InterfaceAddress(destination, mask));
+        edgeDestinations.push_back(destination);
+    }
     for (uint32_t interface = 1; interface < apIpv4->GetNInterfaces(); ++interface)
     {
         apIpv4->SetForwarding(interface, true);
@@ -169,15 +300,69 @@ main(int argc, char* argv[])
     for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
     {
         const uint32_t interface = stationIpv4->GetInterfaceForDevice(stationDevices.Get(path));
-        stationRouting->AddHostRouteTo(wiredInterfaces.GetAddress(1),
+        stationRouting->AddHostRouteTo(edgeDestinations[path],
                                        apAddresses[path],
                                        interface,
-                                       path);
+                                       0);
     }
+
+    const Time warmup = Seconds(1);
+    const Time measurementStop = warmup + Seconds(durationSeconds);
+
+    StreamingRunConfig resolved;
+    resolved.runId = runId;
+    resolved.topology = topology;
+    resolved.policy = policyName;
+    resolved.emissionMode = emissionMode;
+    resolved.durationSeconds = durationSeconds;
+    resolved.warmupSeconds = warmup.GetSeconds();
+    resolved.fps = fps;
+    resolved.frameSizeBytes = frameSize;
+    resolved.payloadSizeBytes = payloadSize;
+    resolved.deadlineUs = deadlineUs;
+    resolved.fixedRssDbm = fixedRssDbm;
+    resolved.standard = "802.11ax";
+    resolved.dataMode = "HeMcs5";
+    resolved.controlMode = "OfdmRate24Mbps";
+    resolved.guardInterval = std::to_string(guardIntervalNs) + "ns";
+    resolved.channelSettings =
+        topology == "single_link"
+            ? std::vector<std::string>{"{36, 20, BAND_5GHZ, 0}"}
+            : std::vector<std::string>{"{1, 20, BAND_2_4GHZ, 0}",
+                                       "{36, 20, BAND_5GHZ, 0}"};
+    resolved.queueMaxPackets = queueMaxPackets;
+    resolved.queueMaxDelayMs = queueMaxDelayMs;
+    resolved.maxAmpduSizeBytes = maxAmpduSize;
+    resolved.maxAmsduSizeBytes = maxAmsduSize;
+    resolved.blockAckEnabled = maxAmpduSize > 0;
+    resolved.frameRetryLimit = frameRetryLimit;
+    resolved.rtsCtsThresholdBytes = rtsCtsThreshold;
+    resolved.fragmentationThresholdBytes = fragmentationThreshold;
+    resolved.txopLimitUs = txopLimitUs;
+    resolved.accessCategory = "AC_BE";
+    resolved.staticLink0Score = staticLink0Score;
+    resolved.staticLink1Score = staticLink1Score;
+    resolved.packetEventLogsEnabled = false;
+    ExperimentOutput::WriteResolvedConfig(outputDir, resolved);
+
+    if (projectGitCommit.empty())
+    {
+        projectGitCommit = WIFI_STREAMING_PROJECT_COMMIT;
+    }
+    StreamingBuildInfo buildInfo;
+    buildInfo.ns3Version = "ns-3.48";
+    buildInfo.ns3UpstreamCommit = ExperimentOutput::NS3_UPSTREAM_COMMIT;
+    buildInfo.projectGitCommit = projectGitCommit;
+    buildInfo.compiler = __VERSION__;
+    buildInfo.buildProfile = BuildProfile();
+    buildInfo.executionTimestampUtc = UtcTimestamp();
+    buildInfo.host = HostName();
+    ExperimentOutput::WriteBuildInfo(outputDir, buildInfo);
 
     Ptr<MetricsCollector> metrics = CreateObject<MetricsCollector>();
     metrics->SetRunId(runId);
-    metrics->SetOutputFiles(framesFile, decisionsFile);
+    metrics->SetOutputFiles((std::filesystem::path(outputDir) / "frames.csv").string(),
+                            (std::filesystem::path(outputDir) / "policy_decisions.csv").string());
 
     constexpr uint16_t port = 5000;
     Ptr<FrameReceiver> receiver = CreateObject<FrameReceiver>();
@@ -210,7 +395,7 @@ main(int argc, char* argv[])
                         "Sender bind failed for path " << path);
         sender->AddPath(path, socket, stationDevices.Get(path));
         NS_ABORT_MSG_IF(
-            socket->Connect(InetSocketAddress(wiredInterfaces.GetAddress(1), port)) < 0,
+            socket->Connect(InetSocketAddress(edgeDestinations[path], port)) < 0,
             "Sender connect failed for path " << path);
     }
     if (policyName == "fixed_link_0" || policyName == "fixed_link_1")
@@ -230,12 +415,121 @@ main(int argc, char* argv[])
         sender->SetPolicy(CreateObject<FullDuplicationPolicy>());
     }
     station.Get(0)->AddApplication(sender);
-    sender->SetStartTime(Seconds(1));
+    sender->SetStartTime(warmup);
     sender->SetStopTime(Seconds(durationSeconds + 2));
+
+    WifiTxStatsHelper txStats(warmup, measurementStop);
+    txStats.Enable(stationDevices);
+    WifiCoTraceHelper occupancy(warmup, measurementStop);
+    occupancy.Enable(stationDevices);
 
     Simulator::Schedule(Seconds(0.9), &PopulateNeighborCaches);
     Simulator::Stop(Seconds(durationSeconds + 3));
     Simulator::Run();
+    metrics->FinalizeMissingFrames();
+
+    const auto successes = txStats.GetSuccessesByNodeDevice();
+    const auto failures = txStats.GetFailuresByNodeDevice();
+    const auto retransmissions = txStats.GetRetransmissionsByNodeDevice();
+    const auto retryDrops =
+        txStats.GetFailuresByNodeDevice(WIFI_MAC_DROP_REACHED_RETRY_LIMIT);
+    const auto successRecords = txStats.GetSuccessRecords();
+    const auto& occupancyRecords = occupancy.GetDeviceRecords();
+    std::vector<LinkIntervalRecord> linkIntervals;
+    std::vector<MacSummaryRecord> macSummaries;
+    for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
+    {
+        const uint32_t nodeId = station.Get(0)->GetId();
+        const uint32_t deviceId = stationDevices.Get(path)->GetIfIndex();
+        const auto deviceKey = std::make_tuple(nodeId, deviceId);
+        const auto linkKey = std::make_tuple(nodeId, deviceId, uint8_t{0});
+        const auto lookup = [](const auto& values, const auto& key) {
+            const auto value = values.find(key);
+            return value == values.end() ? uint64_t{0} : value->second;
+        };
+
+        std::vector<double> serviceTimes;
+        if (const auto records = successRecords.find(linkKey); records != successRecords.end())
+        {
+            for (const auto& record : records->second)
+            {
+                serviceTimes.push_back((record.m_ackTime - record.m_enqueueTime).GetMicroSeconds());
+            }
+        }
+        std::optional<double> meanServiceTime;
+        std::optional<double> p95ServiceTime;
+        if (!serviceTimes.empty())
+        {
+            meanServiceTime =
+                std::accumulate(serviceTimes.begin(), serviceTimes.end(), 0.0) /
+                serviceTimes.size();
+            p95ServiceTime = ExperimentOutput::Percentile(serviceTimes, 0.95);
+        }
+
+        const WifiCoTraceHelper::DeviceRecord* occupancyRecord = nullptr;
+        for (const auto& record : occupancyRecords)
+        {
+            if (record.m_nodeId == nodeId && record.m_ifIndex == deviceId)
+            {
+                occupancyRecord = &record;
+                break;
+            }
+        }
+        LinkIntervalRecord interval;
+        interval.timestampUs = measurementStop.GetMicroSeconds();
+        interval.linkId = path;
+        interval.applicationBytesSent = sender->GetPathBytesSent(path);
+        interval.applicationBytesReceived = receiver->GetPathBytesReceived(path);
+        interval.redundantBytes = sender->GetPathRedundantBytesSent(path);
+        interval.successfulMpdus = lookup(successes, deviceKey);
+        interval.failedMpdus = lookup(failures, deviceKey);
+        interval.retransmissions = lookup(retransmissions, deviceKey);
+        interval.meanMpduServiceTimeUs = meanServiceTime;
+        interval.p95MpduServiceTimeUs = p95ServiceTime;
+        if (occupancyRecord)
+        {
+            interval.phyIdleTimeUs =
+                GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::IDLE);
+            interval.phyCcaBusyTimeUs =
+                GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::CCA_BUSY);
+            interval.phyTxTimeUs = GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::TX);
+            interval.phyRxTimeUs = GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::RX);
+        }
+        linkIntervals.push_back(interval);
+
+        MacSummaryRecord mac;
+        mac.linkId = path;
+        mac.nodeId = nodeId;
+        mac.deviceId = deviceId;
+        mac.successfulMpdus = interval.successfulMpdus;
+        mac.failedMpdus = interval.failedMpdus;
+        mac.retransmissions = interval.retransmissions;
+        mac.retryLimitDrops = lookup(retryDrops, deviceKey);
+        mac.meanMpduServiceTimeUs = meanServiceTime;
+        mac.p95MpduServiceTimeUs = p95ServiceTime;
+        macSummaries.push_back(mac);
+    }
+    ExperimentOutput::WriteLinkIntervals(outputDir, linkIntervals);
+    ExperimentOutput::WriteMacSummary(outputDir, macSummaries);
+    const auto summary = ExperimentOutput::ComputeSummary(metrics->GetFrameResults(),
+                                                          durationSeconds,
+                                                          sender->GetBytesSent(),
+                                                          sender->GetRedundantBytesSent(),
+                                                          linkIntervals);
+    ExperimentOutput::WriteSummary(outputDir, summary);
+    if (!framesFile.empty())
+    {
+        std::filesystem::copy_file(std::filesystem::path(outputDir) / "frames.csv",
+                                   framesFile,
+                                   std::filesystem::copy_options::overwrite_existing);
+    }
+    if (!decisionsFile.empty())
+    {
+        std::filesystem::copy_file(std::filesystem::path(outputDir) /
+                                       "policy_decisions.csv",
+                                   decisionsFile,
+                                   std::filesystem::copy_options::overwrite_existing);
+    }
     std::cout << "sent_packets=" << sender->GetPacketsSent()
               << " sent_bytes=" << sender->GetBytesSent()
               << " redundant_bytes=" << sender->GetRedundantBytesSent()

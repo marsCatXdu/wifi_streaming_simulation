@@ -101,6 +101,8 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
         NS_LOG_WARN("Discarding malformed streaming packet");
         return;
     }
+    m_pathBytesReceived[header.senderLinkId] +=
+        packet->GetSize() + StreamingHeader::SERIALIZED_SIZE;
     if (m_finalizedFrameIds.contains(header.frameId))
     {
         return;
@@ -256,6 +258,16 @@ uint32_t
 FrameReceiver::GetFinalizedFrameCount() const
 {
     return m_finalized;
+}
+
+uint64_t
+FrameReceiver::GetPathBytesReceived(uint8_t pathId) const
+{
+    if (auto bytes = m_pathBytesReceived.find(pathId); bytes != m_pathBytesReceived.end())
+    {
+        return bytes->second;
+    }
+    return 0;
 }
 
 } // namespace ns3

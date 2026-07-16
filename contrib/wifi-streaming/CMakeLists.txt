@@ -5,6 +5,7 @@ build_lib(
     model/frame-source.cc
     model/frame-packetizer.cc
     model/metrics-collector.cc
+    model/experiment-output.cc
     model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
@@ -13,6 +14,7 @@ build_lib(
     model/frame-source.h
     model/frame-packetizer.h
     model/metrics-collector.h
+    model/experiment-output.h
     model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h
