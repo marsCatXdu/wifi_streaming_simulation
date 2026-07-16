@@ -299,13 +299,19 @@ def validate_run(
             _integer(row, "bytes_sent", "background_flows.csv")
             _integer(row, "bytes_received", "background_flows.csv")
         observed_periods: dict[tuple[int, int, str], int] = {}
-        minimum = float(obss["min_rate_mbps"])
-        maximum = float(obss["max_rate_mbps"])
+        _require(obss.get("station_manager", "constant") in {
+            "minstrel_ht", "ideal", "constant",
+        },
+                 "resolved_config.json: invalid OBSS station manager")
         for row in periods:
             _require(row["run_id"] == run_id,
                      "background_rate_periods.csv: run_id mismatch")
             key = (int(row["bss_id"]), int(row["sta_index"]), row["direction"])
             _require(key in flow_keys, "background_rate_periods.csv: unknown flow")
+            direction = row["direction"]
+            prefix = "ul" if direction == "uplink" else "dl"
+            minimum = float(obss.get(f"{prefix}_min_rate_mbps", obss["min_rate_mbps"]))
+            maximum = float(obss.get(f"{prefix}_max_rate_mbps", obss["max_rate_mbps"]))
             rate = float(row["rate_mbps"])
             _require(minimum <= rate <= maximum,
                      "background_rate_periods.csv: rate outside configured range")

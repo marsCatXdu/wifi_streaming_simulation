@@ -118,8 +118,15 @@ struct StreamingRunConfig
     uint32_t obssStationsPerBss{0};
     double obssMinRateMbps{0};
     double obssMaxRateMbps{0};
+    double obssUlMinRateMbps{0};
+    double obssUlMaxRateMbps{0};
+    double obssDlMinRateMbps{0};
+    double obssDlMaxRateMbps{0};
     double obssOnMeanMs{0};
     double obssOffMeanMs{0};
+    std::string obssStationManager{"constant"};
+    double obssManagerUpdateMs{0};
+    bool obssUseLatestAmendmentOnly{false};
     uint32_t obssPacketSizeBytes{0};
     double obssAreaMinXM{0};
     double obssAreaMaxXM{0};

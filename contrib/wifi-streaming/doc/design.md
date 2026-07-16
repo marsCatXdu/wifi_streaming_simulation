@@ -165,16 +165,17 @@ station, plus delivered throughput. Existing CSV columns are unchanged.
 used alone or with `legacy_mixed8`. It creates four infrastructure BSSs with
 unique SSIDs and four statically associated STAs each. HT and HE BSSs share
 the experiment's 2.4 GHz 20 MHz channel; VHT and single-link EHT BSSs share
-the 5 GHz 20 MHz channel. Every homogeneous BSS uses its standard's MCS 5 in
-both directions.
+the 5 GHz 20 MHz channel. Background APs and STAs use Minstrel-HT rate
+adaptation with 50 ms statistics updates. The target devices remain fixed at
+EHT MCS 5 for a controlled dual-versus-MLO comparison.
 
 Each STA has simultaneous UL and DL UDP ON/OFF sources. ON and OFF durations
-are independent exponential samples. A new continuous-uniform offered rate
-between `--obssMinRateMbps` and `--obssMaxRateMbps` is selected at the start
-of every ON period and held for that period. Rate, ON-time, and OFF-time
-draws use three explicit streams per flow. Placement, Wi-Fi, application, and
-propagation streams occupy separately configured ranges so matched dual and
-MLO runs use the same inputs.
+are independent exponential samples. At the start of every ON period, uplink
+draws 0.5--3 Mbps and downlink draws 2--8 Mbps. The 100 ms ON and 300 ms OFF
+means provide 25 percent expected duty. Each selected rate is held for one ON
+period. Rate, ON-time, and OFF-time draws use three explicit streams per flow.
+Placement, Wi-Fi, application, and propagation streams occupy separately
+configured ranges so matched dual and MLO runs use the same inputs.
 
 AP coordinates are sampled inside the configured rectangle. STA angle and
 radius are sampled independently around the associated AP. OBSS batches use
@@ -200,8 +201,9 @@ ID, and successful MPDUs plus PHY TX occupancy on both links.
 
 ## Current boundaries
 
-- Native MLO background traffic is supported only by the `legacy_mixed8`
-  uplink profile. STR is implemented; EMLSR is not configured or implied.
+- Stations associated with the target MLO AP are supported only by the
+  `legacy_mixed8` uplink profile. Independent OBSS networks support both
+  directions. STR is implemented; EMLSR is not configured or implied.
 - ns-3.48 reports successful MPDUs and their service times per MLD link, but
   failed MPDUs and retry-limit drops only per device. Those device-level
   failure totals are placed on MLO link row 0 to avoid double-counting;

@@ -12,7 +12,7 @@ sys.path.insert(0, str(TOOLS))
 
 from run_experiments import cli_arguments, derive_run_id, expand_config
 from plot_results import plot
-from summarize_runs import summarize
+from summarize_runs import group_key, summarize
 from validate_outputs import ValidationError, validate_run
 
 
@@ -130,8 +130,11 @@ class MatrixTests(unittest.TestCase):
             },
             "obss": {
                 "obss_profile": "mixed4x4",
-                "obss_min_rate_mbps": 1,
-                "obss_max_rate_mbps": 50,
+                "obss_ul_min_rate_mbps": 0.5,
+                "obss_ul_max_rate_mbps": 3,
+                "obss_dl_min_rate_mbps": 2,
+                "obss_dl_max_rate_mbps": 8,
+                "obss_station_manager": "minstrel_ht",
                 "obss_application_stream_base": 7000,
                 "obss_wifi_stream_base": 8000,
             },
@@ -140,10 +143,42 @@ class MatrixTests(unittest.TestCase):
         self.assertIn("--pathLossExponent=3", arguments)
         self.assertIn("--propagationStreamBase=5000", arguments)
         self.assertIn("--obssProfile=mixed4x4", arguments)
-        self.assertIn("--obssMinRateMbps=1", arguments)
-        self.assertIn("--obssMaxRateMbps=50", arguments)
+        self.assertIn("--obssUlMinRateMbps=0.5", arguments)
+        self.assertIn("--obssUlMaxRateMbps=3", arguments)
+        self.assertIn("--obssDlMinRateMbps=2", arguments)
+        self.assertIn("--obssDlMaxRateMbps=8", arguments)
+        self.assertIn("--obssStationManager=minstrel_ht", arguments)
         self.assertIn("--obssApplicationStreamBase=7000", arguments)
         self.assertIn("--obssWifiStreamBase=8000", arguments)
+
+    def test_obss_grouping_ignores_resolved_positions(self) -> None:
+        first = {
+            "config": {
+                "run_id": "a",
+                "seed": 1,
+                "background": {
+                    "obss": {
+                        "ul_min_rate_mbps": 0.5,
+                        "bsses": [{"ap": [1, 2], "stas": [[3, 4]]}],
+                    },
+                },
+            },
+        }
+        second = {
+            "config": {
+                "run_id": "b",
+                "seed": 2,
+                "background": {
+                    "obss": {
+                        "ul_min_rate_mbps": 0.5,
+                        "bsses": [{"ap": [9, 8], "stas": [[7, 6]]}],
+                    },
+                },
+            },
+        }
+        self.assertEqual(group_key(first), group_key(second))
+        second["config"]["background"]["obss"]["ul_min_rate_mbps"] = 1
+        self.assertNotEqual(group_key(first), group_key(second))
 
 
 class OutputTests(unittest.TestCase):

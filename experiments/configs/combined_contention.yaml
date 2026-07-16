@@ -1,5 +1,5 @@
 name: combined-contention-dual-vs-mlo
-output_root: results/combined_contention
+output_root: results/combined_contention_realistic
 workers: 4
 
 base:
@@ -35,10 +35,14 @@ base:
   obss:
     obss_profile: mixed4x4
     obss_stations_per_bss: 4
-    obss_min_rate_mbps: 1
-    obss_max_rate_mbps: 50
+    obss_ul_min_rate_mbps: 0.5
+    obss_ul_max_rate_mbps: 3
+    obss_dl_min_rate_mbps: 2
+    obss_dl_max_rate_mbps: 8
     obss_on_mean_ms: 100
-    obss_off_mean_ms: 100
+    obss_off_mean_ms: 300
+    obss_station_manager: minstrel_ht
+    obss_manager_update_ms: 50
     obss_packet_size: 1200
     obss_area_min_x_m: -15
     obss_area_max_x_m: 15

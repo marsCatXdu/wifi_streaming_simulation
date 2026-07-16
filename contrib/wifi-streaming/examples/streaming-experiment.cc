@@ -222,10 +222,14 @@ main(int argc, char* argv[])
     double randomOffMeanMs = 100;
     std::string obssProfile = "none";
     uint32_t obssStationsPerBss = 4;
-    double obssMinRateMbps = 1.0;
-    double obssMaxRateMbps = 50.0;
+    double obssUlMinRateMbps = 0.5;
+    double obssUlMaxRateMbps = 3.0;
+    double obssDlMinRateMbps = 2.0;
+    double obssDlMaxRateMbps = 8.0;
     double obssOnMeanMs = 100.0;
-    double obssOffMeanMs = 100.0;
+    double obssOffMeanMs = 300.0;
+    std::string obssStationManager = "minstrel_ht";
+    double obssManagerUpdateMs = 50.0;
     uint32_t obssPacketSize = 1200;
     double obssAreaMinXM = -15.0;
     double obssAreaMaxXM = 15.0;
@@ -363,10 +367,22 @@ main(int argc, char* argv[])
                      randomOffMeanMs);
     command.AddValue("obssProfile", "none or mixed4x4 overlapping-BSS profile", obssProfile);
     command.AddValue("obssStationsPerBss", "Stations in each overlapping BSS", obssStationsPerBss);
-    command.AddValue("obssMinRateMbps", "Minimum OBSS ON-period rate", obssMinRateMbps);
-    command.AddValue("obssMaxRateMbps", "Maximum OBSS ON-period rate", obssMaxRateMbps);
+    command.AddValue("obssUlMinRateMbps", "Minimum OBSS uplink ON-period rate", obssUlMinRateMbps);
+    command.AddValue("obssUlMaxRateMbps", "Maximum OBSS uplink ON-period rate", obssUlMaxRateMbps);
+    command.AddValue("obssDlMinRateMbps",
+                     "Minimum OBSS downlink ON-period rate",
+                     obssDlMinRateMbps);
+    command.AddValue("obssDlMaxRateMbps",
+                     "Maximum OBSS downlink ON-period rate",
+                     obssDlMaxRateMbps);
     command.AddValue("obssOnMeanMs", "Mean OBSS ON duration", obssOnMeanMs);
     command.AddValue("obssOffMeanMs", "Mean OBSS OFF duration", obssOffMeanMs);
+    command.AddValue("obssStationManager",
+                     "OBSS station manager: minstrel_ht, ideal, or constant",
+                     obssStationManager);
+    command.AddValue("obssManagerUpdateMs",
+                     "Minstrel-HT statistics update interval",
+                     obssManagerUpdateMs);
     command.AddValue("obssPacketSize", "OBSS UDP payload bytes", obssPacketSize);
     command.AddValue("obssAreaMinXM", "Minimum OBSS AP x coordinate", obssAreaMinXM);
     command.AddValue("obssAreaMaxXM", "Maximum OBSS AP x coordinate", obssAreaMaxXM);
@@ -415,9 +431,15 @@ main(int argc, char* argv[])
                     "OBSS requires log_distance_nakagami propagation");
     NS_ABORT_MSG_IF(obssEnabled && topology == "single_link",
                     "OBSS requires dual_interface or mlo_str topology");
-    NS_ABORT_MSG_IF(obssMinRateMbps <= 0 || obssMaxRateMbps < obssMinRateMbps ||
+    NS_ABORT_MSG_IF(obssUlMinRateMbps <= 0 || obssUlMaxRateMbps < obssUlMinRateMbps ||
+                        obssDlMinRateMbps <= 0 || obssDlMaxRateMbps < obssDlMinRateMbps ||
                         obssOnMeanMs <= 0 || obssOffMeanMs <= 0 || obssPacketSize == 0,
                     "OBSS rates, means, and packet size must be positive");
+    NS_ABORT_MSG_IF(obssStationManager != "minstrel_ht" && obssStationManager != "ideal" &&
+                        obssStationManager != "constant",
+                    "obssStationManager must be minstrel_ht, ideal, or constant");
+    NS_ABORT_MSG_IF(obssManagerUpdateMs <= 0,
+                    "obssManagerUpdateMs must be positive");
     NS_ABORT_MSG_IF(obssAreaMaxXM < obssAreaMinXM || obssAreaMaxYM < obssAreaMinYM,
                     "OBSS placement rectangle bounds are invalid");
     NS_ABORT_MSG_IF(obssStaMinDistanceM <= 0 ||
@@ -884,16 +906,43 @@ main(int argc, char* argv[])
             {
                 obssWifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
             }
-            obssWifi.SetRemoteStationManager(
-                "ns3::ConstantRateWifiManager",
-                "DataMode",
-                StringValue(DataModeForStandard(obssStandards[bss])),
-                "ControlMode",
-                StringValue("OfdmRate24Mbps"),
-                "RtsCtsThreshold",
-                UintegerValue(rtsCtsThreshold),
-                "FragmentationThreshold",
-                UintegerValue(fragmentationThreshold));
+            if (obssStationManager == "minstrel_ht")
+            {
+                obssWifi.SetRemoteStationManager(
+                    "ns3::MinstrelHtWifiManager",
+                    "UpdateStatistics",
+                    TimeValue(MilliSeconds(obssManagerUpdateMs)),
+                    "UseLatestAmendmentOnly",
+                    BooleanValue(true),
+                    "RtsCtsThreshold",
+                    UintegerValue(rtsCtsThreshold),
+                    "FragmentationThreshold",
+                    UintegerValue(fragmentationThreshold));
+            }
+            else if (obssStationManager == "ideal")
+            {
+                obssWifi.SetRemoteStationManager(
+                    "ns3::IdealWifiManager",
+                    "BerThreshold",
+                    DoubleValue(1e-6),
+                    "RtsCtsThreshold",
+                    UintegerValue(rtsCtsThreshold),
+                    "FragmentationThreshold",
+                    UintegerValue(fragmentationThreshold));
+            }
+            else
+            {
+                obssWifi.SetRemoteStationManager(
+                    "ns3::ConstantRateWifiManager",
+                    "DataMode",
+                    StringValue(DataModeForStandard(obssStandards[bss])),
+                    "ControlMode",
+                    StringValue("OfdmRate24Mbps"),
+                    "RtsCtsThreshold",
+                    UintegerValue(rtsCtsThreshold),
+                    "FragmentationThreshold",
+                    UintegerValue(fragmentationThreshold));
+            }
             SpectrumWifiPhyHelper obssPhy;
             obssPhy.SetChannel(wifiChannels[obssLinks[bss]]);
             obssPhy.Set("ChannelSettings",
@@ -1258,10 +1307,17 @@ main(int argc, char* argv[])
     resolved.randomOffMeanMs = randomOffMeanMs;
     resolved.obssProfile = obssProfile;
     resolved.obssStationsPerBss = obssEnabled ? obssStationsPerBss : 0;
-    resolved.obssMinRateMbps = obssMinRateMbps;
-    resolved.obssMaxRateMbps = obssMaxRateMbps;
+    resolved.obssMinRateMbps = std::min(obssUlMinRateMbps, obssDlMinRateMbps);
+    resolved.obssMaxRateMbps = std::max(obssUlMaxRateMbps, obssDlMaxRateMbps);
+    resolved.obssUlMinRateMbps = obssUlMinRateMbps;
+    resolved.obssUlMaxRateMbps = obssUlMaxRateMbps;
+    resolved.obssDlMinRateMbps = obssDlMinRateMbps;
+    resolved.obssDlMaxRateMbps = obssDlMaxRateMbps;
     resolved.obssOnMeanMs = obssOnMeanMs;
     resolved.obssOffMeanMs = obssOffMeanMs;
+    resolved.obssStationManager = obssStationManager;
+    resolved.obssManagerUpdateMs = obssManagerUpdateMs;
+    resolved.obssUseLatestAmendmentOnly = obssStationManager == "minstrel_ht";
     resolved.obssPacketSizeBytes = obssPacketSize;
     resolved.obssAreaMinXM = obssAreaMinXM;
     resolved.obssAreaMaxXM = obssAreaMaxXM;
@@ -1524,9 +1580,13 @@ main(int argc, char* argv[])
                 source->SetRemote(InetSocketAddress(destination, obssPort));
                 source->SetLocal(InetSocketAddress(sourceAddress, 0));
                 source->SetPacketSize(obssPacketSize);
+                const double minimumRateMbps =
+                    uplink ? obssUlMinRateMbps : obssDlMinRateMbps;
+                const double maximumRateMbps =
+                    uplink ? obssUlMaxRateMbps : obssDlMaxRateMbps;
                 source->SetRateRange(
-                    DataRate(static_cast<uint64_t>(obssMinRateMbps * 1e6)),
-                    DataRate(static_cast<uint64_t>(obssMaxRateMbps * 1e6)));
+                    DataRate(static_cast<uint64_t>(minimumRateMbps * 1e6)),
+                    DataRate(static_cast<uint64_t>(maximumRateMbps * 1e6)));
                 source->SetMeans(MilliSeconds(obssOnMeanMs), MilliSeconds(obssOffMeanMs));
                 const int64_t rateStream =
                     obssApplicationStreamBase + static_cast<int64_t>(3 * obssFlowOrdinal);

@@ -31,8 +31,11 @@ def run(
             "--propagationModel=log_distance_nakagami",
             "--obssProfile=mixed4x4",
             "--obssStationsPerBss=4",
-            "--obssMinRateMbps=1",
-            "--obssMaxRateMbps=50",
+            "--obssUlMinRateMbps=0.5",
+            "--obssUlMaxRateMbps=3",
+            "--obssDlMinRateMbps=2",
+            "--obssDlMaxRateMbps=8",
+            "--obssStationManager=minstrel_ht",
             "--obssOnMeanMs=20",
             "--obssOffMeanMs=20",
             "--seed=19",
@@ -83,6 +86,8 @@ def main() -> None:
         obss = dual_config["background"]["obss"]
         assert obss["profile"] == "mixed4x4"
         assert obss["stations_per_bss"] == 4
+        assert obss["station_manager"] == "minstrel_ht"
+        assert obss["use_latest_amendment_only"] is True
         assert len(obss["bsses"]) == 4
         assert [(item["standard"], item["link_id"]) for item in obss["bsses"]] == [
             ("802.11n", 0),
@@ -96,7 +101,12 @@ def main() -> None:
                     for key in ("rate_stream", "on_stream", "off_stream")}) == 96
         assert all(int(row["bytes_sent"]) > 0 for row in dual_flows)
         assert all(int(row["bytes_received"]) > 0 for row in dual_flows)
-        assert all(1 <= float(row["rate_mbps"]) <= 50 for row in dual_periods)
+        assert all(
+            (0.5 <= float(row["rate_mbps"]) <= 3)
+            if row["direction"] == "uplink"
+            else (2 <= float(row["rate_mbps"]) <= 8)
+            for row in dual_periods
+        )
         assert all(value > 0 for value in dual_summary["background_bytes_received_per_link"])
         assert all(value > 0 for value in mlo_summary["background_bytes_received_per_link"])
 

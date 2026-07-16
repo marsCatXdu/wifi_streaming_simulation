@@ -112,6 +112,11 @@ def group_key(item: dict[str, Any]) -> str:
     config = copy.deepcopy(item["config"])
     for key in ("run_id", "seed", "run"):
         config.pop(key, None)
+    # OBSS coordinates are resolved random outcomes, not nominal experiment
+    # parameters. Placement bounds and stream bases remain in the key.
+    obss = config.get("background", {}).get("obss")
+    if isinstance(obss, dict):
+        obss.pop("bsses", None)
     return json.dumps(config, sort_keys=True, separators=(",", ":"))
 
 
