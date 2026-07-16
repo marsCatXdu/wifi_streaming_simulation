@@ -7,6 +7,13 @@ deterministic burst or uniform emission offsets. Every datagram carries a
 versioned, fixed-width `StreamingHeader`; all multibyte fields use network byte
 order and malformed or unsupported headers are rejected.
 
+The synthetic source models a periodic GOP. `frameSize` is the interframe
+size; every `gopLength` frames it emits an I-frame whose size is multiplied by
+`keyframeSizeMultiplier`. The reference profile uses a 60-frame GOP and a
+fourfold keyframe multiplier: at 30 frames/s, a 12 KB interframe is followed
+every two seconds by a 48 KB keyframe. Trace sources retain their recorded
+frame types and sizes unchanged.
+
 `MultipathSender` stores paths in a `PathId` map and invokes one replaceable
 `RedundancyPolicy` at each frame boundary. A `PolicyDecision` selects one
 primary and, when duplicating, one secondary. The sender independently

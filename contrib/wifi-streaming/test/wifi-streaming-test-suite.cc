@@ -157,6 +157,26 @@ class TraceSourceTestCase : public TestCase
                                   secondFrames[i].frameSizeBytes,
                                   "Assigned streams are not deterministic");
         }
+
+        auto gop = CreateObject<SyntheticFrameSource>();
+        gop->SetFps(30);
+        gop->SetDuration(MilliSeconds(200));
+        gop->SetConstantFrameSize(12000);
+        gop->SetGopLength(3);
+        gop->SetKeyframeSizeMultiplier(4);
+        const auto gopFrames = gop->GetFrames();
+        NS_TEST_ASSERT_MSG_EQ(gopFrames.size(), 6, "Wrong GOP frame count");
+        for (std::size_t i = 0; i < gopFrames.size(); ++i)
+        {
+            const bool keyframe = i % 3 == 0;
+            NS_TEST_ASSERT_MSG_EQ(
+                static_cast<uint8_t>(gopFrames[i].frameType),
+                static_cast<uint8_t>(keyframe ? FrameType::I_FRAME : FrameType::P_FRAME),
+                "Wrong GOP frame type");
+            NS_TEST_ASSERT_MSG_EQ(gopFrames[i].frameSizeBytes,
+                                  keyframe ? 48000 : 12000,
+                                  "Wrong GOP frame size");
+        }
     }
 };
 

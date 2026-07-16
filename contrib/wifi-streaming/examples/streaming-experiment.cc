@@ -160,6 +160,8 @@ main(int argc, char* argv[])
     double durationSeconds = 1.0;
     double fps = 30.0;
     uint32_t frameSize = 12000;
+    uint32_t gopLength = 60;
+    double keyframeSizeMultiplier = 4.0;
     uint32_t payloadSize = 1200;
     uint32_t deadlineUs = 33333;
     double fixedRssDbm = -50.0;
@@ -246,7 +248,11 @@ main(int argc, char* argv[])
     command.AddValue("run", "ns-3 random run/substream", run);
     command.AddValue("duration", "Frame source duration in seconds", durationSeconds);
     command.AddValue("fps", "Synthetic frame rate", fps);
-    command.AddValue("frameSize", "Synthetic frame size in bytes", frameSize);
+    command.AddValue("frameSize", "Synthetic interframe size in bytes", frameSize);
+    command.AddValue("gopLength", "Synthetic frames per GOP", gopLength);
+    command.AddValue("keyframeSizeMultiplier",
+                     "Synthetic I-frame size relative to interframes",
+                     keyframeSizeMultiplier);
     command.AddValue("payloadSize", "Streaming payload bytes per UDP datagram", payloadSize);
     command.AddValue("deadlineUs", "Frame deadline in microseconds", deadlineUs);
     command.AddValue("fixedRssDbm", "Fixed received signal strength in dBm", fixedRssDbm);
@@ -1213,6 +1219,8 @@ main(int argc, char* argv[])
     resolved.warmupSeconds = warmup.GetSeconds();
     resolved.fps = fps;
     resolved.frameSizeBytes = frameSize;
+    resolved.gopLength = gopLength;
+    resolved.keyframeSizeMultiplier = keyframeSizeMultiplier;
     resolved.payloadSizeBytes = payloadSize;
     resolved.deadlineUs = deadlineUs;
     resolved.propagationModel = propagationModel;
@@ -1371,6 +1379,8 @@ main(int argc, char* argv[])
         syntheticSource->SetFps(fps);
         syntheticSource->SetDuration(Seconds(durationSeconds));
         syntheticSource->SetConstantFrameSize(frameSize);
+        syntheticSource->SetGopLength(gopLength);
+        syntheticSource->SetKeyframeSizeMultiplier(keyframeSizeMultiplier);
         syntheticSource->SetDeadline(deadlineUs);
         source = syntheticSource;
     }

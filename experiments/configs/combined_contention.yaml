@@ -8,6 +8,8 @@ base:
     duration: 60
     fps: 30
     frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
     payload_size: 1200
     deadline_us: 33333
     emission_mode: burst

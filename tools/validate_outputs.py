@@ -228,6 +228,21 @@ def validate_run(
                      "frames.csv: trace frame type changed")
             _require(frame["deadline_us"] == trace["deadline_us"],
                      "frames.csv: trace deadline changed")
+    elif stream.get("source") == "synthetic" and "gop_length" in stream:
+        gop_length = int(stream["gop_length"])
+        interframe_size = int(stream["frame_size_bytes"])
+        multiplier = float(stream["keyframe_size_multiplier"])
+        _require(gop_length > 0 and interframe_size > 0 and multiplier >= 1,
+                 "resolved_config.json: invalid synthetic GOP")
+        keyframe_size = int(interframe_size * multiplier + 0.5)
+        for frame in frames:
+            frame_id = int(frame["frame_id"])
+            keyframe = frame_id % gop_length == 0
+            _require(frame["frame_type"] == ("I_FRAME" if keyframe else "P_FRAME"),
+                     "frames.csv: synthetic GOP frame type mismatch")
+            _require(int(frame["frame_size_bytes"]) ==
+                     (keyframe_size if keyframe else interframe_size),
+                     "frames.csv: synthetic GOP frame size mismatch")
     _require(len(decisions) == total, "policy_decisions.csv: decision/frame count mismatch")
     _require({int(row["frame_id"]) for row in decisions} == seen,
              "policy_decisions.csv: frame IDs mismatch")

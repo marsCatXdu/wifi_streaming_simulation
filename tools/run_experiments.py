@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
 CLI_KEYS = {
     "duration": "duration", "fps": "fps", "frame_size": "frameSize",
+    "gop_length": "gopLength", "keyframe_size_multiplier": "keyframeSizeMultiplier",
     "payload_size": "payloadSize", "deadline_us": "deadlineUs",
     "fixed_rss_dbm": "fixedRssDbm", "station_distance_m": "stationDistanceM",
     "propagation_model": "propagationModel",

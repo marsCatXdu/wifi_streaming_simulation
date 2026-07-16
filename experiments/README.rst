@@ -33,8 +33,11 @@ The 2.4 GHz contenders use HT/HE/EHT and the 5 GHz contenders use
 HT/VHT/HE/EHT.  Per-station standards, random streams, ON/OFF means, and
 per-link/per-station traffic totals are retained in run metadata.
 Each topology runs for 60 simulated seconds at 30 frames/s, yielding exactly
-1,800 frames.  Ten explicit seeds provide ten paired rounds.  The streaming
-STA is placed 10 m from the AP through ``station_distance_m``.
+1,800 frames.  Synthetic video uses 12 KB interframes and a 48 KB keyframe
+every 60 frames (two seconds), approximating a fourfold I-frame size while
+raising mean offered video load by only five percent.  Ten explicit seeds
+provide ten paired rounds.  The streaming STA is placed 10 m from the AP
+through ``station_distance_m``.
 
 This command builds, executes, validates, summarizes, and writes the standard
 plot set.  The tools may also be invoked independently::

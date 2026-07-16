@@ -247,6 +247,14 @@ SyntheticFrameSource::SetGopLength(uint32_t gopLength)
 }
 
 void
+SyntheticFrameSource::SetKeyframeSizeMultiplier(double multiplier)
+{
+    NS_ABORT_MSG_IF(!std::isfinite(multiplier) || multiplier < 1.0,
+                    "Keyframe size multiplier must be finite and at least one");
+    m_keyframeSizeMultiplier = multiplier;
+}
+
+void
 SyntheticFrameSource::SetDeadline(uint32_t deadlineUs)
 {
     m_deadlineUs = deadlineUs;
@@ -279,6 +287,13 @@ SyntheticFrameSource::GetFrames()
         else
         {
             frame.frameSizeBytes = m_constantSize;
+        }
+        if (frame.frameType == FrameType::I_FRAME)
+        {
+            const double keyframeSize = frame.frameSizeBytes * m_keyframeSizeMultiplier;
+            NS_ABORT_MSG_IF(keyframeSize > std::numeric_limits<uint32_t>::max(),
+                            "Keyframe size exceeds uint32_t");
+            frame.frameSizeBytes = std::max<uint32_t>(1, std::llround(keyframeSize));
         }
         frames.push_back(frame);
     }

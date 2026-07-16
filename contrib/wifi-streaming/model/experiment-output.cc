@@ -248,6 +248,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"trace_file\": \"" << JsonEscape(config.traceFile) << "\",\n"
            << "    \"fps\": " << config.fps << ",\n"
            << "    \"frame_size_bytes\": " << config.frameSizeBytes << ",\n"
+           << "    \"gop_length\": " << config.gopLength << ",\n"
+           << "    \"keyframe_size_multiplier\": " << config.keyframeSizeMultiplier << ",\n"
            << "    \"payload_size_bytes\": " << config.payloadSizeBytes << ",\n"
            << "    \"deadline_us\": " << config.deadlineUs << ",\n"
            << "    \"emission_mode\": \"" << JsonEscape(config.emissionMode) << "\"\n"

@@ -50,6 +50,8 @@ struct StreamingRunConfig
     double warmupSeconds{0};
     double fps{0};
     uint32_t frameSizeBytes{0};
+    uint32_t gopLength{0};
+    double keyframeSizeMultiplier{1};
     uint32_t payloadSizeBytes{0};
     uint32_t deadlineUs{0};
     std::string propagationModel{"fixed_rss"};

@@ -120,6 +120,11 @@ class MatrixTests(unittest.TestCase):
             "propagation": {"station_distance_m": 10},
         }, Path("."))
         self.assertIn("--stationDistanceM=10", distance_arguments)
+        stream_arguments = cli_arguments({
+            "stream": {"gop_length": 60, "keyframe_size_multiplier": 4},
+        }, Path("."))
+        self.assertIn("--gopLength=60", stream_arguments)
+        self.assertIn("--keyframeSizeMultiplier=4", stream_arguments)
 
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({

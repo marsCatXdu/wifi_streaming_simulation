@@ -67,6 +67,7 @@ class SyntheticFrameSource : public FrameSource
     void SetLognormalFrameSize(double meanLog, double sigmaLog);
     void SetEmpiricalFrameSizes(const std::vector<uint32_t>& sizes);
     void SetGopLength(uint32_t gopLength);
+    void SetKeyframeSizeMultiplier(double multiplier);
     void SetDeadline(uint32_t deadlineUs);
 
     std::vector<FrameDescriptor> GetFrames() override;
@@ -81,6 +82,7 @@ class SyntheticFrameSource : public FrameSource
     std::vector<uint32_t> m_empiricalSizes;
     FrameSizeDistribution m_distribution{FrameSizeDistribution::CONSTANT};
     uint32_t m_gopLength{30};
+    double m_keyframeSizeMultiplier{1.0};
     uint32_t m_deadlineUs{33333};
     Ptr<LogNormalRandomVariable> m_lognormal;
     Ptr<UniformRandomVariable> m_empiricalIndex;
