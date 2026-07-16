@@ -31,7 +31,7 @@ Empty completion timestamps represent incomplete copies or frames; they are
 not encoded as zero.
 
 The example supports `--topology=single_link` (the original deterministic
-5 GHz setup) and `--topology=dual_interface`. Dual mode installs independent
+5 GHz setup), `--topology=dual_interface`, and `--topology=mlo_str`. Dual mode installs independent
 2.4 GHz and 5 GHz `SpectrumWifiPhy` channels, MAC/PHY contention state,
 station/AP device pairs, and IP subnets. Each sender UDP socket is bound both
 to its radio's source address and its `NetDevice`; matching host routes lead
@@ -40,6 +40,17 @@ subnet. A constant station manager and `FixedRssLossModel` avoid unrelated
 randomness. `--policy` selects `fixed_link_0`, `fixed_link_1`, `static_best`,
 or `full_duplication` in dual mode. Application output, rather than PCAP or
 FlowMonitor, is the source of truth.
+
+Native STR mode requires `--wifiStandard=eht` and installs one two-link
+`WifiNetDevice` on each of the STA and AP MLDs. `SpectrumWifiPhyHelper(2)`
+maps link 0 to its own 2.4 GHz `MultiModelSpectrumChannel` and link 1 to its
+own 5 GHz channel; both links use explicit 20 MHz `ChannelSettings` and fixed
+`EhtMcs5`. `WifiStaticSetupHelper` performs deterministic MLD association and
+installs bidirectional TID-0 Block Ack agreements when A-MPDU is enabled.
+Uplink TID 0 is mapped to the set `{0,1}`, leaving queueing and link selection
+to the native ns-3 MLO MAC. The application creates one UDP socket, one IP
+interface, and one application copy. Explicit routes replace global routing,
+which cannot query a single channel from a multi-channel MLD.
 
 ## Output and measurement contract
 
@@ -72,12 +83,15 @@ otherwise ns-3 build-version metadata is used. The legacy `--framesFile` and
 `--decisionsFile` options copy their corresponding required artifacts after
 the run.
 
-`link_intervals.csv` currently has one row per application path for the full
+`link_intervals.csv` currently has one row per radio link for the full
 measurement window. Application counters come from sender/receiver state,
 MPDU counters and service times come from `WifiTxStatsHelper`, and PHY state
 durations come from `WifiCoTraceHelper`. Queue occupancy and estimated rate
 are left empty because this fixed-rate baseline does not install sampled queue
-or rate traces; zero would incorrectly claim an observation.
+or rate traces; zero would incorrectly claim an observation. Native MLO has no
+application-level link attribution, so its one-path byte totals appear on row
+0 and row 1 has zero application bytes; MAC and PHY fields on both rows are
+genuinely per-link.
 
 `summary.json` uses generated frames as its denominator. It reports complete,
 incomplete, and deadline counts/ratios; linear-interpolated P50/P90/P95/P99
@@ -127,15 +141,25 @@ end-to-end check
 dual-interface runs and requires offered load to worsen streaming latency or
 delivery and link-0 MPDU service time.
 
+`contrib/wifi-streaming/test/mlo-str-integration.py` requires complete native
+MLO delivery, one socket/no duplication metadata, two rows sharing one device
+ID, and successful MPDUs plus PHY TX occupancy on both links.
+
 ## Current boundaries
 
+- Native MLO background traffic is rejected in this phase. STR is implemented;
+  EMLSR is not configured or implied.
+- ns-3.48 reports successful MPDUs and their service times per MLD link, but
+  failed MPDUs and retry-limit drops only per device. Those device-level
+  failure totals are placed on MLO link row 0 to avoid double-counting;
+  successful retransmissions are summed from per-link success records.
 - Dynamic telemetry and adaptive redundancy policies are not part of this
   phase. `StaticBestLinkPolicy` uses configured initialization scores and does
   not switch during a run.
-- The receiver finalizes as soon as the union completes. Packets from a slower
-  duplicate copy arriving afterward are suppressed as packets for an already
-  finalized frame, so that copy's eventual completion is intentionally not
-  reported.
+- A duplicated frame retains its union-completion timestamp while the receiver
+  waits for both complete copy states or a finalization timeout. This permits
+  independent copy-completion and duplicate accounting without changing the
+  measured union latency.
 - `trace_defined` packet emission falls back to burst because the core
   `FrameDescriptor` has no per-packet timing field.
 - Frame deadlines and generation times are application timestamps; encoder,

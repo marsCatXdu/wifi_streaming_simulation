@@ -38,6 +38,8 @@ struct StreamingRunConfig
     std::string dataMode;
     std::string controlMode;
     std::vector<std::string> channelSettings;
+    std::vector<std::string> frequencyRanges;
+    std::vector<std::string> perLinkDataModes;
     std::string guardInterval;
     uint32_t queueMaxPackets{0};
     uint32_t queueMaxDelayMs{0};
@@ -49,6 +51,11 @@ struct StreamingRunConfig
     uint32_t txopLimitUs{0};
     std::string accessCategory;
     bool blockAckEnabled{false};
+    bool staticAssociation{false};
+    std::string tidToLinkMapping;
+    std::string strMode{"not_applicable"};
+    uint32_t applicationSocketCount{0};
+    bool applicationDuplication{false};
     bool packetEventLogsEnabled{false};
     double staticLink0Score{0};
     double staticLink1Score{0};

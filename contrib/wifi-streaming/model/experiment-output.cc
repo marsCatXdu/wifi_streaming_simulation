@@ -262,6 +262,18 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
         output << (i == 0 ? "" : ", ") << '"' << JsonEscape(config.channelSettings[i]) << '"';
     }
     output << "],\n"
+           << "    \"frequency_ranges\": [";
+    for (std::size_t i = 0; i < config.frequencyRanges.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << '"' << JsonEscape(config.frequencyRanges[i]) << '"';
+    }
+    output << "],\n"
+           << "    \"data_modes_per_link\": [";
+    for (std::size_t i = 0; i < config.perLinkDataModes.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << '"' << JsonEscape(config.perLinkDataModes[i]) << '"';
+    }
+    output << "],\n"
            << "    \"queue_max_packets\": " << config.queueMaxPackets << ",\n"
            << "    \"queue_max_delay_ms\": " << config.queueMaxDelayMs << ",\n"
            << "    \"max_ampdu_size_bytes\": " << config.maxAmpduSizeBytes << ",\n"
@@ -272,7 +284,13 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"fragmentation_threshold_bytes\": "
            << config.fragmentationThresholdBytes << ",\n"
            << "    \"access_category\": \"" << JsonEscape(config.accessCategory) << "\",\n"
-           << "    \"txop_limit_us\": " << config.txopLimitUs << "\n"
+           << "    \"txop_limit_us\": " << config.txopLimitUs << ",\n"
+           << "    \"static_association\": " << config.staticAssociation << ",\n"
+           << "    \"tid_to_link_mapping_ul\": \"" << JsonEscape(config.tidToLinkMapping)
+           << "\",\n"
+           << "    \"str_mode\": \"" << JsonEscape(config.strMode) << "\",\n"
+           << "    \"application_socket_count\": " << config.applicationSocketCount << ",\n"
+           << "    \"application_duplication\": " << config.applicationDuplication << "\n"
            << "  },\n"
            << "  \"policy_settings\": {\"static_link_0_score\": " << config.staticLink0Score
            << ", \"static_link_1_score\": " << config.staticLink1Score << "},\n"

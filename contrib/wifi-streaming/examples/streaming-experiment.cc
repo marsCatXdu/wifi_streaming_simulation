@@ -190,7 +190,7 @@ main(int argc, char* argv[])
     command.AddValue("deadlineUs", "Frame deadline in microseconds", deadlineUs);
     command.AddValue("fixedRssDbm", "Fixed received signal strength in dBm", fixedRssDbm);
     command.AddValue("emissionMode", "burst or uniform_within_frame", emissionMode);
-    command.AddValue("topology", "single_link or dual_interface", topology);
+    command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, or full_duplication",
                      policyName);
@@ -279,13 +279,18 @@ main(int argc, char* argv[])
         backgroundStandard0 == "inherit" ? wifiStandard : backgroundStandard0;
     const std::string resolvedBackgroundStandard1 =
         backgroundStandard1 == "inherit" ? wifiStandard : backgroundStandard1;
-    NS_ABORT_MSG_IF(topology != "single_link" && topology != "dual_interface",
+    NS_ABORT_MSG_IF(topology != "single_link" && topology != "dual_interface" &&
+                        topology != "mlo_str",
                     "Unknown topology " << topology);
     NS_ABORT_MSG_IF(policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                         policyName != "static_best" && policyName != "full_duplication",
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(topology == "single_link" && policyName != "fixed_link_0",
                     "single_link supports only fixed_link_0");
+    NS_ABORT_MSG_IF(topology == "mlo_str" && policyName != "fixed_link_0",
+                    "mlo_str uses one native MLO path and supports only fixed_link_0");
+    NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
+                    "mlo_str requires --wifiStandard=eht");
     NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
     NS_ABORT_MSG_IF(emissionMode != "burst" && emissionMode != "uniform_within_frame",
                     "Unknown emission mode " << emissionMode);
@@ -329,6 +334,10 @@ main(int argc, char* argv[])
                     "downlink cannot safely select a legacy station MCS");
     NS_ABORT_MSG_IF(topology == "single_link" && backgroundStations1 != 0,
                     "single_link cannot have backgroundStations1");
+    NS_ABORT_MSG_IF(topology == "mlo_str" &&
+                        (backgroundTraffic != "none" || backgroundStations0 != 0 ||
+                         backgroundStations1 != 0),
+                    "Background traffic is not supported by mlo_str in this MVP");
     NS_ABORT_MSG_IF(backgroundTraffic == "none" &&
                         (backgroundStations0 != 0 || backgroundStations1 != 0),
                     "Background station counts require non-none backgroundTraffic");
@@ -359,6 +368,7 @@ main(int argc, char* argv[])
     accessPoint.Create(1);
     NodeContainer edge;
     edge.Create(1);
+    const bool nativeMlo = topology == "mlo_str";
     const uint32_t linkCount = topology == "single_link" ? 1 : 2;
     std::vector<NodeContainer> backgroundStations(linkCount);
     backgroundStations[0].Create(backgroundStations0);
@@ -476,10 +486,109 @@ main(int argc, char* argv[])
     {
         installWifiLink("wifi-streaming", "{36, 20, BAND_5GHZ, 0}", 0);
     }
-    else
+    else if (topology == "dual_interface")
     {
         installWifiLink("wifi-streaming-2g", "{1, 20, BAND_2_4GHZ, 0}", 0);
         installWifiLink("wifi-streaming-5g", "{36, 20, BAND_5GHZ, 0}", 1);
+    }
+    else
+    {
+        Ptr<MultiModelSpectrumChannel> channel2Ghz =
+            CreateObject<MultiModelSpectrumChannel>();
+        Ptr<FixedRssLossModel> loss2Ghz = CreateObject<FixedRssLossModel>();
+        loss2Ghz->SetRss(fixedRssDbm);
+        channel2Ghz->AddPropagationLossModel(loss2Ghz);
+        channel2Ghz->SetPropagationDelayModel(
+            CreateObject<ConstantSpeedPropagationDelayModel>());
+
+        Ptr<MultiModelSpectrumChannel> channel5Ghz =
+            CreateObject<MultiModelSpectrumChannel>();
+        Ptr<FixedRssLossModel> loss5Ghz = CreateObject<FixedRssLossModel>();
+        loss5Ghz->SetRss(fixedRssDbm);
+        channel5Ghz->AddPropagationLossModel(loss5Ghz);
+        channel5Ghz->SetPropagationDelayModel(
+            CreateObject<ConstantSpeedPropagationDelayModel>());
+
+        SpectrumWifiPhyHelper phy(2);
+        phy.AddPhyToFreqRangeMapping(0, WIFI_SPECTRUM_2_4_GHZ);
+        phy.AddPhyToFreqRangeMapping(1, WIFI_SPECTRUM_5_GHZ);
+        phy.AddChannel(channel2Ghz, WIFI_SPECTRUM_2_4_GHZ);
+        phy.AddChannel(channel5Ghz, WIFI_SPECTRUM_5_GHZ);
+        phy.Set(0, "ChannelSettings", StringValue("{1, 20, BAND_2_4GHZ, 0}"));
+        phy.Set(1, "ChannelSettings", StringValue("{36, 20, BAND_5GHZ, 0}"));
+        phy.Set("RxGain", DoubleValue(0));
+
+        uint8_t link0 = 0;
+        wifi.SetRemoteStationManager(link0,
+                                     "ns3::ConstantRateWifiManager",
+                                     "DataMode",
+                                     StringValue("EhtMcs5"),
+                                     "ControlMode",
+                                     StringValue("OfdmRate24Mbps"),
+                                     "RtsCtsThreshold",
+                                     UintegerValue(rtsCtsThreshold),
+                                     "FragmentationThreshold",
+                                     UintegerValue(fragmentationThreshold));
+        wifi.SetRemoteStationManager(1,
+                                     "ns3::ConstantRateWifiManager",
+                                     "DataMode",
+                                     StringValue("EhtMcs5"),
+                                     "ControlMode",
+                                     StringValue("OfdmRate24Mbps"),
+                                     "RtsCtsThreshold",
+                                     UintegerValue(rtsCtsThreshold),
+                                     "FragmentationThreshold",
+                                     UintegerValue(fragmentationThreshold));
+        wifi.ConfigEhtOptions(
+            "TidToLinkMappingNegSupport",
+            EnumValue(WifiTidToLinkMappingNegSupport::ANY_LINK_SET),
+            "TidToLinkMappingUl",
+            StringValue("0 0,1"));
+
+        WifiMacHelper mac;
+        const Ssid ssid("wifi-streaming-mld");
+        mac.SetType("ns3::StaWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "ActiveProbing",
+                    BooleanValue(false),
+                    "FrameRetryLimit",
+                    UintegerValue(frameRetryLimit),
+                    "BE_MaxAmpduSize",
+                    UintegerValue(maxAmpduSize),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(maxAmsduSize));
+        mac.SetEdca(AC_BE,
+                    "TxopLimits",
+                    StringValue(std::to_string(txopLimitUs) + "us," +
+                                std::to_string(txopLimitUs) + "us"));
+        stationDevices = wifi.Install(phy, mac, station);
+
+        mac.SetType("ns3::ApWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "BeaconGeneration",
+                    BooleanValue(false),
+                    "FrameRetryLimit",
+                    UintegerValue(frameRetryLimit),
+                    "BE_MaxAmpduSize",
+                    UintegerValue(maxAmpduSize),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(maxAmsduSize));
+        mac.SetEdca(AC_BE,
+                    "TxopLimits",
+                    StringValue(std::to_string(txopLimitUs) + "us," +
+                                std::to_string(txopLimitUs) + "us"));
+        apWifiDevices = wifi.Install(phy, mac, accessPoint);
+
+        Ptr<WifiNetDevice> staMld = DynamicCast<WifiNetDevice>(stationDevices.Get(0));
+        Ptr<WifiNetDevice> apMld = DynamicCast<WifiNetDevice>(apWifiDevices.Get(0));
+        WifiStaticSetupHelper::SetStaticAssociation(apMld, staMld);
+        if (maxAmpduSize > 0)
+        {
+            WifiStaticSetupHelper::SetStaticBlockAck(apMld, staMld, 0);
+            WifiStaticSetupHelper::SetStaticBlockAck(staMld, apMld, 0);
+        }
     }
     int64_t wifiStream = 2000;
     wifiStream += WifiHelper::AssignStreams(stationDevices, wifiStream);
@@ -557,11 +666,25 @@ main(int argc, char* argv[])
     {
         apIpv4->SetForwarding(interface, true);
     }
-    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+    Ipv4StaticRoutingHelper staticRoutingHelper;
+    if (nativeMlo)
+    {
+        // Ipv4GlobalRouting calls WifiNetDevice::GetChannel(), which is
+        // intentionally undefined for a multi-channel MLD. Install the one
+        // required reverse route explicitly instead.
+        Ptr<Ipv4StaticRouting> edgeRouting = staticRoutingHelper.GetStaticRouting(edgeIpv4);
+        edgeRouting->AddNetworkRouteTo(Ipv4Address("10.1.0.0"),
+                                       Ipv4Mask("255.255.255.0"),
+                                       wiredInterfaces.GetAddress(0),
+                                       edgeWiredInterface);
+    }
+    else
+    {
+        Ipv4GlobalRoutingHelper::PopulateRoutingTables();
+    }
 
     // One host route per radio lets a socket bound to that NetDevice select the
     // matching gateway even though both routes target the same edge address.
-    Ipv4StaticRoutingHelper staticRoutingHelper;
     Ptr<Ipv4> stationIpv4 = station.Get(0)->GetObject<Ipv4>();
     Ptr<Ipv4StaticRouting> stationRouting = staticRoutingHelper.GetStaticRouting(stationIpv4);
     for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
@@ -610,11 +733,24 @@ main(int argc, char* argv[])
             ? std::vector<std::string>{"{36, 20, BAND_5GHZ, 0}"}
             : std::vector<std::string>{"{1, 20, BAND_2_4GHZ, 0}",
                                        "{36, 20, BAND_5GHZ, 0}"};
+    resolved.frequencyRanges =
+        topology == "single_link"
+            ? std::vector<std::string>{"WIFI_SPECTRUM_5_GHZ"}
+            : std::vector<std::string>{"WIFI_SPECTRUM_2_4_GHZ",
+                                       "WIFI_SPECTRUM_5_GHZ"};
+    resolved.perLinkDataModes =
+        linkCount == 1 ? std::vector<std::string>{dataMode}
+                       : std::vector<std::string>{dataMode, dataMode};
     resolved.queueMaxPackets = queueMaxPackets;
     resolved.queueMaxDelayMs = queueMaxDelayMs;
     resolved.maxAmpduSizeBytes = maxAmpduSize;
     resolved.maxAmsduSizeBytes = maxAmsduSize;
     resolved.blockAckEnabled = maxAmpduSize > 0;
+    resolved.staticAssociation = nativeMlo;
+    resolved.tidToLinkMapping = nativeMlo ? "0 0,1" : "not_applicable";
+    resolved.strMode = nativeMlo ? "STR" : "not_applicable";
+    resolved.applicationSocketCount = stationDevices.GetN();
+    resolved.applicationDuplication = policyName == "full_duplication";
     resolved.frameRetryLimit = frameRetryLimit;
     resolved.rtsCtsThresholdBytes = rtsCtsThreshold;
     resolved.fragmentationThresholdBytes = fragmentationThreshold;
@@ -831,6 +967,7 @@ main(int argc, char* argv[])
     }
 
     const auto successes = txStats.GetSuccessesByNodeDevice();
+    const auto successesByLink = txStats.GetSuccessesByNodeDeviceLink();
     const auto failures = txStats.GetFailuresByNodeDevice();
     const auto retransmissions = txStats.GetRetransmissionsByNodeDevice();
     const auto retryDrops =
@@ -839,23 +976,28 @@ main(int argc, char* argv[])
     const auto& occupancyRecords = occupancy.GetDeviceRecords();
     std::vector<LinkIntervalRecord> linkIntervals;
     std::vector<MacSummaryRecord> macSummaries;
-    for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
+    const uint32_t reportedLinkCount = nativeMlo ? 2 : stationDevices.GetN();
+    for (uint32_t path = 0; path < reportedLinkCount; ++path)
     {
         const uint32_t nodeId = station.Get(0)->GetId();
-        const uint32_t deviceId = stationDevices.Get(path)->GetIfIndex();
+        const uint32_t deviceId =
+            stationDevices.Get(nativeMlo ? 0 : path)->GetIfIndex();
         const auto deviceKey = std::make_tuple(nodeId, deviceId);
-        const auto linkKey = std::make_tuple(nodeId, deviceId, uint8_t{0});
+        const auto linkKey =
+            std::make_tuple(nodeId, deviceId, static_cast<uint8_t>(nativeMlo ? path : 0));
         const auto lookup = [](const auto& values, const auto& key) {
             const auto value = values.find(key);
             return value == values.end() ? uint64_t{0} : value->second;
         };
 
         std::vector<double> serviceTimes;
+        uint64_t linkRetransmissions = 0;
         if (const auto records = successRecords.find(linkKey); records != successRecords.end())
         {
             for (const auto& record : records->second)
             {
                 serviceTimes.push_back((record.m_ackTime - record.m_enqueueTime).GetMicroSeconds());
+                linkRetransmissions += record.m_retransmissions;
             }
         }
         std::optional<double> meanServiceTime;
@@ -880,22 +1022,34 @@ main(int argc, char* argv[])
         LinkIntervalRecord interval;
         interval.timestampUs = measurementStop.GetMicroSeconds();
         interval.linkId = path;
-        interval.applicationBytesSent = sender->GetPathBytesSent(path);
-        interval.applicationBytesReceived = receiver->GetPathBytesReceived(path);
-        interval.redundantBytes = sender->GetPathRedundantBytesSent(path);
-        interval.successfulMpdus = lookup(successes, deviceKey);
-        interval.failedMpdus = lookup(failures, deviceKey);
-        interval.retransmissions = lookup(retransmissions, deviceKey);
+        const uint8_t applicationPath = nativeMlo ? 0 : path;
+        interval.applicationBytesSent =
+            (!nativeMlo || path == 0) ? sender->GetPathBytesSent(applicationPath) : 0;
+        interval.applicationBytesReceived =
+            (!nativeMlo || path == 0) ? receiver->GetPathBytesReceived(applicationPath) : 0;
+        interval.redundantBytes =
+            (!nativeMlo || path == 0) ? sender->GetPathRedundantBytesSent(applicationPath) : 0;
+        interval.successfulMpdus =
+            nativeMlo ? lookup(successesByLink, linkKey) : lookup(successes, deviceKey);
+        // ns-3.48 exposes failures only per device; place the device total in
+        // link 0 so run-level totals are not double counted.
+        interval.failedMpdus = (!nativeMlo || path == 0) ? lookup(failures, deviceKey) : 0;
+        interval.retransmissions =
+            nativeMlo ? linkRetransmissions : lookup(retransmissions, deviceKey);
         interval.meanMpduServiceTimeUs = meanServiceTime;
         interval.p95MpduServiceTimeUs = p95ServiceTime;
         if (occupancyRecord)
         {
             interval.phyIdleTimeUs =
-                GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::IDLE);
+                GetStateDurationUs(*occupancyRecord, nativeMlo ? path : 0, WifiPhyState::IDLE);
             interval.phyCcaBusyTimeUs =
-                GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::CCA_BUSY);
-            interval.phyTxTimeUs = GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::TX);
-            interval.phyRxTimeUs = GetStateDurationUs(*occupancyRecord, 0, WifiPhyState::RX);
+                GetStateDurationUs(*occupancyRecord,
+                                   nativeMlo ? path : 0,
+                                   WifiPhyState::CCA_BUSY);
+            interval.phyTxTimeUs =
+                GetStateDurationUs(*occupancyRecord, nativeMlo ? path : 0, WifiPhyState::TX);
+            interval.phyRxTimeUs =
+                GetStateDurationUs(*occupancyRecord, nativeMlo ? path : 0, WifiPhyState::RX);
         }
         linkIntervals.push_back(interval);
 
@@ -906,7 +1060,8 @@ main(int argc, char* argv[])
         mac.successfulMpdus = interval.successfulMpdus;
         mac.failedMpdus = interval.failedMpdus;
         mac.retransmissions = interval.retransmissions;
-        mac.retryLimitDrops = lookup(retryDrops, deviceKey);
+        mac.retryLimitDrops =
+            (!nativeMlo || path == 0) ? lookup(retryDrops, deviceKey) : 0;
         mac.meanMpduServiceTimeUs = meanServiceTime;
         mac.p95MpduServiceTimeUs = p95ServiceTime;
         macSummaries.push_back(mac);
