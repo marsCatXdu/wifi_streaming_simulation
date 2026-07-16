@@ -35,7 +35,7 @@ def run(
             "--obssUlMaxRateMbps=3",
             "--obssDlMinRateMbps=2",
             "--obssDlMaxRateMbps=8",
-            "--obssStationManager=ideal",
+            "--obssStationManager=minstrel_ht",
             "--obssOnMeanMs=20",
             "--obssOffMeanMs=20",
             "--seed=19",
@@ -86,8 +86,8 @@ def main() -> None:
         obss = dual_config["background"]["obss"]
         assert obss["profile"] == "mixed4x4"
         assert obss["stations_per_bss"] == 4
-        assert obss["station_manager"] == "ideal"
-        assert obss["use_latest_amendment_only"] is False
+        assert obss["station_manager"] == "minstrel_ht"
+        assert obss["use_latest_amendment_only"] is True
         assert len(obss["bsses"]) == 4
         assert [(item["standard"], item["link_id"]) for item in obss["bsses"]] == [
             ("802.11n", 0),
