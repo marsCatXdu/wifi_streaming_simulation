@@ -53,6 +53,7 @@ class StreamingHeader : public Header
     static constexpr uint32_t MAGIC = 0x5354524d; // "STRM"
     static constexpr uint8_t VERSION = 1;
     static constexpr uint32_t SERIALIZED_SIZE = 50;
+    static constexpr uint16_t FLAG_DUPLICATED_FRAME = 1U << 0;
 
     static TypeId GetTypeId();
     TypeId GetInstanceTypeId() const override;

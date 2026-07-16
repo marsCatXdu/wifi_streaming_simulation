@@ -5,6 +5,7 @@ build_lib(
     model/frame-source.cc
     model/frame-packetizer.cc
     model/metrics-collector.cc
+    model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
   HEADER_FILES
@@ -12,6 +13,7 @@ build_lib(
     model/frame-source.h
     model/frame-packetizer.h
     model/metrics-collector.h
+    model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h
   LIBRARIES_TO_LINK

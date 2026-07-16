@@ -8,6 +8,7 @@
 #include "frame-packetizer.h"
 #include "frame-source.h"
 #include "metrics-collector.h"
+#include "redundancy-policy.h"
 
 #include "ns3/application.h"
 #include "ns3/event-id.h"
@@ -20,11 +21,9 @@
 namespace ns3
 {
 
-using PathId = uint8_t;
-
 /**
- * Frame-oriented sender. Its path map and per-frame selection boundary are
- * intentionally ready for later dual-interface policies.
+ * Frame-oriented sender making exactly one redundancy-policy decision per
+ * frame. Each selected path carries a complete frame copy.
  */
 class MultipathSender : public Application
 {
@@ -40,9 +39,13 @@ class MultipathSender : public Application
     void SetEmissionSpan(Time span);
     void SetRunIdHash(uint64_t hash);
     void SetPrimaryPath(PathId pathId);
+    void SetPolicy(Ptr<RedundancyPolicy> policy);
     void AddPath(PathId pathId, Ptr<Socket> socket, Ptr<NetDevice> device = nullptr);
 
     uint64_t GetPacketsSent() const;
+    uint64_t GetBytesSent() const;
+    uint64_t GetRedundantBytesSent() const;
+    uint64_t GetPathBytesSent(PathId pathId) const;
 
   protected:
     void StartApplication() override;
@@ -56,15 +59,25 @@ class MultipathSender : public Application
     };
 
     void GenerateFrame(FrameDescriptor frame);
-    void SendPacket(PathId pathId, Ptr<Packet> packet);
+    void ScheduleCopy(const FrameDescriptor& frame,
+                      PathId pathId,
+                      uint8_t copyId,
+                      bool redundant,
+                      bool duplicatedFrame);
+    void SendPacket(PathId pathId, Ptr<Packet> packet, bool redundant);
 
     Ptr<FrameSource> m_source;
     Ptr<MetricsCollector> m_collector;
     FramePacketizer m_packetizer;
     std::map<PathId, Path> m_paths;
     PathId m_primaryPath{0};
+    Ptr<RedundancyPolicy> m_policy;
+    LinkTelemetrySnapshot m_telemetry;
     uint64_t m_runIdHash{0};
     uint64_t m_packetsSent{0};
+    uint64_t m_bytesSent{0};
+    uint64_t m_redundantBytesSent{0};
+    std::map<PathId, uint64_t> m_pathBytesSent;
     std::vector<EventId> m_events;
 };
 

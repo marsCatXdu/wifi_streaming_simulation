@@ -42,7 +42,8 @@ class FramePacketizer
     std::vector<PacketEmission> Packetize(const FrameDescriptor& frame,
                                           uint64_t runIdHash,
                                           uint8_t copyId,
-                                          uint8_t linkId) const;
+                                          uint8_t linkId,
+                                          uint16_t flags = 0) const;
 
   private:
     uint32_t m_payloadSize{1200};

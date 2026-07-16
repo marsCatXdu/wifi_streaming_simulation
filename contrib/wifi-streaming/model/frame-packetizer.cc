@@ -41,7 +41,8 @@ std::vector<PacketEmission>
 FramePacketizer::Packetize(const FrameDescriptor& frame,
                            uint64_t runIdHash,
                            uint8_t copyId,
-                           uint8_t linkId) const
+                           uint8_t linkId,
+                           uint16_t flags) const
 {
     NS_ABORT_MSG_IF(frame.frameSizeBytes == 0, "Cannot packetize an empty frame");
     const uint32_t count = (frame.frameSizeBytes + m_payloadSize - 1) / m_payloadSize;
@@ -61,6 +62,7 @@ FramePacketizer::Packetize(const FrameDescriptor& frame,
         header.deadlineUs = frame.deadlineUs;
         header.copyId = copyId;
         header.senderLinkId = linkId;
+        header.flags = flags;
 
         auto packet = Create<Packet>(std::min(remaining, m_payloadSize));
         packet->AddHeader(header);

@@ -117,6 +117,8 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
                        header.packetCount,
                        header.deadlineUs,
                        header.frameType};
+        state.duplicatedFrame =
+            (header.flags & StreamingHeader::FLAG_DUPLICATED_FRAME) != 0;
         state.firstArrivalUs = nowUs;
         const Time generation = NanoSeconds(header.generationTimeNs);
         const Time deadline = generation + MicroSeconds(header.deadlineUs);
@@ -153,15 +155,24 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
     }
     state.linkPackets[header.senderLinkId].insert(header.packetIndex);
 
-    if (!state.unionPackets.insert(header.packetIndex).second)
+    const bool newUnionPacket = state.unionPackets.insert(header.packetIndex).second;
+    if (!newUnionPacket)
     {
         ++state.duplicates;
-        return;
     }
-    state.firstLinkForPacket.emplace(header.packetIndex, header.senderLinkId);
-    if (state.unionPackets.size() == state.frame.packetCount)
+    else
+    {
+        state.firstLinkForPacket.emplace(header.packetIndex, header.senderLinkId);
+    }
+    if (!state.completionUs && state.unionPackets.size() == state.frame.packetCount)
     {
         state.completionUs = nowUs;
+    }
+    const bool allCopiesComplete =
+        state.copyPackets[0].size() == state.frame.packetCount &&
+        state.copyPackets[1].size() == state.frame.packetCount;
+    if (state.completionUs && (!state.duplicatedFrame || allCopiesComplete))
+    {
         Finalize(header.frameId, false);
     }
 }
@@ -169,6 +180,7 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
 void
 FrameReceiver::Finalize(uint64_t frameId, bool expired)
 {
+    (void)expired;
     auto iterator = m_frames.find(frameId);
     if (iterator == m_frames.end())
     {
@@ -200,7 +212,7 @@ FrameReceiver::Finalize(uint64_t frameId, bool expired)
         state.frame.generationTimeNs / 1000 + state.frame.deadlineUs;
     result.deadlineMiss =
         state.frame.deadlineUs > 0 &&
-        (!state.completionUs || *state.completionUs > absoluteDeadlineUs || expired);
+        (!state.completionUs || *state.completionUs > absoluteDeadlineUs);
 
     std::set<uint8_t> contributingLinks;
     for (const auto& entry : state.firstLinkForPacket)

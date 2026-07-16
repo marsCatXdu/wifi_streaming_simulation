@@ -70,6 +70,13 @@ MultipathSender::SetPrimaryPath(PathId pathId)
 }
 
 void
+MultipathSender::SetPolicy(Ptr<RedundancyPolicy> policy)
+{
+    NS_ABORT_MSG_IF(!policy, "MultipathSender policy cannot be null");
+    m_policy = policy;
+}
+
+void
 MultipathSender::AddPath(PathId pathId, Ptr<Socket> socket, Ptr<NetDevice> device)
 {
     NS_ABORT_MSG_IF(!socket, "Path requires a socket");
@@ -85,7 +92,12 @@ void
 MultipathSender::StartApplication()
 {
     NS_ABORT_MSG_IF(!m_source, "MultipathSender requires a FrameSource");
-    NS_ABORT_MSG_IF(!m_paths.contains(m_primaryPath), "Primary path is not configured");
+    if (!m_policy)
+    {
+        auto fixed = CreateObject<FixedLinkPolicy>();
+        fixed->SetPath(m_primaryPath);
+        m_policy = fixed;
+    }
     for (auto frame : m_source->GetFrames())
     {
         m_events.push_back(
@@ -114,9 +126,27 @@ void
 MultipathSender::GenerateFrame(FrameDescriptor frame)
 {
     frame.generationTimeNs = Simulator::Now().GetNanoSeconds();
-    const auto emissions =
-        m_packetizer.Packetize(frame, m_runIdHash, 0, static_cast<uint8_t>(m_primaryPath));
-    frame.packetCount = emissions.size();
+    // This is the sole policy invocation for this frame.
+    const PolicyDecision policyDecision = m_policy->Decide(frame, m_telemetry);
+    NS_ABORT_MSG_IF(!m_paths.contains(policyDecision.primaryPath),
+                    "Policy selected unconfigured primary path "
+                        << +policyDecision.primaryPath);
+    NS_ABORT_MSG_IF(policyDecision.duplicate && !policyDecision.secondaryPath,
+                    "Duplicating policy did not select a secondary path");
+    NS_ABORT_MSG_IF(!policyDecision.duplicate && policyDecision.secondaryPath,
+                    "Non-duplicating policy selected a secondary path");
+    if (policyDecision.secondaryPath)
+    {
+        NS_ABORT_MSG_IF(*policyDecision.secondaryPath == policyDecision.primaryPath,
+                        "Primary and secondary paths must differ");
+        NS_ABORT_MSG_IF(!m_paths.contains(*policyDecision.secondaryPath),
+                        "Policy selected unconfigured secondary path "
+                            << +*policyDecision.secondaryPath);
+    }
+
+    frame.packetCount =
+        (frame.frameSizeBytes + m_packetizer.GetPayloadSize() - 1) /
+        m_packetizer.GetPayloadSize();
 
     if (m_collector)
     {
@@ -124,26 +154,61 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
         decision.runId = m_collector->GetRunId();
         decision.frameId = frame.frameId;
         decision.decisionTimeUs = Simulator::Now().GetMicroSeconds();
-        decision.primaryLink = m_primaryPath;
+        decision.policy = m_policy->GetName();
+        decision.primaryLink = policyDecision.primaryPath;
+        decision.duplicated = policyDecision.duplicate;
+        if (policyDecision.secondaryPath)
+        {
+            decision.secondaryLink = std::to_string(*policyDecision.secondaryPath);
+        }
+        decision.reason = policyDecision.reason;
+        decision.primaryScore = policyDecision.primaryScore;
+        decision.secondaryScore = policyDecision.secondaryScore;
         m_collector->RecordPolicyDecision(decision);
     }
+
+    ScheduleCopy(frame, policyDecision.primaryPath, 0, false, policyDecision.duplicate);
+    if (policyDecision.secondaryPath)
+    {
+        ScheduleCopy(frame, *policyDecision.secondaryPath, 1, true, true);
+    }
+}
+
+void
+MultipathSender::ScheduleCopy(const FrameDescriptor& frame,
+                              PathId pathId,
+                              uint8_t copyId,
+                              bool redundant,
+                              bool duplicatedFrame)
+{
+    const uint16_t flags =
+        duplicatedFrame ? StreamingHeader::FLAG_DUPLICATED_FRAME : 0;
+    const auto emissions = m_packetizer.Packetize(frame, m_runIdHash, copyId, pathId, flags);
     for (const auto& emission : emissions)
     {
         m_events.push_back(Simulator::Schedule(emission.offset,
                                                &MultipathSender::SendPacket,
                                                this,
-                                               m_primaryPath,
-                                               emission.packet));
+                                               pathId,
+                                               emission.packet,
+                                               redundant));
     }
 }
 
 void
-MultipathSender::SendPacket(PathId pathId, Ptr<Packet> packet)
+MultipathSender::SendPacket(PathId pathId, Ptr<Packet> packet, bool redundant)
 {
     const auto iterator = m_paths.find(pathId);
     if (iterator != m_paths.end() && iterator->second.socket->Send(packet) >= 0)
     {
         ++m_packetsSent;
+        const uint64_t bytes = packet->GetSize();
+        m_bytesSent += bytes;
+        m_pathBytesSent[pathId] += bytes;
+        if (redundant)
+        {
+            m_redundantBytesSent += bytes;
+        }
     }
 }
 
@@ -151,6 +216,28 @@ uint64_t
 MultipathSender::GetPacketsSent() const
 {
     return m_packetsSent;
+}
+
+uint64_t
+MultipathSender::GetBytesSent() const
+{
+    return m_bytesSent;
+}
+
+uint64_t
+MultipathSender::GetRedundantBytesSent() const
+{
+    return m_redundantBytesSent;
+}
+
+uint64_t
+MultipathSender::GetPathBytesSent(PathId pathId) const
+{
+    if (auto bytes = m_pathBytesSent.find(pathId); bytes != m_pathBytesSent.end())
+    {
+        return bytes->second;
+    }
+    return 0;
 }
 
 } // namespace ns3

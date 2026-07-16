@@ -48,6 +48,7 @@ class FrameReceiver : public Application
         std::map<uint8_t, std::set<uint32_t>> copyPackets;
         std::map<uint8_t, std::set<uint32_t>> linkPackets;
         std::map<uint32_t, uint8_t> firstLinkForPacket;
+        bool duplicatedFrame{false};
         uint32_t duplicates{0};
         std::optional<uint64_t> firstArrivalUs;
         std::optional<uint64_t> completionUs;
