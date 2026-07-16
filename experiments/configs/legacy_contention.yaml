@@ -1,11 +1,11 @@
 name: legacy-contention-dual-vs-mlo
-output_root: results/legacy_contention
-workers: 1
+output_root: results/scaled_legacy_contention
+workers: 4
 
 base:
   stream:
     source: synthetic
-    duration: 0.5
+    duration: 60
     fps: 30
     frame_size: 12000
     payload_size: 1200
@@ -13,6 +13,7 @@ base:
     emission_mode: burst
   propagation:
     fixed_rss_dbm: -50
+    station_distance_m: 10
   wifi:
     wifi_standard: eht
   background:
@@ -23,8 +24,8 @@ base:
     random_on_mean_ms: 100
     random_off_mean_ms: 100
 
-seeds: [19]
-runs: [1, 2]
+seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+runs: [1]
 
 topologies:
   - name: dual_interface

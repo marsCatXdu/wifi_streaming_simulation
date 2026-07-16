@@ -12,6 +12,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def _finish(path: Path, title: str, has_data: bool) -> None:
@@ -25,27 +26,83 @@ def _finish(path: Path, title: str, has_data: bool) -> None:
     plt.close()
 
 
+def _latencies(run: dict) -> np.ndarray:
+    frame_path = Path(run["run_dir"]) / "frames.csv"
+    with frame_path.open(newline="", encoding="utf-8") as source:
+        values = [
+            float(row["union_latency_us"])
+            for row in csv.DictReader(source)
+            if row["union_latency_us"]
+        ]
+    return np.asarray(values, dtype=float)
+
+
+def _latency_groups(runs: list[dict]) -> dict[tuple[str, str], list[np.ndarray]]:
+    grouped: dict[tuple[str, str], list[np.ndarray]] = {}
+    for run in runs:
+        values = _latencies(run)
+        if values.size:
+            grouped.setdefault((run["topology"], run["policy"]), []).append(values)
+    return grouped
+
+
 def plot(aggregate: dict, output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     runs = aggregate.get("runs", [])
     groups = aggregate.get("groups", [])
+    latency_groups = _latency_groups(runs)
 
     plt.figure()
-    cdf_data = False
-    for run in runs:
-        frame_path = Path(run["run_dir"]) / "frames.csv"
-        with frame_path.open(newline="", encoding="utf-8") as source:
-            values = sorted(float(row["union_latency_us"]) for row in csv.DictReader(source)
-                            if row["union_latency_us"])
-        if values:
-            cdf_data = True
-            y = [(index + 1) / len(values) for index in range(len(values))]
-            plt.plot(values, y, label=f"{run['topology']}/{run['policy']}")
+    probabilities = np.linspace(0.0, 1.0, 201)
+    for (topology, policy), samples in sorted(latency_groups.items()):
+        run_quantiles = np.vstack(
+            [np.quantile(values, probabilities, method="linear") for values in samples]
+        )
+        center = np.median(run_quantiles, axis=0)
+        lower = np.quantile(run_quantiles, 0.10, axis=0)
+        upper = np.quantile(run_quantiles, 0.90, axis=0)
+        label = f"{topology}/{policy} (n={len(samples)} runs)"
+        line = plt.plot(center, probabilities, label=label)[0]
+        plt.fill_betweenx(probabilities, lower, upper, color=line.get_color(), alpha=0.2)
+    cdf_data = bool(latency_groups)
     if cdf_data:
         plt.xlabel("Union latency (us)")
         plt.ylabel("CDF")
         plt.legend(fontsize="x-small")
-    _finish(output_dir / "latency_cdf.png", "Frame latency CDF", cdf_data)
+    _finish(output_dir / "latency_cdf.png",
+            "Frame latency CDF (median and 10–90% run band)", cdf_data)
+
+    plt.figure()
+    all_latencies = [
+        value
+        for samples in latency_groups.values()
+        for values in samples
+        for value in values
+    ]
+    pdf_data = bool(all_latencies)
+    if pdf_data:
+        lower_bound = min(all_latencies)
+        upper_bound = max(all_latencies)
+        if lower_bound == upper_bound:
+            lower_bound -= 0.5
+            upper_bound += 0.5
+        bins = np.linspace(lower_bound, upper_bound, 81)
+        centers = (bins[:-1] + bins[1:]) / 2
+        for (topology, policy), samples in sorted(latency_groups.items()):
+            run_densities = np.vstack(
+                [np.histogram(values, bins=bins, density=True)[0] for values in samples]
+            )
+            center = np.median(run_densities, axis=0)
+            lower = np.quantile(run_densities, 0.10, axis=0)
+            upper = np.quantile(run_densities, 0.90, axis=0)
+            label = f"{topology}/{policy} (n={len(samples)} runs)"
+            line = plt.plot(centers, center, label=label)[0]
+            plt.fill_between(centers, lower, upper, color=line.get_color(), alpha=0.2)
+        plt.xlabel("Union latency (us)")
+        plt.ylabel("Probability density")
+        plt.legend(fontsize="x-small")
+    _finish(output_dir / "latency_pdf.png",
+            "Frame latency PDF (median and 10–90% run band)", pdf_data)
 
     plt.figure()
     labels = [f"{g['topology']}\n{g['policy']}" for g in groups]
@@ -112,7 +169,7 @@ def main() -> None:
     args = parser.parse_args()
     aggregate = json.loads(args.aggregate_json.read_text(encoding="utf-8"))
     plot(aggregate, args.output_dir)
-    print(f"WROTE {args.output_dir} plots=6")
+    print(f"WROTE {args.output_dir} plots=7")
 
 
 if __name__ == "__main__":

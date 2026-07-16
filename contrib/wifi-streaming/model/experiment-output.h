@@ -38,6 +38,7 @@ struct StreamingRunConfig
     uint32_t payloadSizeBytes{0};
     uint32_t deadlineUs{0};
     double fixedRssDbm{0};
+    double stationDistanceM{10};
     std::string standard;
     std::string dataMode;
     std::string controlMode;

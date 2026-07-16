@@ -28,7 +28,8 @@ NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
 CLI_KEYS = {
     "duration": "duration", "fps": "fps", "frame_size": "frameSize",
     "payload_size": "payloadSize", "deadline_us": "deadlineUs",
-    "fixed_rss_dbm": "fixedRssDbm", "emission_mode": "emissionMode",
+    "fixed_rss_dbm": "fixedRssDbm", "station_distance_m": "stationDistanceM",
+    "emission_mode": "emissionMode",
     "source": "source", "trace_file": "traceFile", "wifi_standard": "wifiStandard",
     "queue_max_packets": "queueMaxPackets", "queue_max_delay_ms": "queueMaxDelayMs",
     "max_ampdu_size": "maxAmpduSize", "max_amsdu_size": "maxAmsduSize",

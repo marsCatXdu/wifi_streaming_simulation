@@ -18,6 +18,9 @@ and 5 GHz channel.
 The 2.4 GHz contenders use HT/HE/EHT and the 5 GHz contenders use
 HT/VHT/HE/EHT.  Per-station standards, random streams, ON/OFF means, and
 per-link/per-station traffic totals are retained in run metadata.
+Each topology runs for 60 simulated seconds at 30 frames/s, yielding exactly
+1,800 frames.  Ten explicit seeds provide ten paired rounds.  The streaming
+STA is placed 10 m from the AP through ``station_distance_m``.
 
 This command builds, executes, validates, summarizes, and writes the standard
 plot set.  The tools may also be invoked independently::
@@ -67,6 +70,11 @@ the normal approximation thereafter.  Temporal miss-burst distributions are
 retained.  Metrics not supported by available telemetry are represented as
 JSON null, never zero.
 
+The latency CDF and PDF use one distribution per run.  Their center curves are
+the pointwise median across runs and their shaded bands span the pointwise
+10th--90th percentiles.  The PDF is a common-bin histogram density, not a
+kernel-density estimate.
+
 Calibration
 -----------
 
@@ -92,6 +100,8 @@ Cross-copy delay correlation and joint exceedance are available only for
 duplicated frames with the required copy timestamps.  Sparse plots explicitly
 state that data is insufficient.  The fixed-RSS smoke setup does not represent
 mobility, fading, encoder/decoder delay, or firmware processing.
+Changing ``station_distance_m`` changes geometry and propagation delay, but
+not received power while ``FixedRssLossModel`` is selected.
 Non-MLD legacy stations associate dynamically to matching AP MLD links because
 the ns-3.48 static-association helper is not safe for this mixed device shape;
 the streaming MLD remains statically associated.

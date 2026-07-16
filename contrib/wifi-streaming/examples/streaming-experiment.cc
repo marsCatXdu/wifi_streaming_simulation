@@ -162,6 +162,7 @@ main(int argc, char* argv[])
     uint32_t payloadSize = 1200;
     uint32_t deadlineUs = 33333;
     double fixedRssDbm = -50.0;
+    double stationDistanceM = 10.0;
     std::string emissionMode = "burst";
     std::string sourceName = "synthetic";
     std::string traceFile;
@@ -218,6 +219,7 @@ main(int argc, char* argv[])
     command.AddValue("payloadSize", "Streaming payload bytes per UDP datagram", payloadSize);
     command.AddValue("deadlineUs", "Frame deadline in microseconds", deadlineUs);
     command.AddValue("fixedRssDbm", "Fixed received signal strength in dBm", fixedRssDbm);
+    command.AddValue("stationDistanceM", "Streaming STA distance from AP", stationDistanceM);
     command.AddValue("emissionMode", "burst or uniform_within_frame", emissionMode);
     command.AddValue("source", "Frame source: synthetic or trace", sourceName);
     command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
@@ -369,6 +371,7 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard != "eht",
                     "dual_interface requires --wifiStandard=eht for comparison with STR MLO");
     NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
+    NS_ABORT_MSG_IF(stationDistanceM <= 0, "stationDistanceM must be positive");
     NS_ABORT_MSG_IF(sourceName != "synthetic" && sourceName != "trace",
                     "source must be synthetic or trace");
     NS_ABORT_MSG_IF(sourceName == "trace" && traceFile.empty(),
@@ -752,7 +755,7 @@ main(int argc, char* argv[])
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(all);
     accessPoint.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(0, 0, 0));
-    station.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(1, 0, 0));
+    station.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(stationDistanceM, 0, 0));
     for (uint32_t link = 0; link < linkCount; ++link)
     {
         for (uint32_t index = 0; index < backgroundStations[link].GetN(); ++index)
@@ -897,6 +900,7 @@ main(int argc, char* argv[])
     resolved.payloadSizeBytes = payloadSize;
     resolved.deadlineUs = deadlineUs;
     resolved.fixedRssDbm = fixedRssDbm;
+    resolved.stationDistanceM = stationDistanceM;
     resolved.standard = StandardLabel(wifiStandard);
     resolved.dataMode = dataMode;
     resolved.controlMode = "OfdmRate24Mbps";

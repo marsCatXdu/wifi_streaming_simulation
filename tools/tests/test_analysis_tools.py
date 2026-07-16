@@ -11,6 +11,7 @@ TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from run_experiments import cli_arguments, derive_run_id, expand_config
+from plot_results import plot
 from summarize_runs import summarize
 from validate_outputs import ValidationError, validate_run
 
@@ -115,6 +116,10 @@ class MatrixTests(unittest.TestCase):
         self.assertIn("--backgroundStreamBase=4000", arguments)
         self.assertIn("--randomOnMeanMs=75", arguments)
         self.assertIn("--randomOffMeanMs=125", arguments)
+        distance_arguments = cli_arguments({
+            "propagation": {"station_distance_m": 10},
+        }, Path("."))
+        self.assertIn("--stationDistanceM=10", distance_arguments)
 
 
 class OutputTests(unittest.TestCase):
@@ -130,6 +135,10 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(group["metrics"]["deadline_miss_ratio"]["n"], 2)
             self.assertIsNone(group["metrics"]["duplicate_recovery_rate"]["mean"])
             self.assertIsNone(group["redundant_airtime_ratio"]["mean"])
+            plots = root / "plots"
+            plot(result, plots)
+            self.assertTrue((plots / "latency_cdf.png").is_file())
+            self.assertTrue((plots / "latency_pdf.png").is_file())
 
     def test_validator_rejects_count_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
