@@ -161,6 +161,27 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     _finish(output_dir / "miss_burst_distribution.png",
             "Deadline-miss burst distribution", bool(bursts))
 
+    plt.figure()
+    burst_groups = [
+        (
+            f"{group['topology']}/{group['policy']} (n={group['run_count']} runs)",
+            group["deadline_miss_burst_distribution"],
+        )
+        for group in groups
+        if group["deadline_miss_burst_distribution"]
+    ]
+    if burst_groups:
+        maximum = max(value for _, values in burst_groups for value in values)
+        bins = range(1, maximum + 2)
+        for label, values in burst_groups:
+            plt.hist(values, bins=bins, align="left", histtype="step",
+                     linewidth=2, label=label)
+        plt.xlabel("Consecutive missed frames")
+        plt.ylabel("Burst count")
+        plt.legend(fontsize="x-small")
+    _finish(output_dir / "miss_burst_distribution_by_group.png",
+            "Deadline-miss burst distribution by approach", bool(burst_groups))
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -169,7 +190,7 @@ def main() -> None:
     args = parser.parse_args()
     aggregate = json.loads(args.aggregate_json.read_text(encoding="utf-8"))
     plot(aggregate, args.output_dir)
-    print(f"WROTE {args.output_dir} plots=7")
+    print(f"WROTE {args.output_dir} plots=8")
 
 
 if __name__ == "__main__":

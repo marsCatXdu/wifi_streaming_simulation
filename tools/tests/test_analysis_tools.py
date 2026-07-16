@@ -198,6 +198,7 @@ class OutputTests(unittest.TestCase):
             plot(result, plots)
             self.assertTrue((plots / "latency_cdf.png").is_file())
             self.assertTrue((plots / "latency_pdf.png").is_file())
+            self.assertTrue((plots / "miss_burst_distribution_by_group.png").is_file())
 
     def test_validator_rejects_count_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
