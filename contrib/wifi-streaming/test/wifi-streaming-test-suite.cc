@@ -13,6 +13,7 @@
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/metrics-collector.h"
 #include "ns3/multipath-sender.h"
+#include "ns3/random-rate-on-off-application.h"
 #include "ns3/redundancy-policy.h"
 #include "ns3/simulator.h"
 #include "ns3/string.h"
@@ -441,6 +442,10 @@ class OutputStatisticsTestCase : public TestCase
         ExperimentOutput::WriteBuildInfo(directory, build);
         ExperimentOutput::WriteLinkIntervals(directory, {link});
         ExperimentOutput::WriteMacSummary(directory, {MacSummaryRecord{}});
+        ExperimentOutput::WriteBackgroundFlows(directory, {BackgroundFlowRecord{}});
+        ExperimentOutput::WriteBackgroundRatePeriods(
+            directory,
+            {BackgroundRatePeriodRecord{}});
         ExperimentOutput::WriteSummary(directory, summary);
         {
             auto collector = CreateObject<MetricsCollector>();
@@ -453,6 +458,8 @@ class OutputStatisticsTestCase : public TestCase
                                                 "policy_decisions.csv",
                                                 "link_intervals.csv",
                                                 "mac_summary.csv",
+                                                "background_flows.csv",
+                                                "background_rate_periods.csv",
                                                 "summary.json"};
         for (const auto& name : required)
         {
@@ -765,6 +772,65 @@ class FullDuplicationDeliveryTestCase : public TestCase
     }
 };
 
+class RandomRateOnOffApplicationTestCase : public TestCase
+{
+  public:
+    RandomRateOnOffApplicationTestCase()
+        : TestCase("Random-rate ON/OFF application resamples every ON period")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        NodeContainer nodes;
+        nodes.Create(2);
+        InternetStackHelper internet;
+        internet.Install(nodes);
+        CsmaHelper csma;
+        const auto devices = csma.Install(nodes);
+        Ipv4AddressHelper address;
+        address.SetBase("10.10.0.0", "255.255.255.0");
+        const auto interfaces = address.Assign(devices);
+
+        auto application = CreateObject<RandomRateOnOffApplication>();
+        application->SetRemote(InetSocketAddress(interfaces.GetAddress(1), 9002));
+        application->SetLocal(InetSocketAddress(interfaces.GetAddress(0), 0));
+        application->SetPacketSize(200);
+        application->SetRateRange(DataRate("1Mbps"), DataRate("50Mbps"));
+        application->SetMeans(MilliSeconds(5), MilliSeconds(5));
+        NS_TEST_ASSERT_MSG_EQ(application->AssignStreams(71), 3, "Wrong RNG stream count");
+        nodes.Get(0)->AddApplication(application);
+        application->SetStartTime(Time());
+        application->SetStopTime(MilliSeconds(200));
+
+        Simulator::Stop(MilliSeconds(201));
+        Simulator::Run();
+        const auto& periods = application->GetPeriodRecords();
+        NS_TEST_ASSERT_MSG_GT(periods.size(), 2, "Too few ON periods were sampled");
+        bool rateChanged = false;
+        for (std::size_t i = 0; i < periods.size(); ++i)
+        {
+            NS_TEST_ASSERT_MSG_EQ(periods[i].rateBps >= 1e6,
+                                  true,
+                                  "Sampled rate is below minimum");
+            NS_TEST_ASSERT_MSG_EQ(periods[i].rateBps <= 50e6,
+                                  true,
+                                  "Sampled rate is above maximum");
+            NS_TEST_ASSERT_MSG_EQ(periods[i].end >= periods[i].start,
+                                  true,
+                                  "ON period has negative time");
+            if (i > 0 && periods[i].rateBps != periods[i - 1].rateBps)
+            {
+                rateChanged = true;
+            }
+        }
+        NS_TEST_ASSERT_MSG_EQ(rateChanged, true, "Rate was not resampled between ON periods");
+        NS_TEST_ASSERT_MSG_GT(application->GetTotalTxBytes(), 0, "No UDP data was sent");
+        Simulator::Destroy();
+    }
+};
+
 class WifiStreamingTestSuite : public TestSuite
 {
   public:
@@ -782,6 +848,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new RandomRateOnOffApplicationTestCase, TestCase::Duration::QUICK);
     }
 };
 

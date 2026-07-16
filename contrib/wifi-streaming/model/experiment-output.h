@@ -19,6 +19,21 @@ namespace ns3
 {
 
 /**
+ * Resolved configuration for one overlapping infrastructure BSS.
+ */
+struct ObssBssConfig
+{
+    uint32_t bssId{0};
+    uint8_t linkId{0};
+    std::string ssid;
+    std::string standard;
+    double apX{0};
+    double apY{0};
+    std::vector<double> staX;
+    std::vector<double> staY;
+};
+
+/**
  * Resolved settings written with every streaming experiment.
  */
 struct StreamingRunConfig
@@ -37,8 +52,18 @@ struct StreamingRunConfig
     uint32_t frameSizeBytes{0};
     uint32_t payloadSizeBytes{0};
     uint32_t deadlineUs{0};
+    std::string propagationModel{"fixed_rss"};
     double fixedRssDbm{0};
     double stationDistanceM{10};
+    double pathLossExponent{3};
+    double referenceLoss2GhzDb{40.046};
+    double referenceLoss5GhzDb{46.678};
+    double nakagamiDistance1M{80};
+    double nakagamiDistance2M{200};
+    double nakagamiM0{1.5};
+    double nakagamiM1{0.75};
+    double nakagamiM2{0.75};
+    int64_t propagationStreamBase{5000};
     std::string standard;
     std::string dataMode;
     std::string controlMode;
@@ -89,6 +114,23 @@ struct StreamingRunConfig
     double localOffDurationMs{0};
     double randomOnMeanMs{0};
     double randomOffMeanMs{0};
+    std::string obssProfile{"none"};
+    uint32_t obssStationsPerBss{0};
+    double obssMinRateMbps{0};
+    double obssMaxRateMbps{0};
+    double obssOnMeanMs{0};
+    double obssOffMeanMs{0};
+    uint32_t obssPacketSizeBytes{0};
+    double obssAreaMinXM{0};
+    double obssAreaMaxXM{0};
+    double obssAreaMinYM{0};
+    double obssAreaMaxYM{0};
+    double obssStaMinDistanceM{0};
+    double obssStaMaxDistanceM{0};
+    int64_t obssPlacementStreamBase{0};
+    int64_t obssApplicationStreamBase{0};
+    int64_t obssWifiStreamBase{0};
+    std::vector<ObssBssConfig> obssBsses;
 };
 
 /**
@@ -143,6 +185,43 @@ struct MacSummaryRecord
     uint64_t retryLimitDrops{0};
     std::optional<double> meanMpduServiceTimeUs;
     std::optional<double> p95MpduServiceTimeUs;
+};
+
+/**
+ * Aggregate record for one independently randomized OBSS flow.
+ */
+struct BackgroundFlowRecord
+{
+    std::string runId;
+    uint32_t bssId{0};
+    uint8_t linkId{0};
+    std::string standard;
+    uint32_t staIndex{0};
+    std::string direction;
+    uint32_t sourceNodeId{0};
+    uint32_t destinationNodeId{0};
+    uint16_t port{0};
+    int64_t rateStream{0};
+    int64_t onStream{0};
+    int64_t offStream{0};
+    uint32_t periodCount{0};
+    uint64_t bytesSent{0};
+    uint64_t bytesReceived{0};
+};
+
+/**
+ * One sampled offered rate for an OBSS flow ON period.
+ */
+struct BackgroundRatePeriodRecord
+{
+    std::string runId;
+    uint32_t bssId{0};
+    uint32_t staIndex{0};
+    std::string direction;
+    uint32_t periodIndex{0};
+    uint64_t startUs{0};
+    uint64_t endUs{0};
+    double rateMbps{0};
 };
 
 /**
@@ -210,6 +289,11 @@ class ExperimentOutput
                                    const std::vector<LinkIntervalRecord>& records);
     static void WriteMacSummary(const std::string& outputDir,
                                 const std::vector<MacSummaryRecord>& records);
+    static void WriteBackgroundFlows(const std::string& outputDir,
+                                     const std::vector<BackgroundFlowRecord>& records);
+    static void WriteBackgroundRatePeriods(
+        const std::string& outputDir,
+        const std::vector<BackgroundRatePeriodRecord>& records);
     static void WriteSummary(const std::string& outputDir, const StreamingRunSummary& summary);
 };
 

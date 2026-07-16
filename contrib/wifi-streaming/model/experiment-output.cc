@@ -252,9 +252,20 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"deadline_us\": " << config.deadlineUs << ",\n"
            << "    \"emission_mode\": \"" << JsonEscape(config.emissionMode) << "\"\n"
            << "  },\n"
-           << "  \"propagation\": {\"model\": \"fixed_rss\", \"rss_dbm\": "
-           << config.fixedRssDbm << ", \"station_distance_m\": "
-           << config.stationDistanceM << "},\n"
+           << "  \"propagation\": {\n"
+           << "    \"model\": \"" << JsonEscape(config.propagationModel) << "\",\n"
+           << "    \"rss_dbm\": " << config.fixedRssDbm << ",\n"
+           << "    \"station_distance_m\": " << config.stationDistanceM << ",\n"
+           << "    \"path_loss_exponent\": " << config.pathLossExponent << ",\n"
+           << "    \"reference_loss_2_4_ghz_db\": " << config.referenceLoss2GhzDb << ",\n"
+           << "    \"reference_loss_5_ghz_db\": " << config.referenceLoss5GhzDb << ",\n"
+           << "    \"nakagami_distance_1_m\": " << config.nakagamiDistance1M << ",\n"
+           << "    \"nakagami_distance_2_m\": " << config.nakagamiDistance2M << ",\n"
+           << "    \"nakagami_m0\": " << config.nakagamiM0 << ",\n"
+           << "    \"nakagami_m1\": " << config.nakagamiM1 << ",\n"
+           << "    \"nakagami_m2\": " << config.nakagamiM2 << ",\n"
+           << "    \"random_stream_base\": " << config.propagationStreamBase << "\n"
+           << "  },\n"
            << "  \"wifi\": {\n"
            << "    \"standard\": \"" << JsonEscape(config.standard) << "\",\n"
            << "    \"station_manager\": \"ConstantRateWifiManager\",\n"
@@ -345,6 +356,44 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"random_stream_base\": " << config.backgroundStreamBase << ",\n"
            << "    \"random_on_mean_ms\": " << config.randomOnMeanMs << ",\n"
            << "    \"random_off_mean_ms\": " << config.randomOffMeanMs << ",\n"
+           << "    \"obss\": {\n"
+           << "      \"profile\": \"" << JsonEscape(config.obssProfile) << "\",\n"
+           << "      \"stations_per_bss\": " << config.obssStationsPerBss << ",\n"
+           << "      \"min_rate_mbps\": " << config.obssMinRateMbps << ",\n"
+           << "      \"max_rate_mbps\": " << config.obssMaxRateMbps << ",\n"
+           << "      \"on_mean_ms\": " << config.obssOnMeanMs << ",\n"
+           << "      \"off_mean_ms\": " << config.obssOffMeanMs << ",\n"
+           << "      \"packet_size_bytes\": " << config.obssPacketSizeBytes << ",\n"
+           << "      \"area_min_x_m\": " << config.obssAreaMinXM << ",\n"
+           << "      \"area_max_x_m\": " << config.obssAreaMaxXM << ",\n"
+           << "      \"area_min_y_m\": " << config.obssAreaMinYM << ",\n"
+           << "      \"area_max_y_m\": " << config.obssAreaMaxYM << ",\n"
+           << "      \"sta_min_distance_m\": " << config.obssStaMinDistanceM << ",\n"
+           << "      \"sta_max_distance_m\": " << config.obssStaMaxDistanceM << ",\n"
+           << "      \"placement_stream_base\": " << config.obssPlacementStreamBase << ",\n"
+           << "      \"application_stream_base\": " << config.obssApplicationStreamBase
+           << ",\n"
+           << "      \"wifi_stream_base\": " << config.obssWifiStreamBase << ",\n"
+           << "      \"bsses\": [";
+    for (std::size_t bss = 0; bss < config.obssBsses.size(); ++bss)
+    {
+        const auto& descriptor = config.obssBsses[bss];
+        output << (bss == 0 ? "" : ", ") << "{\"bss_id\": " << descriptor.bssId
+               << ", \"link_id\": " << +descriptor.linkId << ", \"ssid\": \""
+               << JsonEscape(descriptor.ssid) << "\", \"standard\": \""
+               << JsonEscape(descriptor.standard) << "\", \"ap\": ["
+               << descriptor.apX << ", " << descriptor.apY << "], \"stas\": [";
+        NS_ABORT_MSG_IF(descriptor.staX.size() != descriptor.staY.size(),
+                        "OBSS STA coordinate vectors differ in size");
+        for (std::size_t station = 0; station < descriptor.staX.size(); ++station)
+        {
+            output << (station == 0 ? "" : ", ") << '[' << descriptor.staX[station] << ", "
+                   << descriptor.staY[station] << ']';
+        }
+        output << "]}";
+    }
+    output << "]\n"
+           << "    },\n"
            << "    \"correlation\": {\n"
            << "      \"mode\": \"" << JsonEscape(config.correlationMode) << "\",\n"
            << "      \"trace\": \"" << JsonEscape(config.correlationTrace) << "\",\n"
@@ -423,6 +472,40 @@ ExperimentOutput::WriteMacSummary(const std::string& outputDir,
         output << ',';
         WriteCsvOptional(output, record.p95MpduServiceTimeUs);
         output << '\n';
+    }
+}
+
+void
+ExperimentOutput::WriteBackgroundFlows(const std::string& outputDir,
+                                       const std::vector<BackgroundFlowRecord>& records)
+{
+    auto output = OpenOutput(outputDir, "background_flows.csv");
+    output << "run_id,bss_id,link_id,standard,sta_index,direction,source_node_id,"
+              "destination_node_id,port,rate_stream,on_stream,off_stream,period_count,"
+              "bytes_sent,bytes_received\n";
+    for (const auto& record : records)
+    {
+        output << record.runId << ',' << record.bssId << ',' << +record.linkId << ','
+               << record.standard << ',' << record.staIndex << ',' << record.direction << ','
+               << record.sourceNodeId << ',' << record.destinationNodeId << ',' << record.port
+               << ',' << record.rateStream << ',' << record.onStream << ',' << record.offStream
+               << ',' << record.periodCount << ',' << record.bytesSent << ','
+               << record.bytesReceived << '\n';
+    }
+}
+
+void
+ExperimentOutput::WriteBackgroundRatePeriods(
+    const std::string& outputDir,
+    const std::vector<BackgroundRatePeriodRecord>& records)
+{
+    auto output = OpenOutput(outputDir, "background_rate_periods.csv");
+    output << "run_id,bss_id,sta_index,direction,period_index,start_us,end_us,rate_mbps\n";
+    for (const auto& record : records)
+    {
+        output << record.runId << ',' << record.bssId << ',' << record.staIndex << ','
+               << record.direction << ',' << record.periodIndex << ',' << record.startUs << ','
+               << record.endUs << ',' << record.rateMbps << '\n';
     }
 }
 

@@ -11,6 +11,7 @@ build_lib(
     model/frame-receiver.cc
     model/controlled-udp-application.cc
     model/correlated-load-controller.cc
+    model/random-rate-on-off-application.cc
   HEADER_FILES
     model/streaming-header.h
     model/frame-source.h
@@ -22,6 +23,7 @@ build_lib(
     model/frame-receiver.h
     model/controlled-udp-application.h
     model/correlated-load-controller.h
+    model/random-rate-on-off-application.h
   LIBRARIES_TO_LINK
     ${libapplications}
     ${libinternet}
