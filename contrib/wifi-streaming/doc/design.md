@@ -88,6 +88,45 @@ A duplicated frame is a recovery when the union completes before the primary
 copy (or while it remains incomplete). It provides no benefit when primary
 copy completion equals union completion.
 
+## Background and correlated-load model
+
+`CorrelatedLoadController` owns separate common and per-link alternating ON/OFF
+processes. `independent` uses only per-link processes, `common_bursts` applies
+each common transition explicitly to every link, and
+`mixed_common_and_independent` gates a link ON when either its local process or
+the common process is ON. `trace_replay` consumes `timestamp_s,link,on` CSV
+rows; `timestamp_s` is relative to the controller start, not simulation time
+zero. Common and local exponential durations have separate assigned ns-3
+streams; a positive deterministic duration replaces the corresponding
+exponential draw. Transition records retain the event source even when a
+mixed-mode event does not change effective state.
+
+The experiment's no-background default is unchanged. Background stations are
+configured per link with alternating near/far coordinates and may generate
+constant-rate UDP, controller-gated bursty UDP, or TCP bulk traffic. Direction
+is uplink, downlink, or alternating (`mixed`). Streaming/AP devices use
+`--wifiStandard`; background stations independently use
+`--backgroundStandard0` and `--backgroundStandard1` (`inherit` by default).
+Each helper has its own `ConstantRateWifiManager` fixed at VHT, HE, or EHT MCS
+5. The fixed dual-interface channel plan is 2.4 GHz plus 5 GHz, so VHT is
+rejected on link 0 and allowed on link 1. A background standard cannot be newer
+than its AP standard. Heterogeneous standards are uplink-only: downlink and
+mixed directions are rejected because one fixed AP data mode cannot safely
+serve legacy stations. Invalid combinations abort before simulation.
+
+Resolved background counts, per-link standards, direction, traffic kind, rates, placement,
+controller means/durations, trace, and stream base are written under
+`background` in `resolved_config.json`. `summary.json` adds background offered
+and delivered bytes and delivered throughput. Existing CSV columns are
+unchanged.
+
+Controller behavior is covered by deterministic, common-versus-local, trace,
+and independent-versus-common tests in the module suite. The controlled
+end-to-end check
+`contrib/wifi-streaming/test/background-load-integration.py` compares matched
+dual-interface runs and requires offered load to worsen streaming latency or
+delivery and link-0 MPDU service time.
+
 ## Current boundaries
 
 - Dynamic telemetry and adaptive redundancy policies are not part of this
@@ -106,3 +145,9 @@ copy completion equals union completion.
 - MAC and airtime totals cover transmitting station radios. AP ACK/control
   airtime is observable in the station PHY receive state but does not create
   AP MAC rows.
+- Placement coordinates are recorded and installed, but the current
+  `FixedRssLossModel` intentionally gives every station the configured RSS.
+  Near/far geometry therefore does not create path-loss asymmetry in this MVP.
+- TCP offered-byte accounting uses application Tx trace bytes; delivered bytes
+  come from sinks. TCP burst gating and per-background-station MAC summaries
+  are not implemented.

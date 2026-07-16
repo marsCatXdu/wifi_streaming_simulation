@@ -9,6 +9,8 @@ build_lib(
     model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
+    model/controlled-udp-application.cc
+    model/correlated-load-controller.cc
   HEADER_FILES
     model/streaming-header.h
     model/frame-source.h
@@ -18,6 +20,8 @@ build_lib(
     model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h
+    model/controlled-udp-application.h
+    model/correlated-load-controller.h
   LIBRARIES_TO_LINK
     ${libapplications}
     ${libinternet}

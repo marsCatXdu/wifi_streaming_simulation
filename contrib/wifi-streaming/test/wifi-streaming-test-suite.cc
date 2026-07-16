@@ -3,6 +3,7 @@
  */
 
 #include "ns3/csma-module.h"
+#include "ns3/correlated-load-controller.h"
 #include "ns3/experiment-output.h"
 #include "ns3/frame-packetizer.h"
 #include "ns3/frame-receiver.h"
@@ -185,6 +186,146 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(emissions[0].offset, Time(), "First offset is not zero");
         NS_TEST_ASSERT_MSG_EQ(emissions[1].offset, MilliSeconds(1), "Middle offset is wrong");
         NS_TEST_ASSERT_MSG_EQ(emissions[2].offset, MilliSeconds(2), "Last offset is wrong");
+    }
+};
+
+class CorrelatedLoadControllerTestCase : public TestCase
+{
+  public:
+    CorrelatedLoadControllerTestCase()
+        : TestCase("Deterministic common/local transitions and replay")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto common = CreateObject<CorrelatedLoadController>();
+        common->SetLinkCount(2);
+        common->SetMode("common_bursts");
+        common->SetCommonDeterministicDurations(MilliSeconds(20), MilliSeconds(10));
+        common->Start(Time(), MilliSeconds(55));
+        Simulator::Stop(MilliSeconds(55));
+        Simulator::Run();
+        const auto commonTransitions = common->GetTransitions();
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions.size(), 6, "Wrong number of common events");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[0].time, MilliSeconds(10), "First event moved");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[0].link, 0, "Common event omitted link 0");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[1].link, 1, "Common event omitted link 1");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[0].on, true, "Common ON state is wrong");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[0].source, "common", "Wrong event source");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[2].time, MilliSeconds(30), "OFF event moved");
+        NS_TEST_ASSERT_MSG_EQ(commonTransitions[2].on, false, "Common OFF state is wrong");
+        Simulator::Destroy();
+
+        auto mixed = CreateObject<CorrelatedLoadController>();
+        mixed->SetLinkCount(2);
+        mixed->SetMode("mixed_common_and_independent");
+        mixed->SetCommonDeterministicDurations(MilliSeconds(10), MilliSeconds(10));
+        mixed->SetLocalDeterministicDurations(MilliSeconds(30), MilliSeconds(15));
+        mixed->Start(Time(), MilliSeconds(26));
+        Simulator::Stop(MilliSeconds(26));
+        Simulator::Run();
+        bool sawCommon0 = false;
+        bool sawCommon1 = false;
+        bool sawLocal = false;
+        for (const auto& transition : mixed->GetTransitions())
+        {
+            sawCommon0 |= transition.source == "common" && transition.link == 0;
+            sawCommon1 |= transition.source == "common" && transition.link == 1;
+            sawLocal |= transition.source == "local";
+        }
+        NS_TEST_ASSERT_MSG_EQ(sawCommon0 && sawCommon1,
+                              true,
+                              "Common process was not explicitly applied to both links");
+        NS_TEST_ASSERT_MSG_EQ(sawLocal, true, "Local process did not run independently");
+        Simulator::Destroy();
+
+        const std::string traceFile = "/tmp/ns3-wifi-streaming-load-trace.csv";
+        {
+            std::ofstream trace(traceFile);
+            trace << "timestamp_s,link,on\n"
+                  << "0.001,1,on\n"
+                  << "0.003,0,1\n"
+                  << "0.004,1,off\n";
+        }
+        auto replay = CreateObject<CorrelatedLoadController>();
+        replay->SetLinkCount(2);
+        replay->SetMode("trace_replay");
+        replay->SetTraceFile(traceFile);
+        replay->Start(MilliSeconds(5), MilliSeconds(15));
+        Simulator::Stop(MilliSeconds(15));
+        Simulator::Run();
+        const auto replayTransitions = replay->GetTransitions();
+        NS_TEST_ASSERT_MSG_EQ(replayTransitions.size(), 3, "Trace event count changed");
+        NS_TEST_ASSERT_MSG_EQ(replayTransitions[0].time,
+                              MilliSeconds(6),
+                              "Trace time was not relative to controller start");
+        NS_TEST_ASSERT_MSG_EQ(replayTransitions[0].link, 1, "Trace link changed");
+        NS_TEST_ASSERT_MSG_EQ(replayTransitions[2].on, false, "Trace OFF state changed");
+        std::remove(traceFile.c_str());
+        Simulator::Destroy();
+    }
+};
+
+class CorrelationSanityTestCase : public TestCase
+{
+  public:
+    CorrelationSanityTestCase()
+        : TestCase("Independent events are not joint while common events are joint")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto independent = CreateObject<CorrelatedLoadController>();
+        independent->SetLinkCount(2);
+        independent->SetMode("independent");
+        independent->SetLocalMeans(MilliSeconds(5), MilliSeconds(5));
+        independent->SetLocalDeterministicDurations(Seconds(1), NanoSeconds(0));
+        independent->AssignStreams(900);
+        independent->Start(Time(), MilliSeconds(50));
+        Simulator::Stop(MilliSeconds(50));
+        Simulator::Run();
+        const auto independentTransitions = independent->GetTransitions();
+        std::optional<Time> first0;
+        std::optional<Time> first1;
+        for (const auto& transition : independentTransitions)
+        {
+            if (transition.link == 0 && !first0)
+            {
+                first0 = transition.time;
+            }
+            if (transition.link == 1 && !first1)
+            {
+                first1 = transition.time;
+            }
+        }
+        NS_TEST_ASSERT_MSG_EQ(first0.has_value() && first1.has_value(),
+                              true,
+                              "Independent links did not both transition");
+        NS_TEST_ASSERT_MSG_EQ(*first0 != *first1,
+                              true,
+                              "Independent streams produced an identical first event");
+        Simulator::Destroy();
+
+        auto common = CreateObject<CorrelatedLoadController>();
+        common->SetLinkCount(2);
+        common->SetMode("common_bursts");
+        common->SetCommonDeterministicDurations(MilliSeconds(5), MilliSeconds(5));
+        common->Start(Time(), MilliSeconds(20));
+        Simulator::Stop(MilliSeconds(20));
+        Simulator::Run();
+        const auto transitions = common->GetTransitions();
+        NS_TEST_ASSERT_MSG_EQ(transitions.size() >= 2, true, "No common transition occurred");
+        NS_TEST_ASSERT_MSG_EQ(transitions[0].time,
+                              transitions[1].time,
+                              "Common transition was not joint");
+        NS_TEST_ASSERT_MSG_EQ(transitions[0].link != transitions[1].link,
+                              true,
+                              "Common transition did not cover distinct links");
+        Simulator::Destroy();
     }
 };
 
@@ -633,6 +774,8 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new HeaderTestCase, TestCase::Duration::QUICK);
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new CorrelationSanityTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new OutputStatisticsTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);

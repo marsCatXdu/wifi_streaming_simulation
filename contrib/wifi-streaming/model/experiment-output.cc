@@ -276,6 +276,40 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  },\n"
            << "  \"policy_settings\": {\"static_link_0_score\": " << config.staticLink0Score
            << ", \"static_link_1_score\": " << config.staticLink1Score << "},\n"
+           << "  \"background\": {\n"
+           << "    \"traffic\": \"" << JsonEscape(config.backgroundTraffic) << "\",\n"
+           << "    \"direction\": \"" << JsonEscape(config.backgroundDirection) << "\",\n"
+           << "    \"stations_per_link\": [";
+    for (std::size_t i = 0; i < config.backgroundStations.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << config.backgroundStations[i];
+    }
+    output << "],\n"
+           << "    \"standards_per_link\": [";
+    for (std::size_t i = 0; i < config.backgroundStandards.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << '"'
+               << JsonEscape(config.backgroundStandards[i]) << '"';
+    }
+    output << "],\n"
+           << "    \"rate_mbps_per_station\": " << config.backgroundRateMbps << ",\n"
+           << "    \"packet_size_bytes\": " << config.backgroundPacketSizeBytes << ",\n"
+           << "    \"near_distance_m\": " << config.backgroundNearDistanceM << ",\n"
+           << "    \"far_distance_m\": " << config.backgroundFarDistanceM << ",\n"
+           << "    \"random_stream_base\": " << config.backgroundStreamBase << ",\n"
+           << "    \"correlation\": {\n"
+           << "      \"mode\": \"" << JsonEscape(config.correlationMode) << "\",\n"
+           << "      \"trace\": \"" << JsonEscape(config.correlationTrace) << "\",\n"
+           << "      \"common_on_mean_ms\": " << config.commonOnMeanMs << ",\n"
+           << "      \"common_off_mean_ms\": " << config.commonOffMeanMs << ",\n"
+           << "      \"local_on_mean_ms\": " << config.localOnMeanMs << ",\n"
+           << "      \"local_off_mean_ms\": " << config.localOffMeanMs << ",\n"
+           << "      \"common_on_duration_ms\": " << config.commonOnDurationMs << ",\n"
+           << "      \"common_off_duration_ms\": " << config.commonOffDurationMs << ",\n"
+           << "      \"local_on_duration_ms\": " << config.localOnDurationMs << ",\n"
+           << "      \"local_off_duration_ms\": " << config.localOffDurationMs << "\n"
+           << "    }\n"
+           << "  },\n"
            << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"
            << "}\n";
 }
@@ -383,7 +417,10 @@ ExperimentOutput::WriteSummary(const std::string& outputDir,
            << "  \"retransmissions\": " << summary.retransmissions << ",\n"
            << "  \"phy_tx_time_us\": " << summary.phyTxTimeUs << ",\n"
            << "  \"phy_rx_time_us\": " << summary.phyRxTimeUs << ",\n"
-           << "  \"phy_cca_busy_time_us\": " << summary.phyCcaBusyTimeUs << "\n"
+           << "  \"phy_cca_busy_time_us\": " << summary.phyCcaBusyTimeUs << ",\n"
+           << "  \"background_bytes_sent\": " << summary.backgroundBytesSent << ",\n"
+           << "  \"background_bytes_received\": " << summary.backgroundBytesReceived << ",\n"
+           << "  \"background_throughput_mbps\": " << summary.backgroundThroughputMbps << "\n"
            << "}\n";
 }
 
