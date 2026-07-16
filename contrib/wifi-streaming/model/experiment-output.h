@@ -24,8 +24,12 @@ namespace ns3
 struct StreamingRunConfig
 {
     std::string runId;
+    uint32_t rngSeed{1};
+    uint64_t rngRun{1};
     std::string topology;
     std::string policy;
+    std::string source{"synthetic"};
+    std::string traceFile;
     std::string emissionMode;
     double durationSeconds{0};
     double warmupSeconds{0};

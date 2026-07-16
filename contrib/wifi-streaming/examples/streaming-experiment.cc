@@ -134,6 +134,8 @@ StandardRank(const std::string& name)
 int
 main(int argc, char* argv[])
 {
+    uint32_t seed = 1;
+    uint64_t run = 1;
     double durationSeconds = 1.0;
     double fps = 30.0;
     uint32_t frameSize = 12000;
@@ -141,6 +143,8 @@ main(int argc, char* argv[])
     uint32_t deadlineUs = 33333;
     double fixedRssDbm = -50.0;
     std::string emissionMode = "burst";
+    std::string sourceName = "synthetic";
+    std::string traceFile;
     std::string topology = "single_link";
     std::string policyName = "fixed_link_0";
     double staticLink0Score = 0.0;
@@ -183,6 +187,8 @@ main(int argc, char* argv[])
     double localOffDurationMs = 0;
 
     CommandLine command(__FILE__);
+    command.AddValue("seed", "ns-3 random seed", seed);
+    command.AddValue("run", "ns-3 random run/substream", run);
     command.AddValue("duration", "Frame source duration in seconds", durationSeconds);
     command.AddValue("fps", "Synthetic frame rate", fps);
     command.AddValue("frameSize", "Synthetic frame size in bytes", frameSize);
@@ -190,6 +196,8 @@ main(int argc, char* argv[])
     command.AddValue("deadlineUs", "Frame deadline in microseconds", deadlineUs);
     command.AddValue("fixedRssDbm", "Fixed received signal strength in dBm", fixedRssDbm);
     command.AddValue("emissionMode", "burst or uniform_within_frame", emissionMode);
+    command.AddValue("source", "Frame source: synthetic or trace", sourceName);
+    command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
     command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, or full_duplication",
@@ -275,6 +283,10 @@ main(int argc, char* argv[])
                      "Per-link deterministic OFF duration; zero selects exponential",
                      localOffDurationMs);
     command.Parse(argc, argv);
+    NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
+    NS_ABORT_MSG_IF(run == 0, "run must be positive");
+    RngSeedManager::SetSeed(seed);
+    RngSeedManager::SetRun(run);
     const std::string resolvedBackgroundStandard0 =
         backgroundStandard0 == "inherit" ? wifiStandard : backgroundStandard0;
     const std::string resolvedBackgroundStandard1 =
@@ -292,6 +304,10 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
                     "mlo_str requires --wifiStandard=eht");
     NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
+    NS_ABORT_MSG_IF(sourceName != "synthetic" && sourceName != "trace",
+                    "source must be synthetic or trace");
+    NS_ABORT_MSG_IF(sourceName == "trace" && traceFile.empty(),
+                    "source=trace requires --traceFile");
     NS_ABORT_MSG_IF(emissionMode != "burst" && emissionMode != "uniform_within_frame",
                     "Unknown emission mode " << emissionMode);
     NS_ABORT_MSG_IF(wifiStandard != "vht" && wifiStandard != "he" && wifiStandard != "eht",
@@ -714,8 +730,12 @@ main(int argc, char* argv[])
 
     StreamingRunConfig resolved;
     resolved.runId = runId;
+    resolved.rngSeed = seed;
+    resolved.rngRun = run;
     resolved.topology = topology;
     resolved.policy = policyName;
+    resolved.source = sourceName;
+    resolved.traceFile = traceFile;
     resolved.emissionMode = emissionMode;
     resolved.durationSeconds = durationSeconds;
     resolved.warmupSeconds = warmup.GetSeconds();
@@ -814,11 +834,22 @@ main(int argc, char* argv[])
     receiver->SetStartTime(Seconds(0.5));
     receiver->SetStopTime(Seconds(durationSeconds + 2.9));
 
-    Ptr<SyntheticFrameSource> source = CreateObject<SyntheticFrameSource>();
-    source->SetFps(fps);
-    source->SetDuration(Seconds(durationSeconds));
-    source->SetConstantFrameSize(frameSize);
-    source->SetDeadline(deadlineUs);
+    Ptr<FrameSource> source;
+    if (sourceName == "trace")
+    {
+        auto traceSource = CreateObject<TraceFrameSource>();
+        traceSource->SetFileName(traceFile);
+        source = traceSource;
+    }
+    else
+    {
+        auto syntheticSource = CreateObject<SyntheticFrameSource>();
+        syntheticSource->SetFps(fps);
+        syntheticSource->SetDuration(Seconds(durationSeconds));
+        syntheticSource->SetConstantFrameSize(frameSize);
+        syntheticSource->SetDeadline(deadlineUs);
+        source = syntheticSource;
+    }
     source->AssignStreams(1);
 
     Ptr<MultipathSender> sender = CreateObject<MultipathSender>();

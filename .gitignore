@@ -45,6 +45,7 @@ version.cache
 .idea/
 cmake-*/
 vcpkg/
+results/
 
 .vs/
 

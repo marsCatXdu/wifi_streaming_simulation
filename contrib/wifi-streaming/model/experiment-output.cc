@@ -234,6 +234,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
     auto output = OpenOutput(outputDir, "resolved_config.json");
     output << "{\n"
            << "  \"run_id\": \"" << JsonEscape(config.runId) << "\",\n"
+           << "  \"seed\": " << config.rngSeed << ",\n"
+           << "  \"run\": " << config.rngRun << ",\n"
            << "  \"topology\": \"" << JsonEscape(config.topology) << "\",\n"
            << "  \"policy\": \"" << JsonEscape(config.policy) << "\",\n"
            << "  \"duration_s\": " << config.durationSeconds << ",\n"
@@ -242,6 +244,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  \"measurement_stop_s\": " << config.warmupSeconds + config.durationSeconds
            << ",\n"
            << "  \"stream\": {\n"
+           << "    \"source\": \"" << JsonEscape(config.source) << "\",\n"
+           << "    \"trace_file\": \"" << JsonEscape(config.traceFile) << "\",\n"
            << "    \"fps\": " << config.fps << ",\n"
            << "    \"frame_size_bytes\": " << config.frameSizeBytes << ",\n"
            << "    \"payload_size_bytes\": " << config.payloadSizeBytes << ",\n"

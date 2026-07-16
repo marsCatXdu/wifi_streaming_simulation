@@ -1,0 +1,36 @@
+name: trace-smoke
+output_root: results/smoke
+workers: 1
+
+base:
+  stream:
+    source: trace
+    trace_file: ../traces/smoke_frames.csv
+    duration: 0.2
+    payload_size: 1200
+    emission_mode: burst
+  propagation:
+    fixed_rss_dbm: -50
+  wifi:
+    wifi_standard: he
+
+seeds: [17]
+runs: [1]
+
+topologies:
+  - name: single_link
+  - name: dual_interface
+  - name: mlo_str
+    config:
+      wifi.wifi_standard: eht
+
+policies:
+  - name: fixed_link_0
+    topologies: [single_link, mlo_str]
+  - name: full_duplication
+    topologies: [dual_interface]
+
+# Dotted keys address the nested base mapping.  Every listed value participates
+# in a deterministic Cartesian product.
+sweep:
+  wifi.queue_max_packets: [500]
