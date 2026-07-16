@@ -1,0 +1,23 @@
+build_lib(
+  LIBNAME wifi-streaming
+  SOURCE_FILES
+    model/streaming-header.cc
+    model/frame-source.cc
+    model/frame-packetizer.cc
+    model/metrics-collector.cc
+    model/multipath-sender.cc
+    model/frame-receiver.cc
+  HEADER_FILES
+    model/streaming-header.h
+    model/frame-source.h
+    model/frame-packetizer.h
+    model/metrics-collector.h
+    model/multipath-sender.h
+    model/frame-receiver.h
+  LIBRARIES_TO_LINK
+    ${libapplications}
+    ${libinternet}
+    ${libnetwork}
+  TEST_SOURCES
+    test/wifi-streaming-test-suite.cc
+)
