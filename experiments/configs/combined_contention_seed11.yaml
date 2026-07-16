@@ -1,0 +1,71 @@
+name: combined-contention-seed11
+output_root: results/combined_contention_realistic_seed11
+workers: 2
+
+base:
+  stream:
+    source: synthetic
+    duration: 60
+    fps: 30
+    frame_size: 12000
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  propagation:
+    propagation_model: log_distance_nakagami
+    station_distance_m: 10
+    path_loss_exponent: 3
+    reference_loss_2_4_ghz_db: 40.046
+    reference_loss_5_ghz_db: 46.678
+    nakagami_distance_1_m: 80
+    nakagami_distance_2_m: 200
+    nakagami_m0: 1.5
+    nakagami_m1: 0.75
+    nakagami_m2: 0.75
+    propagation_stream_base: 5000
+  wifi:
+    wifi_standard: eht
+  background:
+    background_profile: legacy_mixed8
+    background_rate_mbps: 2
+    background_packet_size: 1200
+    background_stream_base: 4000
+    random_on_mean_ms: 100
+    random_off_mean_ms: 100
+  obss:
+    obss_profile: mixed4x4
+    obss_stations_per_bss: 4
+    obss_ul_min_rate_mbps: 0.5
+    obss_ul_max_rate_mbps: 3
+    obss_dl_min_rate_mbps: 2
+    obss_dl_max_rate_mbps: 8
+    obss_on_mean_ms: 100
+    obss_off_mean_ms: 300
+    obss_station_manager: minstrel_ht
+    obss_manager_update_ms: 50
+    obss_packet_size: 1200
+    obss_area_min_x_m: -15
+    obss_area_max_x_m: 15
+    obss_area_min_y_m: -10
+    obss_area_max_y_m: 10
+    obss_sta_min_distance_m: 2
+    obss_sta_max_distance_m: 6
+    obss_placement_stream_base: 6000
+    obss_application_stream_base: 7000
+    obss_wifi_stream_base: 8000
+
+seeds: [11]
+runs: [1]
+
+topologies:
+  - name: dual_interface
+  - name: mlo_str
+
+policies:
+  - name: fixed_link_0
+    topologies: [mlo_str]
+  - name: full_duplication
+    topologies: [dual_interface]
+
+sweep:
+  wifi.queue_max_packets: [500]
