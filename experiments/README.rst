@@ -12,6 +12,17 @@ The matched legacy-contention comparison is available as::
 
   python3 tools/run_experiments.py experiments/configs/legacy_contention.yaml
 
+The distance-aware overlapping-BSS batches are available as::
+
+  python3 tools/run_experiments.py experiments/configs/obss_contention.yaml
+  python3 tools/run_experiments.py experiments/configs/combined_contention.yaml
+
+``obss_contention.yaml`` adds four independent APs, one each for HT, VHT, HE,
+and EHT, with four STAs per AP.  Every STA generates independent UL and DL
+UDP ON/OFF traffic.  A new uniform rate from 1 to 50 Mbps is drawn for each
+ON period.  ``combined_contention.yaml`` adds the same overlapping BSSs on top
+of the sixteen stations in ``legacy_mixed8``.
+
 It compares dual-interface full duplication with native STR MLO against the
 same eight seeded, independent mixed-standard UDP ON/OFF uplinks on each 2.4
 and 5 GHz channel.
@@ -75,6 +86,13 @@ the pointwise median across runs and their shaded bands span the pointwise
 10th--90th percentiles.  The PDF is a common-bin histogram density, not a
 kernel-density estimate.
 
+OBSS runs also contain ``background_flows.csv`` and
+``background_rate_periods.csv``.  The former identifies all 32 directional
+flows and their explicit streams.  The latter records every ON-period rate
+draw.  Log-distance path loss and Nakagami fading make seeded AP/STA placement
+physically relevant; both target topologies receive identical resolved
+coordinates and traffic schedules for a matched seed.
+
 Calibration
 -----------
 
@@ -100,8 +118,9 @@ Cross-copy delay correlation and joint exceedance are available only for
 duplicated frames with the required copy timestamps.  Sparse plots explicitly
 state that data is insufficient.  The fixed-RSS smoke setup does not represent
 mobility, fading, encoder/decoder delay, or firmware processing.
-Changing ``station_distance_m`` changes geometry and propagation delay, but
-not received power while ``FixedRssLossModel`` is selected.
+Changing ``station_distance_m`` changes only propagation delay while
+``FixedRssLossModel`` is selected; it changes received power in the OBSS
+log-distance configurations.
 Non-MLD legacy stations associate dynamically to matching AP MLD links because
 the ns-3.48 static-association helper is not safe for this mixed device shape;
 the streaming MLD remains statically associated.

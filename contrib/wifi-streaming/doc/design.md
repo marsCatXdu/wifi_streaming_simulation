@@ -159,6 +159,34 @@ ON/OFF means are written under `background` in `resolved_config.json`.
 `summary.json` adds offered and delivered bytes in total, per link, and per
 station, plus delivered throughput. Existing CSV columns are unchanged.
 
+### Overlapping BSS profile
+
+`--obssProfile=mixed4x4` is independent of `--backgroundProfile` and may be
+used alone or with `legacy_mixed8`. It creates four infrastructure BSSs with
+unique SSIDs and four statically associated STAs each. HT and HE BSSs share
+the experiment's 2.4 GHz 20 MHz channel; VHT and single-link EHT BSSs share
+the 5 GHz 20 MHz channel. Every homogeneous BSS uses its standard's MCS 5 in
+both directions.
+
+Each STA has simultaneous UL and DL UDP ON/OFF sources. ON and OFF durations
+are independent exponential samples. A new continuous-uniform offered rate
+between `--obssMinRateMbps` and `--obssMaxRateMbps` is selected at the start
+of every ON period and held for that period. Rate, ON-time, and OFF-time
+draws use three explicit streams per flow. Placement, Wi-Fi, application, and
+propagation streams occupy separately configured ranges so matched dual and
+MLO runs use the same inputs.
+
+AP coordinates are sampled inside the configured rectangle. STA angle and
+radius are sampled independently around the associated AP. OBSS batches use
+`log_distance_nakagami`: a band-specific log-distance model feeds a Nakagami
+model on each shared spectrum channel. Scalar loss is therefore
+distance-sensitive and fading consumes explicit channel streams.
+
+`background_flows.csv` records one row per BSS, STA, and direction, including
+stream assignments and delivered totals. `background_rate_periods.csv`
+records every ON interval and its sampled rate. Resolved propagation,
+positions, and stream bases are retained in `resolved_config.json`.
+
 Controller behavior is covered by deterministic, common-versus-local, trace,
 and independent-versus-common tests in the module suite. The controlled
 end-to-end check
@@ -194,9 +222,9 @@ ID, and successful MPDUs plus PHY TX occupancy on both links.
 - MAC and airtime totals cover transmitting station radios. AP ACK/control
   airtime is observable in the station PHY receive state but does not create
   AP MAC rows.
-- Placement coordinates are recorded and installed, but the current
-  `FixedRssLossModel` intentionally gives every station the configured RSS.
-  Near/far geometry therefore does not create path-loss asymmetry in this MVP.
+- `FixedRssLossModel` intentionally makes geometry irrelevant in legacy smoke
+  configurations. OBSS configurations use log-distance loss plus Nakagami
+  fading, so their coordinates affect received power.
 - TCP offered-byte accounting uses application Tx trace bytes; delivered bytes
   come from sinks. TCP burst gating and per-background-station MAC summaries
   are not implemented.

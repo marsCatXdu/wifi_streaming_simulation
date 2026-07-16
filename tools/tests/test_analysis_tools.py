@@ -121,6 +121,30 @@ class MatrixTests(unittest.TestCase):
         }, Path("."))
         self.assertIn("--stationDistanceM=10", distance_arguments)
 
+    def test_obss_cli_translation(self) -> None:
+        arguments = cli_arguments({
+            "propagation": {
+                "propagation_model": "log_distance_nakagami",
+                "path_loss_exponent": 3,
+                "propagation_stream_base": 5000,
+            },
+            "obss": {
+                "obss_profile": "mixed4x4",
+                "obss_min_rate_mbps": 1,
+                "obss_max_rate_mbps": 50,
+                "obss_application_stream_base": 7000,
+                "obss_wifi_stream_base": 8000,
+            },
+        }, Path("."))
+        self.assertIn("--propagationModel=log_distance_nakagami", arguments)
+        self.assertIn("--pathLossExponent=3", arguments)
+        self.assertIn("--propagationStreamBase=5000", arguments)
+        self.assertIn("--obssProfile=mixed4x4", arguments)
+        self.assertIn("--obssMinRateMbps=1", arguments)
+        self.assertIn("--obssMaxRateMbps=50", arguments)
+        self.assertIn("--obssApplicationStreamBase=7000", arguments)
+        self.assertIn("--obssWifiStreamBase=8000", arguments)
+
 
 class OutputTests(unittest.TestCase):
     def test_validation_and_run_level_summary(self) -> None:

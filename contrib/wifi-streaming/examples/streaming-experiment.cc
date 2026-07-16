@@ -15,6 +15,7 @@
 #include "ns3/wifi-streaming-module.h"
 
 #include <chrono>
+#include <cmath>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -163,6 +164,16 @@ main(int argc, char* argv[])
     uint32_t deadlineUs = 33333;
     double fixedRssDbm = -50.0;
     double stationDistanceM = 10.0;
+    std::string propagationModel = "fixed_rss";
+    double pathLossExponent = 3.0;
+    double referenceLoss2GhzDb = 40.046;
+    double referenceLoss5GhzDb = 46.678;
+    double nakagamiDistance1M = 80.0;
+    double nakagamiDistance2M = 200.0;
+    double nakagamiM0 = 1.5;
+    double nakagamiM1 = 0.75;
+    double nakagamiM2 = 0.75;
+    int64_t propagationStreamBase = 5000;
     std::string emissionMode = "burst";
     std::string sourceName = "synthetic";
     std::string traceFile;
@@ -209,6 +220,22 @@ main(int argc, char* argv[])
     double localOffDurationMs = 0;
     double randomOnMeanMs = 100;
     double randomOffMeanMs = 100;
+    std::string obssProfile = "none";
+    uint32_t obssStationsPerBss = 4;
+    double obssMinRateMbps = 1.0;
+    double obssMaxRateMbps = 50.0;
+    double obssOnMeanMs = 100.0;
+    double obssOffMeanMs = 100.0;
+    uint32_t obssPacketSize = 1200;
+    double obssAreaMinXM = -15.0;
+    double obssAreaMaxXM = 15.0;
+    double obssAreaMinYM = -10.0;
+    double obssAreaMaxYM = 10.0;
+    double obssStaMinDistanceM = 2.0;
+    double obssStaMaxDistanceM = 6.0;
+    int64_t obssPlacementStreamBase = 6000;
+    int64_t obssApplicationStreamBase = 7000;
+    int64_t obssWifiStreamBase = 8000;
 
     CommandLine command(__FILE__);
     command.AddValue("seed", "ns-3 random seed", seed);
@@ -220,6 +247,24 @@ main(int argc, char* argv[])
     command.AddValue("deadlineUs", "Frame deadline in microseconds", deadlineUs);
     command.AddValue("fixedRssDbm", "Fixed received signal strength in dBm", fixedRssDbm);
     command.AddValue("stationDistanceM", "Streaming STA distance from AP", stationDistanceM);
+    command.AddValue("propagationModel",
+                     "fixed_rss or log_distance_nakagami",
+                     propagationModel);
+    command.AddValue("pathLossExponent", "Log-distance path-loss exponent", pathLossExponent);
+    command.AddValue("referenceLoss2GhzDb",
+                     "Log-distance reference loss at 1 m for 2.4 GHz",
+                     referenceLoss2GhzDb);
+    command.AddValue("referenceLoss5GhzDb",
+                     "Log-distance reference loss at 1 m for 5 GHz",
+                     referenceLoss5GhzDb);
+    command.AddValue("nakagamiDistance1M", "First Nakagami distance boundary", nakagamiDistance1M);
+    command.AddValue("nakagamiDistance2M", "Second Nakagami distance boundary", nakagamiDistance2M);
+    command.AddValue("nakagamiM0", "Near-field Nakagami m", nakagamiM0);
+    command.AddValue("nakagamiM1", "Middle-field Nakagami m", nakagamiM1);
+    command.AddValue("nakagamiM2", "Far-field Nakagami m", nakagamiM2);
+    command.AddValue("propagationStreamBase",
+                     "First deterministic stream for propagation fading",
+                     propagationStreamBase);
     command.AddValue("emissionMode", "burst or uniform_within_frame", emissionMode);
     command.AddValue("source", "Frame source: synthetic or trace", sourceName);
     command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
@@ -316,6 +361,32 @@ main(int argc, char* argv[])
     command.AddValue("randomOffMeanMs",
                      "Per-station exponential OFF mean for udp_random_onoff",
                      randomOffMeanMs);
+    command.AddValue("obssProfile", "none or mixed4x4 overlapping-BSS profile", obssProfile);
+    command.AddValue("obssStationsPerBss", "Stations in each overlapping BSS", obssStationsPerBss);
+    command.AddValue("obssMinRateMbps", "Minimum OBSS ON-period rate", obssMinRateMbps);
+    command.AddValue("obssMaxRateMbps", "Maximum OBSS ON-period rate", obssMaxRateMbps);
+    command.AddValue("obssOnMeanMs", "Mean OBSS ON duration", obssOnMeanMs);
+    command.AddValue("obssOffMeanMs", "Mean OBSS OFF duration", obssOffMeanMs);
+    command.AddValue("obssPacketSize", "OBSS UDP payload bytes", obssPacketSize);
+    command.AddValue("obssAreaMinXM", "Minimum OBSS AP x coordinate", obssAreaMinXM);
+    command.AddValue("obssAreaMaxXM", "Maximum OBSS AP x coordinate", obssAreaMaxXM);
+    command.AddValue("obssAreaMinYM", "Minimum OBSS AP y coordinate", obssAreaMinYM);
+    command.AddValue("obssAreaMaxYM", "Maximum OBSS AP y coordinate", obssAreaMaxYM);
+    command.AddValue("obssStaMinDistanceM",
+                     "Minimum OBSS STA radius from its AP",
+                     obssStaMinDistanceM);
+    command.AddValue("obssStaMaxDistanceM",
+                     "Maximum OBSS STA radius from its AP",
+                     obssStaMaxDistanceM);
+    command.AddValue("obssPlacementStreamBase",
+                     "First deterministic OBSS placement stream",
+                     obssPlacementStreamBase);
+    command.AddValue("obssApplicationStreamBase",
+                     "First deterministic OBSS application stream",
+                     obssApplicationStreamBase);
+    command.AddValue("obssWifiStreamBase",
+                     "First deterministic OBSS Wi-Fi stream",
+                     obssWifiStreamBase);
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
@@ -323,6 +394,38 @@ main(int argc, char* argv[])
     RngSeedManager::SetRun(run);
     NS_ABORT_MSG_IF(backgroundProfile != "none" && backgroundProfile != "legacy_mixed8",
                     "backgroundProfile must be none or legacy_mixed8");
+    NS_ABORT_MSG_IF(propagationModel != "fixed_rss" &&
+                        propagationModel != "log_distance_nakagami",
+                    "propagationModel must be fixed_rss or log_distance_nakagami");
+    NS_ABORT_MSG_IF(pathLossExponent <= 0 || referenceLoss2GhzDb <= 0 ||
+                        referenceLoss5GhzDb <= 0,
+                    "Path-loss exponent and reference losses must be positive");
+    NS_ABORT_MSG_IF(nakagamiDistance1M <= 0 ||
+                        nakagamiDistance2M <= nakagamiDistance1M || nakagamiM0 <= 0 ||
+                        nakagamiM1 <= 0 || nakagamiM2 <= 0,
+                    "Nakagami distances must be ordered and m parameters positive");
+    NS_ABORT_MSG_IF(propagationStreamBase < 0,
+                    "propagationStreamBase cannot be negative");
+    NS_ABORT_MSG_IF(obssProfile != "none" && obssProfile != "mixed4x4",
+                    "obssProfile must be none or mixed4x4");
+    const bool obssEnabled = obssProfile == "mixed4x4";
+    NS_ABORT_MSG_IF(obssEnabled && obssStationsPerBss != 4,
+                    "mixed4x4 requires obssStationsPerBss=4");
+    NS_ABORT_MSG_IF(obssEnabled && propagationModel == "fixed_rss",
+                    "OBSS requires log_distance_nakagami propagation");
+    NS_ABORT_MSG_IF(obssEnabled && topology == "single_link",
+                    "OBSS requires dual_interface or mlo_str topology");
+    NS_ABORT_MSG_IF(obssMinRateMbps <= 0 || obssMaxRateMbps < obssMinRateMbps ||
+                        obssOnMeanMs <= 0 || obssOffMeanMs <= 0 || obssPacketSize == 0,
+                    "OBSS rates, means, and packet size must be positive");
+    NS_ABORT_MSG_IF(obssAreaMaxXM < obssAreaMinXM || obssAreaMaxYM < obssAreaMinYM,
+                    "OBSS placement rectangle bounds are invalid");
+    NS_ABORT_MSG_IF(obssStaMinDistanceM <= 0 ||
+                        obssStaMaxDistanceM < obssStaMinDistanceM,
+                    "OBSS STA distances must satisfy 0 < min <= max");
+    NS_ABORT_MSG_IF(obssPlacementStreamBase < 0 || obssApplicationStreamBase < 0 ||
+                        obssWifiStreamBase < 0,
+                    "OBSS stream bases cannot be negative");
     const uint32_t linkCount = topology == "single_link" ? 1 : 2;
     if (backgroundProfile == "legacy_mixed8")
     {
@@ -508,6 +611,35 @@ main(int argc, char* argv[])
     NetDeviceContainer apWifiDevices;
     std::vector<NetDeviceContainer> backgroundDevices(linkCount);
     std::vector<Ptr<MultiModelSpectrumChannel>> wifiChannels(linkCount);
+    const auto makeWifiChannel = [&](double referenceLossDb, uint32_t link) {
+        Ptr<MultiModelSpectrumChannel> channel = CreateObject<MultiModelSpectrumChannel>();
+        if (propagationModel == "fixed_rss")
+        {
+            Ptr<FixedRssLossModel> loss = CreateObject<FixedRssLossModel>();
+            loss->SetRss(fixedRssDbm);
+            channel->AddPropagationLossModel(loss);
+        }
+        else
+        {
+            Ptr<LogDistancePropagationLossModel> pathLoss =
+                CreateObject<LogDistancePropagationLossModel>();
+            pathLoss->SetAttribute("Exponent", DoubleValue(pathLossExponent));
+            pathLoss->SetAttribute("ReferenceDistance", DoubleValue(1.0));
+            pathLoss->SetAttribute("ReferenceLoss", DoubleValue(referenceLossDb));
+            Ptr<NakagamiPropagationLossModel> fading =
+                CreateObject<NakagamiPropagationLossModel>();
+            fading->SetAttribute("Distance1", DoubleValue(nakagamiDistance1M));
+            fading->SetAttribute("Distance2", DoubleValue(nakagamiDistance2M));
+            fading->SetAttribute("m0", DoubleValue(nakagamiM0));
+            fading->SetAttribute("m1", DoubleValue(nakagamiM1));
+            fading->SetAttribute("m2", DoubleValue(nakagamiM2));
+            pathLoss->SetNext(fading);
+            channel->AddPropagationLossModel(pathLoss);
+        }
+        channel->SetPropagationDelayModel(CreateObject<ConstantSpeedPropagationDelayModel>());
+        channel->AssignStreams(propagationStreamBase + static_cast<int64_t>(4 * link));
+        return channel;
+    };
     const auto installBackgroundLink = [&](const std::string& ssidName,
                                            const std::string& channelSettings,
                                            uint32_t link) {
@@ -558,13 +690,10 @@ main(int argc, char* argv[])
     };
     const auto installWifiLink = [&](const std::string& ssidName,
                                      const std::string& channelSettings,
-                                     uint32_t link) {
-        Ptr<MultiModelSpectrumChannel> channel = CreateObject<MultiModelSpectrumChannel>();
+                                     uint32_t link,
+                                     double referenceLossDb) {
+        Ptr<MultiModelSpectrumChannel> channel = makeWifiChannel(referenceLossDb, link);
         wifiChannels[link] = channel;
-        Ptr<FixedRssLossModel> loss = CreateObject<FixedRssLossModel>();
-        loss->SetRss(fixedRssDbm);
-        channel->AddPropagationLossModel(loss);
-        channel->SetPropagationDelayModel(CreateObject<ConstantSpeedPropagationDelayModel>());
 
         SpectrumWifiPhyHelper phy;
         phy.SetChannel(channel);
@@ -621,32 +750,29 @@ main(int argc, char* argv[])
     };
     if (topology == "single_link")
     {
-        installWifiLink("wifi-streaming", "{36, 20, BAND_5GHZ, 0}", 0);
+        installWifiLink("wifi-streaming",
+                        "{36, 20, BAND_5GHZ, 0}",
+                        0,
+                        referenceLoss5GhzDb);
     }
     else if (topology == "dual_interface")
     {
-        installWifiLink("wifi-streaming-2g", "{1, 20, BAND_2_4GHZ, 0}", 0);
-        installWifiLink("wifi-streaming-5g", "{36, 20, BAND_5GHZ, 0}", 1);
+        installWifiLink("wifi-streaming-2g",
+                        "{1, 20, BAND_2_4GHZ, 0}",
+                        0,
+                        referenceLoss2GhzDb);
+        installWifiLink("wifi-streaming-5g",
+                        "{36, 20, BAND_5GHZ, 0}",
+                        1,
+                        referenceLoss5GhzDb);
     }
     else
     {
-        Ptr<MultiModelSpectrumChannel> channel2Ghz =
-            CreateObject<MultiModelSpectrumChannel>();
+        Ptr<MultiModelSpectrumChannel> channel2Ghz = makeWifiChannel(referenceLoss2GhzDb, 0);
         wifiChannels[0] = channel2Ghz;
-        Ptr<FixedRssLossModel> loss2Ghz = CreateObject<FixedRssLossModel>();
-        loss2Ghz->SetRss(fixedRssDbm);
-        channel2Ghz->AddPropagationLossModel(loss2Ghz);
-        channel2Ghz->SetPropagationDelayModel(
-            CreateObject<ConstantSpeedPropagationDelayModel>());
 
-        Ptr<MultiModelSpectrumChannel> channel5Ghz =
-            CreateObject<MultiModelSpectrumChannel>();
+        Ptr<MultiModelSpectrumChannel> channel5Ghz = makeWifiChannel(referenceLoss5GhzDb, 1);
         wifiChannels[1] = channel5Ghz;
-        Ptr<FixedRssLossModel> loss5Ghz = CreateObject<FixedRssLossModel>();
-        loss5Ghz->SetRss(fixedRssDbm);
-        channel5Ghz->AddPropagationLossModel(loss5Ghz);
-        channel5Ghz->SetPropagationDelayModel(
-            CreateObject<ConstantSpeedPropagationDelayModel>());
 
         SpectrumWifiPhyHelper phy(2);
         phy.AddPhyToFreqRangeMapping(0, WIFI_SPECTRUM_2_4_GHZ);
@@ -738,6 +864,92 @@ main(int argc, char* argv[])
             WifiStaticSetupHelper::SetStaticBlockAck(staMld, apMld, 0);
         }
     }
+    constexpr uint32_t obssBssCount = 4;
+    std::vector<NodeContainer> obssAccessPoints(obssBssCount);
+    std::vector<NodeContainer> obssStations(obssBssCount);
+    std::vector<NetDeviceContainer> obssApDevices(obssBssCount);
+    std::vector<NetDeviceContainer> obssStaDevices(obssBssCount);
+    std::vector<ObssBssConfig> obssBssConfigs;
+    const std::vector<std::string> obssStandards{"ht", "he", "vht", "eht"};
+    const std::vector<uint8_t> obssLinks{0, 0, 1, 1};
+    if (obssEnabled)
+    {
+        for (uint32_t bss = 0; bss < obssBssCount; ++bss)
+        {
+            obssAccessPoints[bss].Create(1);
+            obssStations[bss].Create(obssStationsPerBss);
+            WifiHelper obssWifi;
+            obssWifi.SetStandard(ParseWifiStandard(obssStandards[bss]));
+            if (obssStandards[bss] == "he" || obssStandards[bss] == "eht")
+            {
+                obssWifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
+            }
+            obssWifi.SetRemoteStationManager(
+                "ns3::ConstantRateWifiManager",
+                "DataMode",
+                StringValue(DataModeForStandard(obssStandards[bss])),
+                "ControlMode",
+                StringValue("OfdmRate24Mbps"),
+                "RtsCtsThreshold",
+                UintegerValue(rtsCtsThreshold),
+                "FragmentationThreshold",
+                UintegerValue(fragmentationThreshold));
+            SpectrumWifiPhyHelper obssPhy;
+            obssPhy.SetChannel(wifiChannels[obssLinks[bss]]);
+            obssPhy.Set("ChannelSettings",
+                        StringValue(obssLinks[bss] == 0
+                                        ? "{1, 20, BAND_2_4GHZ, 0}"
+                                        : "{36, 20, BAND_5GHZ, 0}"));
+            obssPhy.Set("RxGain", DoubleValue(0));
+            WifiMacHelper obssMac;
+            const Ssid obssSsid("wifi-streaming-obss-" + std::to_string(bss));
+            obssMac.SetType("ns3::StaWifiMac",
+                            "Ssid",
+                            SsidValue(obssSsid),
+                            "ActiveProbing",
+                            BooleanValue(false),
+                            "FrameRetryLimit",
+                            UintegerValue(frameRetryLimit),
+                            "BE_MaxAmpduSize",
+                            UintegerValue(maxAmpduSize),
+                            "BE_MaxAmsduSize",
+                            UintegerValue(maxAmsduSize));
+            obssMac.SetEdca(AC_BE,
+                            "TxopLimits",
+                            StringValue(std::to_string(txopLimitUs) + "us"));
+            obssStaDevices[bss] = obssWifi.Install(obssPhy, obssMac, obssStations[bss]);
+            obssMac.SetType("ns3::ApWifiMac",
+                            "Ssid",
+                            SsidValue(obssSsid),
+                            "FrameRetryLimit",
+                            UintegerValue(frameRetryLimit),
+                            "BE_MaxAmpduSize",
+                            UintegerValue(maxAmpduSize),
+                            "BE_MaxAmsduSize",
+                            UintegerValue(maxAmsduSize));
+            obssMac.SetEdca(AC_BE,
+                            "TxopLimits",
+                            StringValue(std::to_string(txopLimitUs) + "us"));
+            obssApDevices[bss] =
+                obssWifi.Install(obssPhy, obssMac, obssAccessPoints[bss]);
+            Ptr<WifiNetDevice> obssAp =
+                DynamicCast<WifiNetDevice>(obssApDevices[bss].Get(0));
+            for (uint32_t index = 0; index < obssStationsPerBss; ++index)
+            {
+                WifiStaticSetupHelper::SetStaticAssociation(
+                    obssAp,
+                    DynamicCast<WifiNetDevice>(obssStaDevices[bss].Get(index)));
+            }
+        }
+        int64_t obssWifiStream = obssWifiStreamBase;
+        for (uint32_t bss = 0; bss < obssBssCount; ++bss)
+        {
+            obssWifiStream +=
+                WifiHelper::AssignStreams(obssStaDevices[bss], obssWifiStream);
+            obssWifiStream +=
+                WifiHelper::AssignStreams(obssApDevices[bss], obssWifiStream);
+        }
+    }
     int64_t wifiStream = 2000;
     wifiStream += WifiHelper::AssignStreams(stationDevices, wifiStream);
     wifiStream += WifiHelper::AssignStreams(apWifiDevices, wifiStream);
@@ -750,6 +962,11 @@ main(int argc, char* argv[])
     for (const auto& nodes : backgroundStations)
     {
         all.Add(nodes);
+    }
+    for (uint32_t bss = 0; bss < obssBssCount; ++bss)
+    {
+        all.Add(obssAccessPoints[bss]);
+        all.Add(obssStations[bss]);
     }
     MobilityHelper mobility;
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -766,6 +983,39 @@ main(int argc, char* argv[])
                 Vector(distance, 2.0 + link, 0));
         }
     }
+    const auto samplePlacement = [](double minimum, double maximum, int64_t stream) {
+        Ptr<UniformRandomVariable> variable = CreateObject<UniformRandomVariable>();
+        variable->SetStream(stream);
+        return variable->GetValue(minimum, maximum);
+    };
+    constexpr double pi = 3.14159265358979323846;
+    for (uint32_t bss = 0; bss < (obssEnabled ? obssBssCount : 0); ++bss)
+    {
+        int64_t placementStream =
+            obssPlacementStreamBase + static_cast<int64_t>(bss * (2 + 2 * obssStationsPerBss));
+        ObssBssConfig descriptor;
+        descriptor.bssId = bss;
+        descriptor.linkId = obssLinks[bss];
+        descriptor.ssid = "wifi-streaming-obss-" + std::to_string(bss);
+        descriptor.standard = StandardLabel(obssStandards[bss]);
+        descriptor.apX = samplePlacement(obssAreaMinXM, obssAreaMaxXM, placementStream++);
+        descriptor.apY = samplePlacement(obssAreaMinYM, obssAreaMaxYM, placementStream++);
+        obssAccessPoints[bss].Get(0)->GetObject<MobilityModel>()->SetPosition(
+            Vector(descriptor.apX, descriptor.apY, 0));
+        for (uint32_t index = 0; index < obssStationsPerBss; ++index)
+        {
+            const double angle = samplePlacement(0, 2 * pi, placementStream++);
+            const double radius = samplePlacement(obssStaMinDistanceM,
+                                                  obssStaMaxDistanceM,
+                                                  placementStream++);
+            const double x = descriptor.apX + radius * std::cos(angle);
+            const double y = descriptor.apY + radius * std::sin(angle);
+            descriptor.staX.push_back(x);
+            descriptor.staY.push_back(y);
+            obssStations[bss].Get(index)->GetObject<MobilityModel>()->SetPosition(Vector(x, y, 0));
+        }
+        obssBssConfigs.push_back(descriptor);
+    }
 
     CsmaHelper csma;
     csma.SetChannelAttribute("DataRate", StringValue("1Gbps"));
@@ -778,6 +1028,8 @@ main(int argc, char* argv[])
     std::vector<Ipv4Address> stationAddresses;
     std::vector<Ipv4Address> apAddresses;
     std::vector<std::vector<Ipv4Address>> backgroundAddresses(linkCount);
+    std::vector<Ipv4Address> obssApAddresses(obssBssCount);
+    std::vector<std::vector<Ipv4Address>> obssStaAddresses(obssBssCount);
     if (nativeMlo)
     {
         NetDeviceContainer wifiNetwork(stationDevices.Get(0), apWifiDevices.Get(0));
@@ -850,6 +1102,21 @@ main(int argc, char* argv[])
     {
         Ipv4GlobalRoutingHelper::PopulateRoutingTables();
     }
+    // Assign isolated OBSS subnets after global route discovery.  Their radios
+    // share the spectrum channels with the target BSS but not its IP network.
+    for (uint32_t bss = 0; bss < (obssEnabled ? obssBssCount : 0); ++bss)
+    {
+        NetDeviceContainer obssNetwork(obssApDevices[bss].Get(0));
+        obssNetwork.Add(obssStaDevices[bss]);
+        const std::string network = "10.3." + std::to_string(bss) + ".0";
+        address.SetBase(network.c_str(), "255.255.255.0");
+        const Ipv4InterfaceContainer interfaces = address.Assign(obssNetwork);
+        obssApAddresses[bss] = interfaces.GetAddress(0);
+        for (uint32_t index = 0; index < obssStationsPerBss; ++index)
+        {
+            obssStaAddresses[bss].push_back(interfaces.GetAddress(index + 1));
+        }
+    }
 
     // One host route per radio lets a socket bound to that NetDevice select the
     // matching gateway even though both routes target the same edge address.
@@ -899,8 +1166,18 @@ main(int argc, char* argv[])
     resolved.frameSizeBytes = frameSize;
     resolved.payloadSizeBytes = payloadSize;
     resolved.deadlineUs = deadlineUs;
+    resolved.propagationModel = propagationModel;
     resolved.fixedRssDbm = fixedRssDbm;
     resolved.stationDistanceM = stationDistanceM;
+    resolved.pathLossExponent = pathLossExponent;
+    resolved.referenceLoss2GhzDb = referenceLoss2GhzDb;
+    resolved.referenceLoss5GhzDb = referenceLoss5GhzDb;
+    resolved.nakagamiDistance1M = nakagamiDistance1M;
+    resolved.nakagamiDistance2M = nakagamiDistance2M;
+    resolved.nakagamiM0 = nakagamiM0;
+    resolved.nakagamiM1 = nakagamiM1;
+    resolved.nakagamiM2 = nakagamiM2;
+    resolved.propagationStreamBase = propagationStreamBase;
     resolved.standard = StandardLabel(wifiStandard);
     resolved.dataMode = dataMode;
     resolved.controlMode = "OfdmRate24Mbps";
@@ -979,6 +1256,23 @@ main(int argc, char* argv[])
     resolved.localOffDurationMs = localOffDurationMs;
     resolved.randomOnMeanMs = randomOnMeanMs;
     resolved.randomOffMeanMs = randomOffMeanMs;
+    resolved.obssProfile = obssProfile;
+    resolved.obssStationsPerBss = obssEnabled ? obssStationsPerBss : 0;
+    resolved.obssMinRateMbps = obssMinRateMbps;
+    resolved.obssMaxRateMbps = obssMaxRateMbps;
+    resolved.obssOnMeanMs = obssOnMeanMs;
+    resolved.obssOffMeanMs = obssOffMeanMs;
+    resolved.obssPacketSizeBytes = obssPacketSize;
+    resolved.obssAreaMinXM = obssAreaMinXM;
+    resolved.obssAreaMaxXM = obssAreaMaxXM;
+    resolved.obssAreaMinYM = obssAreaMinYM;
+    resolved.obssAreaMaxYM = obssAreaMaxYM;
+    resolved.obssStaMinDistanceM = obssStaMinDistanceM;
+    resolved.obssStaMaxDistanceM = obssStaMaxDistanceM;
+    resolved.obssPlacementStreamBase = obssPlacementStreamBase;
+    resolved.obssApplicationStreamBase = obssApplicationStreamBase;
+    resolved.obssWifiStreamBase = obssWifiStreamBase;
+    resolved.obssBsses = obssBssConfigs;
 
     if (projectGitCommit.empty())
     {
@@ -1194,6 +1488,75 @@ main(int argc, char* argv[])
     {
         loadController->Start(warmup, measurementStop);
     }
+    std::vector<BackgroundFlowRecord> obssFlowRecords;
+    std::vector<BackgroundRatePeriodRecord> obssRatePeriodRecords;
+    std::vector<Ptr<RandomRateOnOffApplication>> obssSources;
+    std::vector<Ptr<PacketSink>> obssSinks;
+    uint16_t obssPort = 20000;
+    uint32_t obssFlowOrdinal = 0;
+    for (uint32_t bss = 0; bss < (obssEnabled ? obssBssCount : 0); ++bss)
+    {
+        for (uint32_t index = 0; index < obssStationsPerBss; ++index)
+        {
+            for (uint32_t direction = 0; direction < 2; ++direction, ++obssFlowOrdinal)
+            {
+                const bool uplink = direction == 0;
+                const Ptr<Node> sourceNode =
+                    uplink ? obssStations[bss].Get(index) : obssAccessPoints[bss].Get(0);
+                const Ptr<Node> sinkNode =
+                    uplink ? obssAccessPoints[bss].Get(0) : obssStations[bss].Get(index);
+                const Ipv4Address sourceAddress =
+                    uplink ? obssStaAddresses[bss][index] : obssApAddresses[bss];
+                const Ipv4Address destination =
+                    uplink ? obssApAddresses[bss] : obssStaAddresses[bss][index];
+
+                PacketSinkHelper sinkHelper(
+                    "ns3::UdpSocketFactory",
+                    InetSocketAddress(Ipv4Address::GetAny(), obssPort));
+                Ptr<PacketSink> sink =
+                    DynamicCast<PacketSink>(sinkHelper.Install(sinkNode).Get(0));
+                sink->SetStartTime(Seconds(0.5));
+                sink->SetStopTime(measurementStop + Seconds(1));
+                obssSinks.push_back(sink);
+
+                Ptr<RandomRateOnOffApplication> source =
+                    CreateObject<RandomRateOnOffApplication>();
+                source->SetRemote(InetSocketAddress(destination, obssPort));
+                source->SetLocal(InetSocketAddress(sourceAddress, 0));
+                source->SetPacketSize(obssPacketSize);
+                source->SetRateRange(
+                    DataRate(static_cast<uint64_t>(obssMinRateMbps * 1e6)),
+                    DataRate(static_cast<uint64_t>(obssMaxRateMbps * 1e6)));
+                source->SetMeans(MilliSeconds(obssOnMeanMs), MilliSeconds(obssOffMeanMs));
+                const int64_t rateStream =
+                    obssApplicationStreamBase + static_cast<int64_t>(3 * obssFlowOrdinal);
+                const int64_t consumed = source->AssignStreams(rateStream);
+                NS_ABORT_MSG_IF(consumed != 3,
+                                "RandomRateOnOffApplication stream count changed; expected 3, got "
+                                    << consumed);
+                sourceNode->AddApplication(source);
+                source->SetStartTime(warmup);
+                source->SetStopTime(measurementStop);
+                obssSources.push_back(source);
+
+                BackgroundFlowRecord record;
+                record.runId = runId;
+                record.bssId = bss;
+                record.linkId = obssLinks[bss];
+                record.standard = StandardLabel(obssStandards[bss]);
+                record.staIndex = index;
+                record.direction = uplink ? "uplink" : "downlink";
+                record.sourceNodeId = sourceNode->GetId();
+                record.destinationNodeId = sinkNode->GetId();
+                record.port = obssPort;
+                record.rateStream = rateStream;
+                record.onStream = rateStream + 1;
+                record.offStream = rateStream + 2;
+                obssFlowRecords.push_back(record);
+                ++obssPort;
+            }
+        }
+    }
     ExperimentOutput::WriteResolvedConfig(outputDir, resolved);
 
     WifiTxStatsHelper txStats(warmup, measurementStop);
@@ -1214,6 +1577,46 @@ main(int argc, char* argv[])
     {
         backgroundBytesReceivedPerStation[i] = backgroundSinks[i]->GetTotalRx();
     }
+    std::vector<uint64_t> obssBytesSentPerLink(linkCount, 0);
+    std::vector<uint64_t> obssBytesReceivedPerLink(linkCount, 0);
+    const uint32_t obssStationCount =
+        obssEnabled ? obssBssCount * obssStationsPerBss : 0;
+    std::vector<uint64_t> obssBytesSentPerStation(obssStationCount, 0);
+    std::vector<uint64_t> obssBytesReceivedPerStation(obssStationCount, 0);
+    for (std::size_t flow = 0; flow < obssFlowRecords.size(); ++flow)
+    {
+        auto& record = obssFlowRecords[flow];
+        record.bytesSent = obssSources[flow]->GetTotalTxBytes();
+        record.bytesReceived = obssSinks[flow]->GetTotalRx();
+        const auto& periods = obssSources[flow]->GetPeriodRecords();
+        record.periodCount = periods.size();
+        obssBytesSentPerLink[record.linkId] += record.bytesSent;
+        obssBytesReceivedPerLink[record.linkId] += record.bytesReceived;
+        const uint32_t stationIndex = record.bssId * obssStationsPerBss + record.staIndex;
+        obssBytesSentPerStation[stationIndex] += record.bytesSent;
+        obssBytesReceivedPerStation[stationIndex] += record.bytesReceived;
+        for (const auto& period : periods)
+        {
+            BackgroundRatePeriodRecord periodRecord;
+            periodRecord.runId = runId;
+            periodRecord.bssId = record.bssId;
+            periodRecord.staIndex = record.staIndex;
+            periodRecord.direction = record.direction;
+            periodRecord.periodIndex = static_cast<uint32_t>(period.index);
+            periodRecord.startUs = period.start.GetMicroSeconds();
+            periodRecord.endUs = period.end.GetMicroSeconds();
+            periodRecord.rateMbps = period.rateBps / 1e6;
+            obssRatePeriodRecords.push_back(periodRecord);
+        }
+    }
+    backgroundBytesSentPerStation.insert(backgroundBytesSentPerStation.end(),
+                                         obssBytesSentPerStation.begin(),
+                                         obssBytesSentPerStation.end());
+    backgroundBytesReceivedPerStation.insert(backgroundBytesReceivedPerStation.end(),
+                                             obssBytesReceivedPerStation.begin(),
+                                             obssBytesReceivedPerStation.end());
+    ExperimentOutput::WriteBackgroundFlows(outputDir, obssFlowRecords);
+    ExperimentOutput::WriteBackgroundRatePeriods(outputDir, obssRatePeriodRecords);
     const uint64_t backgroundBytesSent =
         std::accumulate(backgroundBytesSentPerStation.begin(),
                         backgroundBytesSentPerStation.end(),
@@ -1347,6 +1750,8 @@ main(int argc, char* argv[])
             summary.backgroundBytesReceivedPerLink[link] +=
                 backgroundBytesReceivedPerStation[stationOrdinal];
         }
+        summary.backgroundBytesSentPerLink[link] += obssBytesSentPerLink[link];
+        summary.backgroundBytesReceivedPerLink[link] += obssBytesReceivedPerLink[link];
     }
     summary.backgroundThroughputMbps =
         backgroundBytesReceived * 8.0 / durationSeconds / 1e6;

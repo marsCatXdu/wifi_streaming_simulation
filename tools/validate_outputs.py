@@ -42,6 +42,15 @@ MAC_COLUMNS = {
     "link_id", "node_id", "device_id", "successful_mpdus", "failed_mpdus",
     "retransmissions", "retry_limit_drops",
 }
+BACKGROUND_FLOW_COLUMNS = {
+    "run_id", "bss_id", "link_id", "standard", "sta_index", "direction",
+    "source_node_id", "destination_node_id", "port", "rate_stream", "on_stream",
+    "off_stream", "period_count", "bytes_sent", "bytes_received",
+}
+BACKGROUND_PERIOD_COLUMNS = {
+    "run_id", "bss_id", "sta_index", "direction", "period_index", "start_us",
+    "end_us", "rate_mbps",
+}
 SUMMARY_KEYS = {
     "frame_count", "complete_frame_count", "incomplete_frame_count",
     "deadline_miss_count", "complete_ratio", "incomplete_ratio",
@@ -139,6 +148,17 @@ def validate_run(
     decisions = _csv(run_dir / "policy_decisions.csv", DECISION_COLUMNS)
     links = _csv(run_dir / "link_intervals.csv", LINK_COLUMNS)
     mac = _csv(run_dir / "mac_summary.csv", MAC_COLUMNS)
+    obss = config.get("background", {}).get("obss", {})
+    obss_enabled = obss.get("profile", "none") != "none"
+    flows: list[dict[str, str]] = []
+    periods: list[dict[str, str]] = []
+    if obss_enabled:
+        _require((run_dir / "background_flows.csv").is_file(),
+                 "missing core file: background_flows.csv")
+        _require((run_dir / "background_rate_periods.csv").is_file(),
+                 "missing core file: background_rate_periods.csv")
+        flows = _csv(run_dir / "background_flows.csv", BACKGROUND_FLOW_COLUMNS)
+        periods = _csv(run_dir / "background_rate_periods.csv", BACKGROUND_PERIOD_COLUMNS)
     _require(frames, "frames.csv: no frame rows")
     _require(links, "link_intervals.csv: no link rows")
     for rows, name in ((frames, "frames.csv"), (decisions, "policy_decisions.csv")):
@@ -254,6 +274,46 @@ def validate_run(
     for key in ("successful_mpdus", "failed_mpdus", "retransmissions"):
         _require(sum(_integer(row, key, "mac_summary.csv") for row in mac) == summary[key],
                  f"mac_summary.csv: {key} total mismatch")
+    if obss_enabled:
+        station_count = int(obss["stations_per_bss"])
+        _require(len(obss.get("bsses", [])) == 4, "resolved_config.json: expected four OBSSs")
+        _require(len(flows) == 4 * station_count * 2,
+                 "background_flows.csv: unexpected flow count")
+        flow_keys: set[tuple[int, int, str]] = set()
+        streams: set[int] = set()
+        periods_by_flow: dict[tuple[int, int, str], int] = {}
+        for row in flows:
+            _require(row["run_id"] == run_id, "background_flows.csv: run_id mismatch")
+            key = (int(row["bss_id"]), int(row["sta_index"]), row["direction"])
+            _require(row["direction"] in {"uplink", "downlink"},
+                     "background_flows.csv: invalid direction")
+            _require(key not in flow_keys, "background_flows.csv: duplicate flow")
+            flow_keys.add(key)
+            for stream_key in ("rate_stream", "on_stream", "off_stream"):
+                stream = int(row[stream_key])
+                _require(stream not in streams, "background_flows.csv: reused RNG stream")
+                streams.add(stream)
+            periods_by_flow[key] = _integer(
+                row, "period_count", "background_flows.csv"
+            )
+            _integer(row, "bytes_sent", "background_flows.csv")
+            _integer(row, "bytes_received", "background_flows.csv")
+        observed_periods: dict[tuple[int, int, str], int] = {}
+        minimum = float(obss["min_rate_mbps"])
+        maximum = float(obss["max_rate_mbps"])
+        for row in periods:
+            _require(row["run_id"] == run_id,
+                     "background_rate_periods.csv: run_id mismatch")
+            key = (int(row["bss_id"]), int(row["sta_index"]), row["direction"])
+            _require(key in flow_keys, "background_rate_periods.csv: unknown flow")
+            rate = float(row["rate_mbps"])
+            _require(minimum <= rate <= maximum,
+                     "background_rate_periods.csv: rate outside configured range")
+            _require(int(row["end_us"]) >= int(row["start_us"]),
+                     "background_rate_periods.csv: negative period")
+            observed_periods[key] = observed_periods.get(key, 0) + 1
+        _require(observed_periods == periods_by_flow,
+                 "background_rate_periods.csv: period counts mismatch")
     return {"run_id": run_id, "frame_count": total, "valid": True}
 
 
