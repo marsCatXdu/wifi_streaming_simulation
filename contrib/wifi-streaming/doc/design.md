@@ -41,6 +41,11 @@ randomness. `--policy` selects `fixed_link_0`, `fixed_link_1`, `static_best`,
 or `full_duplication` in dual mode. Application output, rather than PCAP or
 FlowMonitor, is the source of truth.
 
+Dual mode requires IEEE 802.11be and installs two independent single-link
+`WifiNetDevice` instances; it does not create an MLD or enable native MLO.
+Both dual-interface links and both STR links use `EhtMcs5`, 20 MHz channels,
+an 800 ns guard interval, and the same explicit MAC controls.
+
 Native STR mode requires `--wifiStandard=eht` and installs one two-link
 `WifiNetDevice` on each of the STA and AP MLDs. `SpectrumWifiPhyHelper(2)`
 maps link 0 to its own 2.4 GHz `MultiModelSpectrumChannel` and link 1 to its

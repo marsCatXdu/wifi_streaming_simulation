@@ -163,7 +163,7 @@ main(int argc, char* argv[])
     uint32_t rtsCtsThreshold = 4692480;
     uint32_t fragmentationThreshold = 65535;
     uint32_t guardIntervalNs = 800;
-    std::string wifiStandard = "he";
+    std::string wifiStandard = "eht";
     std::string backgroundStandard0 = "inherit";
     std::string backgroundStandard1 = "inherit";
     std::string backgroundTraffic = "none";
@@ -303,6 +303,8 @@ main(int argc, char* argv[])
                     "mlo_str uses one native MLO path and supports only fixed_link_0");
     NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
                     "mlo_str requires --wifiStandard=eht");
+    NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard != "eht",
+                    "dual_interface requires --wifiStandard=eht for comparison with STR MLO");
     NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
     NS_ABORT_MSG_IF(sourceName != "synthetic" && sourceName != "trace",
                     "source must be synthetic or trace");
@@ -320,8 +322,6 @@ main(int argc, char* argv[])
                         resolvedBackgroundStandard1 != "he" &&
                         resolvedBackgroundStandard1 != "eht",
                     "backgroundStandard1 must be inherit, vht, he, or eht");
-    NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard == "vht",
-                    "vht is invalid on dual_interface because link 0 is 2.4 GHz");
     NS_ABORT_MSG_IF(backgroundStations0 > 0 && resolvedBackgroundStandard0 == "vht" &&
                         topology == "dual_interface",
                     "VHT backgroundStandard0 is invalid on the 2.4 GHz link");

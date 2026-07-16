@@ -12,7 +12,7 @@ base:
   propagation:
     fixed_rss_dbm: -50
   wifi:
-    wifi_standard: he
+    wifi_standard: eht
 
 seeds: [17]
 runs: [1]
@@ -21,8 +21,6 @@ topologies:
   - name: single_link
   - name: dual_interface
   - name: mlo_str
-    config:
-      wifi.wifi_standard: eht
 
 policies:
   - name: fixed_link_0
