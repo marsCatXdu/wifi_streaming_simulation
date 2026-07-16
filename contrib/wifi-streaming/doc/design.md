@@ -165,9 +165,11 @@ station, plus delivered throughput. Existing CSV columns are unchanged.
 used alone or with `legacy_mixed8`. It creates four infrastructure BSSs with
 unique SSIDs and four statically associated STAs each. HT and HE BSSs share
 the experiment's 2.4 GHz 20 MHz channel; VHT and single-link EHT BSSs share
-the 5 GHz 20 MHz channel. Background APs and STAs use Minstrel-HT rate
-adaptation with 50 ms statistics updates. The target devices remain fixed at
-EHT MCS 5 for a controlled dual-versus-MLO comparison.
+the 5 GHz 20 MHz channel. Background APs and STAs use `IdealWifiManager`
+adaptive rates. The target devices remain fixed at EHT MCS 5 for a controlled
+dual-versus-MLO comparison. Minstrel-HT remains selectable, but one
+hidden-node seed produced a non-terminating PHY event storm in the combined
+profile and is not used by the reference matrix.
 
 Each STA has simultaneous UL and DL UDP ON/OFF sources. ON and OFF durations
 are independent exponential samples. At the start of every ON period, uplink

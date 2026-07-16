@@ -21,7 +21,8 @@ The distance-aware overlapping-BSS batches are available as::
 and EHT, with four STAs per AP.  Every STA generates independent UL and DL
 UDP ON/OFF traffic.  Uplink draws 0.5--3 Mbps and downlink draws 2--8 Mbps for
 each ON period.  The 100/300 ms ON/OFF means give 25 percent expected duty and
-about 27 Mbps aggregate OBSS offered load.  Background BSSs use Minstrel-HT;
+about 27 Mbps aggregate OBSS offered load.  Background BSSs use adaptive
+``IdealWifiManager`` rates;
 the target remains fixed at EHT MCS 5.  ``combined_contention.yaml`` adds the
 same overlapping BSSs on top of the sixteen stations in ``legacy_mixed8``,
 for about 43 Mbps expected aggregate background load.

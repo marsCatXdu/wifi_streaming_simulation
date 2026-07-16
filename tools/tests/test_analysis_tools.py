@@ -134,7 +134,7 @@ class MatrixTests(unittest.TestCase):
                 "obss_ul_max_rate_mbps": 3,
                 "obss_dl_min_rate_mbps": 2,
                 "obss_dl_max_rate_mbps": 8,
-                "obss_station_manager": "minstrel_ht",
+                "obss_station_manager": "ideal",
                 "obss_application_stream_base": 7000,
                 "obss_wifi_stream_base": 8000,
             },
@@ -147,7 +147,7 @@ class MatrixTests(unittest.TestCase):
         self.assertIn("--obssUlMaxRateMbps=3", arguments)
         self.assertIn("--obssDlMinRateMbps=2", arguments)
         self.assertIn("--obssDlMaxRateMbps=8", arguments)
-        self.assertIn("--obssStationManager=minstrel_ht", arguments)
+        self.assertIn("--obssStationManager=ideal", arguments)
         self.assertIn("--obssApplicationStreamBase=7000", arguments)
         self.assertIn("--obssWifiStreamBase=8000", arguments)
 

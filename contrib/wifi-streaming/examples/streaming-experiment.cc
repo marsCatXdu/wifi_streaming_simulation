@@ -228,7 +228,7 @@ main(int argc, char* argv[])
     double obssDlMaxRateMbps = 8.0;
     double obssOnMeanMs = 100.0;
     double obssOffMeanMs = 300.0;
-    std::string obssStationManager = "minstrel_ht";
+    std::string obssStationManager = "ideal";
     double obssManagerUpdateMs = 50.0;
     uint32_t obssPacketSize = 1200;
     double obssAreaMinXM = -15.0;
