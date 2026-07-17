@@ -37,12 +37,35 @@ def _latencies(run: dict) -> np.ndarray:
     return np.asarray(values, dtype=float)
 
 
-def _latency_groups(runs: list[dict]) -> dict[tuple[str, str], list[np.ndarray]]:
-    grouped: dict[tuple[str, str], list[np.ndarray]] = {}
+def _approach_key(item: dict) -> tuple[str, str, int]:
+    inflights = int(item.get("config", {}).get("wifi", {}).get("sta_max_inflights", 1))
+    return item["topology"], item["policy"], inflights
+
+
+def _approach_label(item: dict, run_count: int | None = None) -> str:
+    topology, policy, inflights = _approach_key(item)
+    if topology == "dual_interface" and policy == "full_duplication":
+        label = "Application full duplication"
+    elif topology == "mlo_str":
+        label = f"MLO NMaxInflights={inflights}"
+    else:
+        label = f"{topology}/{policy}"
+    return f"{label} (n={run_count} runs)" if run_count is not None else label
+
+
+def _run_groups(runs: list[dict]) -> dict[tuple[str, str, int], list[dict]]:
+    grouped: dict[tuple[str, str, int], list[dict]] = {}
+    for run in runs:
+        grouped.setdefault(_approach_key(run), []).append(run)
+    return grouped
+
+
+def _latency_groups(runs: list[dict]) -> dict[tuple[str, str, int], list[np.ndarray]]:
+    grouped: dict[tuple[str, str, int], list[np.ndarray]] = {}
     for run in runs:
         values = _latencies(run)
         if values.size:
-            grouped.setdefault((run["topology"], run["policy"]), []).append(values)
+            grouped.setdefault(_approach_key(run), []).append(values)
     return grouped
 
 
@@ -54,14 +77,18 @@ def plot(aggregate: dict, output_dir: Path) -> None:
 
     plt.figure()
     probabilities = np.linspace(0.0, 1.0, 201)
-    for (topology, policy), samples in sorted(latency_groups.items()):
+    for key, samples in sorted(latency_groups.items()):
         run_quantiles = np.vstack(
             [np.quantile(values, probabilities, method="linear") for values in samples]
         )
         center = np.median(run_quantiles, axis=0)
         lower = np.quantile(run_quantiles, 0.10, axis=0)
         upper = np.quantile(run_quantiles, 0.90, axis=0)
-        label = f"{topology}/{policy} (n={len(samples)} runs)"
+        label = _approach_label(
+            {"topology": key[0], "policy": key[1],
+             "config": {"wifi": {"sta_max_inflights": key[2]}}},
+            len(samples),
+        )
         line = plt.plot(center, probabilities, label=label)[0]
         plt.fill_betweenx(probabilities, lower, upper, color=line.get_color(), alpha=0.2)
     cdf_data = bool(latency_groups)
@@ -88,14 +115,18 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             upper_bound += 0.5
         bins = np.linspace(lower_bound, upper_bound, 81)
         centers = (bins[:-1] + bins[1:]) / 2
-        for (topology, policy), samples in sorted(latency_groups.items()):
+        for key, samples in sorted(latency_groups.items()):
             run_densities = np.vstack(
                 [np.histogram(values, bins=bins, density=True)[0] for values in samples]
             )
             center = np.median(run_densities, axis=0)
             lower = np.quantile(run_densities, 0.10, axis=0)
             upper = np.quantile(run_densities, 0.90, axis=0)
-            label = f"{topology}/{policy} (n={len(samples)} runs)"
+            label = _approach_label(
+                {"topology": key[0], "policy": key[1],
+                 "config": {"wifi": {"sta_max_inflights": key[2]}}},
+                len(samples),
+            )
             line = plt.plot(centers, center, label=label)[0]
             plt.fill_between(centers, lower, upper, color=line.get_color(), alpha=0.2)
         plt.xlabel("Union latency (us)")
@@ -105,7 +136,7 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             "Frame latency PDF (median and 10–90% run band)", pdf_data)
 
     plt.figure()
-    labels = [f"{g['topology']}\n{g['policy']}" for g in groups]
+    labels = [_approach_label(group).replace(" ", "\n", 1) for group in groups]
     misses = [g["metrics"]["deadline_miss_ratio"]["mean"] for g in groups]
     available = [index for index, value in enumerate(misses) if value is not None]
     if available:
@@ -115,10 +146,11 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     _finish(output_dir / "deadline_miss.png", "Deadline misses", bool(available))
 
     plt.figure()
-    pareto = [(run["redundant_byte_ratio"], run["latency_p99_us"], run) for run in runs
-              if run["latency_p99_us"] is not None]
-    for x, y, run in pareto:
-        plt.scatter(x, y, label=f"{run['topology']}/{run['policy']}")
+    pareto = [run for run in runs if run["latency_p99_us"] is not None]
+    for members in _run_groups(pareto).values():
+        plt.scatter([run["redundant_byte_ratio"] for run in members],
+                    [run["latency_p99_us"] for run in members],
+                    label=_approach_label(members[0]))
     if pareto:
         plt.xlabel("Redundant byte ratio (airtime proxy; not measured airtime)")
         plt.ylabel("P99 latency (us)")
@@ -127,10 +159,11 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             "P99 latency vs redundant-byte proxy", bool(pareto))
 
     plt.figure()
-    background = [(run["background_throughput_mbps"], run["deadline_miss_ratio"], run)
-                  for run in runs if run["background_throughput_mbps"] is not None]
-    for x, y, run in background:
-        plt.scatter(x, y, label=f"{run['topology']}/{run['policy']}")
+    background = [run for run in runs if run["background_throughput_mbps"] is not None]
+    for members in _run_groups(background).values():
+        plt.scatter([run["background_throughput_mbps"] for run in members],
+                    [run["deadline_miss_ratio"] for run in members],
+                    label=_approach_label(members[0]))
     if background:
         plt.xlabel("Background delivered throughput (Mbps)")
         plt.ylabel("Streaming deadline miss ratio")
@@ -139,11 +172,12 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             "Background throughput and streaming degradation", bool(background))
 
     plt.figure()
-    duplicate = [(run["cross_copy_delay_correlation"], run["duplicate_recovery_rate"], run)
-                 for run in runs if run["cross_copy_delay_correlation"] is not None
+    duplicate = [run for run in runs if run["cross_copy_delay_correlation"] is not None
                  and run["duplicate_recovery_rate"] is not None]
-    for x, y, run in duplicate:
-        plt.scatter(x, y, label=f"{run['topology']}/{run['policy']}")
+    for members in _run_groups(duplicate).values():
+        plt.scatter([run["cross_copy_delay_correlation"] for run in members],
+                    [run["duplicate_recovery_rate"] for run in members],
+                    label=_approach_label(members[0]))
     if duplicate:
         plt.xlabel("Cross-copy delay correlation")
         plt.ylabel("Duplicate recovery rate")
@@ -164,7 +198,7 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     plt.figure()
     burst_groups = [
         (
-            f"{group['topology']}/{group['policy']} (n={group['run_count']} runs)",
+            _approach_label(group, group["run_count"]),
             group["deadline_miss_burst_distribution"],
         )
         for group in groups

@@ -1,5 +1,5 @@
 name: combined-contention-dual-vs-mlo
-output_root: results/combined_contention_realistic
+output_root: results/combined_contention_realistic_gop_three_way
 workers: 4
 
 base:
@@ -27,6 +27,7 @@ base:
     propagation_stream_base: 5000
   wifi:
     wifi_standard: eht
+    mlo_sta_max_inflights: 1
   background:
     background_profile: legacy_mixed8
     background_rate_mbps: 2
@@ -62,6 +63,9 @@ runs: [1]
 topologies:
   - name: dual_interface
   - name: mlo_str
+  - name: mlo_str
+    config:
+      wifi.mlo_sta_max_inflights: 2
 
 policies:
   - name: fixed_link_0

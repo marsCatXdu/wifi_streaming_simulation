@@ -77,6 +77,7 @@ struct StreamingRunConfig
     uint32_t queueMaxDelayMs{0};
     uint32_t maxAmpduSizeBytes{0};
     uint32_t maxAmsduSizeBytes{0};
+    uint32_t mloStaMaxInflights{1};
     uint32_t frameRetryLimit{0};
     uint32_t rtsCtsThresholdBytes{0};
     uint32_t fragmentationThresholdBytes{0};

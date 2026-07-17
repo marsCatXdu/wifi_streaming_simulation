@@ -64,6 +64,12 @@ to the native ns-3 MLO MAC. The application creates one UDP socket, one IP
 interface, and one application copy. Explicit routes replace global routing,
 which cannot query a single channel from a multi-channel MLD.
 
+`mloStaMaxInflights` controls the target STA's BE `QosTxop::NMaxInflights`.
+The value one permits traffic splitting but prevents an MPDU from being
+simultaneously active on both links. The value two permits opportunistic
+uplink MPDU duplication after Block Ack setup. It does not affect the AP,
+background BSSs, or application-copy accounting.
+
 ## Output and measurement contract
 
 `streaming-experiment` requires `--outputDir`. The path must be new or empty,

@@ -11,7 +11,7 @@ TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from run_experiments import cli_arguments, derive_run_id, expand_config
-from plot_results import plot
+from plot_results import _approach_key, _approach_label, plot
 from summarize_runs import group_key, summarize
 from validate_outputs import ValidationError, validate_run
 
@@ -125,6 +125,23 @@ class MatrixTests(unittest.TestCase):
         }, Path("."))
         self.assertIn("--gopLength=60", stream_arguments)
         self.assertIn("--keyframeSizeMultiplier=4", stream_arguments)
+        wifi_arguments = cli_arguments({
+            "wifi": {"mlo_sta_max_inflights": 2},
+        }, Path("."))
+        self.assertIn("--mloStaMaxInflights=2", wifi_arguments)
+
+    def test_mlo_inflight_variants_have_distinct_plot_labels(self) -> None:
+        first = {
+            "topology": "mlo_str", "policy": "fixed_link_0",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        second = {
+            "topology": "mlo_str", "policy": "fixed_link_0",
+            "config": {"wifi": {"sta_max_inflights": 2}},
+        }
+        self.assertEqual(_approach_label(first), "MLO NMaxInflights=1")
+        self.assertEqual(_approach_label(second), "MLO NMaxInflights=2")
+        self.assertNotEqual(_approach_key(first), _approach_key(second))
 
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({

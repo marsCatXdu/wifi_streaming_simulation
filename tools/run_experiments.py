@@ -42,6 +42,7 @@ CLI_KEYS = {
     "emission_mode": "emissionMode",
     "source": "source", "trace_file": "traceFile", "wifi_standard": "wifiStandard",
     "queue_max_packets": "queueMaxPackets", "queue_max_delay_ms": "queueMaxDelayMs",
+    "mlo_sta_max_inflights": "mloStaMaxInflights",
     "max_ampdu_size": "maxAmpduSize", "max_amsdu_size": "maxAmsduSize",
     "frame_retry_limit": "frameRetryLimit", "txop_limit_us": "txopLimitUs",
     "rts_cts_threshold": "rtsCtsThreshold",

@@ -13,7 +13,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 
 
 def run(
-    output: pathlib.Path, topology: str, run_number: int
+    output: pathlib.Path, topology: str, run_number: int, max_inflights: int = 1
 ) -> tuple[dict, dict, list[dict], list[dict]]:
     policy = "full_duplication" if topology == "dual_interface" else "fixed_link_0"
     subprocess.run(
@@ -25,6 +25,7 @@ def run(
             "--",
             f"--topology={topology}",
             f"--policy={policy}",
+            f"--mloStaMaxInflights={max_inflights}",
             "--duration=0.5",
             "--fps=10",
             "--frameSize=1200",
@@ -80,7 +81,7 @@ def main() -> None:
         )
         _, _, _, varied_periods = run(temporary / "dual-c", "dual_interface", 4)
         mlo_config, mlo_summary, mlo_flows, mlo_periods = run(
-            temporary / "mlo", "mlo_str", 3
+            temporary / "mlo", "mlo_str", 3, 2
         )
 
         obss = dual_config["background"]["obss"]
@@ -109,6 +110,8 @@ def main() -> None:
         )
         assert all(value > 0 for value in dual_summary["background_bytes_received_per_link"])
         assert all(value > 0 for value in mlo_summary["background_bytes_received_per_link"])
+        assert dual_config["wifi"]["sta_max_inflights"] == 1
+        assert mlo_config["wifi"]["sta_max_inflights"] == 2
 
         assert dual_config["background"]["obss"] == mlo_config["background"]["obss"]
         assert period_signature(dual_periods) == period_signature(mlo_periods)

@@ -296,6 +296,7 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"queue_max_delay_ms\": " << config.queueMaxDelayMs << ",\n"
            << "    \"max_ampdu_size_bytes\": " << config.maxAmpduSizeBytes << ",\n"
            << "    \"max_amsdu_size_bytes\": " << config.maxAmsduSizeBytes << ",\n"
+           << "    \"sta_max_inflights\": " << config.mloStaMaxInflights << ",\n"
            << "    \"block_ack_enabled\": " << std::boolalpha << config.blockAckEnabled << ",\n"
            << "    \"frame_retry_limit\": " << config.frameRetryLimit << ",\n"
            << "    \"rts_cts_threshold_bytes\": " << config.rtsCtsThresholdBytes << ",\n"

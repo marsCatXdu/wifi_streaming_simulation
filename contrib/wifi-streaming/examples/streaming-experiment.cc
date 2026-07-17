@@ -197,6 +197,7 @@ main(int argc, char* argv[])
     uint32_t rtsCtsThreshold = 4692480;
     uint32_t fragmentationThreshold = 65535;
     uint32_t guardIntervalNs = 800;
+    uint32_t mloStaMaxInflights = 1;
     std::string wifiStandard = "eht";
     std::string backgroundStandard0 = "inherit";
     std::string backgroundStandard1 = "inherit";
@@ -306,6 +307,9 @@ main(int argc, char* argv[])
                      "Fragmentation PSDU threshold bytes",
                      fragmentationThreshold);
     command.AddValue("guardIntervalNs", "HE guard interval in nanoseconds", guardIntervalNs);
+    command.AddValue("mloStaMaxInflights",
+                     "Maximum links carrying one uplink MPDU concurrently",
+                     mloStaMaxInflights);
     command.AddValue("wifiStandard", "ht, vht, he, or eht (fixed PHY rate)", wifiStandard);
     command.AddValue("backgroundProfile",
                      "none or legacy_mixed8 deterministic contention profile",
@@ -499,6 +503,8 @@ main(int argc, char* argv[])
                     "mlo_str uses one native MLO path and supports only fixed_link_0");
     NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
                     "mlo_str requires --wifiStandard=eht");
+    NS_ABORT_MSG_IF(mloStaMaxInflights < 1 || mloStaMaxInflights > 15,
+                    "mloStaMaxInflights must be in [1,15]");
     NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard != "eht",
                     "dual_interface requires --wifiStandard=eht for comparison with STR MLO");
     NS_ABORT_MSG_IF(durationSeconds <= 0, "duration must be positive");
@@ -852,6 +858,8 @@ main(int argc, char* argv[])
                     "BE_MaxAmsduSize",
                     UintegerValue(maxAmsduSize));
         mac.SetEdca(AC_BE,
+                    "NMaxInflights",
+                    UintegerValue(mloStaMaxInflights),
                     "TxopLimits",
                     StringValue(std::to_string(txopLimitUs) + "us," +
                                 std::to_string(txopLimitUs) + "us"));
@@ -1256,6 +1264,7 @@ main(int argc, char* argv[])
     resolved.queueMaxDelayMs = queueMaxDelayMs;
     resolved.maxAmpduSizeBytes = maxAmpduSize;
     resolved.maxAmsduSizeBytes = maxAmsduSize;
+    resolved.mloStaMaxInflights = nativeMlo ? mloStaMaxInflights : 1;
     resolved.blockAckEnabled = maxAmpduSize > 0;
     resolved.staticAssociation = nativeMlo;
     resolved.tidToLinkMapping = nativeMlo ? "0 0,1" : "not_applicable";

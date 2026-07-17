@@ -135,6 +135,13 @@ def validate_run(
     _require(config.get("topology") in {"single_link", "dual_interface", "mlo_str"},
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
+    wifi = config.get("wifi", {})
+    max_inflights = int(wifi.get("sta_max_inflights", 1))
+    _require(1 <= max_inflights <= 15,
+             "resolved_config.json: invalid STA max inflights")
+    _require(max_inflights == 1 or
+             (config["topology"] == "mlo_str" and wifi.get("block_ack_enabled") is True),
+             "resolved_config.json: multiple inflights require MLO Block Ack")
     if expected_project_commit is not None:
         _require(build["project_git_commit"] == expected_project_commit,
                  "build_info.json: project commit mismatch")
