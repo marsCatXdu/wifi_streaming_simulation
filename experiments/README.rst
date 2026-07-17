@@ -29,11 +29,13 @@ for about 43 Mbps expected aggregate background load.
 It compares dual-interface full duplication with native STR MLO against the
 same eight seeded, independent mixed-standard UDP ON/OFF uplinks on each 2.4
 and 5 GHz channel.
-The OBSS and combined matrices contain three target configurations:
-application-controlled full duplication, native MLO with one maximum in-flight
-link per MPDU, and native MLO with two.  The latter setting applies only to the
-STA's uplink BE queue and requires the statically established Block Ack
-agreement.
+The OBSS and combined matrices contain five target configurations: fixed
+application transmission over the 2.4 GHz interface, fixed transmission over
+the 5 GHz interface, application-controlled full duplication, native MLO with
+one maximum in-flight link per MPDU, and native MLO with two.  The latter
+setting applies only to the STA's uplink BE queue and requires the statically
+established Block Ack agreement.  Fixed-interface baselines retain both target
+radios but the sender policy uses only the selected interface.
 The 2.4 GHz contenders use HT/HE/EHT and the 5 GHz contenders use
 HT/VHT/HE/EHT.  Per-station standards, random streams, ON/OFF means, and
 per-link/per-station traffic totals are retained in run metadata.

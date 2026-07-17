@@ -1,5 +1,5 @@
 name: obss-contention-dual-vs-mlo
-output_root: results/obss_contention_realistic_gop_three_way
+output_root: results/obss_contention_realistic_gop_five_way
 workers: 4
 
 base:
@@ -62,7 +62,9 @@ topologies:
 
 policies:
   - name: fixed_link_0
-    topologies: [mlo_str]
+    topologies: [dual_interface, mlo_str]
+  - name: fixed_link_1
+    topologies: [dual_interface]
   - name: full_duplication
     topologies: [dual_interface]
 

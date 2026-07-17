@@ -143,6 +143,18 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(_approach_label(second), "MLO NMaxInflights=2")
         self.assertNotEqual(_approach_key(first), _approach_key(second))
 
+    def test_fixed_interface_baselines_have_frequency_labels(self) -> None:
+        link_24 = {
+            "topology": "dual_interface", "policy": "fixed_link_0",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        link_5 = {
+            "topology": "dual_interface", "policy": "fixed_link_1",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        self.assertEqual(_approach_label(link_24), "Single 2.4 GHz interface")
+        self.assertEqual(_approach_label(link_5), "Single 5 GHz interface")
+
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({
             "propagation": {

@@ -46,6 +46,10 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
     topology, policy, inflights = _approach_key(item)
     if topology == "dual_interface" and policy == "full_duplication":
         label = "Application full duplication"
+    elif topology == "dual_interface" and policy == "fixed_link_0":
+        label = "Single 2.4 GHz interface"
+    elif topology == "dual_interface" and policy == "fixed_link_1":
+        label = "Single 5 GHz interface"
     elif topology == "mlo_str":
         label = f"MLO NMaxInflights={inflights}"
     else:
