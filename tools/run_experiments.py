@@ -231,7 +231,19 @@ def write_experiment_description(document: dict[str, Any],
         bool(spec["config"].get("wifi", {}).get("ul_ofdma_enabled", False))
         for spec in specs
     })
-    seed_count = len({spec["seed"] for spec in specs})
+    treatment_seeds: dict[tuple[str, str, int, bool], set[int]] = {}
+    for spec in specs:
+        config = spec["config"]
+        config_wifi = config.get("wifi", {})
+        key = (
+            config["topology"],
+            config["policy"],
+            int(config_wifi.get("mlo_sta_max_inflights", 1)),
+            bool(config_wifi.get("ul_ofdma_enabled", False)),
+        )
+        treatment_seeds.setdefault(key, set()).add(spec["seed"])
+    seed_counts = {len(seeds) for seeds in treatment_seeds.values()}
+    seed_count = next(iter(seed_counts)) if len(seed_counts) == 1 else None
     ofdma_scope = wifi.get("ul_ofdma_scope", "all_he_eht_aps")
     state_text = ", ".join("enabled" if state else "disabled" for state in ofdma_states)
     has_legacy = background.get("background_profile") == "legacy_mixed8"
@@ -338,8 +350,9 @@ def write_experiment_description(document: dict[str, Any],
         "ms, enables BSRP, allocates RUs to at most",
         f"{wifi.get('ul_ofdma_max_stations', 4)} STAs, and uses",
         f"{wifi.get('ul_ofdma_psdu_size', 1200)} bytes as the fallback solicited",
-        f"PSDU size. The off and on cases use the same {seed_count} RNG seeds and are",
-        "analyzed as paired observations.",
+        f"PSDU size. Each treatment uses {seed_count} RNG seeds and is paired by seed."
+        if seed_count is not None
+        else "PSDU size. Treatment seed counts differ; see the experiment manifest.",
         "",
     ]
     (output_root / "DESCRIPTION.rst").write_text("\n".join(lines), encoding="utf-8")
