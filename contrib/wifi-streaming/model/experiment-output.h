@@ -78,6 +78,12 @@ struct StreamingRunConfig
     uint32_t maxAmpduSizeBytes{0};
     uint32_t maxAmsduSizeBytes{0};
     uint32_t mloStaMaxInflights{1};
+    bool ulOfdmaEnabled{false};
+    std::string ulOfdmaScope{"all_he_eht_aps"};
+    uint32_t ulOfdmaAccessIntervalMs{0};
+    bool ulOfdmaBsrpEnabled{false};
+    uint32_t ulOfdmaMaxStations{0};
+    uint32_t ulOfdmaPsduSizeBytes{0};
     uint32_t frameRetryLimit{0};
     uint32_t rtsCtsThresholdBytes{0};
     uint32_t fragmentationThresholdBytes{0};

@@ -70,6 +70,18 @@ simultaneously active on both links. The value two permits opportunistic
 uplink MPDU duplication after Block Ack setup. It does not affect the AP,
 background BSSs, or application-copy accounting.
 
+UL OFDMA uses `RrMultiUserScheduler` on selected HE/EHT APs. A nonzero
+`AccessReqInterval` is mandatory because the target workload is uplink-only;
+without periodic AP access requests, the scheduler has no downlink frame from
+which to initiate a trigger exchange. The experiment exposes BSRP enablement,
+maximum scheduled stations, fallback UL PSDU size, and either target-AP or
+all-capable-AP scope. HT/VHT stations remain EDCA contenders and cannot be
+allocated RUs.
+
+The 2.4 GHz link uses `ErpOfdmRate24Mbps` for control traffic; the 5 GHz link
+uses `OfdmRate24Mbps`. This distinction is required for trigger and QoS Null
+exchanges. Data remains fixed at MCS 5 for the target on both links.
+
 ## Output and measurement contract
 
 `streaming-experiment` requires `--outputDir`. The path must be new or empty,
@@ -89,6 +101,7 @@ frames.csv
 policy_decisions.csv
 link_intervals.csv
 mac_summary.csv
+ofdma_summary.csv
 summary.json
 ```
 
@@ -110,6 +123,12 @@ or rate traces; zero would incorrectly claim an observation. Native MLO has no
 application-level link attribution, so its one-path byte totals appear on row
 0 and row 1 has zero application bytes; MAC and PHY fields on both rows are
 genuinely per-link.
+
+`ofdma_summary.csv` separates target devices, same-BSS background STAs, and
+independent OBSS devices. It counts Basic and BSRP triggers, RU grants,
+transmitted TB PPDUs and bytes, and successfully monitored TB MPDUs and bytes.
+The file is present for enabled and disabled runs so paired analyses can
+verify that the disabled treatment generated no trigger-based traffic.
 
 `summary.json` uses generated frames as its denominator. It reports complete,
 incomplete, and deadline counts/ratios; linear-interpolated P50/P90/P95/P99

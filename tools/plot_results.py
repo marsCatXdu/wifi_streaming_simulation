@@ -37,13 +37,14 @@ def _latencies(run: dict) -> np.ndarray:
     return np.asarray(values, dtype=float)
 
 
-def _approach_key(item: dict) -> tuple[str, str, int]:
-    inflights = int(item.get("config", {}).get("wifi", {}).get("sta_max_inflights", 1))
-    return item["topology"], item["policy"], inflights
+def _approach_key(item: dict) -> tuple[str, str, int, bool]:
+    wifi = item.get("config", {}).get("wifi", {})
+    inflights = int(wifi.get("sta_max_inflights", 1))
+    return item["topology"], item["policy"], inflights, bool(wifi.get("ul_ofdma_enabled", False))
 
 
 def _approach_label(item: dict, run_count: int | None = None) -> str:
-    topology, policy, inflights = _approach_key(item)
+    topology, policy, inflights, ul_ofdma = _approach_key(item)
     if topology == "dual_interface" and policy == "full_duplication":
         label = "Application full duplication"
     elif topology == "dual_interface" and policy == "fixed_link_0":
@@ -54,18 +55,20 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
         label = f"MLO NMaxInflights={inflights}"
     else:
         label = f"{topology}/{policy}"
+    if "ul_ofdma_enabled" in item.get("config", {}).get("wifi", {}):
+        label += f" / UL OFDMA {'on' if ul_ofdma else 'off'}"
     return f"{label} (n={run_count} runs)" if run_count is not None else label
 
 
-def _run_groups(runs: list[dict]) -> dict[tuple[str, str, int], list[dict]]:
-    grouped: dict[tuple[str, str, int], list[dict]] = {}
+def _run_groups(runs: list[dict]) -> dict[tuple[str, str, int, bool], list[dict]]:
+    grouped: dict[tuple[str, str, int, bool], list[dict]] = {}
     for run in runs:
         grouped.setdefault(_approach_key(run), []).append(run)
     return grouped
 
 
-def _latency_groups(runs: list[dict]) -> dict[tuple[str, str, int], list[np.ndarray]]:
-    grouped: dict[tuple[str, str, int], list[np.ndarray]] = {}
+def _latency_groups(runs: list[dict]) -> dict[tuple[str, str, int, bool], list[np.ndarray]]:
+    grouped: dict[tuple[str, str, int, bool], list[np.ndarray]] = {}
     for run in runs:
         values = _latencies(run)
         if values.size:
@@ -90,7 +93,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         upper = np.quantile(run_quantiles, 0.90, axis=0)
         label = _approach_label(
             {"topology": key[0], "policy": key[1],
-             "config": {"wifi": {"sta_max_inflights": key[2]}}},
+             "config": {"wifi": {"sta_max_inflights": key[2],
+                                 "ul_ofdma_enabled": key[3]}}},
             len(samples),
         )
         line = plt.plot(center, probabilities, label=label)[0]
@@ -128,7 +132,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             upper = np.quantile(run_densities, 0.90, axis=0)
             label = _approach_label(
                 {"topology": key[0], "policy": key[1],
-                 "config": {"wifi": {"sta_max_inflights": key[2]}}},
+                 "config": {"wifi": {"sta_max_inflights": key[2],
+                                     "ul_ofdma_enabled": key[3]}}},
                 len(samples),
             )
             line = plt.plot(centers, center, label=label)[0]

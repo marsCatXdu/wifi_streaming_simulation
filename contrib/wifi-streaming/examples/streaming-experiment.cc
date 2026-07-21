@@ -150,6 +150,143 @@ LegacyMixed8Standards(uint32_t link, bool singleLink)
     return {"ht", "vht", "he", "eht", "ht", "vht", "he", "eht"};
 }
 
+void
+ConfigureUlOfdmaScheduler(WifiMacHelper& mac,
+                          bool enabled,
+                          uint32_t accessIntervalMs,
+                          bool bsrpEnabled,
+                          uint32_t maxStations,
+                          uint32_t psduSize)
+{
+    if (!enabled)
+    {
+        return;
+    }
+    mac.SetMultiUserScheduler("ns3::RrMultiUserScheduler",
+                              "EnableUlOfdma",
+                              BooleanValue(true),
+                              "EnableBsrp",
+                              BooleanValue(bsrpEnabled),
+                              "AccessReqInterval",
+                              TimeValue(MilliSeconds(accessIntervalMs)),
+                              "NStations",
+                              UintegerValue(maxStations),
+                              "UlPsduSize",
+                              UintegerValue(psduSize));
+}
+
+struct OfdmaTelemetry
+{
+    uint64_t triggerFrames{0};
+    uint64_t basicTriggerFrames{0};
+    uint64_t bsrpTriggerFrames{0};
+    uint64_t ruGrants{0};
+    uint64_t tbPpdusTransmitted{0};
+    uint64_t tbBytesTransmitted{0};
+    uint64_t tbMpdusReceived{0};
+    uint64_t tbBytesReceived{0};
+};
+
+bool
+IsTbPreamble(WifiPreamble preamble)
+{
+    return preamble == WIFI_PREAMBLE_HE_TB || preamble == WIFI_PREAMBLE_EHT_TB;
+}
+
+void
+CountOfdmaPhyTx(OfdmaTelemetry* telemetry,
+                WifiConstPsduMap psdus,
+                WifiTxVector txVector,
+                double)
+{
+    if (IsTbPreamble(txVector.GetPreambleType()))
+    {
+        ++telemetry->tbPpdusTransmitted;
+        for (const auto& [staId, psdu] : psdus)
+        {
+            (void)staId;
+            telemetry->tbBytesTransmitted += psdu->GetSize();
+        }
+    }
+    for (const auto& [staId, psdu] : psdus)
+    {
+        (void)staId;
+        if (psdu->GetNMpdus() != 1 || !psdu->GetHeader(0).IsTrigger())
+        {
+            continue;
+        }
+        CtrlTriggerHeader trigger;
+        psdu->GetPayload(0)->PeekHeader(trigger);
+        ++telemetry->triggerFrames;
+        telemetry->ruGrants += trigger.GetNUserInfoFields();
+        if (trigger.GetType() == TriggerFrameType::BASIC_TRIGGER)
+        {
+            ++telemetry->basicTriggerFrames;
+        }
+        else if (trigger.GetType() == TriggerFrameType::BSRP_TRIGGER)
+        {
+            ++telemetry->bsrpTriggerFrames;
+        }
+    }
+}
+
+void
+CountOfdmaPhyRx(OfdmaTelemetry* telemetry,
+                Ptr<const Packet> packet,
+                uint16_t,
+                WifiTxVector txVector,
+                MpduInfo,
+                SignalNoiseDbm,
+                uint16_t)
+{
+    if (IsTbPreamble(txVector.GetPreambleType()))
+    {
+        ++telemetry->tbMpdusReceived;
+        telemetry->tbBytesReceived += packet->GetSize();
+    }
+}
+
+void
+ConnectOfdmaTelemetry(const NetDeviceContainer& devices, OfdmaTelemetry* telemetry)
+{
+    for (uint32_t index = 0; index < devices.GetN(); ++index)
+    {
+        Ptr<WifiNetDevice> wifiDevice = DynamicCast<WifiNetDevice>(devices.Get(index));
+        for (uint8_t phyId = 0; phyId < wifiDevice->GetNPhys(); ++phyId)
+        {
+            wifiDevice->GetPhy(phyId)->TraceConnectWithoutContext(
+                "PhyTxPsduBegin",
+                MakeBoundCallback(&CountOfdmaPhyTx, telemetry));
+            wifiDevice->GetPhy(phyId)->TraceConnectWithoutContext(
+                "MonitorSnifferRx",
+                MakeBoundCallback(&CountOfdmaPhyRx, telemetry));
+        }
+    }
+}
+
+void
+WriteOfdmaTelemetry(const std::string& outputDir,
+                    const OfdmaTelemetry& target,
+                    const OfdmaTelemetry& sameBss,
+                    const OfdmaTelemetry& obss)
+{
+    std::ofstream output(std::filesystem::path(outputDir) / "ofdma_summary.csv",
+                         std::ios::out | std::ios::trunc);
+    NS_ABORT_MSG_IF(!output, "Cannot write OFDMA telemetry");
+    output << "device_group,trigger_frames,basic_trigger_frames,bsrp_trigger_frames,"
+              "ru_grants,tb_ppdus_transmitted,tb_bytes_transmitted,tb_mpdus_received,"
+              "tb_bytes_received\n";
+    const auto write = [&output](const std::string& name, const OfdmaTelemetry& record) {
+        output << name << ',' << record.triggerFrames << ',' << record.basicTriggerFrames << ','
+               << record.bsrpTriggerFrames << ',' << record.ruGrants << ','
+               << record.tbPpdusTransmitted << ',' << record.tbBytesTransmitted << ','
+               << record.tbMpdusReceived << ',' << record.tbBytesReceived << '\n';
+    };
+    write("target", target);
+    write("same_bss_background", sameBss);
+    write("obss", obss);
+}
+
 } // namespace
 
 int
@@ -198,6 +335,12 @@ main(int argc, char* argv[])
     uint32_t fragmentationThreshold = 65535;
     uint32_t guardIntervalNs = 800;
     uint32_t mloStaMaxInflights = 1;
+    bool ulOfdmaEnabled = false;
+    std::string ulOfdmaScope = "all_he_eht_aps";
+    uint32_t ulOfdmaAccessIntervalMs = 20;
+    bool ulOfdmaBsrpEnabled = true;
+    uint32_t ulOfdmaMaxStations = 4;
+    uint32_t ulOfdmaPsduSize = 1200;
     std::string wifiStandard = "eht";
     std::string backgroundStandard0 = "inherit";
     std::string backgroundStandard1 = "inherit";
@@ -310,6 +453,22 @@ main(int argc, char* argv[])
     command.AddValue("mloStaMaxInflights",
                      "Maximum links carrying one uplink MPDU concurrently",
                      mloStaMaxInflights);
+    command.AddValue("ulOfdmaEnabled", "Enable AP-triggered uplink OFDMA", ulOfdmaEnabled);
+    command.AddValue("ulOfdmaScope",
+                     "UL OFDMA AP scope: target_aps or all_he_eht_aps",
+                     ulOfdmaScope);
+    command.AddValue("ulOfdmaAccessIntervalMs",
+                     "Periodic UL OFDMA channel-access request interval",
+                     ulOfdmaAccessIntervalMs);
+    command.AddValue("ulOfdmaBsrpEnabled",
+                     "Send buffer-status-report poll triggers before UL OFDMA",
+                     ulOfdmaBsrpEnabled);
+    command.AddValue("ulOfdmaMaxStations",
+                     "Maximum stations allocated resource units",
+                     ulOfdmaMaxStations);
+    command.AddValue("ulOfdmaPsduSize",
+                     "Fallback solicited UL PSDU size in bytes",
+                     ulOfdmaPsduSize);
     command.AddValue("wifiStandard", "ht, vht, he, or eht (fixed PHY rate)", wifiStandard);
     command.AddValue("backgroundProfile",
                      "none or legacy_mixed8 deterministic contention profile",
@@ -418,6 +577,12 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
+    NS_ABORT_MSG_IF(ulOfdmaScope != "target_aps" && ulOfdmaScope != "all_he_eht_aps",
+                    "ulOfdmaScope must be target_aps or all_he_eht_aps");
+    NS_ABORT_MSG_IF(ulOfdmaEnabled &&
+                        (ulOfdmaAccessIntervalMs == 0 || ulOfdmaMaxStations == 0 ||
+                         ulOfdmaMaxStations > 74 || ulOfdmaPsduSize == 0),
+                    "UL OFDMA requires a positive interval and PSDU size and 1-74 stations");
     NS_ABORT_MSG_IF(backgroundProfile != "none" && backgroundProfile != "legacy_mixed8",
                     "backgroundProfile must be none or legacy_mixed8");
     NS_ABORT_MSG_IF(propagationModel != "fixed_rss" &&
@@ -627,6 +792,10 @@ main(int argc, char* argv[])
     WifiHelper wifi;
     const WifiStandard standard = ParseWifiStandard(wifiStandard);
     const std::string dataMode = DataModeForStandard(wifiStandard);
+    const auto controlModeForLink = [topology](uint32_t link) {
+        return topology != "single_link" && link == 0 ? "ErpOfdmRate24Mbps"
+                                                       : "OfdmRate24Mbps";
+    };
     wifi.SetStandard(standard);
     if (wifiStandard == "he" || wifiStandard == "eht")
     {
@@ -636,7 +805,7 @@ main(int argc, char* argv[])
                                  "DataMode",
                                  StringValue(dataMode),
                                  "ControlMode",
-                                 StringValue("OfdmRate24Mbps"),
+                                 StringValue(controlModeForLink(0)),
                                  "RtsCtsThreshold",
                                  UintegerValue(rtsCtsThreshold),
                                  "FragmentationThreshold",
@@ -692,7 +861,7 @@ main(int argc, char* argv[])
                 "DataMode",
                 StringValue(DataModeForStandard(stationStandard)),
                 "ControlMode",
-                StringValue("OfdmRate24Mbps"),
+                StringValue(controlModeForLink(link)),
                 "RtsCtsThreshold",
                 UintegerValue(rtsCtsThreshold),
                 "FragmentationThreshold",
@@ -763,11 +932,17 @@ main(int argc, char* argv[])
                                      "DataMode",
                                      StringValue(dataMode),
                                      "ControlMode",
-                                     StringValue("OfdmRate24Mbps"),
+                                     StringValue(controlModeForLink(link)),
                                      "RtsCtsThreshold",
                                      UintegerValue(rtsCtsThreshold),
                                      "FragmentationThreshold",
                                      UintegerValue(fragmentationThreshold));
+        ConfigureUlOfdmaScheduler(mac,
+                                  ulOfdmaEnabled,
+                                  ulOfdmaAccessIntervalMs,
+                                  ulOfdmaBsrpEnabled,
+                                  ulOfdmaMaxStations,
+                                  ulOfdmaPsduSize);
         mac.SetType("ns3::ApWifiMac",
                     "Ssid",
                     SsidValue(ssid),
@@ -823,7 +998,7 @@ main(int argc, char* argv[])
                                      "DataMode",
                                      StringValue("EhtMcs5"),
                                      "ControlMode",
-                                     StringValue("OfdmRate24Mbps"),
+                                     StringValue(controlModeForLink(0)),
                                      "RtsCtsThreshold",
                                      UintegerValue(rtsCtsThreshold),
                                      "FragmentationThreshold",
@@ -833,7 +1008,7 @@ main(int argc, char* argv[])
                                      "DataMode",
                                      StringValue("EhtMcs5"),
                                      "ControlMode",
-                                     StringValue("OfdmRate24Mbps"),
+                                     StringValue(controlModeForLink(1)),
                                      "RtsCtsThreshold",
                                      UintegerValue(rtsCtsThreshold),
                                      "FragmentationThreshold",
@@ -865,6 +1040,12 @@ main(int argc, char* argv[])
                                 std::to_string(txopLimitUs) + "us"));
         stationDevices = wifi.Install(phy, mac, station);
 
+        ConfigureUlOfdmaScheduler(mac,
+                                  ulOfdmaEnabled,
+                                  ulOfdmaAccessIntervalMs,
+                                  ulOfdmaBsrpEnabled,
+                                  ulOfdmaMaxStations,
+                                  ulOfdmaPsduSize);
         mac.SetType("ns3::ApWifiMac",
                     "Ssid",
                     SsidValue(ssid),
@@ -951,7 +1132,8 @@ main(int argc, char* argv[])
                     "DataMode",
                     StringValue(DataModeForStandard(obssStandards[bss])),
                     "ControlMode",
-                    StringValue("OfdmRate24Mbps"),
+                    StringValue(obssLinks[bss] == 0 ? "ErpOfdmRate24Mbps"
+                                                   : "OfdmRate24Mbps"),
                     "RtsCtsThreshold",
                     UintegerValue(rtsCtsThreshold),
                     "FragmentationThreshold",
@@ -981,6 +1163,14 @@ main(int argc, char* argv[])
                             "TxopLimits",
                             StringValue(std::to_string(txopLimitUs) + "us"));
             obssStaDevices[bss] = obssWifi.Install(obssPhy, obssMac, obssStations[bss]);
+            ConfigureUlOfdmaScheduler(
+                obssMac,
+                ulOfdmaEnabled && ulOfdmaScope == "all_he_eht_aps" &&
+                    (obssStandards[bss] == "he" || obssStandards[bss] == "eht"),
+                ulOfdmaAccessIntervalMs,
+                ulOfdmaBsrpEnabled,
+                ulOfdmaMaxStations,
+                ulOfdmaPsduSize);
             obssMac.SetType("ns3::ApWifiMac",
                             "Ssid",
                             SsidValue(obssSsid),
@@ -1245,7 +1435,9 @@ main(int argc, char* argv[])
     resolved.propagationStreamBase = propagationStreamBase;
     resolved.standard = StandardLabel(wifiStandard);
     resolved.dataMode = dataMode;
-    resolved.controlMode = "OfdmRate24Mbps";
+    resolved.controlMode = topology == "single_link"
+                               ? "OfdmRate24Mbps"
+                               : "ErpOfdmRate24Mbps,OfdmRate24Mbps";
     resolved.guardInterval = std::to_string(guardIntervalNs) + "ns";
     resolved.channelSettings =
         topology == "single_link"
@@ -1265,6 +1457,12 @@ main(int argc, char* argv[])
     resolved.maxAmpduSizeBytes = maxAmpduSize;
     resolved.maxAmsduSizeBytes = maxAmsduSize;
     resolved.mloStaMaxInflights = nativeMlo ? mloStaMaxInflights : 1;
+    resolved.ulOfdmaEnabled = ulOfdmaEnabled;
+    resolved.ulOfdmaScope = ulOfdmaScope;
+    resolved.ulOfdmaAccessIntervalMs = ulOfdmaAccessIntervalMs;
+    resolved.ulOfdmaBsrpEnabled = ulOfdmaBsrpEnabled;
+    resolved.ulOfdmaMaxStations = ulOfdmaMaxStations;
+    resolved.ulOfdmaPsduSizeBytes = ulOfdmaPsduSize;
     resolved.blockAckEnabled = maxAmpduSize > 0;
     resolved.staticAssociation = nativeMlo;
     resolved.tidToLinkMapping = nativeMlo ? "0 0,1" : "not_applicable";
@@ -1638,6 +1836,21 @@ main(int argc, char* argv[])
     }
     ExperimentOutput::WriteResolvedConfig(outputDir, resolved);
 
+    OfdmaTelemetry targetOfdma;
+    OfdmaTelemetry sameBssOfdma;
+    OfdmaTelemetry obssOfdma;
+    ConnectOfdmaTelemetry(stationDevices, &targetOfdma);
+    ConnectOfdmaTelemetry(apWifiDevices, &targetOfdma);
+    for (const auto& devices : backgroundDevices)
+    {
+        ConnectOfdmaTelemetry(devices, &sameBssOfdma);
+    }
+    for (uint32_t bss = 0; bss < obssBssCount; ++bss)
+    {
+        ConnectOfdmaTelemetry(obssStaDevices[bss], &obssOfdma);
+        ConnectOfdmaTelemetry(obssApDevices[bss], &obssOfdma);
+    }
+
     WifiTxStatsHelper txStats(warmup, measurementStop);
     txStats.Enable(stationDevices);
     WifiCoTraceHelper occupancy(warmup, measurementStop);
@@ -1835,6 +2048,7 @@ main(int argc, char* argv[])
     summary.backgroundThroughputMbps =
         backgroundBytesReceived * 8.0 / durationSeconds / 1e6;
     ExperimentOutput::WriteSummary(outputDir, summary);
+    WriteOfdmaTelemetry(outputDir, targetOfdma, sameBssOfdma, obssOfdma);
     if (!framesFile.empty())
     {
         std::filesystem::copy_file(std::filesystem::path(outputDir) / "frames.csv",

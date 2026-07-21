@@ -36,6 +36,20 @@ one maximum in-flight link per MPDU, and native MLO with two.  The latter
 setting applies only to the STA's uplink BE queue and requires the statically
 established Block Ack agreement.  Fixed-interface baselines retain both target
 radios but the sender policy uses only the selected interface.
+``obss_contention_ul_ofdma.yaml`` and
+``combined_contention_ul_ofdma.yaml`` repeat the five approaches with UL
+OFDMA disabled and enabled under the same code revision and random seeds.
+The enabled case installs ``RrMultiUserScheduler`` on the target EHT APs and
+requests access every 20 ms, polls buffer status, allocates at most four RUs,
+and uses 1200 bytes as the fallback solicited PSDU size.  The OBSS-only matrix
+also enables the HE/EHT overlapping AP schedulers.  The denser combined matrix
+keeps overlapping APs on EDCA because simultaneous schedulers expose an
+ns-3.48 SpectrumWifiPhy reception-state assertion; its treatment is therefore
+target-BSS UL OFDMA.  HT/VHT APs and stations remain EDCA-only.
+
+Each batch output root contains ``DESCRIPTION.rst``.  It records the logical
+node and radio-interface counts, BSS associations, standards, traffic
+settings, OFDMA eligibility, and sender behavior for every approach.
 The 2.4 GHz contenders use HT/HE/EHT and the 5 GHz contenders use
 HT/VHT/HE/EHT.  Per-station standards, random streams, ON/OFF means, and
 per-link/per-station traffic totals are retained in run metadata.

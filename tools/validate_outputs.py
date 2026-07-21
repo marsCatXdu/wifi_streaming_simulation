@@ -20,6 +20,11 @@ CORE_FILES = {
     "summary.json",
     "stdout.log",
 }
+OFDMA_COLUMNS = {
+    "device_group", "trigger_frames", "basic_trigger_frames", "bsrp_trigger_frames",
+    "ru_grants", "tb_ppdus_transmitted", "tb_bytes_transmitted",
+    "tb_mpdus_received", "tb_bytes_received",
+}
 FRAME_COLUMNS = {
     "run_id", "frame_id", "generation_time_us", "frame_size_bytes", "packet_count",
     "frame_type", "deadline_us", "policy", "primary_link", "duplicated",
@@ -142,6 +147,28 @@ def validate_run(
     _require(max_inflights == 1 or
              (config["topology"] == "mlo_str" and wifi.get("block_ack_enabled") is True),
              "resolved_config.json: multiple inflights require MLO Block Ack")
+    ul_ofdma_enabled = wifi.get("ul_ofdma_enabled", False)
+    _require(isinstance(ul_ofdma_enabled, bool),
+             "resolved_config.json: invalid UL OFDMA enabled flag")
+    if ul_ofdma_enabled:
+        _require(wifi.get("ul_ofdma_scope") in {"target_aps", "all_he_eht_aps"},
+                 "resolved_config.json: invalid UL OFDMA scope")
+        _require(int(wifi.get("ul_ofdma_access_interval_ms", 0)) > 0,
+                 "resolved_config.json: invalid UL OFDMA access interval")
+        _require(1 <= int(wifi.get("ul_ofdma_max_stations", 0)) <= 74,
+                 "resolved_config.json: invalid UL OFDMA station count")
+        _require(int(wifi.get("ul_ofdma_psdu_size_bytes", 0)) > 0,
+                 "resolved_config.json: invalid UL OFDMA PSDU size")
+    if "ul_ofdma_enabled" in wifi:
+        _require((run_dir / "ofdma_summary.csv").is_file(),
+                 "missing core file: ofdma_summary.csv")
+        ofdma_rows = _csv(run_dir / "ofdma_summary.csv", OFDMA_COLUMNS)
+        _require({row["device_group"] for row in ofdma_rows} ==
+                 {"target", "same_bss_background", "obss"},
+                 "ofdma_summary.csv: invalid device groups")
+        for row in ofdma_rows:
+            for column in OFDMA_COLUMNS - {"device_group"}:
+                _integer(row, column, "ofdma_summary.csv")
     if expected_project_commit is not None:
         _require(build["project_git_commit"] == expected_project_commit,
                  "build_info.json: project commit mismatch")

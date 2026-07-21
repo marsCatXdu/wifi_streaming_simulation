@@ -20,6 +20,7 @@ from typing import Any, Iterable
 import yaml
 
 from plot_results import plot
+from plot_ofdma_comparison import plot_ofdma_comparison
 from summarize_runs import discover, summarize, write_outputs
 from validate_outputs import validate_run
 
@@ -43,6 +44,11 @@ CLI_KEYS = {
     "source": "source", "trace_file": "traceFile", "wifi_standard": "wifiStandard",
     "queue_max_packets": "queueMaxPackets", "queue_max_delay_ms": "queueMaxDelayMs",
     "mlo_sta_max_inflights": "mloStaMaxInflights",
+    "ul_ofdma_enabled": "ulOfdmaEnabled", "ul_ofdma_scope": "ulOfdmaScope",
+    "ul_ofdma_access_interval_ms": "ulOfdmaAccessIntervalMs",
+    "ul_ofdma_bsrp_enabled": "ulOfdmaBsrpEnabled",
+    "ul_ofdma_max_stations": "ulOfdmaMaxStations",
+    "ul_ofdma_psdu_size": "ulOfdmaPsduSize",
     "max_ampdu_size": "maxAmpduSize", "max_amsdu_size": "maxAmsduSize",
     "frame_retry_limit": "frameRetryLimit", "txop_limit_us": "txopLimitUs",
     "rts_cts_threshold": "rtsCtsThreshold",
@@ -212,6 +218,132 @@ def atomic_json(path: Path, value: Any) -> None:
     os.replace(temporary, path)
 
 
+def write_experiment_description(document: dict[str, Any],
+                                 specs: list[dict[str, Any]],
+                                 output_root: Path) -> None:
+    """Write the resolved node, association, and approach description."""
+    base = document.get("base", {})
+    wifi = base.get("wifi", {})
+    stream = base.get("stream", {})
+    background = base.get("background", {})
+    obss = base.get("obss", {})
+    ofdma_states = sorted({
+        bool(spec["config"].get("wifi", {}).get("ul_ofdma_enabled", False))
+        for spec in specs
+    })
+    ofdma_scope = wifi.get("ul_ofdma_scope", "all_he_eht_aps")
+    state_text = ", ".join("enabled" if state else "disabled" for state in ofdma_states)
+    has_legacy = background.get("background_profile") == "legacy_mixed8"
+    has_obss = obss.get("obss_profile") == "mixed4x4"
+
+    lines = [
+        document.get("name", "Wi-Fi streaming experiment"),
+        "=" * len(document.get("name", "Wi-Fi streaming experiment")),
+        "",
+        "Purpose",
+        "-------",
+        "",
+        "This matrix compares five target-sender approaches under identical",
+        f"traffic, propagation, and random seeds. UL OFDMA states: {state_text}.",
+        "",
+        "Target devices and approaches",
+        "-----------------------------",
+        "",
+        "* ``Single 2.4 GHz interface``: one dual-radio 802.11be STA node is",
+        "  associated through separate non-MLO interfaces with the target AP's",
+        "  2.4 GHz and 5 GHz BSSs; the application sends only through the",
+        "  2.4 GHz interface.",
+        "* ``Single 5 GHz interface``: the same dual-radio association is used,",
+        "  but the application sends only through the 5 GHz interface.",
+        "* ``Application full duplication``: the same frame is sent over both",
+        "  independent non-MLO 802.11be interfaces.",
+        "* ``MLO NMaxInflights=1``: one two-link 802.11be STR MLD STA is",
+        "  associated with one two-link AP MLD; each MPDU may be in flight on",
+        "  at most one link.",
+        "* ``MLO NMaxInflights=2``: the same MLD association permits an MPDU to",
+        "  be in flight on both links opportunistically.",
+        "",
+        "Both target links are 20 MHz: channel 1 at 2.4 GHz and channel 36 at",
+        "5 GHz. Target data uses EHT MCS 5, an 800 ns guard interval, BE",
+        "traffic, A-MPDU aggregation, and a 500-packet MAC queue.",
+        f"The target STA is 10 m from the target AP and generates {stream.get('fps', 30)}",
+        f"frames/s for {stream.get('duration', 60)} s. Interframes are",
+        f"{stream.get('frame_size', 12000)} bytes; every",
+        f"{stream.get('gop_length', 60)}th frame is multiplied by",
+        f"{stream.get('keyframe_size_multiplier', 4)} and packetized into",
+        f"{stream.get('payload_size', 1200)}-byte UDP payloads.",
+        "",
+    ]
+    if has_legacy:
+        lines += [
+            "Same-BSS contention devices",
+            "---------------------------",
+            "",
+            "Sixteen independent non-MLD uplink STAs associate with the target",
+            "AP: eight on each target link. The 2.4 GHz BSS has three 802.11n,",
+            "three 802.11ax, and two 802.11be STAs. The 5 GHz BSS has two each",
+            "of 802.11n, 802.11ac, 802.11ax, and 802.11be. Each STA generates",
+            f"independent UDP ON/OFF traffic at {background.get('background_rate_mbps', 2)}",
+            "Mbps while ON, with 100 ms mean ON and OFF durations.",
+            "",
+        ]
+    if has_obss:
+        count = int(obss.get("obss_stations_per_bss", 4))
+        lines += [
+            "Overlapping BSS devices",
+            "-----------------------",
+            "",
+            f"Four independent APs each serve {count} same-standard STAs:",
+            "",
+            "* one 802.11n BSS on the 2.4 GHz target channel;",
+            "* one 802.11ax BSS on the 2.4 GHz target channel;",
+            "* one 802.11ac BSS on the 5 GHz target channel;",
+            "* one 802.11be BSS on the 5 GHz target channel.",
+            "",
+            "These 16 OBSS STAs do not associate with the target AP. Every OBSS",
+            "STA has independent uplink and downlink UDP ON/OFF flows. A new",
+            f"UL rate is drawn uniformly from {obss.get('obss_ul_min_rate_mbps', 0.5)}-",
+            f"{obss.get('obss_ul_max_rate_mbps', 3)} Mbps and a new DL rate from",
+            f"{obss.get('obss_dl_min_rate_mbps', 2)}-{obss.get('obss_dl_max_rate_mbps', 8)}",
+            "Mbps for each ON period. Mean ON and OFF durations are 100 ms and",
+            "300 ms. OBSS PHY rates use Minstrel-HT with the latest amendment",
+            "only and a 50 ms update interval.",
+            "",
+        ]
+    target_sta_count = 1
+    extra_sta_count = (16 if has_legacy else 0) + (16 if has_obss else 0)
+    lines += [
+        "Device counts per approach",
+        "--------------------------",
+        "",
+        f"Each approach contains {target_sta_count} logical target STA node and",
+        f"{extra_sta_count} contention STA nodes. The target AP is one logical",
+        "node with either two independent AP interfaces or one two-link AP",
+        "MLD. Four additional AP nodes exist for the OBSS profile.",
+        "",
+        "UL OFDMA configuration",
+        "----------------------",
+        "",
+        "When disabled, all uplink data uses normal EDCA channel access. When",
+        "enabled, ``RrMultiUserScheduler`` is installed on the target EHT AP.",
+        ("The independent HE and EHT OBSS APs also use the scheduler."
+         if ofdma_scope == "all_he_eht_aps"
+         else "The independent OBSS APs remain EDCA-only in this matrix."),
+        "HT and VHT APs remain EDCA-only. Only associated HE/EHT STAs are",
+        "trigger eligible; OFDMA does not coordinate stations across BSS",
+        "boundaries.",
+        "",
+        f"The scheduler requests access every {wifi.get('ul_ofdma_access_interval_ms', 5)}",
+        "ms, enables BSRP, allocates RUs to at most",
+        f"{wifi.get('ul_ofdma_max_stations', 4)} STAs, and uses",
+        f"{wifi.get('ul_ofdma_psdu_size', 1200)} bytes as the fallback solicited",
+        "PSDU size. The off and on cases use the same ten RNG seeds and are",
+        "analyzed as paired observations.",
+        "",
+    ]
+    (output_root / "DESCRIPTION.rst").write_text("\n".join(lines), encoding="utf-8")
+
+
 def load_yaml(path: Path) -> dict[str, Any]:
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -274,6 +406,7 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     commit = project_commit()
     specs = expand_config(document)
+    write_experiment_description(document, specs, output_root)
     seen = set()
     for spec in specs:
         spec["run_id"] = derive_run_id(spec["config"], spec["seed"], spec["run"],
@@ -335,6 +468,12 @@ def main() -> None:
         aggregate_csv = output_root / "aggregate.csv"
         write_outputs(aggregate, aggregate_json, aggregate_csv)
         plot(aggregate, output_root / "plots")
+        ofdma_states = {
+            bool(run.get("config", {}).get("wifi", {}).get("ul_ofdma_enabled", False))
+            for run in aggregate["runs"]
+        }
+        if ofdma_states == {False, True}:
+            plot_ofdma_comparison(aggregate, output_root / "plots" / "ofdma_comparison")
         print(f"ANALYSIS {aggregate_json} {aggregate_csv} {output_root / 'plots'}")
     print(f"MANIFEST {manifest_path}")
 

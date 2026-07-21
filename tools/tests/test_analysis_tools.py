@@ -8,9 +8,16 @@ import unittest
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parents[1]
+ROOT = TOOLS.parent
 sys.path.insert(0, str(TOOLS))
 
-from run_experiments import cli_arguments, derive_run_id, expand_config
+from run_experiments import (
+    cli_arguments,
+    derive_run_id,
+    expand_config,
+    load_yaml,
+    write_experiment_description,
+)
 from plot_results import _approach_key, _approach_label, plot
 from summarize_runs import group_key, summarize
 from validate_outputs import ValidationError, validate_run
@@ -129,6 +136,37 @@ class MatrixTests(unittest.TestCase):
             "wifi": {"mlo_sta_max_inflights": 2},
         }, Path("."))
         self.assertIn("--mloStaMaxInflights=2", wifi_arguments)
+        ofdma_arguments = cli_arguments({
+            "wifi": {
+                "ul_ofdma_enabled": True,
+                "ul_ofdma_scope": "all_he_eht_aps",
+                "ul_ofdma_access_interval_ms": 5,
+                "ul_ofdma_bsrp_enabled": True,
+                "ul_ofdma_max_stations": 4,
+                "ul_ofdma_psdu_size": 1200,
+            },
+        }, Path("."))
+        self.assertIn("--ulOfdmaEnabled=1", ofdma_arguments)
+        self.assertIn("--ulOfdmaScope=all_he_eht_aps", ofdma_arguments)
+        self.assertIn("--ulOfdmaAccessIntervalMs=5", ofdma_arguments)
+        self.assertIn("--ulOfdmaBsrpEnabled=1", ofdma_arguments)
+        self.assertIn("--ulOfdmaMaxStations=4", ofdma_arguments)
+        self.assertIn("--ulOfdmaPsduSize=1200", ofdma_arguments)
+
+    def test_ofdma_matrices_have_paired_five_way_runs(self) -> None:
+        for name in ("obss_contention_ul_ofdma.yaml",
+                     "combined_contention_ul_ofdma.yaml"):
+            path = ROOT / "experiments" / "configs" / name
+            expanded = expand_config(load_yaml(path))
+            self.assertEqual(len(expanded), 100)
+            self.assertEqual({
+                item["config"]["wifi"]["ul_ofdma_enabled"] for item in expanded
+            }, {False, True})
+            self.assertEqual(len({
+                (item["config"]["topology"], item["config"]["policy"],
+                 item["config"]["wifi"]["mlo_sta_max_inflights"])
+                for item in expanded
+            }), 5)
 
     def test_mlo_inflight_variants_have_distinct_plot_labels(self) -> None:
         first = {
@@ -142,6 +180,25 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(_approach_label(first), "MLO NMaxInflights=1")
         self.assertEqual(_approach_label(second), "MLO NMaxInflights=2")
         self.assertNotEqual(_approach_key(first), _approach_key(second))
+
+    def test_ofdma_states_have_distinct_plot_labels(self) -> None:
+        disabled = {
+            "topology": "dual_interface", "policy": "fixed_link_0",
+            "config": {"wifi": {
+                "sta_max_inflights": 1, "ul_ofdma_enabled": False,
+            }},
+        }
+        enabled = {
+            "topology": "dual_interface", "policy": "fixed_link_0",
+            "config": {"wifi": {
+                "sta_max_inflights": 1, "ul_ofdma_enabled": True,
+            }},
+        }
+        self.assertEqual(_approach_label(disabled),
+                         "Single 2.4 GHz interface / UL OFDMA off")
+        self.assertEqual(_approach_label(enabled),
+                         "Single 2.4 GHz interface / UL OFDMA on")
+        self.assertNotEqual(_approach_key(disabled), _approach_key(enabled))
 
     def test_fixed_interface_baselines_have_frequency_labels(self) -> None:
         link_24 = {
@@ -216,6 +273,20 @@ class MatrixTests(unittest.TestCase):
 
 
 class OutputTests(unittest.TestCase):
+    def test_result_description_lists_associations_and_standards(self) -> None:
+        config_path = ROOT / "experiments" / "configs" / \
+            "combined_contention_ul_ofdma.yaml"
+        document = load_yaml(config_path)
+        specs = expand_config(document)
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            write_experiment_description(document, specs, output)
+            description = (output / "DESCRIPTION.rst").read_text()
+            self.assertIn("Single 2.4 GHz interface", description)
+            self.assertIn("three 802.11n", description)
+            self.assertIn("Four independent APs", description)
+            self.assertIn("RrMultiUserScheduler", description)
+
     def test_validation_and_run_level_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
