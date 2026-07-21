@@ -144,15 +144,56 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     _finish(output_dir / "latency_pdf.png",
             "Frame latency PDF (median and 10–90% run band)", pdf_data)
 
-    plt.figure()
-    labels = [_approach_label(group).replace(" ", "\n", 1) for group in groups]
-    misses = [g["metrics"]["deadline_miss_ratio"]["mean"] for g in groups]
-    available = [index for index, value in enumerate(misses) if value is not None]
-    if available:
-        plt.bar(available, [misses[index] for index in available])
-        plt.xticks(available, [labels[index] for index in available], fontsize="x-small")
-        plt.ylabel("Deadline miss ratio (run mean)")
-    _finish(output_dir / "deadline_miss.png", "Deadline misses", bool(available))
+    ofdma_states = {
+        bool(group.get("config", {}).get("wifi", {}).get("ul_ofdma_enabled"))
+        for group in groups
+        if "ul_ofdma_enabled" in group.get("config", {}).get("wifi", {})
+    }
+    if ofdma_states == {False, True}:
+        approaches = sorted(
+            {_approach_key(group)[:3] for group in groups},
+            key=lambda key: _approach_label({
+                "topology": key[0], "policy": key[1],
+                "config": {"wifi": {"sta_max_inflights": key[2]}},
+            }),
+        )
+        plt.figure(figsize=(10, max(4.8, len(approaches))))
+        positions = np.arange(len(approaches), dtype=float)
+        plotted = False
+        for state, offset in ((False, -0.18), (True, 0.18)):
+            values = []
+            for approach in approaches:
+                group = next(
+                    item for item in groups
+                    if _approach_key(item) == (*approach, state)
+                )
+                values.append(group["metrics"]["deadline_miss_ratio"]["mean"])
+            plt.barh(positions + offset, values, height=0.34,
+                     label=f"UL OFDMA {'on' if state else 'off'}")
+            plotted = plotted or any(value is not None for value in values)
+        labels = [
+            _approach_label({
+                "topology": key[0], "policy": key[1],
+                "config": {"wifi": {"sta_max_inflights": key[2]}},
+            })
+            for key in approaches
+        ]
+        plt.yticks(positions, labels, fontsize="small")
+        plt.gca().invert_yaxis()
+        plt.xlabel("Deadline miss ratio (run mean)")
+        plt.legend()
+    else:
+        plt.figure(figsize=(10, max(4.8, 0.7 * len(groups))))
+        labels = [_approach_label(group) for group in groups]
+        misses = [group["metrics"]["deadline_miss_ratio"]["mean"] for group in groups]
+        available = [index for index, value in enumerate(misses) if value is not None]
+        plotted = bool(available)
+        if available:
+            plt.barh(available, [misses[index] for index in available])
+            plt.yticks(available, [labels[index] for index in available], fontsize="small")
+            plt.gca().invert_yaxis()
+            plt.xlabel("Deadline miss ratio (run mean)")
+    _finish(output_dir / "deadline_miss.png", "Deadline misses", plotted)
 
     plt.figure()
     pareto = [run for run in runs if run["latency_p99_us"] is not None]
