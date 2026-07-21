@@ -240,6 +240,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     if bursts:
         bins = range(1, max(bursts) + 2)
         plt.hist(bursts, bins=bins, align="left", rwidth=0.85)
+        plt.xscale("log")
+        plt.xlim(left=1)
         plt.xlabel("Consecutive missed frames")
         plt.ylabel("Burst count")
     _finish(output_dir / "miss_burst_distribution.png",
@@ -260,6 +262,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         for label, values in burst_groups:
             plt.hist(values, bins=bins, align="left", histtype="step",
                      linewidth=2, label=label)
+        plt.xscale("log")
+        plt.xlim(left=1)
         plt.xlabel("Consecutive missed frames")
         plt.ylabel("Burst count")
         plt.legend(fontsize="x-small")
