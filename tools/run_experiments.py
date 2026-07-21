@@ -231,6 +231,7 @@ def write_experiment_description(document: dict[str, Any],
         bool(spec["config"].get("wifi", {}).get("ul_ofdma_enabled", False))
         for spec in specs
     })
+    seed_count = len({spec["seed"] for spec in specs})
     ofdma_scope = wifi.get("ul_ofdma_scope", "all_he_eht_aps")
     state_text = ", ".join("enabled" if state else "disabled" for state in ofdma_states)
     has_legacy = background.get("background_profile") == "legacy_mixed8"
@@ -337,7 +338,7 @@ def write_experiment_description(document: dict[str, Any],
         "ms, enables BSRP, allocates RUs to at most",
         f"{wifi.get('ul_ofdma_max_stations', 4)} STAs, and uses",
         f"{wifi.get('ul_ofdma_psdu_size', 1200)} bytes as the fallback solicited",
-        "PSDU size. The off and on cases use the same ten RNG seeds and are",
+        f"PSDU size. The off and on cases use the same {seed_count} RNG seeds and are",
         "analyzed as paired observations.",
         "",
     ]
