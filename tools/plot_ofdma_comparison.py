@@ -14,7 +14,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from plot_results import _approach_label, _latencies
+from plot_results import _approach_label, _deadline_title, _latencies
 from summarize_runs import confidence
 
 
@@ -114,8 +114,8 @@ def plot_ofdma_comparison(aggregate: dict, output_dir: Path) -> None:
             label = f"UL OFDMA {'on' if state else 'off'}"
             axes[1].plot(centers, center, color=color, label=label)
             axes[1].fill_between(centers, lower, upper, color=color, alpha=0.2)
-        axes[0].set(xlabel="Union latency (ms)", ylabel="CDF")
-        axes[1].set(xlabel="Union latency (ms)", ylabel="Probability density")
+        axes[0].set(xlabel="Frame Completion Latency (ms)", ylabel="CDF")
+        axes[1].set(xlabel="Frame Completion Latency (ms)", ylabel="Probability density")
         for axis in axes:
             axis.grid(alpha=0.25)
             axis.legend()
@@ -146,7 +146,9 @@ def plot_ofdma_comparison(aggregate: dict, output_dir: Path) -> None:
         axis.set_xticks(positions, labels, rotation=20, ha="right")
         axis.grid(alpha=0.25)
         axis.legend()
-    figure.suptitle("UL OFDMA off/on comparison with 95% confidence intervals")
+    figure.suptitle(_deadline_title(
+        "UL OFDMA off/on comparison with 95% confidence intervals", runs
+    ))
     figure.tight_layout()
     figure.savefig(output_dir / "ofdma_group_comparison.png", dpi=160)
     plt.close(figure)
@@ -177,7 +179,9 @@ def plot_ofdma_comparison(aggregate: dict, output_dir: Path) -> None:
         axis.axhline(0, color="black", linewidth=1)
         axis.set_xticks(positions, labels, rotation=20, ha="right")
         axis.grid(alpha=0.25)
-    figure.suptitle("Paired UL OFDMA effect with 95% confidence intervals")
+    figure.suptitle(_deadline_title(
+        "Paired UL OFDMA effect with 95% confidence intervals", runs
+    ))
     figure.tight_layout()
     figure.savefig(output_dir / "ofdma_paired_differences.png", dpi=160)
     plt.close(figure)

@@ -37,6 +37,19 @@ def _latencies(run: dict) -> np.ndarray:
     return np.asarray(values, dtype=float)
 
 
+def _deadline_title(title: str, runs: list[dict]) -> str:
+    deadlines_ms = sorted({
+        float(run["config"]["stream"]["deadline_us"]) / 1000
+        for run in runs
+        if run.get("config", {}).get("stream", {}).get("deadline_us") is not None
+    })
+    if not deadlines_ms:
+        return title
+    values = ", ".join(f"{deadline:g}" for deadline in deadlines_ms)
+    label = "deadline" if len(deadlines_ms) == 1 else "deadlines"
+    return f"{title} ({label} = {values} ms)"
+
+
 def _approach_key(item: dict) -> tuple[str, str, int, bool]:
     wifi = item.get("config", {}).get("wifi", {})
     inflights = int(wifi.get("sta_max_inflights", 1))
@@ -81,6 +94,10 @@ def plot(aggregate: dict, output_dir: Path) -> None:
     runs = aggregate.get("runs", [])
     groups = aggregate.get("groups", [])
     latency_groups = _latency_groups(runs)
+    show_ofdma_state = any(
+        "ul_ofdma_enabled" in run.get("config", {}).get("wifi", {})
+        for run in runs
+    )
 
     plt.figure()
     probabilities = np.linspace(0.0, 1.0, 201)
@@ -91,17 +108,19 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         center = np.median(run_quantiles, axis=0)
         lower = np.quantile(run_quantiles, 0.10, axis=0)
         upper = np.quantile(run_quantiles, 0.90, axis=0)
-        label = _approach_label(
-            {"topology": key[0], "policy": key[1],
-             "config": {"wifi": {"sta_max_inflights": key[2],
-                                 "ul_ofdma_enabled": key[3]}}},
-            len(samples),
+        wifi_config = {"sta_max_inflights": key[2]}
+        if show_ofdma_state:
+            wifi_config["ul_ofdma_enabled"] = key[3]
+        label = _approach_label({
+            "topology": key[0], "policy": key[1], "config": {"wifi": wifi_config}
+        }, len(samples))
+        line = plt.plot(center / 1000, probabilities, label=label)[0]
+        plt.fill_betweenx(
+            probabilities, lower / 1000, upper / 1000, color=line.get_color(), alpha=0.2
         )
-        line = plt.plot(center, probabilities, label=label)[0]
-        plt.fill_betweenx(probabilities, lower, upper, color=line.get_color(), alpha=0.2)
     cdf_data = bool(latency_groups)
     if cdf_data:
-        plt.xlabel("Union latency (us)")
+        plt.xlabel("Frame Completion Latency (ms)")
         plt.ylabel("CDF")
         plt.legend(fontsize="x-small")
     _finish(output_dir / "latency_cdf.png",
@@ -109,7 +128,7 @@ def plot(aggregate: dict, output_dir: Path) -> None:
 
     plt.figure()
     all_latencies = [
-        value
+        value / 1000
         for samples in latency_groups.values()
         for values in samples
         for value in values
@@ -125,20 +144,20 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         centers = (bins[:-1] + bins[1:]) / 2
         for key, samples in sorted(latency_groups.items()):
             run_densities = np.vstack(
-                [np.histogram(values, bins=bins, density=True)[0] for values in samples]
+                [np.histogram(values / 1000, bins=bins, density=True)[0] for values in samples]
             )
             center = np.median(run_densities, axis=0)
             lower = np.quantile(run_densities, 0.10, axis=0)
             upper = np.quantile(run_densities, 0.90, axis=0)
-            label = _approach_label(
-                {"topology": key[0], "policy": key[1],
-                 "config": {"wifi": {"sta_max_inflights": key[2],
-                                     "ul_ofdma_enabled": key[3]}}},
-                len(samples),
-            )
+            wifi_config = {"sta_max_inflights": key[2]}
+            if show_ofdma_state:
+                wifi_config["ul_ofdma_enabled"] = key[3]
+            label = _approach_label({
+                "topology": key[0], "policy": key[1], "config": {"wifi": wifi_config}
+            }, len(samples))
             line = plt.plot(centers, center, label=label)[0]
             plt.fill_between(centers, lower, upper, color=line.get_color(), alpha=0.2)
-        plt.xlabel("Union latency (us)")
+        plt.xlabel("Frame Completion Latency (ms)")
         plt.ylabel("Probability density")
         plt.legend(fontsize="x-small")
     _finish(output_dir / "latency_pdf.png",
@@ -193,7 +212,11 @@ def plot(aggregate: dict, output_dir: Path) -> None:
             plt.yticks(available, [labels[index] for index in available], fontsize="small")
             plt.gca().invert_yaxis()
             plt.xlabel("Deadline miss ratio (run mean)")
-    _finish(output_dir / "deadline_miss.png", "Deadline misses", plotted)
+    _finish(
+        output_dir / "deadline_miss.png",
+        _deadline_title("Deadline misses", runs),
+        plotted,
+    )
 
     plt.figure()
     pareto = [run for run in runs if run["latency_p99_us"] is not None]
@@ -219,7 +242,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         plt.ylabel("Streaming deadline miss ratio")
         plt.legend(fontsize="x-small")
     _finish(output_dir / "background_degradation.png",
-            "Background throughput and streaming degradation", bool(background))
+            _deadline_title("Background throughput and streaming degradation", runs),
+            bool(background))
 
     plt.figure()
     duplicate = [run for run in runs if run["cross_copy_delay_correlation"] is not None
@@ -245,7 +269,7 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         plt.xlabel("Consecutive missed frames")
         plt.ylabel("Burst count")
     _finish(output_dir / "miss_burst_distribution.png",
-            "Deadline-miss burst distribution", bool(bursts))
+            _deadline_title("Deadline-miss burst distribution", runs), bool(bursts))
 
     plt.figure()
     burst_groups = [
@@ -268,7 +292,8 @@ def plot(aggregate: dict, output_dir: Path) -> None:
         plt.ylabel("Burst count")
         plt.legend(fontsize="x-small")
     _finish(output_dir / "miss_burst_distribution_by_group.png",
-            "Deadline-miss burst distribution by approach", bool(burst_groups))
+            _deadline_title("Deadline-miss burst distribution by approach", runs),
+            bool(burst_groups))
 
 
 def main() -> None:
