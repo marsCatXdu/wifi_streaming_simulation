@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
 import json
 import multiprocessing
 import os
@@ -33,6 +35,19 @@ PROFILES = {
         "predictionEventLogEnabled": "true",
     },
 }
+MEANINGFUL_OUTPUT_FILES = (
+    "frames.csv",
+    "policy_decisions.csv",
+    "link_intervals.csv",
+    "mac_summary.csv",
+    "summary.json",
+    "ofdma_summary.csv",
+    "background_flows.csv",
+    "background_rate_periods.csv",
+    "resolved_config.json",
+    "build_info.json",
+    "stdout.log",
+)
 
 
 def _execute(command: list[str], log_path: str,
@@ -54,6 +69,39 @@ def _row_count(path: Path) -> int:
         return 0
     with path.open(encoding="utf-8") as source:
         return max(sum(1 for _ in source) - 1, 0)
+
+
+def _normalized_digest(path: Path) -> str:
+    if path.suffix == ".csv":
+        with path.open(newline="", encoding="utf-8") as source:
+            reader = csv.DictReader(source)
+            fields = reader.fieldnames
+            if fields is None:
+                raise RuntimeError(f"missing CSV header: {path}")
+            rows = []
+            for row in reader:
+                if "run_id" in row:
+                    row["run_id"] = "<run>"
+                rows.append([row[field] for field in fields])
+            normalized = json.dumps(
+                {"fields": fields, "rows": rows},
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+    elif path.suffix == ".json":
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(value, dict) and "run_id" in value:
+            value["run_id"] = "<run>"
+        if path.name == "resolved_config.json" and isinstance(value, dict):
+            value.pop("predictionTelemetry", None)
+        if path.name == "build_info.json" and isinstance(value, dict):
+            value.pop("execution_timestamp_utc", None)
+        normalized = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    elif path.name == "stdout.log":
+        normalized = path.read_text(encoding="utf-8")
+    else:
+        raise RuntimeError(f"unsupported normalized file: {path}")
+    return hashlib.sha256(normalized.encode()).hexdigest()
 
 
 def _run_profile(profile: str, repetition: int, output_root: Path,
@@ -110,6 +158,10 @@ def _run_profile(profile: str, repetition: int, output_root: Path,
     output_bytes = sum(
         path.stat().st_size for path in run_dir.iterdir() if path.is_file()
     )
+    meaningful_digests = {
+        name: _normalized_digest(run_dir / name)
+        for name in MEANINGFUL_OUTPUT_FILES
+    }
     return {
         "profile": profile,
         "repetition": repetition,
@@ -119,11 +171,28 @@ def _run_profile(profile: str, repetition: int, output_root: Path,
         "output_bytes": output_bytes,
         "sample_rows": _row_count(run_dir / "prediction_samples.csv"),
         "event_rows": _row_count(run_dir / "prediction_events.csv"),
+        "meaningful_output_sha256": meaningful_digests,
+        "prediction_samples_sha256": (
+            _normalized_digest(run_dir / "prediction_samples.csv")
+            if (run_dir / "prediction_samples.csv").is_file() else None
+        ),
+        "prediction_events_sha256": (
+            _normalized_digest(run_dir / "prediction_events.csv")
+            if (run_dir / "prediction_events.csv").is_file() else None
+        ),
     }
 
 
 def _median(rows: list[dict[str, Any]], field: str) -> float:
     return statistics.median(float(row[field]) for row in rows)
+
+
+def _overhead_classification(overhead_percent: float) -> str:
+    if overhead_percent <= 25:
+        return "PASS"
+    if overhead_percent <= 35:
+        return "PASS_WITH_PERFORMANCE_WARNING"
+    return "REVIEW_REQUIRED"
 
 
 def main() -> None:
@@ -160,6 +229,43 @@ def main() -> None:
                 f"wall={measurement['wall_time_s']:.6f}s"
             )
 
+    rows_by_repetition = {
+        repetition: {
+            row["profile"]: row
+            for row in raw if row["repetition"] == repetition
+        }
+        for repetition in range(args.repetitions)
+    }
+    for repetition, rows in rows_by_repetition.items():
+        reference = rows["disabled"]["meaningful_output_sha256"]
+        for profile in names[1:]:
+            if rows[profile]["meaningful_output_sha256"] != reference:
+                raise RuntimeError(
+                    f"telemetry changed meaningful output in repetition {repetition}: "
+                    f"{profile}"
+                )
+        if (rows["samples"]["prediction_samples_sha256"] !=
+                rows["samples_events"]["prediction_samples_sha256"]):
+            raise RuntimeError(
+                f"event logging changed samples in repetition {repetition}"
+            )
+    reference_outputs = rows_by_repetition[0]["disabled"]["meaningful_output_sha256"]
+    reference_samples = rows_by_repetition[0]["samples"]["prediction_samples_sha256"]
+    reference_events = rows_by_repetition[0]["samples_events"]["prediction_events_sha256"]
+    for repetition, rows in rows_by_repetition.items():
+        if rows["disabled"]["meaningful_output_sha256"] != reference_outputs:
+            raise RuntimeError(
+                f"meaningful simulation output is nondeterministic in repetition {repetition}"
+            )
+        if rows["samples"]["prediction_samples_sha256"] != reference_samples:
+            raise RuntimeError(
+                f"prediction samples are nondeterministic in repetition {repetition}"
+            )
+        if rows["samples_events"]["prediction_events_sha256"] != reference_events:
+            raise RuntimeError(
+                f"prediction events are nondeterministic in repetition {repetition}"
+            )
+
     summaries: dict[str, dict[str, Any]] = {}
     for profile in names:
         rows = [row for row in raw if row["profile"] == profile]
@@ -175,6 +281,14 @@ def main() -> None:
         summary["median_wall_time_overhead_ratio"] = (
             summary["median_wall_time_s"] / baseline - 1 if baseline else None
         )
+    samples_overhead_percent = (
+        100 * (summaries["samples"]["median_wall_time_s"] - baseline) / baseline
+        if baseline else None
+    )
+    samples_classification = (
+        _overhead_classification(samples_overhead_percent)
+        if samples_overhead_percent is not None else "REVIEW_REQUIRED"
+    )
     report = {
         "schema_version": 1,
         "method": "interleaved single-worker repetitions",
@@ -183,6 +297,20 @@ def main() -> None:
         "repetitions": args.repetitions,
         "project_commit": project_commit,
         "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
+        "samples_only_wall_time_overhead_percent": samples_overhead_percent,
+        "samples_only_overhead_classification": samples_classification,
+        "telemetry_on_off_meaningful_output_equivalence": {
+            "status": "PASS",
+            "normalization": "run_id only",
+            "files": list(MEANINGFUL_OUTPUT_FILES),
+            "normalized_sha256": reference_outputs,
+        },
+        "deterministic_output": {
+            "status": "PASS",
+            "repetitions": args.repetitions,
+            "prediction_samples_normalized_sha256": reference_samples,
+            "prediction_events_normalized_sha256": reference_events,
+        },
         "profiles": summaries,
         "measurements": raw,
     }

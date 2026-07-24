@@ -19,6 +19,7 @@ from run_experiments import (
     load_yaml,
     write_experiment_description,
 )
+from benchmark_prediction_telemetry import _overhead_classification
 from plot_results import _approach_key, _approach_label, plot
 from summarize_runs import group_key, summarize
 from validate_outputs import (
@@ -119,9 +120,9 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
             "history_windows_us": [1000],
             "event_log_enabled": False,
             "oracle_features_enabled": oracle_enabled,
-            "telemetry_schema_version": 1,
-            "event_schema_version": 1,
-            "feature_support_mask_version": 1,
+            "telemetry_schema_version": 2,
+            "event_schema_version": 2,
+            "feature_support_mask_version": 2,
         },
     })
     config_path.write_text(json.dumps(config))
@@ -142,7 +143,7 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
     }
     values = {column: "" for column in columns}
     values.update({
-        "telemetry_schema_version": 1,
+        "telemetry_schema_version": 2,
         "run_id": config["run_id"],
         "frame_id": 7,
         "path_id": 0,
@@ -150,7 +151,8 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
         "sample_stage": "T0",
         "sample_offset_us": 0,
         "sample_time_ns": 100000,
-        "latest_feature_event_time_ns": 100000,
+        "latest_feature_event_time_ns": "",
+        "latest_feature_event_sequence": 0,
         "generation_time_ns": 100000,
         "deadline_time_ns": 1100000,
         "frame_age_us": 0,
@@ -164,7 +166,7 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
         "application_socket_packet_bytes_submitted": 0,
         "packets_remaining_to_submit": 1,
         "mpdu_tx_attempts_total": 0,
-        "mpdu_tx_successes_total": 0,
+        "mpdu_positive_acks_total": 0,
         "mpdu_tx_attempt_failures_total": 0,
         "mpdu_retries_total": 0,
         "mpdu_terminal_drops_total": 0,
@@ -188,9 +190,14 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
         "frame_packets_pending_primary": 1,
         "frame_mac_service_bytes_not_acknowledged": 1286,
         "frame_mac_service_bytes_pending_primary": 1286,
-        "feature_support_mask": "0x7f" if oracle_enabled else "0x3f",
+        "feature_support_mask": hex(sum(
+            1 << bit for bit in (
+                set(range(0, 17)) | set(range(18, 54)) |
+                ({54, 56, 57, 58, 59} if oracle_enabled else set())
+            )
+        )),
         "mpdu_attempts_1ms": 0,
-        "mpdu_successes_1ms": 0,
+        "mpdu_positive_acks_1ms": 0,
         "mpdu_attempt_failures_1ms": 0,
         "mpdu_retries_1ms": 0,
         "acknowledged_mac_service_bytes_1ms": 0,
@@ -214,6 +221,18 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
 
 
 class MatrixTests(unittest.TestCase):
+    def test_prediction_overhead_policy_boundaries(self) -> None:
+        self.assertEqual(_overhead_classification(25), "PASS")
+        self.assertEqual(
+            _overhead_classification(25.0001),
+            "PASS_WITH_PERFORMANCE_WARNING",
+        )
+        self.assertEqual(
+            _overhead_classification(35),
+            "PASS_WITH_PERFORMANCE_WARNING",
+        )
+        self.assertEqual(_overhead_classification(35.0001), "REVIEW_REQUIRED")
+
     def test_deterministic_cartesian_and_compatibility(self) -> None:
         document = {
             "base": {"stream": {"duration": 1}},
@@ -509,6 +528,7 @@ class OutputTests(unittest.TestCase):
                 header = reader.fieldnames
             self.assertIsNotNone(header)
             rows[0]["latest_feature_event_time_ns"] = "100001"
+            rows[0]["latest_feature_event_sequence"] = "1"
             with sample_path.open("w", newline="", encoding="utf-8") as output:
                 writer = csv.DictWriter(output, fieldnames=header)
                 writer.writeheader()
@@ -552,7 +572,7 @@ class OutputTests(unittest.TestCase):
                 field: "" for field in header
             }
             common.update({
-                "event_schema_version": 1,
+                "event_schema_version": 2,
                 "run_id": "prediction",
                 "event_time_ns": 100000,
                 "path_id": 0,
@@ -563,9 +583,12 @@ class OutputTests(unittest.TestCase):
                 "mac_queue_service_bytes": 0,
                 "current_phy_state": "IDLE",
             })
-            registered = {**common, "event_type": "FRAME_REGISTERED"}
+            registered = {
+                **common, "event_sequence": 1, "event_type": "FRAME_REGISTERED"
+            }
             enqueued = {
                 **common,
+                "event_sequence": 2,
                 "event_type": "MAC_ENQUEUE",
                 "mac_service_bytes": 1286,
                 "mac_queue_packets": 1,

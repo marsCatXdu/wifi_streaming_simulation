@@ -27,9 +27,9 @@ from validate_outputs import validate_run
 ROOT = Path(__file__).resolve().parents[1]
 NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
 PREDICTION_SCHEMA_VERSIONS = {
-    "telemetry_schema_version": 1,
-    "event_schema_version": 1,
-    "feature_support_mask_version": 1,
+    "telemetry_schema_version": 2,
+    "event_schema_version": 2,
+    "feature_support_mask_version": 2,
 }
 CLI_KEYS = {
     "duration": "duration", "fps": "fps", "frame_size": "frameSize",

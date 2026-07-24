@@ -431,8 +431,6 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
     NS_ABORT_MSG_IF(state.telemetryStartNs != 0 ||
                         state.phyState->GetState() != WifiPhyState::IDLE,
                     "Prediction telemetry paths must bind at time zero while PHY is idle");
-    state.latestFeatureEventTimeNs =
-        static_cast<uint64_t>(std::max<int64_t>(state.telemetryStartNs, 0));
     state.centerFrequencyMhz = state.phy->GetFrequency();
     if (state.centerFrequencyMhz < 3000)
     {
@@ -450,7 +448,7 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
         {state.telemetryStartNs,
          std::numeric_limits<int64_t>::max(),
          state.phyState->GetState(),
-         state.latestFeatureEventTimeNs,
+         0,
          state.phyIntervalSerial++});
     state.phyListener =
         std::make_shared<PredictionTelemetryPhyListener>(this, pathId);
@@ -507,6 +505,16 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
             "State",
             MakeBoundCallback(&PredictionTelemetryTraceAdapter::PhyState, this, pathId)),
         "Cannot connect prediction telemetry PHY state trace");
+    WriteEvent("PHY_INTERVAL_REVISION",
+               pathId,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::string{"INITIAL"},
+               path.phyState->GetState(),
+               path.telemetryStartNs,
+               std::numeric_limits<int64_t>::max());
 }
 
 void
@@ -529,10 +537,12 @@ void
 PredictionTelemetryCollector::WriteEventHeader()
 {
     m_eventsOutput
-        << "event_schema_version,run_id,event_time_ns,event_type,path_id,copy_id,frame_id,"
-           "packet_index,attempt_number,mac_service_bytes,mac_queue_packets,"
+        << "event_schema_version,run_id,event_time_ns,event_sequence,event_type,path_id,"
+           "copy_id,frame_id,packet_index,attempt_number,finalizes_attempt_success,"
+           "mac_service_bytes,mac_queue_packets,"
            "mac_queue_service_bytes,current_mcs,current_nss,current_channel_width_mhz,"
-           "current_guard_interval_ns,current_phy_state\n";
+           "current_guard_interval_ns,current_phy_state,phy_interval_revision_kind,"
+           "phy_interval_state,phy_interval_start_ns,phy_interval_end_ns\n";
 }
 
 std::string
@@ -550,20 +560,21 @@ PredictionTelemetryCollector::WriteSampleHeader(std::ostream& output) const
 {
     output
         << "telemetry_schema_version,run_id,frame_id,path_id,copy_id,sample_stage,"
-           "sample_offset_us,sample_time_ns,latest_feature_event_time_ns,generation_time_ns,"
-           "deadline_time_ns,frame_age_us,deadline_slack_us,sender_mac_complete,actionable,"
+           "sample_offset_us,sample_time_ns,latest_feature_event_time_ns,"
+           "latest_feature_event_sequence,generation_time_ns,deadline_time_ns,frame_age_us,"
+           "deadline_slack_us,sender_mac_complete,actionable,"
            "frame_size_bytes,frame_packet_count,frame_type,packets_submitted,"
            "application_socket_packet_bytes_submitted,packets_remaining_to_submit,"
-           "mpdu_tx_attempts_total,mpdu_tx_successes_total,mpdu_tx_attempt_failures_total,"
+           "mpdu_tx_attempts_total,mpdu_positive_acks_total,mpdu_tx_attempt_failures_total,"
            "mpdu_retries_total,mpdu_terminal_drops_total,mpdu_retry_limit_drops_total,"
            "mpdu_lifetime_drops_total,mpdu_queue_drops_total,ppdu_tx_count_total,"
-           "last_tx_attempt_time_ns,last_tx_success_time_ns,current_mcs,current_nss,"
+           "last_tx_attempt_time_ns,last_positive_ack_time_ns,current_mcs,current_nss,"
            "current_channel_width_mhz,current_guard_interval_ns,frequency_band,"
            "center_frequency_mhz,current_ack_signal_dbm";
     for (const auto windowUs : m_historyWindowsUs)
     {
         const auto label = WindowLabel(windowUs);
-        output << ",mpdu_attempts_" << label << ",mpdu_successes_" << label
+        output << ",mpdu_attempts_" << label << ",mpdu_positive_acks_" << label
                << ",mpdu_attempt_failures_" << label << ",mpdu_retries_" << label
                << ",mpdu_retry_ratio_" << label << ",acknowledged_mac_service_bytes_" << label
                << ",mpdu_queue_to_ack_mean_" << label << "_us"
@@ -606,6 +617,7 @@ PredictionTelemetryCollector::WriteSample(std::ostream& output,
     row.Add(sample.sampleOffsetUs);
     row.Add(sample.sampleTimeNs);
     row.Add(sample.latestFeatureEventTimeNs);
+    row.Add(sample.latestFeatureEventSequence);
     row.Add(sample.generationTimeNs);
     row.Add(sample.deadlineTimeNs);
     row.Add(sample.frameAgeUs);
@@ -619,7 +631,7 @@ PredictionTelemetryCollector::WriteSample(std::ostream& output,
     row.Add(sample.applicationSocketPacketBytesSubmitted);
     row.Add(sample.packetsRemainingToSubmit);
     row.Add(sample.mpduTxAttemptsTotal);
-    row.Add(sample.mpduTxSuccessesTotal);
+    row.Add(sample.mpduPositiveAcksTotal);
     row.Add(sample.mpduTxAttemptFailuresTotal);
     row.Add(sample.mpduRetriesTotal);
     row.Add(sample.mpduTerminalDropsTotal);
@@ -628,7 +640,7 @@ PredictionTelemetryCollector::WriteSample(std::ostream& output,
     row.Add(sample.mpduQueueDropsTotal);
     row.Add(sample.ppduTxCountTotal);
     row.Add(sample.lastTxAttemptTimeNs);
-    row.Add(sample.lastTxSuccessTimeNs);
+    row.Add(sample.lastPositiveAckTimeNs);
     row.Add(sample.currentMcs);
     row.Add(sample.currentNss);
     row.Add(sample.currentChannelWidthMhz);
@@ -670,7 +682,7 @@ PredictionTelemetryCollector::WriteSample(std::ostream& output,
         NS_ABORT_MSG_IF(rolling.windowUs != m_historyWindowsUs[index],
                         "Prediction sample rolling windows are out of order");
         row.Add(rolling.mpduAttempts);
-        row.Add(rolling.mpduSuccesses);
+        row.Add(rolling.mpduPositiveAcks);
         row.Add(rolling.mpduAttemptFailures);
         row.Add(rolling.mpduRetries);
         row.Add(rolling.mpduRetryRatio);
@@ -758,25 +770,65 @@ PredictionTelemetryCollector::WriteEvent(
     uint8_t pathId,
     const std::optional<StreamingFrameTag>& tag,
     std::optional<uint32_t> attemptNumber,
-    std::optional<uint32_t> macServiceBytes)
+    std::optional<uint32_t> macServiceBytes,
+    std::optional<bool> finalizesAttemptSuccess,
+    std::optional<std::string> phyIntervalRevisionKind,
+    std::optional<WifiPhyState> phyIntervalState,
+    std::optional<int64_t> phyIntervalStartNs,
+    std::optional<int64_t> phyIntervalEndNs)
 {
+    const uint64_t nowNs = NowNs();
+    const uint64_t eventSequence = ++m_featureEventSequence;
+    auto pathIterator = m_paths.find(pathId);
+    if (pathIterator != m_paths.end())
+    {
+        pathIterator->second.latestFeatureEventTimeNs = nowNs;
+        pathIterator->second.latestFeatureEventSequence = eventSequence;
+    }
+    if (tag)
+    {
+        if (auto frame = m_frames.find(MakeKey(*tag)); frame != m_frames.end())
+        {
+            frame->second.latestFeatureEventTimeNs = nowNs;
+            frame->second.latestFeatureEventSequence = eventSequence;
+        }
+    }
     if (!m_eventsOutput.is_open())
     {
         return;
     }
-    auto pathIterator = m_paths.find(pathId);
-    NS_ABORT_MSG_IF(pathIterator == m_paths.end(), "Prediction event references an unbound path");
-    const auto& path = pathIterator->second;
-    uint64_t queueServiceBytes = 0;
-    for (const auto& entry : path.queueEntries)
+
+    std::optional<uint64_t> queuePackets;
+    std::optional<uint64_t> queueServiceBytes;
+    std::optional<uint8_t> currentMcs;
+    std::optional<uint8_t> currentNss;
+    std::optional<uint16_t> currentChannelWidthMhz;
+    std::optional<uint64_t> currentGuardIntervalNs;
+    std::optional<std::string> currentPhyState;
+    if (pathIterator != m_paths.end())
     {
-        queueServiceBytes += entry.macServiceBytes;
+        const auto& path = pathIterator->second;
+        queuePackets = path.queueEntries.size();
+        queueServiceBytes = 0;
+        for (const auto& entry : path.queueEntries)
+        {
+            *queueServiceBytes += entry.macServiceBytes;
+        }
+        currentMcs = path.currentMcs;
+        currentNss = path.currentNss;
+        currentChannelWidthMhz = path.currentChannelWidthMhz;
+        currentGuardIntervalNs = path.currentGuardIntervalNs;
+        if (path.phyState)
+        {
+            currentPhyState = PhyStateToString(path.phyState->GetState());
+        }
     }
 
     CsvRow row(m_eventsOutput);
     row.Add(PREDICTION_EVENT_SCHEMA_VERSION);
     row.Add(m_runId);
-    row.Add(NowNs());
+    row.Add(nowNs);
+    row.Add(eventSequence);
     row.Add(eventType);
     row.Add(pathId);
     if (tag)
@@ -792,14 +844,26 @@ PredictionTelemetryCollector::WriteEvent(
         row.Add(std::optional<uint32_t>{});
     }
     row.Add(attemptNumber);
+    row.Add(finalizesAttemptSuccess);
     row.Add(macServiceBytes);
-    row.Add(path.queueEntries.size());
+    row.Add(queuePackets);
     row.Add(queueServiceBytes);
-    row.Add(path.currentMcs);
-    row.Add(path.currentNss);
-    row.Add(path.currentChannelWidthMhz);
-    row.Add(path.currentGuardIntervalNs);
-    row.Add(PhyStateToString(path.phyState->GetState()));
+    row.Add(currentMcs);
+    row.Add(currentNss);
+    row.Add(currentChannelWidthMhz);
+    row.Add(currentGuardIntervalNs);
+    row.Add(currentPhyState);
+    row.Add(phyIntervalRevisionKind);
+    if (phyIntervalState)
+    {
+        row.Add(PhyStateToString(*phyIntervalState));
+    }
+    else
+    {
+        row.Add(std::optional<std::string>{});
+    }
+    row.Add(phyIntervalStartNs);
+    row.Add(phyIntervalEndNs);
     row.End();
 }
 
@@ -850,7 +914,6 @@ PredictionTelemetryCollector::RegisterFrame(const PacketizationPlan& plan)
     {
         state.packets[index].macServiceBytes = plan.packets[index].expectedMacServiceBytes;
     }
-    state.latestFeatureEventTimeNs = plan.frame.generationTimeNs;
     const auto [iterator, inserted] = m_frames.emplace(key, std::move(state));
     NS_ABORT_MSG_IF(!inserted,
                     "Prediction frame copy was registered more than once: frame "
@@ -912,7 +975,6 @@ PredictionTelemetryCollector::RecordPacketSubmitted(
     packet.submitted = true;
     ++state.packetsSubmitted;
     state.submittedBytes += applicationSocketPacketBytes;
-    state.latestFeatureEventTimeNs = NowNs();
     WriteEvent("PACKET_SUBMITTED", tag.pathId, tag, std::nullopt, std::nullopt);
 }
 
@@ -967,8 +1029,6 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
     }
 
     const uint64_t nowNs = NowNs();
-    path.latestFeatureEventTimeNs = nowNs;
-
     QueueEntry entry;
     entry.stableMpdu = GetStableMpdu(mpdu);
     entry.macServiceBytes = mpdu->GetPacketSize();
@@ -1017,7 +1077,6 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
     packet.enqueueTimeNs = nowNs;
     packet.stableMpdu = entry.stableMpdu;
     ++frame.packetsMacEnqueued;
-    frame.latestFeatureEventTimeNs = nowNs;
     WriteEvent("MAC_ENQUEUE",
                pathId,
                *entry.tag,
@@ -1044,7 +1103,6 @@ PredictionTelemetryCollector::NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiM
                         "Tagged MPDU dequeued on a different application path");
     }
     const uint64_t nowNs = NowNs();
-    path.latestFeatureEventTimeNs = nowNs;
     const auto stableMpdu = GetStableMpdu(mpdu);
     const auto queued =
         std::find_if(path.queueEntries.begin(),
@@ -1079,7 +1137,6 @@ PredictionTelemetryCollector::NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiM
         ++frame.packetsMacDequeued;
     }
     packet.queued = false;
-    frame.latestFeatureEventTimeNs = nowNs;
     WriteEvent("MAC_DEQUEUE", pathId, *tag, std::nullopt, mpdu->GetPacketSize());
 }
 
@@ -1119,8 +1176,6 @@ PredictionTelemetryCollector::NotifyPhyTxBegin(uint8_t pathId, Ptr<const Packet>
     ++path.mpduAttempts;
     path.mpduRetries += retry;
     path.lastTxAttemptTimeNs = nowNs;
-    path.latestFeatureEventTimeNs = nowNs;
-    frame.latestFeatureEventTimeNs = nowNs;
     path.macEvents.push_back({nowNs,
                               MacEventKind::ATTEMPT,
                               retry,
@@ -1158,8 +1213,6 @@ PredictionTelemetryCollector::FinalizeAttemptFailure(PathState& path,
     ++packet.attemptFailures;
     ++frame.mpduAttemptFailures;
     ++path.mpduAttemptFailures;
-    frame.latestFeatureEventTimeNs = nowNs;
-    path.latestFeatureEventTimeNs = nowNs;
     path.macEvents.push_back({nowNs,
                               MacEventKind::ATTEMPT_FAILURE,
                               false,
@@ -1213,8 +1266,6 @@ PredictionTelemetryCollector::NotifyAckedMpdu(uint8_t pathId, Ptr<const WifiMpdu
     {
         return;
     }
-    NS_ABORT_MSG_IF(packet.terminallyDropped,
-                    "A packet was acknowledged after a terminal drop");
     NS_ABORT_MSG_IF(packet.attemptCount == 0,
                     "Positive acknowledgement has no prior PHY attempt");
     NS_ABORT_MSG_IF(!packet.macServiceBytes || !packet.enqueueTimeNs ||
@@ -1222,29 +1273,40 @@ PredictionTelemetryCollector::NotifyAckedMpdu(uint8_t pathId, Ptr<const WifiMpdu
                     "Positive acknowledgement lacks required MPDU timing state");
 
     const uint64_t nowNs = NowNs();
+    const bool finalizesAttemptSuccess = packet.attemptPending;
+    const bool wasTerminallyDropped = packet.terminallyDropped;
     // A Block ACK obtained after an explicit BAR can arrive after the original
     // data attempt timed out. It acknowledges the packet without creating a
     // second attempt or undoing the timeout failure.
     packet.attemptPending = false;
     packet.acknowledged = true;
+    if (wasTerminallyDropped)
+    {
+        NS_ABORT_MSG_IF(frame.packetsTerminallyDropped == 0,
+                        "Terminal frame-packet state underflow on late acknowledgement");
+        packet.terminallyDropped = false;
+        --frame.packetsTerminallyDropped;
+    }
+    path.mpduAttemptSuccesses += finalizesAttemptSuccess;
     ++frame.packetsTxSucceeded;
-    ++path.mpduSuccesses;
-    path.lastTxSuccessTimeNs = nowNs;
-    path.latestFeatureEventTimeNs = nowNs;
-    frame.latestFeatureEventTimeNs = nowNs;
+    ++path.mpduPositiveAcks;
+    path.lastPositiveAckTimeNs = nowNs;
     const double queueToAckUs = (nowNs - *packet.enqueueTimeNs) / 1000.0;
     const double firstAttemptToAckUs = (nowNs - *packet.firstAttemptTimeNs) / 1000.0;
     path.macEvents.push_back({nowNs,
-                              MacEventKind::SUCCESS,
+                              MacEventKind::POSITIVE_ACK,
                               false,
                               *packet.macServiceBytes,
                               queueToAckUs,
                               firstAttemptToAckUs});
-    WriteEvent("MPDU_TX_SUCCESS",
+    WriteEvent("MPDU_POSITIVE_ACK",
                pathId,
                tag,
-               packet.attemptCount,
-               packet.macServiceBytes);
+               finalizesAttemptSuccess
+                   ? std::optional<uint32_t>{packet.attemptCount}
+                   : std::nullopt,
+               packet.macServiceBytes,
+               finalizesAttemptSuccess);
     frame.senderMacComplete =
         frame.packetsTxSucceeded == frame.plan.frame.packetCount;
     PruneHistories(path, nowNs);
@@ -1308,8 +1370,6 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
         ++path.mpduQueueDrops;
         break;
     }
-    frame.latestFeatureEventTimeNs = nowNs;
-    path.latestFeatureEventTimeNs = nowNs;
     WriteEvent("MAC_DROP",
                pathId,
                tag,
@@ -1329,7 +1389,6 @@ PredictionTelemetryCollector::NotifyPpduTx(uint8_t pathId,
 {
     auto& path = m_paths.at(pathId);
     ++path.ppduTxCount;
-    path.latestFeatureEventTimeNs = NowNs();
     if (taggedTarget)
     {
         const auto mode = txVector.GetMode();
@@ -1368,8 +1427,16 @@ PredictionTelemetryCollector::NotifyPhyState(uint8_t pathId,
     const int64_t startNs = start.GetNanoSeconds();
     const int64_t endNs = (start + duration).GetNanoSeconds();
     UpsertPhyInterval(path, startNs, endNs, state, nowNs);
-    path.latestFeatureEventTimeNs = nowNs;
-    WriteEvent("PHY_STATE_CHANGE", pathId, std::nullopt, std::nullopt, std::nullopt);
+    WriteEvent("PHY_INTERVAL_REVISION",
+               pathId,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::string{"AUTHORITATIVE"},
+               state,
+               startNs,
+               endNs);
     PruneHistories(path, nowNs);
 }
 
@@ -1387,7 +1454,16 @@ PredictionTelemetryCollector::NotifyPhyActivity(uint8_t pathId,
     const int64_t startNs = static_cast<int64_t>(nowNs);
     const int64_t endNs = (Simulator::Now() + duration).GetNanoSeconds();
     UpsertPhyInterval(path, startNs, endNs, state, nowNs);
-    path.latestFeatureEventTimeNs = nowNs;
+    WriteEvent("PHY_INTERVAL_REVISION",
+               pathId,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::nullopt,
+               std::string{"PREDICTED_START"},
+               state,
+               startNs,
+               endNs);
     PruneHistories(path, nowNs);
 }
 
@@ -1405,6 +1481,16 @@ PredictionTelemetryCollector::NotifyPhyActivityEnd(uint8_t pathId, WifiPhyState 
             interval.endNs = endNs;
             interval.reportedAtNs = nowNs;
             interval.serial = path.phyIntervalSerial++;
+            WriteEvent("PHY_INTERVAL_REVISION",
+                       pathId,
+                       std::nullopt,
+                       std::nullopt,
+                       std::nullopt,
+                       std::nullopt,
+                       std::string{"EXPLICIT_END"},
+                       interval.state,
+                       interval.startNs,
+                       interval.endNs);
         }
     }
     path.phyIntervals.erase(
@@ -1414,7 +1500,6 @@ PredictionTelemetryCollector::NotifyPhyActivityEnd(uint8_t pathId, WifiPhyState 
                            return interval.serial != 0 && interval.endNs <= interval.startNs;
                        }),
         path.phyIntervals.end());
-    path.latestFeatureEventTimeNs = nowNs;
     PruneHistories(path, nowNs);
 }
 
@@ -1508,8 +1593,8 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
             ++result.mpduAttempts;
             result.mpduRetries += event.retry;
             break;
-        case MacEventKind::SUCCESS:
-            ++result.mpduSuccesses;
+        case MacEventKind::POSITIVE_ACK:
+            ++result.mpduPositiveAcks;
             result.acknowledgedMacServiceBytes += event.acknowledgedBytes;
             if (event.queueToAckUs)
             {
@@ -1628,25 +1713,37 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
 
 std::string
 PredictionTelemetryCollector::MakeSupportMask(bool wifiBound,
-                                              bool txVectorSupported,
                                               bool oracleSupported)
 {
-    uint64_t mask = (1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::FRAME_PLAN)) |
-                    (1ULL << static_cast<uint32_t>(
-                         PredictionFeatureSupportBit::SOCKET_SUBMISSION_PROGRESS));
+    uint64_t mask = 0;
+    const auto set = [&mask](PredictionFeatureSupportBit bit) {
+        mask |= 1ULL << static_cast<uint32_t>(bit);
+    };
     if (wifiBound)
     {
-        mask |= (1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::MPDU_OUTCOMES)) |
-                (1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::MAC_QUEUE)) |
-                (1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::PHY_OCCUPANCY));
+        for (uint32_t bit = static_cast<uint32_t>(
+                 PredictionFeatureSupportBit::MPDU_TX_ATTEMPTS_TOTAL);
+             bit <= static_cast<uint32_t>(PredictionFeatureSupportBit::CENTER_FREQUENCY_MHZ);
+             ++bit)
+        {
+            mask |= 1ULL << bit;
+        }
+        for (uint32_t bit =
+                 static_cast<uint32_t>(PredictionFeatureSupportBit::MPDU_ATTEMPTS_WINDOW);
+             bit <= static_cast<uint32_t>(
+                        PredictionFeatureSupportBit::FRAME_MAC_SERVICE_BYTES_PENDING_PRIMARY);
+             ++bit)
+        {
+            mask |= 1ULL << bit;
+        }
     }
-    if (txVectorSupported)
+    if (wifiBound && oracleSupported)
     {
-        mask |= 1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::TX_VECTOR);
-    }
-    if (oracleSupported)
-    {
-        mask |= 1ULL << static_cast<uint32_t>(PredictionFeatureSupportBit::CAUSAL_ORACLE);
+        set(PredictionFeatureSupportBit::CURRENT_CW);
+        set(PredictionFeatureSupportBit::NAV_REMAINING_US);
+        set(PredictionFeatureSupportBit::CURRENT_PHY_STATE);
+        set(PredictionFeatureSupportBit::CHANNEL_ACCESS_STATUS);
+        set(PredictionFeatureSupportBit::MEDIUM_BUSY_NOW);
     }
     std::ostringstream output;
     output << "0x" << std::hex << mask;
@@ -1707,10 +1804,29 @@ PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
 {
     const uint64_t nowNs = sample.sampleTimeNs;
     PruneHistories(path, nowNs);
-    sample.latestFeatureEventTimeNs =
-        std::max(sample.latestFeatureEventTimeNs, path.latestFeatureEventTimeNs);
+    if (path.latestFeatureEventSequence > sample.latestFeatureEventSequence)
+    {
+        sample.latestFeatureEventTimeNs = path.latestFeatureEventTimeNs;
+        sample.latestFeatureEventSequence = path.latestFeatureEventSequence;
+    }
+    uint64_t unresolvedAttempts = 0;
+    for (const auto& [frameKey, frameState] : m_frames)
+    {
+        if (frameKey.pathId != key.pathId)
+        {
+            continue;
+        }
+        unresolvedAttempts += std::count_if(
+            frameState.packets.begin(),
+            frameState.packets.end(),
+            [](const PacketState& packet) { return packet.attemptPending; });
+    }
+    NS_ABORT_MSG_IF(path.mpduAttempts != path.mpduAttemptSuccesses +
+                                             path.mpduAttemptFailures +
+                                             unresolvedAttempts,
+                    "Prediction MPDU attempt ledger does not conserve outcomes");
     sample.mpduTxAttemptsTotal = path.mpduAttempts;
-    sample.mpduTxSuccessesTotal = path.mpduSuccesses;
+    sample.mpduPositiveAcksTotal = path.mpduPositiveAcks;
     sample.mpduTxAttemptFailuresTotal = path.mpduAttemptFailures;
     sample.mpduRetriesTotal = path.mpduRetries;
     sample.mpduTerminalDropsTotal = path.mpduTerminalDrops;
@@ -1719,7 +1835,7 @@ PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
     sample.mpduQueueDropsTotal = path.mpduQueueDrops;
     sample.ppduTxCountTotal = path.ppduTxCount;
     sample.lastTxAttemptTimeNs = path.lastTxAttemptTimeNs;
-    sample.lastTxSuccessTimeNs = path.lastTxSuccessTimeNs;
+    sample.lastPositiveAckTimeNs = path.lastPositiveAckTimeNs;
     sample.currentMcs = path.currentMcs;
     sample.currentNss = path.currentNss;
     sample.currentChannelWidthMhz = path.currentChannelWidthMhz;
@@ -1773,8 +1889,14 @@ PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
     sample.framePacketsCurrentlyQueued = frameQueuedPackets;
     sample.frameMacServiceBytesCurrentlyQueued = frameQueuedBytes;
     sample.framePacketsPendingPrimary = pendingPackets;
+    NS_ABORT_MSG_IF(frame.packetsTxSucceeded + frame.packetsTerminallyDropped +
+                            pendingPackets !=
+                        frame.plan.frame.packetCount,
+                    "Prediction frame packet states do not conserve the packet plan");
     if (allServiceBytesKnown)
     {
+        NS_ABORT_MSG_IF(unacknowledgedBytes < pendingBytes || pendingBytes < frameQueuedBytes,
+                        "Prediction frame MAC service-byte states are inconsistent");
         sample.frameMacServiceBytesNotAcknowledged = unacknowledgedBytes;
         sample.frameMacServiceBytesPendingPrimary = pendingBytes;
     }
@@ -1828,7 +1950,7 @@ PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
         // A passive collector must therefore leave this field unsupported.
     }
     sample.featureSupportMask =
-        MakeSupportMask(true, true, m_oracleFeaturesEnabled);
+        MakeSupportMask(true, m_oracleFeaturesEnabled);
 }
 
 void
@@ -1847,7 +1969,8 @@ PredictionTelemetryCollector::CaptureSnapshot(PredictionFrameKey key, uint64_t o
         static_cast<uint64_t>(state.plan.frame.deadlineUs) * 1000;
     NS_ABORT_MSG_IF(sampleTimeNs >= deadlineTimeNs,
                     "Prediction snapshot executed at or after the frame deadline");
-    NS_ABORT_MSG_IF(state.latestFeatureEventTimeNs > sampleTimeNs,
+    NS_ABORT_MSG_IF(state.latestFeatureEventTimeNs &&
+                        *state.latestFeatureEventTimeNs > sampleTimeNs,
                     "Prediction snapshot contains a future feature event");
 
     PredictionSample sample;
@@ -1857,6 +1980,7 @@ PredictionTelemetryCollector::CaptureSnapshot(PredictionFrameKey key, uint64_t o
     sample.sampleOffsetUs = offsetUs;
     sample.sampleTimeNs = sampleTimeNs;
     sample.latestFeatureEventTimeNs = state.latestFeatureEventTimeNs;
+    sample.latestFeatureEventSequence = state.latestFeatureEventSequence;
     sample.generationTimeNs = state.plan.frame.generationTimeNs;
     sample.deadlineTimeNs = deadlineTimeNs;
     sample.frameAgeUs = offsetUs;
@@ -1876,9 +2000,13 @@ PredictionTelemetryCollector::CaptureSnapshot(PredictionFrameKey key, uint64_t o
     }
     else
     {
-        sample.featureSupportMask = MakeSupportMask(false, false, false);
+        sample.featureSupportMask = MakeSupportMask(false, false);
     }
-    NS_ABORT_MSG_IF(sample.latestFeatureEventTimeNs > sample.sampleTimeNs,
+    NS_ABORT_MSG_IF(
+        (sample.latestFeatureEventSequence == 0) != !sample.latestFeatureEventTimeNs,
+        "Prediction snapshot has an inconsistent empty feature watermark");
+    NS_ABORT_MSG_IF(sample.latestFeatureEventTimeNs &&
+                        *sample.latestFeatureEventTimeNs > sample.sampleTimeNs,
                     "Prediction snapshot contains a future path feature event");
     m_samples.push_back(std::move(sample));
 }

@@ -102,7 +102,7 @@ class PredictionTelemetryCollectorTestAccess
         const auto& path = collector->m_paths.at(tag.pathId);
         const auto& frame = collector->m_frames.at(PredictionTelemetryCollector::MakeKey(tag));
         return {path.mpduAttempts,
-                path.mpduSuccesses,
+                path.mpduPositiveAcks,
                 path.mpduAttemptFailures,
                 path.mpduRetries,
                 path.mpduTerminalDrops,
@@ -115,7 +115,32 @@ class PredictionTelemetryCollectorTestAccess
                 path.queueEntries.size()};
     }
 
-    static std::array<double, 2> GetLastSuccessLatencies(
+    static std::array<uint64_t, 4> GetAttemptLedger(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId)
+    {
+        const auto& path = collector->m_paths.at(pathId);
+        uint64_t unresolved = 0;
+        for (const auto& [key, frame] : collector->m_frames)
+        {
+            if (key.pathId != pathId)
+            {
+                continue;
+            }
+            unresolved += std::count_if(
+                frame.packets.begin(),
+                frame.packets.end(),
+                [](const PredictionTelemetryCollector::PacketState& packet) {
+                    return packet.attemptPending;
+                });
+        }
+        return {path.mpduAttempts,
+                path.mpduAttemptSuccesses,
+                path.mpduAttemptFailures,
+                unresolved};
+    }
+
+    static std::array<double, 2> GetLastPositiveAckLatencies(
         Ptr<PredictionTelemetryCollector> collector,
         uint8_t pathId)
     {
@@ -171,25 +196,25 @@ class PredictionTelemetryCollectorTestAccess
         path.telemetryStartNs = nowNs;
         path.macEvents.clear();
         path.macEvents.push_back({lowerNs,
-                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  PredictionTelemetryCollector::MacEventKind::POSITIVE_ACK,
                                   false,
                                   100,
                                   1.0,
                                   1.0});
         path.macEvents.push_back({lowerNs + 1,
-                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  PredictionTelemetryCollector::MacEventKind::POSITIVE_ACK,
                                   false,
                                   100,
                                   10.0,
                                   20.0});
         path.macEvents.push_back({nowNs,
-                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  PredictionTelemetryCollector::MacEventKind::POSITIVE_ACK,
                                   false,
                                   100,
                                   30.0,
                                   40.0});
         path.macEvents.push_back({nowNs + 1,
-                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  PredictionTelemetryCollector::MacEventKind::POSITIVE_ACK,
                                   false,
                                   100,
                                   50.0,
@@ -203,13 +228,15 @@ class PredictionTelemetryCollectorTestAccess
     {
         auto& path = collector->m_paths.at(pathId);
         path.telemetryStartNs = Simulator::Now().GetNanoSeconds();
-        path.latestFeatureEventTimeNs = path.telemetryStartNs;
+        path.latestFeatureEventTimeNs =
+            static_cast<uint64_t>(std::max<int64_t>(path.telemetryStartNs, 0));
+        path.latestFeatureEventSequence = ++collector->m_featureEventSequence;
         path.phyIntervals.clear();
         path.phyIntervalSerial = 0;
         path.phyIntervals.push_back({path.telemetryStartNs,
                                      std::numeric_limits<int64_t>::max(),
                                      state,
-                                     path.latestFeatureEventTimeNs,
+                                     *path.latestFeatureEventTimeNs,
                                      path.phyIntervalSerial++});
     }
 
@@ -236,6 +263,11 @@ class PredictionTelemetryCollectorTestAccess
         uint64_t nowNs)
     {
         return collector->BuildRollingSample(collector->m_paths.at(pathId), nowNs, 1000);
+    }
+
+    static std::string MakeSupportMask(bool wifiBound, bool oracleSupported)
+    {
+        return PredictionTelemetryCollector::MakeSupportMask(wifiBound, oracleSupported);
     }
 };
 
@@ -541,6 +573,37 @@ class PredictionCollectorFoundationTestCase : public TestCase
         auto collector = CreateObject<PredictionTelemetryCollector>();
         collector->SetRunId("prediction-foundation");
         collector->SetSampleOffsetsUs({0, 1000, 2000});
+        NS_TEST_ASSERT_MSG_EQ(
+            PredictionTelemetryCollectorTestAccess::MakeSupportMask(false, false),
+            "0x0",
+            "Unbound support mask is not canonical");
+        const uint64_t wifiMask = std::stoull(
+            PredictionTelemetryCollectorTestAccess::MakeSupportMask(true, false),
+            nullptr,
+            16);
+        for (uint32_t bit = 0; bit <= 60; ++bit)
+        {
+            const bool expected = bit <= 16 || (bit >= 18 && bit <= 53);
+            NS_TEST_ASSERT_MSG_EQ(bool(wifiMask & (1ULL << bit)),
+                                  expected,
+                                  "Per-field Wi-Fi support bit is incorrect");
+        }
+        const uint64_t oracleMask = std::stoull(
+            PredictionTelemetryCollectorTestAccess::MakeSupportMask(true, true),
+            nullptr,
+            16);
+        for (const uint32_t bit : {54U, 56U, 57U, 58U, 59U})
+        {
+            NS_TEST_ASSERT_MSG_EQ(bool(oracleMask & (1ULL << bit)),
+                                  true,
+                                  "Supported oracle bit is clear");
+        }
+        for (const uint32_t bit : {17U, 55U, 60U})
+        {
+            NS_TEST_ASSERT_MSG_EQ(bool(oracleMask & (1ULL << bit)),
+                                  false,
+                                  "Unsupported field bit is set");
+        }
 
         // This event is inserted before RegisterFrame schedules the T1
         // snapshot and must therefore be visible at T1.
@@ -562,6 +625,13 @@ class PredictionCollectorFoundationTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(collector->GetSamples()[0].packetsRemainingToSubmit,
                               3,
                               "T0 did not use the packetization plan");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples()[0].latestFeatureEventSequence,
+                              0,
+                              "T0 empty watermark has a nonzero sequence");
+        NS_TEST_ASSERT_MSG_EQ(
+            collector->GetSamples()[0].latestFeatureEventTimeNs.has_value(),
+            false,
+            "T0 empty watermark has a timestamp");
 
         // This event is inserted after the T1 snapshot and must not be visible
         // until T2, despite sharing the T1 timestamp.
@@ -579,9 +649,15 @@ class PredictionCollectorFoundationTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(samples[1].packetsSubmitted,
                               1,
                               "T1 included an event processed after its callback");
-        NS_TEST_ASSERT_MSG_EQ(samples[1].latestFeatureEventTimeNs,
+        NS_TEST_ASSERT_MSG_EQ(samples[1].latestFeatureEventTimeNs.has_value(),
+                              true,
+                              "T1 feature timestamp is absent");
+        NS_TEST_ASSERT_MSG_EQ(*samples[1].latestFeatureEventTimeNs,
                               1000000,
                               "T1 feature timestamp is wrong");
+        NS_TEST_ASSERT_MSG_EQ(samples[1].latestFeatureEventSequence,
+                              2,
+                              "T1 feature sequence is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].packetsSubmitted,
                               2,
                               "T2 omitted a prior same-timestamp event");
@@ -592,9 +668,13 @@ class PredictionCollectorFoundationTestCase : public TestCase
                               emissions[0].packet->GetSize() +
                                   emissions[1].packet->GetSize(),
                               "Submitted byte accounting is wrong");
-        NS_TEST_ASSERT_MSG_EQ(samples[2].latestFeatureEventTimeNs <= samples[2].sampleTimeNs,
+        NS_TEST_ASSERT_MSG_EQ(*samples[2].latestFeatureEventTimeNs <=
+                                  samples[2].sampleTimeNs,
                               true,
                               "Snapshot contains a future feature event");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].latestFeatureEventSequence,
+                              3,
+                              "T2 feature sequence is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].deadlineSlackUs, 3000, "Deadline slack is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].actionable, true, "Incomplete frame is not actionable");
         Simulator::Destroy();
@@ -718,13 +798,16 @@ class PredictionMpduAccountingTestCase : public TestCase
     {
         FramePacketizer packetizer;
         packetizer.SetPayloadSize(1000);
-        const FrameDescriptor frame{21, 0, 3000, 0, 5000, FrameType::P_FRAME};
+        const FrameDescriptor frame{21, 0, 4000, 0, 5000, FrameType::P_FRAME};
         const auto plan = packetizer.Plan(frame, 27, 0, 0);
         auto emissions = packetizer.Materialize(plan);
 
         auto collector = CreateObject<PredictionTelemetryCollector>();
         collector->SetRunId("prediction-mpdu-accounting");
         collector->SetSampleOffsetsUs({0});
+        const auto samplesFile = CreateTempDirFilename("prediction-accounting-samples.csv");
+        const auto eventsFile = CreateTempDirFilename("prediction-accounting-events.csv");
+        collector->SetOutputFiles(samplesFile, eventsFile);
         collector->RegisterFrame(plan);
         PredictionTelemetryCollectorTestAccess::AddPath(collector, 0);
 
@@ -733,7 +816,7 @@ class PredictionMpduAccountingTestCase : public TestCase
         header.SetAddr1(Mac48Address("00:00:00:00:00:01"));
         header.SetAddr2(Mac48Address("00:00:00:00:00:02"));
         header.SetQosTid(0);
-        std::array<Ptr<WifiMpdu>, 3> mpdus;
+        std::array<Ptr<WifiMpdu>, 4> mpdus;
         for (std::size_t index = 0; index < emissions.size(); ++index)
         {
             emissions[index].packet->AddPacketTag(emissions[index].frameTag);
@@ -823,27 +906,85 @@ class PredictionMpduAccountingTestCase : public TestCase
                             collector,
                             0,
                             mpdus[2]);
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Enqueue,
+                            collector,
+                            0,
+                            mpdus[3]);
+        Simulator::Schedule(MicroSeconds(120),
+                            &PredictionTelemetryCollectorTestAccess::Attempt,
+                            collector,
+                            0,
+                            mpdus[3]);
+        Simulator::Schedule(MicroSeconds(220),
+                            &PredictionTelemetryCollectorTestAccess::Timeout,
+                            collector,
+                            0,
+                            mpdus[3]);
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Drop,
+                            collector,
+                            0,
+                            WIFI_MAC_DROP_EXPIRED_LIFETIME,
+                            mpdus[3]);
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[3]);
+        // A positive ACK after terminal removal changes the current packet state
+        // without reversing either the failed attempt or terminal-drop event.
+        Simulator::Schedule(MicroSeconds(300),
+                            &PredictionTelemetryCollectorTestAccess::Ack,
+                            collector,
+                            0,
+                            mpdus[3]);
+        Simulator::Stop(MicroSeconds(275));
+        Simulator::Run();
+        const auto beforeLateAck =
+            PredictionTelemetryCollectorTestAccess::GetCounts(collector,
+                                                               emissions[0].frameTag);
+        NS_TEST_ASSERT_MSG_EQ(beforeLateAck[4],
+                              2,
+                              "Terminal-drop event count before late ACK is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(beforeLateAck[9],
+                              1,
+                              "Positive-ACK state before late ACK is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(beforeLateAck[10],
+                              2,
+                              "Current terminal state before late ACK is incorrect");
+
         Simulator::Stop(MicroSeconds(500));
         Simulator::Run();
 
         const auto counts =
             PredictionTelemetryCollectorTestAccess::GetCounts(collector,
                                                                emissions[0].frameTag);
-        NS_TEST_ASSERT_MSG_EQ(counts[0], 3, "Incorrect attempt count");
-        NS_TEST_ASSERT_MSG_EQ(counts[1], 2, "Late BAR acknowledgement was not counted");
-        NS_TEST_ASSERT_MSG_EQ(counts[2], 2, "Duplicate failure callback was counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[0], 4, "Incorrect attempt count");
+        NS_TEST_ASSERT_MSG_EQ(counts[1], 3, "Late positive acknowledgements were not counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[2], 3, "Duplicate failure callback was counted");
         NS_TEST_ASSERT_MSG_EQ(counts[3], 1, "Retry was not identified");
-        NS_TEST_ASSERT_MSG_EQ(counts[4], 1, "Terminal drop was not counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[4], 2, "Terminal drops were not counted");
         NS_TEST_ASSERT_MSG_EQ(counts[5], 0, "Retry-limit drop was invented");
-        NS_TEST_ASSERT_MSG_EQ(counts[6], 1, "Lifetime drop was not classified");
+        NS_TEST_ASSERT_MSG_EQ(counts[6], 2, "Lifetime drops were not classified");
         NS_TEST_ASSERT_MSG_EQ(counts[7], 0, "Queue drop was invented");
-        NS_TEST_ASSERT_MSG_EQ(counts[8], 2, "Frame failure count is incorrect");
-        NS_TEST_ASSERT_MSG_EQ(counts[9], 2, "Distinct frame success count is incorrect");
-        NS_TEST_ASSERT_MSG_EQ(counts[10], 1, "Frame terminal count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[8], 3, "Frame failure count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[9], 3, "Distinct frame success count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[10],
+                              1,
+                              "Late ACK did not leave one current terminal packet");
         NS_TEST_ASSERT_MSG_EQ(counts[11], 0, "Dropped packet remained in the queue");
+        const auto attemptLedger =
+            PredictionTelemetryCollectorTestAccess::GetAttemptLedger(collector, 0);
+        NS_TEST_ASSERT_MSG_EQ(attemptLedger[0],
+                              attemptLedger[1] + attemptLedger[2] + attemptLedger[3],
+                              "Attempt outcomes do not conserve transmitted MPDUs");
+        NS_TEST_ASSERT_MSG_EQ(attemptLedger[1],
+                              1,
+                              "Late positive ACK was misclassified as attempt success");
 
         const auto latencies =
-            PredictionTelemetryCollectorTestAccess::GetLastSuccessLatencies(collector, 0);
+            PredictionTelemetryCollectorTestAccess::GetLastPositiveAckLatencies(collector, 0);
         NS_TEST_ASSERT_MSG_EQ_TOL(latencies[0],
                                   300,
                                   1e-9,
@@ -869,7 +1010,7 @@ class PredictionMpduAccountingTestCase : public TestCase
             "Rolling percentile does not use type-7 interpolation");
         const auto boundary =
             PredictionTelemetryCollectorTestAccess::BuildBoundaryWindow(collector, 0);
-        NS_TEST_ASSERT_MSG_EQ(boundary.mpduSuccesses,
+        NS_TEST_ASSERT_MSG_EQ(boundary.mpduPositiveAcks,
                               2,
                               "Rolling window did not use (t - w, t]");
         NS_TEST_ASSERT_MSG_EQ(boundary.acknowledgedMacServiceBytes,
@@ -888,6 +1029,46 @@ class PredictionMpduAccountingTestCase : public TestCase
                                                                                30000000),
             0,
             "MAC event history was not bounded by the configured window");
+        collector->WriteOutputs();
+        std::ifstream events(eventsFile);
+        std::string line;
+        std::getline(events, line);
+        uint32_t positiveAckRows = 0;
+        uint32_t attemptSuccessRows = 0;
+        uint32_t lateAckRows = 0;
+        while (std::getline(events, line))
+        {
+            std::stringstream stream(line);
+            std::vector<std::string> fields;
+            std::string field;
+            while (std::getline(stream, field, ','))
+            {
+                fields.push_back(field);
+            }
+            if (fields.size() > 10 && fields[4] == "MPDU_POSITIVE_ACK")
+            {
+                ++positiveAckRows;
+                if (fields[10] == "1")
+                {
+                    ++attemptSuccessRows;
+                    NS_TEST_ASSERT_MSG_EQ(fields[9].empty(),
+                                          false,
+                                          "Attempt-success ACK omitted attempt number");
+                }
+                else
+                {
+                    ++lateAckRows;
+                    NS_TEST_ASSERT_MSG_EQ(fields[9].empty(),
+                                          true,
+                                          "Late ACK retained an attempt number");
+                }
+            }
+        }
+        NS_TEST_ASSERT_MSG_EQ(positiveAckRows, 3, "Positive-ACK event count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(attemptSuccessRows,
+                              1,
+                              "Attempt-success finalizer count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(lateAckRows, 2, "Late positive-ACK count is incorrect");
         Simulator::Destroy();
     }
 };

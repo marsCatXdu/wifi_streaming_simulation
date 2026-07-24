@@ -44,30 +44,84 @@ enum class WifiPhyState;
 /**
  * Source-owned prediction telemetry schema version.
  */
-constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 1;
+constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 2;
 
 /**
  * Source-owned prediction event schema version.
  */
-constexpr uint32_t PREDICTION_EVENT_SCHEMA_VERSION = 1;
+constexpr uint32_t PREDICTION_EVENT_SCHEMA_VERSION = 2;
 
 /**
  * Source-owned feature support-mask mapping version.
  */
-constexpr uint32_t FEATURE_SUPPORT_MASK_VERSION = 1;
+constexpr uint32_t FEATURE_SUPPORT_MASK_VERSION = 2;
 
 /**
- * Version-1 feature-family support-mask bit assignments.
+ * Version-2 per-field feature support-mask bit assignments.
  */
 enum class PredictionFeatureSupportBit : uint32_t
 {
-    FRAME_PLAN = 0,                ///< Immutable frame and packetization-plan state.
-    SOCKET_SUBMISSION_PROGRESS = 1, ///< Application socket submission progress.
-    MPDU_OUTCOMES = 2,             ///< Exact tagged MPDU attempts and outcomes.
-    MAC_QUEUE = 3,                 ///< Tagged target MAC queue state.
-    PHY_OCCUPANCY = 4,             ///< Target PHY state history.
-    TX_VECTOR = 5,                 ///< Most recent tagged target TX vector.
-    CAUSAL_ORACLE = 6              ///< Exact current MAC/PHY oracle state.
+    MPDU_TX_ATTEMPTS_TOTAL = 0,
+    MPDU_POSITIVE_ACKS_TOTAL = 1,
+    MPDU_TX_ATTEMPT_FAILURES_TOTAL = 2,
+    MPDU_RETRIES_TOTAL = 3,
+    MPDU_TERMINAL_DROPS_TOTAL = 4,
+    MPDU_RETRY_LIMIT_DROPS_TOTAL = 5,
+    MPDU_LIFETIME_DROPS_TOTAL = 6,
+    MPDU_QUEUE_DROPS_TOTAL = 7,
+    PPDU_TX_COUNT_TOTAL = 8,
+    LAST_TX_ATTEMPT_TIME_NS = 9,
+    LAST_POSITIVE_ACK_TIME_NS = 10,
+    CURRENT_MCS = 11,
+    CURRENT_NSS = 12,
+    CURRENT_CHANNEL_WIDTH_MHZ = 13,
+    CURRENT_GUARD_INTERVAL_NS = 14,
+    FREQUENCY_BAND = 15,
+    CENTER_FREQUENCY_MHZ = 16,
+    CURRENT_ACK_SIGNAL_DBM = 17,
+    MPDU_ATTEMPTS_WINDOW = 18,
+    MPDU_POSITIVE_ACKS_WINDOW = 19,
+    MPDU_ATTEMPT_FAILURES_WINDOW = 20,
+    MPDU_RETRIES_WINDOW = 21,
+    MPDU_RETRY_RATIO_WINDOW = 22,
+    ACKNOWLEDGED_MAC_SERVICE_BYTES_WINDOW = 23,
+    MPDU_QUEUE_TO_ACK_MEAN_WINDOW = 24,
+    MPDU_QUEUE_TO_ACK_P95_WINDOW = 25,
+    MPDU_FIRST_ATTEMPT_TO_ACK_MEAN_WINDOW = 26,
+    MPDU_FIRST_ATTEMPT_TO_ACK_P95_WINDOW = 27,
+    PHY_TX_TIME_WINDOW = 28,
+    PHY_RX_TIME_WINDOW = 29,
+    PHY_BUSY_TIME_WINDOW = 30,
+    PHY_IDLE_TIME_WINDOW = 31,
+    PHY_OTHER_TIME_WINDOW = 32,
+    PHY_TX_FRACTION_WINDOW = 33,
+    PHY_RX_FRACTION_WINDOW = 34,
+    PHY_BUSY_FRACTION_WINDOW = 35,
+    PHY_IDLE_FRACTION_WINDOW = 36,
+    PHY_OTHER_FRACTION_WINDOW = 37,
+    HISTORY_COVERAGE_WINDOW = 38,
+    FRAME_PACKETS_MAC_ENQUEUED = 39,
+    FRAME_PACKETS_MAC_DEQUEUED = 40,
+    FRAME_PACKETS_TX_SUCCEEDED = 41,
+    FRAME_MPDU_ATTEMPT_FAILURES = 42,
+    FRAME_PACKETS_TERMINALLY_DROPPED = 43,
+    FRAME_PACKETS_CURRENTLY_QUEUED = 44,
+    FRAME_MAC_SERVICE_BYTES_CURRENTLY_QUEUED = 45,
+    MAC_QUEUE_PACKETS = 46,
+    MAC_QUEUE_SERVICE_BYTES = 47,
+    MAC_QUEUE_OLDEST_ENQUEUE_TIME_NS = 48,
+    PACKETS_AHEAD_OF_FRAME = 49,
+    MAC_SERVICE_BYTES_AHEAD_OF_FRAME = 50,
+    FRAME_PACKETS_PENDING_PRIMARY = 51,
+    FRAME_MAC_SERVICE_BYTES_NOT_ACKNOWLEDGED = 52,
+    FRAME_MAC_SERVICE_BYTES_PENDING_PRIMARY = 53,
+    CURRENT_CW = 54,
+    REMAINING_BACKOFF_SLOTS = 55,
+    NAV_REMAINING_US = 56,
+    CURRENT_PHY_STATE = 57,
+    CHANNEL_ACCESS_STATUS = 58,
+    MEDIUM_BUSY_NOW = 59,
+    EXPECTED_ACCESS_REASON_WITHIN_SLACK = 60
 };
 
 /**
@@ -95,7 +149,7 @@ struct PredictionRollingSample
 {
     uint64_t windowUs{0};               ///< Rolling window duration.
     uint64_t mpduAttempts{0};            ///< MPDU attempts completed in the window.
-    uint64_t mpduSuccesses{0};           ///< Positive MPDU acknowledgements.
+    uint64_t mpduPositiveAcks{0};        ///< Distinct positive MPDU acknowledgements.
     uint64_t mpduAttemptFailures{0};     ///< Unsuccessful nonterminal attempts.
     uint64_t mpduRetries{0};             ///< Attempts following a prior failed attempt.
     std::optional<double> mpduRetryRatio; ///< Retries divided by attempts.
@@ -128,7 +182,8 @@ struct PredictionSample
     std::string sampleStage;                ///< Human-readable stage name.
     uint64_t sampleOffsetUs{0};             ///< Offset from frame generation.
     uint64_t sampleTimeNs{0};               ///< Absolute sample time.
-    uint64_t latestFeatureEventTimeNs{0};   ///< Latest included feature event.
+    std::optional<uint64_t> latestFeatureEventTimeNs; ///< Latest included feature event.
+    uint64_t latestFeatureEventSequence{0}; ///< Latest included event sequence.
     uint64_t generationTimeNs{0};           ///< Absolute frame generation time.
     uint64_t deadlineTimeNs{0};             ///< Absolute frame deadline.
     uint64_t frameAgeUs{0};                 ///< Frame age at sampling.
@@ -143,7 +198,7 @@ struct PredictionSample
     uint32_t packetsRemainingToSubmit{0};              ///< Planned packets not yet submitted.
 
     std::optional<uint64_t> mpduTxAttemptsTotal;       ///< Cumulative MPDU attempts.
-    std::optional<uint64_t> mpduTxSuccessesTotal;      ///< Cumulative positive acknowledgements.
+    std::optional<uint64_t> mpduPositiveAcksTotal;     ///< Distinct positive acknowledgements.
     std::optional<uint64_t> mpduTxAttemptFailuresTotal; ///< Cumulative failed attempts.
     std::optional<uint64_t> mpduRetriesTotal;          ///< Cumulative retry attempts.
     std::optional<uint64_t> mpduTerminalDropsTotal;    ///< Cumulative terminal MPDU drops.
@@ -152,7 +207,7 @@ struct PredictionSample
     std::optional<uint64_t> mpduQueueDropsTotal;       ///< Queue-related terminal drops.
     std::optional<uint64_t> ppduTxCountTotal;          ///< Cumulative target PHY PPDUs.
     std::optional<uint64_t> lastTxAttemptTimeNs;       ///< Most recent tagged attempt.
-    std::optional<uint64_t> lastTxSuccessTimeNs;       ///< Most recent tagged success.
+    std::optional<uint64_t> lastPositiveAckTimeNs;     ///< Most recent positive acknowledgement.
     std::optional<uint8_t> currentMcs;                 ///< Most recent tagged MCS.
     std::optional<uint8_t> currentNss;                 ///< Most recent tagged spatial streams.
     std::optional<uint16_t> currentChannelWidthMhz;    ///< Most recent tagged channel width.
@@ -186,7 +241,7 @@ struct PredictionSample
     std::optional<bool> mediumBusyNow;                 ///< Channel manager busy state oracle.
     std::optional<std::string> expectedAccessReasonWithinSlack; ///< Access-within-slack reason.
 
-    std::string featureSupportMask{"0x3"}; ///< Canonical supported-family mask.
+    std::string featureSupportMask{"0x0"}; ///< Canonical per-field support mask.
 };
 
 /**
@@ -367,13 +422,14 @@ class PredictionTelemetryCollector : public Object
         uint32_t mpduAttemptFailures{0};     ///< Failed attempts attributed to this frame.
         uint32_t packetsTerminallyDropped{0}; ///< Distinct terminally dropped packets.
         bool senderMacComplete{false};       ///< Whether all packets are positively acknowledged.
-        uint64_t latestFeatureEventTimeNs{0}; ///< Latest included feature event.
+        std::optional<uint64_t> latestFeatureEventTimeNs; ///< Latest included feature event.
+        uint64_t latestFeatureEventSequence{0}; ///< Latest included event sequence.
     };
 
     enum class MacEventKind
     {
         ATTEMPT,
-        SUCCESS,
+        POSITIVE_ACK,
         ATTEMPT_FAILURE
     };
 
@@ -415,9 +471,11 @@ class PredictionTelemetryCollector : public Object
         Ptr<ChannelAccessManager> channelAccessManager; ///< Bound channel manager.
         uint8_t linkId{0};                ///< MAC link served by the selected PHY.
         int64_t telemetryStartNs{0};      ///< Start of available history.
-        uint64_t latestFeatureEventTimeNs{0}; ///< Latest path-level feature event.
+        std::optional<uint64_t> latestFeatureEventTimeNs; ///< Latest path feature event.
+        uint64_t latestFeatureEventSequence{0}; ///< Latest path feature sequence.
         uint64_t mpduAttempts{0};         ///< Cumulative tagged attempts.
-        uint64_t mpduSuccesses{0};        ///< Cumulative tagged successes.
+        uint64_t mpduAttemptSuccesses{0}; ///< Attempts finalized by a positive ACK.
+        uint64_t mpduPositiveAcks{0};     ///< Distinct tagged positive acknowledgements.
         uint64_t mpduAttemptFailures{0};  ///< Cumulative tagged failed attempts.
         uint64_t mpduRetries{0};          ///< Cumulative tagged retries.
         uint64_t mpduTerminalDrops{0};    ///< Cumulative tagged terminal drops.
@@ -426,7 +484,7 @@ class PredictionTelemetryCollector : public Object
         uint64_t mpduQueueDrops{0};       ///< Queue-related drops.
         uint64_t ppduTxCount{0};          ///< Cumulative target-PHY PPDU transmissions.
         std::optional<uint64_t> lastTxAttemptTimeNs; ///< Most recent tagged attempt.
-        std::optional<uint64_t> lastTxSuccessTimeNs; ///< Most recent tagged success.
+        std::optional<uint64_t> lastPositiveAckTimeNs; ///< Most recent positive ACK.
         std::optional<uint8_t> currentMcs;            ///< Most recent tagged MCS.
         std::optional<uint8_t> currentNss;            ///< Most recent tagged NSS.
         std::optional<uint16_t> currentChannelWidthMhz; ///< Most recent tagged width.
@@ -472,19 +530,23 @@ class PredictionTelemetryCollector : public Object
                             const FrameState& frame,
                             PathState& path);
     void PruneHistories(PathState& path, uint64_t nowNs);
-    void WriteEvent(const std::string& eventType,
-                    uint8_t pathId,
-                    const std::optional<StreamingFrameTag>& tag,
-                    std::optional<uint32_t> attemptNumber,
-                    std::optional<uint32_t> macServiceBytes);
+    void WriteEvent(
+        const std::string& eventType,
+        uint8_t pathId,
+        const std::optional<StreamingFrameTag>& tag,
+        std::optional<uint32_t> attemptNumber,
+        std::optional<uint32_t> macServiceBytes,
+        std::optional<bool> finalizesAttemptSuccess = std::nullopt,
+        std::optional<std::string> phyIntervalRevisionKind = std::nullopt,
+        std::optional<WifiPhyState> phyIntervalState = std::nullopt,
+        std::optional<int64_t> phyIntervalStartNs = std::nullopt,
+        std::optional<int64_t> phyIntervalEndNs = std::nullopt);
     void WriteEventHeader();
     void WriteSampleHeader(std::ostream& output) const;
     void WriteSample(std::ostream& output, const PredictionSample& sample) const;
     static bool GetTag(Ptr<const WifiMpdu> mpdu, StreamingFrameTag& tag);
     static const WifiMpdu* GetStableMpdu(Ptr<const WifiMpdu> mpdu);
-    static std::string MakeSupportMask(bool wifiBound,
-                                       bool txVectorSupported,
-                                       bool oracleSupported);
+    static std::string MakeSupportMask(bool wifiBound, bool oracleSupported);
     static std::string PhyStateToString(WifiPhyState state);
     static std::string AccessStatusToString(uint8_t status);
     static std::string WindowLabel(uint64_t windowUs);
@@ -501,6 +563,7 @@ class PredictionTelemetryCollector : public Object
     std::vector<EventId> m_snapshotEvents;
     std::string m_samplesFile;
     std::ofstream m_eventsOutput;
+    uint64_t m_featureEventSequence{0};
     bool m_outputsWritten{false};
     bool m_oracleFeaturesEnabled{false};
 };

@@ -27,7 +27,8 @@ The example accepts:
 
 Lists are nonempty and strictly increasing. Offsets start at zero and precede
 the frame deadline; history windows are positive. Schema versions are
-source-owned constants and cannot be set from the command line.
+source-owned constants and cannot be set from the command line. Increment 1
+emits telemetry schema 2, event schema 2, and support-mask mapping 2.
 
 Enabled runs add `predictionTelemetry` to `resolved_config.json` and write
 `prediction_samples.csv`. `prediction_events.csv` exists only when requested.
@@ -70,14 +71,14 @@ analogue, not a claim of equal update timing or precision.
 |---|---|---|---|---|---|---|
 | `telemetry_schema_version`, `run_id`, `frame_id`, `path_id`, `copy_id` | Source constants, run configuration, `PacketizationPlan` | metadata | identifier | Immutable per sample | Never null; zero is valid for numeric IDs | Application metadata |
 | `sample_stage`, `sample_offset_us`, `sample_time_ns` | Configured offsets and `Simulator::Now()` | metadata | categorical, us, ns | Immutable sample identity | Never null; offset zero is T0 | Application timer analogue |
-| `latest_feature_event_time_ns` | Maximum processed frame/path feature event time | metadata | ns | Causal watermark | Never null; must not exceed sample time | No direct commodity equivalent |
+| `latest_feature_event_time_ns`, `latest_feature_event_sequence` | Most recent processed frame/path feature event | metadata | ns, sequence | Causal watermark including same-time event order | Empty history is null time and sequence zero; otherwise time is non-null, sequence is positive, and time does not exceed sample time | No direct commodity equivalent |
 | `generation_time_ns`, `deadline_time_ns`, `frame_age_us`, `deadline_slack_us` | Frame plan and current sample offset | F0 | ns or us | Immutable except age/slack by stage | Never null; zero is meaningful | Application state |
 | `sender_mac_complete`, `actionable` | Per-packet positive-ACK state and deadline comparison | eligibility metadata | Boolean | Monotone completion/actionability state | Never null; zero is meaningful; prohibited as model features | Modified-driver completion analogue |
 | `frame_size_bytes`, `frame_packet_count`, `frame_type` | `FrameDescriptor` and packetization plan | F0 | encoded-video bytes, packets, categorical | Immutable | Never null; size/count are positive | Application state |
 | `packets_submitted`, `packets_remaining_to_submit` | `MultipathSender::SendPacket` and plan | F0 | packets | Recorded immediately before `Socket::Send()` so synchronous lower-layer traces are causally later; enabled runs abort on submission failure | Never null; zero is meaningful | Application state |
 | `application_socket_packet_bytes_submitted` | `Packet::GetSize()` immediately before `Socket::Send()` | F0 | application socket packet bytes | Cumulative | Never null; zero is meaningful | Application state |
-| `mpdu_tx_attempts_total`, `mpdu_retries_total`, `last_tx_attempt_time_ns` | Tagged MPDUs in `PhyTxPsduBegin`; stable MPDU attempt state | F1-ideal | count or ns | Cumulative; one attempt per transmitted constituent MPDU | Null only without Wi-Fi binding; zero count is meaningful; timestamp null before first attempt | Driver TX/retry counters, coarser timing |
-| `mpdu_tx_successes_total`, `last_tx_success_time_ns` | `AckedMpdu` after a prior tagged attempt | F1-ideal | count or ns | Cumulative; one success per stable MPDU; a late Block ACK after explicit BAR does not create another attempt or erase the earlier timeout | Null only without Wi-Fi binding; timestamp null before first success | Driver TX success counters |
+| `mpdu_tx_attempts_total`, `mpdu_retries_total`, `last_tx_attempt_time_ns` | Tagged target-stream MPDUs in `PhyTxPsduBegin`; stable MPDU attempt state | F1-ideal | count or ns | Cumulative; one attempt per transmitted constituent MPDU | Null only without Wi-Fi binding; zero count is meaningful; timestamp null before first attempt | Stronger-than-commodity stream-scoped observation |
+| `mpdu_positive_acks_total`, `last_positive_ack_time_ns` | First `AckedMpdu` confirmation for each tagged logical packet | F1-ideal | count or ns | Cumulative distinct logical acknowledgements; a late Block ACK does not create another attempt or reverse an earlier timeout | Null only without Wi-Fi binding; timestamp null before the first positive ACK | Stronger-than-commodity stream-scoped observation |
 | `mpdu_tx_attempt_failures_total` | De-duplicated `NAckedMpdu` and response-timeout callbacks | F1-ideal | count | Cumulative unsuccessful attempts, not terminal drops | Null only without Wi-Fi binding; zero is meaningful | Driver retry/failure counters |
 | `mpdu_terminal_drops_total`, `mpdu_retry_limit_drops_total`, `mpdu_lifetime_drops_total`, `mpdu_queue_drops_total` | `DroppedMpdu` reason | F1-ideal | count | Cumulative terminal outcomes by cause | Null only without Wi-Fi binding; zero is meaningful | Partial driver statistics |
 | `ppdu_tx_count_total` | Target sender PHY `PhyTxPsduBegin` | F1-ideal | PPDUs | Cumulative transmitting-device count | Null only without Wi-Fi binding; zero is meaningful | Driver/radio statistics, device dependent |
@@ -85,14 +86,14 @@ analogue, not a claim of equal update timing or precision.
 | `frequency_band`, `center_frequency_mhz` | Bound `WifiPhy` operating channel | F1-ideal | categorical, MHz | Static for the fixed path | Null without Wi-Fi binding | Interface/channel configuration |
 | `current_ack_signal_dbm` | No verified ns-3.48 ACK/BA signal callback is bound in Increment 1 | F1-ideal | dBm | Unsupported | Always null; zero must not be substituted | Some modified drivers expose ACK signal |
 | `frame_packets_mac_enqueued`, `frame_packets_mac_dequeued` | Tagged target BE queue enqueue/dequeue traces | F2 | packets | Cumulative per frame copy | Null without queue binding; zero is meaningful | Modified driver |
-| `frame_packets_tx_succeeded` | Distinct tagged packets with positive MAC ACK | F2 | packets | Cumulative, at most frame packet count | Null without outcome support; zero is meaningful | Modified driver |
+| `frame_packets_tx_succeeded` | Distinct tagged packets with positive MAC ACK | F2 | packets | Current `ACKNOWLEDGED` state count, monotone for one frame | Null without outcome support; zero is meaningful | Modified driver |
 | `frame_mpdu_attempt_failures` | De-duplicated unsuccessful attempts attributed by tag | F2 | attempts | Cumulative per frame copy | Null without outcome support; zero is meaningful | Modified driver |
-| `frame_packets_terminally_dropped` | Tagged terminal drop callbacks | F2 | packets | Cumulative per frame copy | Null without outcome support; zero is meaningful | Modified driver |
+| `frame_packets_terminally_dropped` | Tagged terminal-removal and late-ACK transitions | F2 | packets | Current `TERMINALLY_REMOVED_PRIMARY` count; a later positive ACK moves the packet to `frame_packets_tx_succeeded` | Null without outcome support; zero is meaningful | Modified driver |
 | `frame_packets_currently_queued`, `frame_mac_service_bytes_currently_queued` | Tagged entries in the selected target receiver/TID queue | F2 | packets, MAC service bytes | Instantaneous exact frame state; terminal removal remains queued until the authoritative `Dequeue` trace | Null without queue support; zero is meaningful | Modified driver |
 | `mac_queue_packets`, `mac_queue_service_bytes`, `mac_queue_oldest_enqueue_time_ns` | All entries mirrored from the selected receiver/TID queue | F2 | packets, MAC service bytes, ns | Instantaneous exact logical-queue scope; service bytes use `WifiMpdu::GetPacketSize()` | Counts/bytes zero when empty; oldest timestamp null when empty | Modified driver |
 | `packets_ahead_of_frame`, `mac_service_bytes_ahead_of_frame` | FIFO order of all mirrored target logical-queue entries | F2 | packets, MAC service bytes | Instantaneous; older entries before the first queued packet of this frame, or all entries before that frame is queued | Both null when exact ordering is unavailable; zero is meaningful | Modified driver |
 | `frame_packets_pending_primary` | Planned packets minus ACKed and terminally removed packets | F2 | packets | Instantaneous primary-path work | Null without frame state; zero is meaningful | Modified driver |
-| `frame_mac_service_bytes_not_acknowledged` | Planned/validated per-packet MAC service sizes without positive ACK | F2 | MAC service bytes | Includes terminally dropped work needing delivery or rescue | Null until every contributing size is exact; zero is meaningful | Modified driver |
+| `frame_mac_service_bytes_not_acknowledged` | Planned/validated per-packet MAC service sizes without positive ACK | F2 | MAC service bytes | Includes currently terminally removed work until a late positive ACK | Null until every contributing size is exact; zero is meaningful | Modified driver |
 | `frame_mac_service_bytes_pending_primary` | Planned/validated sizes still queued, in flight, or retry eligible | F2 | MAC service bytes | Excludes ACKed and terminally removed work | Null until every contributing size is exact; zero is meaningful | Modified driver |
 | `current_cw` | Selected `QosTxop::GetCw()` | F3 | slots | Instantaneous and side-effect free | Null when oracle collection is disabled | Internal/modified driver |
 | `remaining_backoff_slots` | No exact passive ns-3.48 getter is used: `GetBackoffSlots()` is lazily updated | F3 | slots | Unsupported until passive reconstruction and boundary tests are available | Always null in Increment 1 | Internal/modified driver |
@@ -101,13 +102,13 @@ analogue, not a claim of equal update timing or precision.
 | `channel_access_status` | Selected `QosTxop::GetAccessStatus()` | F3 | `NOT_REQUESTED`, `REQUESTED`, `GRANTED` | Instantaneous | Null when oracle collection is disabled | Internal/modified driver |
 | `medium_busy_now` | `ChannelAccessManager::IsBusy()` | F3 | Boolean | Instantaneous | Null when oracle collection is disabled; zero is meaningful | CCA analogue |
 | `expected_access_reason_within_slack` | No passive ns-3.48 source: `GetExpectedAccessWithin()` can expire queued MPDUs through `HasFramesToTransmit()` | F3 | documented `WifiExpectedAccessReason` token | Unsupported because collector queries must not mutate simulation state | Always null in Increment 1 | No commodity equivalent |
-| `feature_support_mask` | Collector support-family mapping below | provenance | canonical hexadecimal | Immutable support declaration per row | Never null | Not applicable |
+| `feature_support_mask` | Collector per-field mapping below | provenance | canonical hexadecimal | Immutable support declaration per row | Never null | Not applicable |
 
 For each configured window label, the collector expands these exact fields:
 
 | Field pattern | Source | Tier | Unit/domain | Semantics and null handling |
 |---|---|---|---|---|
-| `mpdu_attempts_{window}`, `mpdu_successes_{window}`, `mpdu_attempt_failures_{window}`, `mpdu_retries_{window}` | Timestamped tagged MPDU events | F1-ideal | count | Events in `(sample_time - window, sample_time]`; zero is meaningful |
+| `mpdu_attempts_{window}`, `mpdu_positive_acks_{window}`, `mpdu_attempt_failures_{window}`, `mpdu_retries_{window}` | Timestamped tagged MPDU events | F1-ideal | count | Events in `(sample_time - window, sample_time]`; zero is meaningful |
 | `mpdu_retry_ratio_{window}` | Retry count divided by attempt count | F1-ideal | ratio | Null when attempt count is zero |
 | `acknowledged_mac_service_bytes_{window}` | Positive ACK events | F1-ideal | MAC service bytes | Counted once at ACK time; zero is meaningful |
 | `mpdu_queue_to_ack_mean_{window}_us`, `mpdu_queue_to_ack_p95_{window}_us` | ACK time minus first enqueue time | F1-ideal | us | Completed observations assigned by ACK time; null with no observation |
@@ -122,28 +123,91 @@ to history coverage within timestamp tolerance.
 ## Support mask
 
 `feature_support_mask` uses lowercase hexadecimal, bit 0 as the least
-significant bit, and no leading zeroes:
+significant bit, and no leading zeroes. Mapping version 2 assigns one bit to
+each optional field or configured-window field pattern. Fields in each row
+below follow the listed bit order:
 
 ```text
-bit 0  frame plan
-bit 1  socket submission progress
-bit 2  MPDU outcomes
-bit 3  exact target MAC queue
-bit 4  PHY occupancy
-bit 5  TX vector
-bit 6  causal oracle
+bits 0-17
+    mpdu_tx_attempts_total, mpdu_positive_acks_total,
+    mpdu_tx_attempt_failures_total, mpdu_retries_total,
+    mpdu_terminal_drops_total, mpdu_retry_limit_drops_total,
+    mpdu_lifetime_drops_total, mpdu_queue_drops_total,
+    ppdu_tx_count_total, last_tx_attempt_time_ns,
+    last_positive_ack_time_ns, current_mcs, current_nss,
+    current_channel_width_mhz, current_guard_interval_ns,
+    frequency_band, center_frequency_mhz, current_ack_signal_dbm
+
+bits 18-38
+    mpdu_attempts_{window}, mpdu_positive_acks_{window},
+    mpdu_attempt_failures_{window}, mpdu_retries_{window},
+    mpdu_retry_ratio_{window}, acknowledged_mac_service_bytes_{window},
+    mpdu_queue_to_ack_mean_{window}, mpdu_queue_to_ack_p95_{window},
+    mpdu_first_attempt_to_ack_mean_{window},
+    mpdu_first_attempt_to_ack_p95_{window},
+    phy_tx_time_{window}, phy_rx_time_{window}, phy_busy_time_{window},
+    phy_idle_time_{window}, phy_other_time_{window},
+    phy_tx_fraction_{window}, phy_rx_fraction_{window},
+    phy_busy_fraction_{window}, phy_idle_fraction_{window},
+    phy_other_fraction_{window}, history_coverage_{window}
+
+bits 39-60
+    frame_packets_mac_enqueued, frame_packets_mac_dequeued,
+    frame_packets_tx_succeeded, frame_mpdu_attempt_failures,
+    frame_packets_terminally_dropped, frame_packets_currently_queued,
+    frame_mac_service_bytes_currently_queued, mac_queue_packets,
+    mac_queue_service_bytes, mac_queue_oldest_enqueue_time_ns,
+    packets_ahead_of_frame, mac_service_bytes_ahead_of_frame,
+    frame_packets_pending_primary,
+    frame_mac_service_bytes_not_acknowledged,
+    frame_mac_service_bytes_pending_primary, current_cw,
+    remaining_backoff_slots, nav_remaining_us, current_phy_state,
+    channel_access_status, medium_busy_now,
+    expected_access_reason_within_slack
 ```
 
-The mapping version is 1. A set family bit does not convert an explicitly
-unsupported member, such as ACK signal, exact remaining backoff, or expected
-access reason in Increment 1, into a fabricated zero.
+One rolling-pattern bit is set only when every configured window is
+implemented. A clear bit requires null in every corresponding field. A set bit
+still permits only the documented no-observation nulls. Bits 17, 55, and 60
+remain clear in Increment 1; ACK signal, exact remaining backoff, and expected
+access reason remain null. Bits 61 and above are zero. Mandatory identity,
+timing, eligibility, and F0 fields have no support bits.
+
+## Event ledger
+
+Event schema 2 uses a collector-global sequence beginning at one. Every row
+contains `event_time_ns` and `event_sequence`; sequence order resolves events
+that share an ns-3 timestamp. `MPDU_POSITIVE_ACK` is a logical-packet event.
+Its non-null `finalizes_attempt_success` field is true only when the ACK
+finalizes a currently unresolved PHY attempt. A late ACK after timeout or
+terminal removal sets it false and leaves `attempt_number` null.
+
+The attempt ledger satisfies:
+
+```text
+MPDU_TX_ATTEMPT count
+    = successful-attempt finalizers
+    + MPDU_TX_ATTEMPT_FAILURE count
+    + unresolved attempts
+```
+
+`MPDU_TERMINAL_DROP` is a cumulative event. It is distinct from the current
+`frame_packets_terminally_dropped` state count.
+
+`PHY_INTERVAL_REVISION` rows make rolling PHY state reconstructible. The
+revision kinds are `INITIAL`, `PREDICTED_START`, `AUTHORITATIVE`, and
+`EXPLICIT_END`; each row carries state, start, and end. The initial IDLE
+interval remains the fallback coverage interval. Later revisions supersede a
+non-initial interval with the same start and state.
 
 ## Validation
 
 The validator checks sample cardinality independently of receiver completion,
 unique fixed-path keys, configured times, causal watermarks, monotone
 counters, sender completion, queue and primary-work conservation, exact
-IPv4/UDP MAC service bytes, rolling boundaries, full PHY coverage, supported
-oracle values, required unsupported nulls, submission-before-enqueue event
-ordering, and canonical support masks. It
-rejects receiver outcomes or final labels in the feature schema.
+IPv4/UDP MAC service bytes, per-field support semantics, event sequence and
+attempt conservation, and terminal-state transitions. It reconstructs every
+MAC rolling window from the event ledger and one deterministic PHY window from
+interval revisions. It also checks full PHY coverage, supported oracle values,
+required unsupported nulls, and submission-before-enqueue ordering. Receiver
+outcomes and final labels are rejected from the feature schema.

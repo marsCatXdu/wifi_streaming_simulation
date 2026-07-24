@@ -1657,16 +1657,16 @@ main(int argc, char* argv[])
         predictionTelemetry->SetSampleOffsetsUs(resolvedPredictionSampleOffsetsUs);
         predictionTelemetry->SetHistoryWindowsUs(resolvedPredictionHistoryWindowsUs);
         predictionTelemetry->SetOracleFeaturesEnabled(predictionOracleFeaturesEnabled);
-        const uint8_t selectedPath = policyName == "fixed_link_0" ? 0 : 1;
-        predictionTelemetry->BindWifiPath(selectedPath,
-                                          stationDevices.Get(selectedPath),
-                                          0,
-                                          AC_BE);
         predictionTelemetry->SetOutputFiles(
             (std::filesystem::path(outputDir) / "prediction_samples.csv").string(),
             predictionEventLogEnabled
                 ? (std::filesystem::path(outputDir) / "prediction_events.csv").string()
                 : "");
+        const uint8_t selectedPath = policyName == "fixed_link_0" ? 0 : 1;
+        predictionTelemetry->BindWifiPath(selectedPath,
+                                          stationDevices.Get(selectedPath),
+                                          0,
+                                          AC_BE);
     }
 
     constexpr uint16_t port = 5000;

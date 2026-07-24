@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import json
 import math
@@ -70,21 +71,22 @@ BUILD_KEYS = {
     "ns3_version", "ns3_upstream_commit", "project_git_commit", "compiler",
     "build_profile", "execution_timestamp_utc", "host",
 }
-PREDICTION_SCHEMA_VERSION = 1
-PREDICTION_EVENT_SCHEMA_VERSION = 1
-PREDICTION_SUPPORT_MASK_VERSION = 1
+PREDICTION_SCHEMA_VERSION = 2
+PREDICTION_EVENT_SCHEMA_VERSION = 2
+PREDICTION_SUPPORT_MASK_VERSION = 2
 PREDICTION_BASE_COLUMNS = {
     "telemetry_schema_version", "run_id", "frame_id", "path_id", "copy_id",
     "sample_stage", "sample_offset_us", "sample_time_ns",
-    "latest_feature_event_time_ns", "generation_time_ns", "deadline_time_ns",
+    "latest_feature_event_time_ns", "latest_feature_event_sequence",
+    "generation_time_ns", "deadline_time_ns",
     "frame_age_us", "deadline_slack_us", "sender_mac_complete", "actionable",
     "frame_size_bytes", "frame_packet_count", "frame_type", "packets_submitted",
     "application_socket_packet_bytes_submitted", "packets_remaining_to_submit",
-    "mpdu_tx_attempts_total", "mpdu_tx_successes_total",
+    "mpdu_tx_attempts_total", "mpdu_positive_acks_total",
     "mpdu_tx_attempt_failures_total", "mpdu_retries_total",
     "mpdu_terminal_drops_total", "mpdu_retry_limit_drops_total",
     "mpdu_lifetime_drops_total", "mpdu_queue_drops_total", "ppdu_tx_count_total",
-    "last_tx_attempt_time_ns", "last_tx_success_time_ns", "current_mcs",
+    "last_tx_attempt_time_ns", "last_positive_ack_time_ns", "current_mcs",
     "current_nss", "current_channel_width_mhz", "current_guard_interval_ns",
     "frequency_band", "center_frequency_mhz", "current_ack_signal_dbm",
     "frame_packets_mac_enqueued", "frame_packets_mac_dequeued",
@@ -100,7 +102,7 @@ PREDICTION_BASE_COLUMNS = {
     "expected_access_reason_within_slack", "feature_support_mask",
 }
 PREDICTION_ROLLING_PREFIXES = {
-    "mpdu_attempts", "mpdu_successes", "mpdu_attempt_failures", "mpdu_retries",
+    "mpdu_attempts", "mpdu_positive_acks", "mpdu_attempt_failures", "mpdu_retries",
     "mpdu_retry_ratio", "acknowledged_mac_service_bytes",
     "mpdu_queue_to_ack_mean", "mpdu_queue_to_ack_p95",
     "mpdu_first_attempt_to_ack_mean", "mpdu_first_attempt_to_ack_p95",
@@ -110,19 +112,92 @@ PREDICTION_ROLLING_PREFIXES = {
     "history_coverage",
 }
 PREDICTION_EVENT_COLUMNS = {
-    "event_schema_version", "run_id", "event_time_ns", "event_type", "path_id",
-    "copy_id", "frame_id", "packet_index", "attempt_number",
+    "event_schema_version", "run_id", "event_time_ns", "event_sequence",
+    "event_type", "path_id", "copy_id", "frame_id", "packet_index",
+    "attempt_number", "finalizes_attempt_success",
     "mac_service_bytes", "mac_queue_packets", "mac_queue_service_bytes",
     "current_mcs", "current_nss", "current_channel_width_mhz",
     "current_guard_interval_ns", "current_phy_state",
+    "phy_interval_revision_kind", "phy_interval_state",
+    "phy_interval_start_ns", "phy_interval_end_ns",
 }
 PREDICTION_EVENT_TYPES = {
     "FRAME_REGISTERED", "PACKET_SUBMITTED", "MAC_ENQUEUE", "MAC_DEQUEUE",
-    "MAC_DROP", "MPDU_TX_ATTEMPT", "MPDU_TX_SUCCESS",
+    "MAC_DROP", "MPDU_TX_ATTEMPT", "MPDU_POSITIVE_ACK",
     "MPDU_TX_ATTEMPT_FAILURE", "MPDU_RETRY", "MPDU_TERMINAL_DROP", "PPDU_TX",
-    "PHY_STATE_CHANGE",
+    "PHY_INTERVAL_REVISION",
 }
 PHY_STATES = {"IDLE", "CCA_BUSY", "TX", "RX", "SWITCHING", "SLEEP", "OFF"}
+PHY_INTERVAL_REVISION_KINDS = {
+    "INITIAL", "PREDICTED_START", "AUTHORITATIVE", "EXPLICIT_END",
+}
+PREDICTION_ROLLING_SUPPORT_BITS = {
+    "mpdu_attempts": 18,
+    "mpdu_positive_acks": 19,
+    "mpdu_attempt_failures": 20,
+    "mpdu_retries": 21,
+    "mpdu_retry_ratio": 22,
+    "acknowledged_mac_service_bytes": 23,
+    "mpdu_queue_to_ack_mean": 24,
+    "mpdu_queue_to_ack_p95": 25,
+    "mpdu_first_attempt_to_ack_mean": 26,
+    "mpdu_first_attempt_to_ack_p95": 27,
+    "phy_tx_time": 28,
+    "phy_rx_time": 29,
+    "phy_busy_time": 30,
+    "phy_idle_time": 31,
+    "phy_other_time": 32,
+    "phy_tx_fraction": 33,
+    "phy_rx_fraction": 34,
+    "phy_busy_fraction": 35,
+    "phy_idle_fraction": 36,
+    "phy_other_fraction": 37,
+    "history_coverage": 38,
+}
+PREDICTION_ORACLE_SUPPORT_BITS = {54, 56, 57, 58, 59}
+PREDICTION_REQUIRED_WIFI_SUPPORT_BITS = set(range(0, 17)) | set(range(18, 54))
+PREDICTION_FIELD_SUPPORT_BITS = {
+    "mpdu_tx_attempts_total": 0,
+    "mpdu_positive_acks_total": 1,
+    "mpdu_tx_attempt_failures_total": 2,
+    "mpdu_retries_total": 3,
+    "mpdu_terminal_drops_total": 4,
+    "mpdu_retry_limit_drops_total": 5,
+    "mpdu_lifetime_drops_total": 6,
+    "mpdu_queue_drops_total": 7,
+    "ppdu_tx_count_total": 8,
+    "last_tx_attempt_time_ns": 9,
+    "last_positive_ack_time_ns": 10,
+    "current_mcs": 11,
+    "current_nss": 12,
+    "current_channel_width_mhz": 13,
+    "current_guard_interval_ns": 14,
+    "frequency_band": 15,
+    "center_frequency_mhz": 16,
+    "current_ack_signal_dbm": 17,
+    "frame_packets_mac_enqueued": 39,
+    "frame_packets_mac_dequeued": 40,
+    "frame_packets_tx_succeeded": 41,
+    "frame_mpdu_attempt_failures": 42,
+    "frame_packets_terminally_dropped": 43,
+    "frame_packets_currently_queued": 44,
+    "frame_mac_service_bytes_currently_queued": 45,
+    "mac_queue_packets": 46,
+    "mac_queue_service_bytes": 47,
+    "mac_queue_oldest_enqueue_time_ns": 48,
+    "packets_ahead_of_frame": 49,
+    "mac_service_bytes_ahead_of_frame": 50,
+    "frame_packets_pending_primary": 51,
+    "frame_mac_service_bytes_not_acknowledged": 52,
+    "frame_mac_service_bytes_pending_primary": 53,
+    "current_cw": 54,
+    "remaining_backoff_slots": 55,
+    "nav_remaining_us": 56,
+    "current_phy_state": 57,
+    "channel_access_status": 58,
+    "medium_busy_now": 59,
+    "expected_access_reason_within_slack": 60,
+}
 ACCESS_STATUSES = {"NOT_REQUESTED", "REQUESTED", "GRANTED"}
 
 
@@ -226,6 +301,18 @@ def _close(actual: float, expected: float) -> bool:
     return math.isclose(actual, expected, rel_tol=1e-9, abs_tol=1e-9)
 
 
+def _type7_percentile(values: list[float], probability: float) -> float:
+    _require(bool(values), "cannot calculate a percentile of an empty list")
+    ordered = sorted(values)
+    index = (len(ordered) - 1) * probability
+    lower = math.floor(index)
+    upper = math.ceil(index)
+    if lower == upper:
+        return ordered[lower]
+    weight = index - lower
+    return ordered[lower] * (1 - weight) + ordered[upper] * weight
+
+
 def _rolling_column(prefix: str, label: str) -> str:
     if (prefix.startswith("mpdu_queue_to_ack_") or
             prefix.startswith("mpdu_first_attempt_to_ack_") or
@@ -314,16 +401,15 @@ def _validate_prediction(
     by_frame: dict[int, list[dict[str, str]]] = {}
     cumulative_fields = (
         "packets_submitted", "application_socket_packet_bytes_submitted",
-        "mpdu_tx_attempts_total", "mpdu_tx_successes_total",
+        "mpdu_tx_attempts_total", "mpdu_positive_acks_total",
         "mpdu_tx_attempt_failures_total", "mpdu_retries_total",
         "mpdu_terminal_drops_total", "mpdu_retry_limit_drops_total",
         "mpdu_lifetime_drops_total", "mpdu_queue_drops_total", "ppdu_tx_count_total",
         "frame_packets_mac_enqueued", "frame_packets_mac_dequeued",
         "frame_packets_tx_succeeded", "frame_mpdu_attempt_failures",
-        "frame_packets_terminally_dropped",
     )
     optional_nonnegative_integers = (
-        "last_tx_attempt_time_ns", "last_tx_success_time_ns", "current_mcs",
+        "last_tx_attempt_time_ns", "last_positive_ack_time_ns", "current_mcs",
         "current_nss", "current_channel_width_mhz", "current_guard_interval_ns",
         "center_frequency_mhz",
         "frame_packets_mac_enqueued", "frame_packets_mac_dequeued",
@@ -362,7 +448,12 @@ def _validate_prediction(
         sample_time = _integer(row, "sample_time_ns", file_name)
         generation_time = _integer(row, "generation_time_ns", file_name)
         deadline_time = _integer(row, "deadline_time_ns", file_name)
-        latest_event = _integer(row, "latest_feature_event_time_ns", file_name)
+        latest_event = _optional_integer(
+            row, "latest_feature_event_time_ns", file_name
+        )
+        latest_sequence = _integer(
+            row, "latest_feature_event_sequence", file_name
+        )
         frame = frames_by_id[frame_id]
         _require(generation_time // 1000 == int(frame["generation_time_us"]),
                  f"{file_name}: generation timestamp mismatch")
@@ -371,7 +462,10 @@ def _validate_prediction(
         _require(deadline_time == generation_time + int(frame["deadline_us"]) * 1000,
                  f"{file_name}: deadline timestamp mismatch")
         _require(sample_time < deadline_time, f"{file_name}: post-deadline sample")
-        _require(latest_event <= sample_time, f"{file_name}: future feature event")
+        _require((latest_sequence == 0) == (latest_event is None),
+                 f"{file_name}: inconsistent empty feature watermark")
+        if latest_event is not None:
+            _require(latest_event <= sample_time, f"{file_name}: future feature event")
         _require(row["sample_stage"] == _stage_name(offset),
                  f"{file_name}: incorrect stage name")
         _require(_integer(row, "frame_age_us", file_name) == offset,
@@ -419,10 +513,24 @@ def _validate_prediction(
                               row["feature_support_mask"]) is not None,
                  f"{file_name}: noncanonical feature support mask")
         support_mask = int(row["feature_support_mask"], 16)
-        _require(support_mask & 0x3f == 0x3f,
-                 f"{file_name}: required support families are absent")
-        _require(bool(support_mask & (1 << 6)) == oracle_enabled,
-                 f"{file_name}: oracle support bit disagrees with configuration")
+        expected_bits = set(PREDICTION_REQUIRED_WIFI_SUPPORT_BITS)
+        if oracle_enabled:
+            expected_bits |= PREDICTION_ORACLE_SUPPORT_BITS
+        expected_mask = sum(1 << bit for bit in expected_bits)
+        _require(support_mask == expected_mask,
+                 f"{file_name}: per-field support mask disagrees with configuration")
+        _require(support_mask >> 61 == 0,
+                 f"{file_name}: reserved support-mask bit is set")
+        for field, bit in PREDICTION_FIELD_SUPPORT_BITS.items():
+            supported = bool(support_mask & (1 << bit))
+            _require(supported or row[field] == "",
+                     f"{file_name}: unsupported field {field} is non-null")
+        for prefix, bit in PREDICTION_ROLLING_SUPPORT_BITS.items():
+            supported = bool(support_mask & (1 << bit))
+            for window in windows:
+                field = _rolling_column(prefix, _window_label(window))
+                _require(supported or row[field] == "",
+                         f"{file_name}: unsupported rolling field {field} is non-null")
 
         f2_counts = {
             field: _optional_integer(row, field, file_name)
@@ -515,7 +623,7 @@ def _validate_prediction(
             label = _window_label(window)
             attempts = _integer(row, f"mpdu_attempts_{label}", file_name)
             retries = _integer(row, f"mpdu_retries_{label}", file_name)
-            _integer(row, f"mpdu_successes_{label}", file_name)
+            _integer(row, f"mpdu_positive_acks_{label}", file_name)
             _integer(row, f"mpdu_attempt_failures_{label}", file_name)
             acknowledged_bytes = _integer(
                 row, f"acknowledged_mac_service_bytes_{label}", file_name
@@ -559,10 +667,10 @@ def _validate_prediction(
                                           rel_tol=1e-9, abs_tol=1e-6),
                              f"{file_name}: PHY duration/fraction mismatch")
             if acknowledged_bytes == 0:
-                # Zero acknowledged bytes does not imply zero successes for a malformed
+                # Zero acknowledged bytes does not imply zero ACKs for a malformed
                 # zero-byte MPDU, which this experiment contract already excludes.
-                _require(_integer(row, f"mpdu_successes_{label}", file_name) == 0,
-                         f"{file_name}: successful MPDU has no acknowledged service bytes")
+                _require(_integer(row, f"mpdu_positive_acks_{label}", file_name) == 0,
+                         f"{file_name}: positive ACK has no acknowledged service bytes")
 
         observed_order.append((sample_time, frame_id, path_id, offset, copy_id))
         by_frame.setdefault(frame_id, []).append(row)
@@ -603,11 +711,16 @@ def _validate_prediction(
         _require(all(None not in row for row in events),
                  "prediction_events.csv: rows exceed the declared schema")
         previous_time = -1
+        previous_sequence = 0
         payload_size = int(config["stream"]["payload_size_bytes"])
         registered_frames: set[tuple[int, int, int]] = set()
         submitted_packets: set[tuple[int, int, int, int]] = set()
         enqueued_packets: set[tuple[int, int, int, int]] = set()
-        attempted_packets: set[tuple[int, int, int, int]] = set()
+        positive_acked_packets: set[tuple[int, int, int, int]] = set()
+        terminal_packets: set[tuple[int, int, int, int]] = set()
+        attempt_counts: dict[tuple[int, int, int, int], int] = {}
+        unresolved_attempts: dict[tuple[int, int, int, int], int] = {}
+        events_by_sequence: dict[int, dict[str, str]] = {}
         for row in events:
             file_name = "prediction_events.csv"
             _require(row["run_id"] == run_id, f"{file_name}: run_id mismatch")
@@ -615,8 +728,13 @@ def _validate_prediction(
                      PREDICTION_EVENT_SCHEMA_VERSION,
                      f"{file_name}: invalid event schema version")
             event_time = _integer(row, "event_time_ns", file_name)
+            event_sequence = _integer(row, "event_sequence", file_name)
             _require(event_time >= previous_time, f"{file_name}: events are unordered")
+            _require(event_sequence == previous_sequence + 1,
+                     f"{file_name}: event sequence is not contiguous")
             previous_time = event_time
+            previous_sequence = event_sequence
+            events_by_sequence[event_sequence] = row
             _require(row["event_type"] in PREDICTION_EVENT_TYPES,
                      f"{file_name}: invalid event type")
             _require(_integer(row, "path_id", file_name) == selected_path,
@@ -627,11 +745,41 @@ def _validate_prediction(
                 "copy_id", "frame_id", "packet_index", "attempt_number",
                 "mac_service_bytes", "current_mcs", "current_nss",
                 "current_channel_width_mhz", "current_guard_interval_ns",
+                "phy_interval_start_ns", "phy_interval_end_ns",
             ):
                 _optional_integer(row, field, file_name)
             if row["current_phy_state"]:
                 _require(row["current_phy_state"] in PHY_STATES,
                          f"{file_name}: invalid PHY state")
+            event_type = row["event_type"]
+            if event_type == "MPDU_POSITIVE_ACK":
+                finalizes_attempt = _flag(
+                    row, "finalizes_attempt_success", file_name
+                )
+            else:
+                _require(row["finalizes_attempt_success"] == "",
+                         f"{file_name}: non-ACK event has attempt-success flag")
+                finalizes_attempt = None
+            if event_type == "PHY_INTERVAL_REVISION":
+                _require(row["phy_interval_revision_kind"] in
+                         PHY_INTERVAL_REVISION_KINDS,
+                         f"{file_name}: invalid PHY interval revision kind")
+                _require(row["phy_interval_state"] in PHY_STATES,
+                         f"{file_name}: invalid PHY interval state")
+                interval_start = _integer(
+                    row, "phy_interval_start_ns", file_name
+                )
+                interval_end = _integer(row, "phy_interval_end_ns", file_name)
+                _require(interval_end >= interval_start,
+                         f"{file_name}: invalid PHY interval revision")
+            else:
+                _require(
+                    row["phy_interval_revision_kind"] == "" and
+                    row["phy_interval_state"] == "" and
+                    row["phy_interval_start_ns"] == "" and
+                    row["phy_interval_end_ns"] == "",
+                    f"{file_name}: non-PHY event has interval fields",
+                )
             if row["frame_id"]:
                 event_frame_id = int(row["frame_id"])
                 _require(event_frame_id in frames_by_id, f"{file_name}: unknown frame")
@@ -645,26 +793,62 @@ def _validate_prediction(
                     selected_path, int(row["copy_id"]), event_frame_id
                 )
                 packet_key = frame_key + (packet_index,)
-                event_type = row["event_type"]
                 if event_type == "FRAME_REGISTERED":
+                    _require(frame_key not in registered_frames,
+                             f"{file_name}: duplicate frame registration")
                     registered_frames.add(frame_key)
                 elif event_type == "PACKET_SUBMITTED":
                     _require(frame_key in registered_frames,
                              f"{file_name}: submission precedes frame registration")
+                    _require(packet_key not in submitted_packets,
+                             f"{file_name}: duplicate packet submission")
                     submitted_packets.add(packet_key)
                 elif event_type == "MAC_ENQUEUE":
                     _require(packet_key in submitted_packets,
                              f"{file_name}: MAC enqueue precedes submission")
+                    _require(packet_key not in enqueued_packets,
+                             f"{file_name}: duplicate MAC enqueue")
                     enqueued_packets.add(packet_key)
                 elif event_type == "MPDU_TX_ATTEMPT":
                     _require(packet_key in enqueued_packets,
                              f"{file_name}: PHY attempt precedes MAC enqueue")
-                    attempted_packets.add(packet_key)
-                elif event_type in {
-                    "MPDU_TX_SUCCESS", "MPDU_TX_ATTEMPT_FAILURE", "MPDU_RETRY"
-                }:
-                    _require(packet_key in attempted_packets,
-                             f"{file_name}: MPDU outcome precedes PHY attempt")
+                    _require(packet_key not in unresolved_attempts,
+                             f"{file_name}: overlapping unresolved attempts")
+                    attempt = _integer(row, "attempt_number", file_name)
+                    _require(attempt == attempt_counts.get(packet_key, 0) + 1,
+                             f"{file_name}: noncontiguous attempt number")
+                    attempt_counts[packet_key] = attempt
+                    unresolved_attempts[packet_key] = attempt
+                elif event_type == "MPDU_RETRY":
+                    attempt = _integer(row, "attempt_number", file_name)
+                    _require(attempt_counts.get(packet_key, 0) >= 2 and
+                             unresolved_attempts.get(packet_key) == attempt,
+                             f"{file_name}: retry is not an active repeated attempt")
+                elif event_type == "MPDU_TX_ATTEMPT_FAILURE":
+                    attempt = _integer(row, "attempt_number", file_name)
+                    _require(unresolved_attempts.get(packet_key) == attempt,
+                             f"{file_name}: failure does not finalize active attempt")
+                    del unresolved_attempts[packet_key]
+                elif event_type == "MPDU_POSITIVE_ACK":
+                    _require(packet_key not in positive_acked_packets,
+                             f"{file_name}: duplicate logical positive ACK")
+                    if finalizes_attempt:
+                        attempt = _integer(row, "attempt_number", file_name)
+                        _require(unresolved_attempts.get(packet_key) == attempt,
+                                 f"{file_name}: ACK finalizes wrong attempt")
+                        del unresolved_attempts[packet_key]
+                    else:
+                        _require(row["attempt_number"] == "" and
+                                 packet_key not in unresolved_attempts,
+                                 f"{file_name}: late ACK has an active attempt")
+                    positive_acked_packets.add(packet_key)
+                    terminal_packets.discard(packet_key)
+                elif event_type == "MPDU_TERMINAL_DROP":
+                    _require(packet_key not in positive_acked_packets and
+                             packet_key not in terminal_packets and
+                             packet_key not in unresolved_attempts,
+                             f"{file_name}: invalid terminal packet transition")
+                    terminal_packets.add(packet_key)
                 elif event_type == "MAC_DEQUEUE":
                     _require(packet_key in enqueued_packets,
                              f"{file_name}: MAC dequeue precedes enqueue")
@@ -676,6 +860,231 @@ def _validate_prediction(
                     expected_service_bytes = packet_payload + 50 + 28 + 8
                     _require(int(row["mac_service_bytes"]) == expected_service_bytes,
                              f"{file_name}: MAC service-byte domain mismatch")
+        for row in samples:
+            sequence = int(row["latest_feature_event_sequence"])
+            if sequence == 0:
+                continue
+            _require(sequence in events_by_sequence,
+                     "prediction_samples.csv: watermark event is absent")
+            _require(int(events_by_sequence[sequence]["event_time_ns"]) ==
+                     int(row["latest_feature_event_time_ns"]),
+                     "prediction_samples.csv: watermark time/sequence mismatch")
+
+        enqueue_times: dict[tuple[int, int, int, int], int] = {}
+        first_attempt_times: dict[tuple[int, int, int, int], int] = {}
+        rolling_events: dict[str, list[tuple[Any, ...]]] = {
+            "attempt": [], "positive_ack": [], "failure": [], "retry": [],
+        }
+        for row in events:
+            if not row["frame_id"]:
+                continue
+            key = (
+                int(row["path_id"]), int(row["copy_id"]),
+                int(row["frame_id"]), int(row["packet_index"]),
+            )
+            event_key = (int(row["event_time_ns"]), int(row["event_sequence"]))
+            event_type = row["event_type"]
+            if event_type == "MAC_ENQUEUE":
+                enqueue_times[key] = event_key[0]
+            elif event_type == "MPDU_TX_ATTEMPT":
+                first_attempt_times.setdefault(key, event_key[0])
+                rolling_events["attempt"].append(event_key)
+            elif event_type == "MPDU_RETRY":
+                rolling_events["retry"].append(event_key)
+            elif event_type == "MPDU_TX_ATTEMPT_FAILURE":
+                rolling_events["failure"].append(event_key)
+            elif event_type == "MPDU_POSITIVE_ACK":
+                _require(key in enqueue_times and key in first_attempt_times,
+                         "prediction_events.csv: ACK latency origin is absent")
+                rolling_events["positive_ack"].append(
+                    event_key + (
+                        int(row["mac_service_bytes"]),
+                        (event_key[0] - enqueue_times[key]) / 1000.0,
+                        (event_key[0] - first_attempt_times[key]) / 1000.0,
+                    )
+                )
+
+        rolling_keys = {
+            name: [(event[0], event[1]) for event in rows]
+            for name, rows in rolling_events.items()
+        }
+
+        def window_slice(name: str, lower_ns: int, sample_ns: int,
+                         watermark: int) -> list[tuple[Any, ...]]:
+            keys = rolling_keys[name]
+            rows = rolling_events[name]
+            left = bisect.bisect_right(keys, (lower_ns, 2**64 - 1))
+            right = bisect.bisect_right(keys, (sample_ns, watermark))
+            return rows[left:right]
+
+        for sample in samples:
+            sample_time = int(sample["sample_time_ns"])
+            watermark = int(sample["latest_feature_event_sequence"])
+            for window in windows:
+                label = _window_label(window)
+                lower_ns = max(sample_time - window * 1000, 0)
+                attempts = window_slice("attempt", lower_ns, sample_time, watermark)
+                positive_acks = window_slice(
+                    "positive_ack", lower_ns, sample_time, watermark
+                )
+                failures = window_slice("failure", lower_ns, sample_time, watermark)
+                retries = window_slice("retry", lower_ns, sample_time, watermark)
+                _require(int(sample[f"mpdu_attempts_{label}"]) == len(attempts),
+                         "prediction_samples.csv: reconstructed attempt count differs")
+                _require(int(sample[f"mpdu_positive_acks_{label}"]) ==
+                         len(positive_acks),
+                         "prediction_samples.csv: reconstructed ACK count differs")
+                _require(int(sample[f"mpdu_attempt_failures_{label}"]) ==
+                         len(failures),
+                         "prediction_samples.csv: reconstructed failure count differs")
+                _require(int(sample[f"mpdu_retries_{label}"]) == len(retries),
+                         "prediction_samples.csv: reconstructed retry count differs")
+                expected_bytes = sum(event[2] for event in positive_acks)
+                _require(int(sample[f"acknowledged_mac_service_bytes_{label}"]) ==
+                         expected_bytes,
+                         "prediction_samples.csv: reconstructed ACK bytes differ")
+                ratio = _optional_number(
+                    sample, f"mpdu_retry_ratio_{label}", "prediction_samples.csv"
+                )
+                if attempts:
+                    _require(ratio is not None and
+                             _close(ratio, len(retries) / len(attempts)),
+                             "prediction_samples.csv: reconstructed retry ratio differs")
+                else:
+                    _require(ratio is None,
+                             "prediction_samples.csv: zero-attempt retry ratio is non-null")
+                for offset, prefix in (
+                    (3, "mpdu_queue_to_ack"),
+                    (4, "mpdu_first_attempt_to_ack"),
+                ):
+                    values = [float(event[offset]) for event in positive_acks]
+                    mean = _optional_number(
+                        sample, f"{prefix}_mean_{label}_us",
+                        "prediction_samples.csv",
+                    )
+                    p95 = _optional_number(
+                        sample, f"{prefix}_p95_{label}_us",
+                        "prediction_samples.csv",
+                    )
+                    if values:
+                        _require(mean is not None and
+                                 _close(mean, sum(values) / len(values)),
+                                 "prediction_samples.csv: reconstructed latency mean differs")
+                        _require(p95 is not None and
+                                 _close(p95, _type7_percentile(values, 0.95)),
+                                 "prediction_samples.csv: reconstructed latency P95 differs")
+                    else:
+                        _require(mean is None and p95 is None,
+                                 "prediction_samples.csv: empty latency window is non-null")
+
+        reconstruction_window = 5000 if 5000 in windows else windows[0]
+        reconstruction_label = _window_label(reconstruction_window)
+        reconstruction_sample = next(
+            (
+                row for row in samples
+                if int(row["latest_feature_event_sequence"]) > 0 and
+                float(row[f"history_coverage_{reconstruction_label}_us"]) > 0
+            ),
+            None,
+        )
+        if reconstruction_sample is not None:
+            watermark = int(reconstruction_sample["latest_feature_event_sequence"])
+            revisions: dict[
+                tuple[int, str, bool], tuple[int, int, str, int, int]
+            ] = {}
+            telemetry_start_ns: int | None = None
+            for row in events:
+                sequence = int(row["event_sequence"])
+                if sequence > watermark:
+                    break
+                if row["event_type"] != "PHY_INTERVAL_REVISION":
+                    continue
+                start_ns = int(row["phy_interval_start_ns"])
+                end_ns = int(row["phy_interval_end_ns"])
+                state = row["phy_interval_state"]
+                initial = row["phy_interval_revision_kind"] == "INITIAL"
+                revisions[(start_ns, state, initial)] = (
+                    start_ns, end_ns, state, int(row["event_time_ns"]), sequence
+                )
+                if initial:
+                    telemetry_start_ns = start_ns
+            _require(telemetry_start_ns is not None,
+                     "prediction_events.csv: initial PHY interval is absent")
+            sample_time = int(reconstruction_sample["sample_time_ns"])
+            lower_ns = max(sample_time - reconstruction_window * 1000, 0)
+            coverage_start = max(telemetry_start_ns, lower_ns)
+            boundaries = {coverage_start, sample_time}
+            intervals = []
+            for interval in revisions.values():
+                start_ns, end_ns, _state, _reported, _sequence = interval
+                if end_ns <= coverage_start or start_ns >= sample_time:
+                    continue
+                intervals.append(interval)
+                boundaries.add(max(start_ns, coverage_start))
+                boundaries.add(min(end_ns, sample_time))
+            durations = {
+                "TX": 0.0, "RX": 0.0, "CCA_BUSY": 0.0, "IDLE": 0.0,
+                "OTHER": 0.0,
+            }
+            priority = {
+                "OFF": 7, "SLEEP": 6, "TX": 5, "RX": 4,
+                "SWITCHING": 3, "CCA_BUSY": 2, "IDLE": 1,
+            }
+            ordered_boundaries = sorted(boundaries)
+            for start_ns, end_ns in zip(
+                ordered_boundaries, ordered_boundaries[1:]
+            ):
+                if end_ns <= start_ns:
+                    continue
+                midpoint = start_ns + (end_ns - start_ns) // 2
+                candidates = [
+                    interval for interval in intervals
+                    if interval[0] <= midpoint < interval[1]
+                ]
+                _require(bool(candidates),
+                         "prediction_events.csv: PHY reconstruction has a gap")
+                selected = max(
+                    candidates,
+                    key=lambda interval: (
+                        priority[interval[2]], interval[3], interval[4]
+                    ),
+                )
+                bucket = (
+                    selected[2]
+                    if selected[2] in {"TX", "RX", "CCA_BUSY", "IDLE"}
+                    else "OTHER"
+                )
+                durations[bucket] += (end_ns - start_ns) / 1000.0
+            coverage_us = (sample_time - coverage_start) / 1000.0
+            comparisons = {
+                "phy_tx_time": durations["TX"],
+                "phy_rx_time": durations["RX"],
+                "phy_busy_time": durations["CCA_BUSY"],
+                "phy_idle_time": durations["IDLE"],
+                "phy_other_time": durations["OTHER"],
+                "history_coverage": coverage_us,
+            }
+            for prefix, expected in comparisons.items():
+                actual = float(
+                    reconstruction_sample[
+                        f"{prefix}_{reconstruction_label}_us"
+                    ]
+                )
+                _require(_close(actual, expected),
+                         f"prediction_samples.csv: reconstructed {prefix} differs")
+            if coverage_us > 0:
+                for prefix, duration in (
+                    ("phy_tx_fraction", durations["TX"]),
+                    ("phy_rx_fraction", durations["RX"]),
+                    ("phy_busy_fraction", durations["CCA_BUSY"]),
+                    ("phy_idle_fraction", durations["IDLE"]),
+                    ("phy_other_fraction", durations["OTHER"]),
+                ):
+                    actual = float(
+                        reconstruction_sample[f"{prefix}_{reconstruction_label}"]
+                    )
+                    _require(_close(actual, duration / coverage_us),
+                             f"prediction_samples.csv: reconstructed {prefix} differs")
         event_count = len(events)
 
     return {
