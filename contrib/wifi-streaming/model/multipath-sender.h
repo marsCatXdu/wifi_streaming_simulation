@@ -43,6 +43,12 @@ class MultipathSender : public Application
      */
     void SetPredictionTelemetryCollector(Ptr<PredictionTelemetryCollector> collector);
     void SetPacketPayloadSize(uint32_t bytes);
+    /**
+     * Set exact lower-layer bytes added after socket submission.
+     *
+     * @param bytes UDP, IP, and LLC/SNAP bytes added before MAC service.
+     */
+    void SetExpectedMacServiceOverhead(uint32_t bytes);
     void SetEmissionMode(EmissionMode mode);
     void SetEmissionSpan(Time span);
     void SetRunIdHash(uint64_t hash);

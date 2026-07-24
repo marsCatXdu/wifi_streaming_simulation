@@ -38,6 +38,12 @@ FramePacketizer::SetEmissionSpan(Time span)
     m_emissionSpan = span;
 }
 
+void
+FramePacketizer::SetExpectedMacServiceOverhead(uint32_t bytes)
+{
+    m_expectedMacServiceOverhead = bytes;
+}
+
 std::vector<PacketEmission>
 FramePacketizer::Materialize(const PacketizationPlan& plan) const
 {
@@ -105,6 +111,15 @@ FramePacketizer::Plan(const FrameDescriptor& frame,
         PlannedPacket packet;
         packet.packetIndex = index;
         packet.applicationPayloadBytes = std::min(remaining, m_payloadSize);
+        if (m_expectedMacServiceOverhead)
+        {
+            const uint64_t expectedBytes =
+                static_cast<uint64_t>(packet.applicationPayloadBytes) +
+                StreamingHeader::SERIALIZED_SIZE + *m_expectedMacServiceOverhead;
+            NS_ABORT_MSG_IF(expectedBytes > std::numeric_limits<uint32_t>::max(),
+                            "Expected MAC service size exceeds uint32_t");
+            packet.expectedMacServiceBytes = static_cast<uint32_t>(expectedBytes);
+        }
         if (m_mode == EmissionMode::UNIFORM_WITHIN_FRAME && plan.frame.packetCount > 1)
         {
             packet.offset = m_emissionSpan * index / (plan.frame.packetCount - 1);

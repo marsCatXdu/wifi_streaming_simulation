@@ -70,6 +70,13 @@ class FramePacketizer
     void SetEmissionSpan(Time span);
 
     /**
+     * Set exact lower-layer bytes added after socket submission.
+     *
+     * @param bytes UDP, IP, and LLC/SNAP bytes added before MAC service.
+     */
+    void SetExpectedMacServiceOverhead(uint32_t bytes);
+
+    /**
      * Build an immutable packetization plan without changing simulation state.
      *
      * @param frame Frame to packetize.
@@ -113,6 +120,7 @@ class FramePacketizer
     uint32_t m_payloadSize{1200};
     EmissionMode m_mode{EmissionMode::BURST};
     Time m_emissionSpan{MilliSeconds(1)};
+    std::optional<uint32_t> m_expectedMacServiceOverhead; ///< Post-socket service overhead.
 };
 
 } // namespace ns3

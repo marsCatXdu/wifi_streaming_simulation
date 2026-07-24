@@ -52,6 +52,12 @@ MultipathSender::SetPacketPayloadSize(uint32_t bytes)
 }
 
 void
+MultipathSender::SetExpectedMacServiceOverhead(uint32_t bytes)
+{
+    m_packetizer.SetExpectedMacServiceOverhead(bytes);
+}
+
+void
 MultipathSender::SetEmissionMode(EmissionMode mode)
 {
     m_packetizer.SetEmissionMode(mode);

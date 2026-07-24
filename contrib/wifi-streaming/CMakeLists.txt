@@ -32,6 +32,7 @@ build_lib(
     ${libapplications}
     ${libinternet}
     ${libnetwork}
+    ${libwifi}
   TEST_SOURCES
     test/wifi-streaming-test-suite.cc
 )

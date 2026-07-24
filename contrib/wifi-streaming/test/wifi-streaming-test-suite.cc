@@ -12,6 +12,7 @@
 #include "ns3/internet-stack-helper.h"
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/metrics-collector.h"
+#include "ns3/mobility-module.h"
 #include "ns3/multipath-sender.h"
 #include "ns3/prediction-telemetry-collector.h"
 #include "ns3/random-rate-on-off-application.h"
@@ -22,11 +23,181 @@
 #include "ns3/streaming-header.h"
 #include "ns3/test.h"
 #include "ns3/udp-socket-factory.h"
+#include "ns3/wifi-module.h"
 
+#include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+
+namespace ns3
+{
+
+/**
+ * Test-only access to deterministic prediction accounting callbacks.
+ */
+class PredictionTelemetryCollectorTestAccess
+{
+  public:
+    static void AddPath(Ptr<PredictionTelemetryCollector> collector, uint8_t pathId)
+    {
+        collector->m_paths.try_emplace(pathId);
+    }
+
+    static void Enqueue(Ptr<PredictionTelemetryCollector> collector,
+                        uint8_t pathId,
+                        Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyQueueEnqueue(pathId, mpdu);
+    }
+
+    static void Dequeue(Ptr<PredictionTelemetryCollector> collector,
+                        uint8_t pathId,
+                        Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyQueueDequeue(pathId, mpdu);
+    }
+
+    static void Attempt(Ptr<PredictionTelemetryCollector> collector,
+                        uint8_t pathId,
+                        Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyPhyTxBegin(pathId, mpdu->GetPacket());
+    }
+
+    static void Timeout(Ptr<PredictionTelemetryCollector> collector,
+                        uint8_t pathId,
+                        Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyResponseTimeout(pathId, mpdu);
+    }
+
+    static void Nack(Ptr<PredictionTelemetryCollector> collector,
+                     uint8_t pathId,
+                     Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyNackedMpdu(pathId, mpdu);
+    }
+
+    static void Ack(Ptr<PredictionTelemetryCollector> collector,
+                    uint8_t pathId,
+                    Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyAckedMpdu(pathId, mpdu);
+    }
+
+    static void Drop(Ptr<PredictionTelemetryCollector> collector,
+                     uint8_t pathId,
+                     WifiMacDropReason reason,
+                     Ptr<const WifiMpdu> mpdu)
+    {
+        collector->NotifyDroppedMpdu(pathId, reason, mpdu);
+    }
+
+    static std::array<uint64_t, 12> GetCounts(Ptr<PredictionTelemetryCollector> collector,
+                                              const StreamingFrameTag& tag)
+    {
+        const auto& path = collector->m_paths.at(tag.pathId);
+        const auto& frame = collector->m_frames.at(PredictionTelemetryCollector::MakeKey(tag));
+        return {path.mpduAttempts,
+                path.mpduSuccesses,
+                path.mpduAttemptFailures,
+                path.mpduRetries,
+                path.mpduTerminalDrops,
+                path.mpduRetryLimitDrops,
+                path.mpduLifetimeDrops,
+                path.mpduQueueDrops,
+                frame.mpduAttemptFailures,
+                frame.packetsTxSucceeded,
+                frame.packetsTerminallyDropped,
+                path.queueEntries.size()};
+    }
+
+    static std::array<double, 2> GetLastSuccessLatencies(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId)
+    {
+        const auto& event = collector->m_paths.at(pathId).macEvents.back();
+        return {*event.queueToAckUs, *event.firstAttemptToAckUs};
+    }
+
+    static std::array<uint64_t, 3> GetPendingState(
+        Ptr<PredictionTelemetryCollector> collector,
+        const StreamingFrameTag& tag)
+    {
+        const auto& frame = collector->m_frames.at(PredictionTelemetryCollector::MakeKey(tag));
+        uint64_t unacknowledgedBytes = 0;
+        uint64_t pendingBytes = 0;
+        uint64_t pendingPackets = 0;
+        for (const auto& packet : frame.packets)
+        {
+            if (!packet.acknowledged)
+            {
+                unacknowledgedBytes += packet.macServiceBytes.value_or(0);
+            }
+            if (!packet.acknowledged && !packet.terminallyDropped)
+            {
+                ++pendingPackets;
+                pendingBytes += packet.macServiceBytes.value_or(0);
+            }
+        }
+        return {pendingPackets, unacknowledgedBytes, pendingBytes};
+    }
+
+    static std::size_t PruneAndGetMacHistorySize(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId,
+        uint64_t nowNs)
+    {
+        auto& path = collector->m_paths.at(pathId);
+        collector->PruneHistories(path, nowNs);
+        return path.macEvents.size();
+    }
+
+    static double Percentile(std::vector<double> values, double probability)
+    {
+        return PredictionTelemetryCollector::Percentile(std::move(values), probability);
+    }
+
+    static PredictionRollingSample BuildBoundaryWindow(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId)
+    {
+        auto& path = collector->m_paths.at(pathId);
+        constexpr uint64_t nowNs = 2000000;
+        constexpr uint64_t lowerNs = 1000000;
+        path.telemetryStartNs = nowNs;
+        path.macEvents.clear();
+        path.macEvents.push_back({lowerNs,
+                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  false,
+                                  100,
+                                  1.0,
+                                  1.0});
+        path.macEvents.push_back({lowerNs + 1,
+                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  false,
+                                  100,
+                                  10.0,
+                                  20.0});
+        path.macEvents.push_back({nowNs,
+                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  false,
+                                  100,
+                                  30.0,
+                                  40.0});
+        path.macEvents.push_back({nowNs + 1,
+                                  PredictionTelemetryCollector::MacEventKind::SUCCESS,
+                                  false,
+                                  100,
+                                  50.0,
+                                  60.0});
+        return collector->BuildRollingSample(path, nowNs, 1000);
+    }
+};
+
+} // namespace ns3
 
 using namespace ns3;
 
@@ -260,6 +431,7 @@ class PacketizerTestCase : public TestCase
         packetizer.SetPayloadSize(1000);
         packetizer.SetEmissionMode(EmissionMode::UNIFORM_WITHIN_FRAME);
         packetizer.SetEmissionSpan(MilliSeconds(2));
+                packetizer.SetExpectedMacServiceOverhead(36);
         const auto plan = packetizer.Plan(frame, 42, 1, 3);
         NS_TEST_ASSERT_MSG_EQ(plan.frame.packetCount, 3, "Plan has wrong packet count");
         NS_TEST_ASSERT_MSG_EQ(plan.packets.size(), 3, "Plan has wrong packet vector size");
@@ -269,6 +441,18 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(plan.packets[2].applicationPayloadBytes,
                               501,
                               "Plan has wrong final payload");
+                NS_TEST_ASSERT_MSG_EQ(plan.packets[0].expectedMacServiceBytes.has_value(),
+                                      true,
+                                      "Plan omitted full MAC service size");
+                NS_TEST_ASSERT_MSG_EQ(*plan.packets[0].expectedMacServiceBytes,
+                                      1086,
+                                      "Plan has wrong full MAC service size");
+                NS_TEST_ASSERT_MSG_EQ(plan.packets[2].expectedMacServiceBytes.has_value(),
+                                      true,
+                                      "Plan omitted final MAC service size");
+                NS_TEST_ASSERT_MSG_EQ(*plan.packets[2].expectedMacServiceBytes,
+                                      587,
+                                      "Plan has wrong final MAC service size");
         NS_TEST_ASSERT_MSG_EQ(plan.packets[1].offset,
                               MilliSeconds(1),
                               "Plan has wrong emission offset");
@@ -371,6 +555,158 @@ class PredictionCollectorFoundationTestCase : public TestCase
                               "Snapshot contains a future feature event");
         NS_TEST_ASSERT_MSG_EQ(samples[2].deadlineSlackUs, 3000, "Deadline slack is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].actionable, true, "Incomplete frame is not actionable");
+        Simulator::Destroy();
+    }
+};
+
+class PredictionMpduAccountingTestCase : public TestCase
+{
+  public:
+    PredictionMpduAccountingTestCase()
+        : TestCase("Prediction MPDU retry de-duplication and terminal accounting")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        FramePacketizer packetizer;
+        packetizer.SetPayloadSize(1000);
+        const FrameDescriptor frame{21, 0, 2000, 0, 5000, FrameType::P_FRAME};
+        const auto plan = packetizer.Plan(frame, 27, 0, 0);
+        auto emissions = packetizer.Materialize(plan);
+
+        auto collector = CreateObject<PredictionTelemetryCollector>();
+        collector->SetRunId("prediction-mpdu-accounting");
+        collector->SetSampleOffsetsUs({0});
+        collector->RegisterFrame(plan);
+        PredictionTelemetryCollectorTestAccess::AddPath(collector, 0);
+
+        WifiMacHeader header;
+        header.SetType(WIFI_MAC_QOSDATA);
+        header.SetAddr1(Mac48Address("00:00:00:00:00:01"));
+        header.SetAddr2(Mac48Address("00:00:00:00:00:02"));
+        header.SetQosTid(0);
+        std::array<Ptr<WifiMpdu>, 2> mpdus;
+        for (std::size_t index = 0; index < emissions.size(); ++index)
+        {
+            emissions[index].packet->AddPacketTag(emissions[index].frameTag);
+            mpdus[index] = Create<WifiMpdu>(emissions[index].packet, header);
+        }
+
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Enqueue,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Attempt,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(200),
+                            &PredictionTelemetryCollectorTestAccess::Timeout,
+                            collector,
+                            0,
+                            mpdus[0]);
+        // The NACK callback reports the same failed exchange and must not
+        // increment the failure count a second time.
+        Simulator::Schedule(MicroSeconds(200),
+                            &PredictionTelemetryCollectorTestAccess::Nack,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(300),
+                            &PredictionTelemetryCollectorTestAccess::Attempt,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(400),
+                            &PredictionTelemetryCollectorTestAccess::Ack,
+                            collector,
+                            0,
+                            mpdus[0]);
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Enqueue,
+                            collector,
+                            0,
+                            mpdus[1]);
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Drop,
+                            collector,
+                            0,
+                            WIFI_MAC_DROP_EXPIRED_LIFETIME,
+                            mpdus[1]);
+        Simulator::Stop(MicroSeconds(500));
+        Simulator::Run();
+
+        const auto counts =
+            PredictionTelemetryCollectorTestAccess::GetCounts(collector,
+                                                               emissions[0].frameTag);
+        NS_TEST_ASSERT_MSG_EQ(counts[0], 2, "Incorrect attempt count");
+        NS_TEST_ASSERT_MSG_EQ(counts[1], 1, "Incorrect success count");
+        NS_TEST_ASSERT_MSG_EQ(counts[2], 1, "Duplicate failure callback was counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[3], 1, "Retry was not identified");
+        NS_TEST_ASSERT_MSG_EQ(counts[4], 1, "Terminal drop was not counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[5], 0, "Retry-limit drop was invented");
+        NS_TEST_ASSERT_MSG_EQ(counts[6], 1, "Lifetime drop was not classified");
+        NS_TEST_ASSERT_MSG_EQ(counts[7], 0, "Queue drop was invented");
+        NS_TEST_ASSERT_MSG_EQ(counts[8], 1, "Frame failure count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[9], 1, "Distinct frame success count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[10], 1, "Frame terminal count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[11], 0, "Dropped packet remained in the queue");
+
+        const auto latencies =
+            PredictionTelemetryCollectorTestAccess::GetLastSuccessLatencies(collector, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(latencies[0],
+                                  300,
+                                  1e-9,
+                                  "Queue-to-ACK latency is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(latencies[1],
+                                  300,
+                                  1e-9,
+                                  "First-attempt-to-ACK latency is incorrect");
+        const auto pending =
+            PredictionTelemetryCollectorTestAccess::GetPendingState(collector,
+                                                                     emissions[0].frameTag);
+        NS_TEST_ASSERT_MSG_EQ(pending[0], 0, "Terminal work remains pending on primary");
+        NS_TEST_ASSERT_MSG_EQ(pending[1],
+                              mpdus[1]->GetPacketSize(),
+                              "Unacknowledged bytes excluded the terminal drop");
+        NS_TEST_ASSERT_MSG_EQ(pending[2],
+                              0,
+                              "Primary-pending bytes included the terminal drop");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            PredictionTelemetryCollectorTestAccess::Percentile({0, 10, 20, 30}, 0.95),
+            28.5,
+            1e-9,
+            "Rolling percentile does not use type-7 interpolation");
+        const auto boundary =
+            PredictionTelemetryCollectorTestAccess::BuildBoundaryWindow(collector, 0);
+        NS_TEST_ASSERT_MSG_EQ(boundary.mpduSuccesses,
+                              2,
+                              "Rolling window did not use (t - w, t]");
+        NS_TEST_ASSERT_MSG_EQ(boundary.acknowledgedMacServiceBytes,
+                              200,
+                              "ACK-timestamp byte accounting is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(*boundary.mpduQueueToAckP95Us,
+                                  29,
+                                  1e-9,
+                                  "Rolling latency P95 is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(boundary.mpduRetryRatio.has_value(),
+                              false,
+                              "Zero-attempt retry ratio is not null");
+        NS_TEST_ASSERT_MSG_EQ(
+            PredictionTelemetryCollectorTestAccess::PruneAndGetMacHistorySize(collector,
+                                                                               0,
+                                                                               30000000),
+            0,
+            "MAC event history was not bounded by the configured window");
         Simulator::Destroy();
     }
 };
@@ -873,6 +1209,172 @@ class IntegrationDeliveryTestCase : public TestCase
     }
 };
 
+class PredictionWifiTelemetryTestCase : public TestCase
+{
+  public:
+    PredictionWifiTelemetryTestCase()
+        : TestCase("Prediction telemetry observes tagged Wi-Fi MAC and PHY state")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        NodeContainer station;
+        NodeContainer accessPoint;
+        station.Create(1);
+        accessPoint.Create(1);
+        InternetStackHelper internet;
+        internet.Install(station);
+        internet.Install(accessPoint);
+
+        YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
+        YansWifiPhyHelper phy;
+        phy.SetChannel(channel.Create());
+        phy.Set("ChannelSettings", StringValue("{36, 20, BAND_5GHZ, 0}"));
+        WifiHelper wifi;
+        wifi.SetStandard(WIFI_STANDARD_80211be);
+        wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
+                                     "DataMode",
+                                     StringValue("EhtMcs5"),
+                                     "ControlMode",
+                                     StringValue("OfdmRate24Mbps"),
+                                     "FragmentationThreshold",
+                                     UintegerValue(65535));
+        const Ssid ssid("prediction-telemetry-test");
+        WifiMacHelper mac;
+        mac.SetType("ns3::StaWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "ActiveProbing",
+                    BooleanValue(false),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(0));
+        const auto stationDevice = wifi.Install(phy, mac, station);
+        mac.SetType("ns3::ApWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(0));
+        const auto accessPointDevice = wifi.Install(phy, mac, accessPoint);
+
+        MobilityHelper mobility;
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+        mobility.Install(station);
+        mobility.Install(accessPoint);
+        station.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(0, 0, 0));
+        accessPoint.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(1, 0, 0));
+
+        Ipv4AddressHelper address;
+        address.SetBase("10.11.0.0", "255.255.255.0");
+        const auto stationInterface = address.Assign(stationDevice);
+        const auto accessPointInterface = address.Assign(accessPointDevice);
+
+        auto metrics = CreateObject<MetricsCollector>();
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9010));
+        receiver->SetMetricsCollector(metrics);
+        accessPoint.Get(0)->AddApplication(receiver);
+        receiver->SetStartTime(Time());
+        receiver->SetStopTime(Seconds(2));
+
+        auto source = CreateObject<SyntheticFrameSource>();
+        source->SetFps(30);
+        source->SetDuration(MilliSeconds(1));
+        source->SetConstantFrameSize(2400);
+        source->SetDeadline(100000);
+
+        const std::string directory = "/tmp/ns3-wifi-streaming-prediction-test";
+        std::filesystem::remove_all(directory);
+        std::filesystem::create_directories(directory);
+        auto prediction = CreateObject<PredictionTelemetryCollector>();
+        prediction->SetRunId("prediction-wifi-test");
+        prediction->SetSampleOffsetsUs({0, 5000, 20000});
+        prediction->SetHistoryWindowsUs({1000, 5000, 20000});
+        prediction->SetOracleFeaturesEnabled(true);
+        prediction->BindWifiPath(0, stationDevice.Get(0), 0, AC_BE);
+        prediction->SetOutputFiles(directory + "/prediction_samples.csv",
+                                   directory + "/prediction_events.csv");
+
+        auto socket = Socket::CreateSocket(station.Get(0), UdpSocketFactory::GetTypeId());
+        NS_TEST_ASSERT_MSG_EQ(
+            socket->Bind(InetSocketAddress(stationInterface.GetAddress(0), 0)),
+            0,
+            "Wi-Fi sender bind failed");
+        NS_TEST_ASSERT_MSG_EQ(
+            socket->Connect(InetSocketAddress(accessPointInterface.GetAddress(0), 9010)),
+            0,
+            "Wi-Fi sender connect failed");
+        auto sender = CreateObject<MultipathSender>();
+        sender->SetFrameSource(source);
+        sender->SetMetricsCollector(metrics);
+        sender->SetPredictionTelemetryCollector(prediction);
+        sender->SetPacketPayloadSize(1200);
+        sender->SetExpectedMacServiceOverhead(36);
+        sender->AddPath(0, socket, stationDevice.Get(0));
+        station.Get(0)->AddApplication(sender);
+        sender->SetStartTime(Seconds(1));
+        sender->SetStopTime(Seconds(1.5));
+
+        Simulator::Stop(Seconds(1.5));
+        Simulator::Run();
+        prediction->WriteOutputs();
+
+        const auto& samples = prediction->GetSamples();
+        NS_TEST_ASSERT_MSG_EQ(samples.size(), 3, "Prediction Wi-Fi snapshots are missing");
+        NS_TEST_ASSERT_MSG_EQ(samples.front().packetsSubmitted,
+                              0,
+                              "Wi-Fi T0 includes sender-caused state");
+        NS_TEST_ASSERT_MSG_EQ(samples.front().mpduTxAttemptsTotal.has_value(),
+                              true,
+                              "Bound Wi-Fi MPDU counters are unsupported");
+        NS_TEST_ASSERT_MSG_EQ(samples.front().frameMacServiceBytesNotAcknowledged.has_value(),
+                              true,
+                              "T0 omitted deterministic MAC service bytes");
+        NS_TEST_ASSERT_MSG_EQ(*samples.front().frameMacServiceBytesNotAcknowledged,
+                              2572,
+                              "T0 MAC service-byte plan is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(*samples.front().frameMacServiceBytesPendingPrimary,
+                              2572,
+                              "T0 primary-pending service bytes are incorrect");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().framePacketsTxSucceeded.has_value(),
+                              true,
+                              "Tagged packet success count is unsupported");
+        NS_TEST_ASSERT_MSG_EQ(*samples.back().framePacketsTxSucceeded,
+                              2,
+                              "Tagged packets were not acknowledged exactly once");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().senderMacComplete,
+                              true,
+                              "MAC-complete frame remains actionable");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().actionable,
+                              false,
+                              "MAC-complete frame was marked actionable");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().rolling.size(),
+                              3,
+                              "Rolling Wi-Fi histories are missing");
+        for (const auto& window : samples.back().rolling)
+        {
+            const double stateSum = window.phyTxTimeUs + window.phyRxTimeUs +
+                                    window.phyBusyTimeUs + window.phyIdleTimeUs +
+                                    window.phyOtherTimeUs;
+            NS_TEST_ASSERT_MSG_EQ_TOL(stateSum,
+                                      window.historyCoverageUs,
+                                      1e-6,
+                                      "PHY state accounting does not cover the full window");
+        }
+        NS_TEST_ASSERT_MSG_EQ(std::filesystem::is_regular_file(
+                                  directory + "/prediction_samples.csv"),
+                              true,
+                              "Prediction sample output is missing");
+        NS_TEST_ASSERT_MSG_EQ(std::filesystem::is_regular_file(
+                                  directory + "/prediction_events.csv"),
+                              true,
+                              "Prediction event output is missing");
+        Simulator::Destroy();
+        std::filesystem::remove_all(directory);
+    }
+};
+
 class FullDuplicationDeliveryTestCase : public TestCase
 {
   public:
@@ -1039,6 +1541,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionCollectorFoundationTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionMpduAccountingTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelationSanityTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);
@@ -1046,6 +1549,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionWifiTelemetryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new RandomRateOnOffApplicationTestCase, TestCase::Duration::QUICK);
     }
