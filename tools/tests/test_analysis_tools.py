@@ -230,16 +230,23 @@ class MatrixTests(unittest.TestCase):
         refinement = load_yaml(
             ROOT / "experiments/configs/prediction_load_pilot_refinement.yaml"
         )
+        refinement_2 = load_yaml(
+            ROOT / "experiments/configs/prediction_load_pilot_refinement_2.yaml"
+        )
         loaded_specs = expand_config(loaded)
         baseline_specs = expand_config(baseline)
         refinement_specs = expand_config(refinement)
+        refinement_2_specs = expand_config(refinement_2)
         self.assertEqual(len(loaded_specs), 90)
         self.assertEqual(len(baseline_specs), 6)
         self.assertEqual(len(refinement_specs), 75)
+        self.assertEqual(len(refinement_2_specs), 24)
         self.assertFalse(
             any(
                 "prediction" in spec["config"]
-                for spec in loaded_specs + baseline_specs + refinement_specs
+                for spec in (
+                    loaded_specs + baseline_specs + refinement_specs + refinement_2_specs
+                )
             )
         )
         self.assertEqual(
