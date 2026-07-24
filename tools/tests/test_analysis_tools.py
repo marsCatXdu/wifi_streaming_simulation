@@ -21,6 +21,7 @@ from run_experiments import (
 )
 from benchmark_prediction_telemetry import _overhead_classification
 from plot_results import _approach_key, _approach_label, plot
+from summarize_prediction_pilots import _candidate_id, _load_key, _target_band
 from summarize_runs import group_key, summarize
 from validate_outputs import (
     PREDICTION_BASE_COLUMNS,
@@ -221,6 +222,53 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
 
 
 class MatrixTests(unittest.TestCase):
+    def test_prediction_load_pilot_matrix(self) -> None:
+        loaded = load_yaml(ROOT / "experiments/configs/prediction_load_pilot.yaml")
+        baseline = load_yaml(
+            ROOT / "experiments/configs/prediction_load_pilot_baseline.yaml"
+        )
+        loaded_specs = expand_config(loaded)
+        baseline_specs = expand_config(baseline)
+        self.assertEqual(len(loaded_specs), 90)
+        self.assertEqual(len(baseline_specs), 6)
+        self.assertFalse(
+            any("prediction" in spec["config"] for spec in loaded_specs + baseline_specs)
+        )
+        self.assertEqual(
+            {
+                spec["config"]["background"]["correlation_mode"]
+                for spec in loaded_specs
+            },
+            {
+                "independent",
+                "common_bursts",
+                "mixed_common_and_independent",
+            },
+        )
+
+    def test_prediction_pilot_candidate_derivation(self) -> None:
+        config = {
+            "policy": "fixed_link_0",
+            "background": {
+                "profile": "legacy_mixed8",
+                "rate_mbps_per_station": 4,
+                "correlation": {
+                    "mode": "mixed_common_and_independent",
+                    "common_on_mean_ms": 100,
+                    "common_off_mean_ms": 100,
+                    "local_on_mean_ms": 100,
+                    "local_off_mean_ms": 100,
+                },
+            },
+        }
+        key = _load_key(config)
+        self.assertAlmostEqual(key[-1], 0.75)
+        self.assertEqual(_candidate_id(key), "mixed-r4-d75.0-link0")
+        self.assertEqual(_target_band(0.02), "low")
+        self.assertEqual(_target_band(0.07), "medium")
+        self.assertEqual(_target_band(0.20), "high")
+        self.assertEqual(_target_band(0.04), "outside_target_bands")
+
     def test_prediction_overhead_policy_boundaries(self) -> None:
         self.assertEqual(_overhead_classification(25), "PASS")
         self.assertEqual(

@@ -1,0 +1,100 @@
+name: prediction-load-pilot-v1
+output_root: results/prediction_load_pilot_v1
+workers: 4
+
+base:
+  stream:
+    source: synthetic
+    duration: 10
+    fps: 30
+    frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  propagation:
+    propagation_model: log_distance_nakagami
+    station_distance_m: 10
+    path_loss_exponent: 3
+    reference_loss_2_4_ghz_db: 40.046
+    reference_loss_5_ghz_db: 46.678
+    nakagami_distance_1_m: 80
+    nakagami_distance_2_m: 200
+    nakagami_m0: 1.5
+    nakagami_m1: 0.75
+    nakagami_m2: 0.75
+    propagation_stream_base: 5000
+  wifi:
+    wifi_standard: eht
+    queue_max_packets: 500
+    max_amsdu_size: 0
+    fragmentation_threshold: 65535
+    ul_ofdma_enabled: false
+  background:
+    background_profile: legacy_mixed8
+    background_traffic: udp_bursty
+    background_direction: uplink
+    background_packet_size: 1200
+    background_stream_base: 4000
+
+seeds: [101, 102, 103]
+runs: [1]
+
+topologies:
+  - name: dual_interface
+    config:
+      background.correlation_mode: independent
+  - name: dual_interface
+    config:
+      background.correlation_mode: common_bursts
+  - name: dual_interface
+    config:
+      background.correlation_mode: mixed_common_and_independent
+
+policies:
+  - name: fixed_link_0
+    config: &load_1mbps_25pct
+      background.background_rate_mbps: 1
+      background.common_on_mean_ms: 100
+      background.common_off_mean_ms: 300
+      background.local_on_mean_ms: 100
+      background.local_off_mean_ms: 300
+  - name: fixed_link_1
+    config: *load_1mbps_25pct
+  - name: fixed_link_0
+    config: &load_2mbps_50pct
+      background.background_rate_mbps: 2
+      background.common_on_mean_ms: 100
+      background.common_off_mean_ms: 100
+      background.local_on_mean_ms: 100
+      background.local_off_mean_ms: 100
+  - name: fixed_link_1
+    config: *load_2mbps_50pct
+  - name: fixed_link_0
+    config: &load_4mbps_50pct
+      background.background_rate_mbps: 4
+      background.common_on_mean_ms: 100
+      background.common_off_mean_ms: 100
+      background.local_on_mean_ms: 100
+      background.local_off_mean_ms: 100
+  - name: fixed_link_1
+    config: *load_4mbps_50pct
+  - name: fixed_link_0
+    config: &load_6mbps_50pct
+      background.background_rate_mbps: 6
+      background.common_on_mean_ms: 100
+      background.common_off_mean_ms: 100
+      background.local_on_mean_ms: 100
+      background.local_off_mean_ms: 100
+  - name: fixed_link_1
+    config: *load_6mbps_50pct
+  - name: fixed_link_0
+    config: &load_8mbps_75pct
+      background.background_rate_mbps: 8
+      background.common_on_mean_ms: 100
+      background.common_off_mean_ms: 33.333333
+      background.local_on_mean_ms: 100
+      background.local_off_mean_ms: 33.333333
+  - name: fixed_link_1
+    config: *load_8mbps_75pct

@@ -1,0 +1,46 @@
+name: prediction-load-pilot-baseline-v1
+output_root: results/prediction_load_pilot_baseline_v1
+workers: 2
+
+base:
+  stream:
+    source: synthetic
+    duration: 10
+    fps: 30
+    frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  propagation:
+    propagation_model: log_distance_nakagami
+    station_distance_m: 10
+    path_loss_exponent: 3
+    reference_loss_2_4_ghz_db: 40.046
+    reference_loss_5_ghz_db: 46.678
+    nakagami_distance_1_m: 80
+    nakagami_distance_2_m: 200
+    nakagami_m0: 1.5
+    nakagami_m1: 0.75
+    nakagami_m2: 0.75
+    propagation_stream_base: 5000
+  wifi:
+    wifi_standard: eht
+    queue_max_packets: 500
+    max_amsdu_size: 0
+    fragmentation_threshold: 65535
+    ul_ofdma_enabled: false
+  background:
+    background_profile: none
+    background_traffic: none
+
+seeds: [101, 102, 103]
+runs: [1]
+
+topologies:
+  - name: dual_interface
+
+policies:
+  - name: fixed_link_0
+  - name: fixed_link_1

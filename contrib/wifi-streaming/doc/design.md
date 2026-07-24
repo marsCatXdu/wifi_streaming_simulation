@@ -176,10 +176,14 @@ contenders on each active link. The 2.4 GHz set contains HT, HE, and EHT
 stations but no VHT station; the 5 GHz set contains HT, VHT, HE, and EHT
 stations. Every station is installed by a separate `WifiHelper` on the same
 `MultiModelSpectrumChannel` as the streaming radio and uses its standard's
-fixed MCS 5. Each station runs one uplink-only `OnOffApplication` with
-independent exponential ON and OFF random variables. The application consumes
-two explicit streams starting at `--backgroundStreamBase`; the ON/OFF means
-are set by `--randomOnMeanMs` and `--randomOffMeanMs`.
+fixed MCS 5. With `udp_random_onoff`, each station runs one uplink-only
+`OnOffApplication` with independent exponential ON and OFF random variables.
+The application consumes two explicit streams starting at
+`--backgroundStreamBase`; the ON/OFF means are set by `--randomOnMeanMs` and
+`--randomOffMeanMs`. With `udp_bursty`, all stations on a link use
+`ControlledUdpApplication` and the existing `CorrelatedLoadController`.
+`--correlationMode` then selects independent per-link, common cross-link, or
+mixed common-and-independent bursts.
 
 For native MLO, AP MLD beacon generation is enabled and the non-MLD stations
 passively associate to the AP link whose channel matches their PHY. The

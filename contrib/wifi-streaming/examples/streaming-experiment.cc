@@ -724,9 +724,14 @@ main(int argc, char* argv[])
         NS_ABORT_MSG_IF(backgroundDirection != "uplink",
                         "legacy_mixed8 supports uplink background traffic only");
         NS_ABORT_MSG_IF(backgroundTraffic != "none" &&
-                            backgroundTraffic != "udp_random_onoff",
-                        "legacy_mixed8 requires backgroundTraffic=udp_random_onoff");
-        backgroundTraffic = "udp_random_onoff";
+                            backgroundTraffic != "udp_random_onoff" &&
+                            backgroundTraffic != "udp_bursty",
+                        "legacy_mixed8 requires backgroundTraffic=udp_random_onoff or "
+                        "udp_bursty");
+        if (backgroundTraffic == "none")
+        {
+            backgroundTraffic = "udp_random_onoff";
+        }
     }
     const uint32_t backgroundStations0 =
         backgroundStations0Option < 0 ? 0 : static_cast<uint32_t>(backgroundStations0Option);
