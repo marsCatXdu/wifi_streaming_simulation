@@ -1,10 +1,14 @@
 # Specification: Causal Wi-Fi Frame Latency-Risk Prediction Study
 
-**Status:** Revised implementation specification  
-**Revision:** 7, 2026-07-24
+**Status:** Frozen implementation specification
+**Revision:** 8, 2026-07-24
 **Scope:** Increments 1 through 3  
 **Target repository:** `wifi_streaming_simulation`  
 **Target ns-3 version:** Existing pinned ns-3.48 revision
+
+Revision 8 freezes the broader design. Before Increment 2, changes are limited
+to correcting demonstrated telemetry defects or contradictions found while
+producing the Increment-1 acceptance evidence.
 
 ## 1. Goal
 
@@ -168,20 +172,21 @@ identity, path, generation and deadline
 frame size, type, and packet count
 packets/bytes submitted
 packets enqueued/dequeued
-packets acknowledged, failed, and terminally dropped
-successful acknowledgement state for every application packet
+packets positively acknowledged, failed attempts, and terminal-removal state
+positive-ack state for every application packet
 MAC service bytes for every application packet
 ```
 
 Track per path:
 
 ```text
-cumulative MPDU attempts, successes, unsuccessful attempts, retries, drops
+cumulative MPDU attempts, positive acknowledgements, unsuccessful attempts
+cumulative retries and terminal-removal events
 PPDU transmissions
 bounded recent MAC events
 bounded PHY state intervals
 tagged queued packets
-last attempt and last success
+last attempt and last positive acknowledgement
 ```
 
 All per-path state refers to the selected target sender device. It must not
@@ -286,7 +291,17 @@ completion and packet arrivals remain offline label data.
 `sender_mac_complete` and `actionable` are eligibility metadata, not model
 features. Increment 3 evaluates only actionable rows.
 
-Every sample records `latest_feature_event_time_ns`, which must satisfy:
+Every sample records `latest_feature_event_sequence` and
+`latest_feature_event_time_ns`. Their empty-watermark representation is:
+
+```text
+latest_feature_event_sequence = 0
+latest_feature_event_time_ns = null
+```
+
+Simulation time zero is a valid event time and shall not represent an empty
+watermark. The first feature event has sequence one. When the sequence is
+nonzero, the timestamp is non-null and must satisfy:
 
 ```text
 latest_feature_event_time_ns <= sample_time_ns
@@ -299,9 +314,36 @@ latest_feature_event_time_ns <= sample_time_ns
 Count one attempt for each MPDU included in an actual PHY transmission. An
 A-MPDU containing ten MPDUs contributes ten attempts and one PPDU.
 
-### 8.2 MPDU successes
+### 8.2 Positive acknowledgements and successful attempts
 
-Count one success when an MPDU is positively acknowledged by ACK or Block Ack.
+These are distinct:
+
+```text
+MPDU_POSITIVE_ACK
+    The first ACK or Block Ack confirmation for one logical MPDU/application
+    packet. Count the logical packet once.
+
+MPDU_ATTEMPT_SUCCESS
+    A currently unresolved PHY transmission attempt finalized successfully.
+```
+
+Emit one `MPDU_POSITIVE_ACK` event for the first positive acknowledgement and
+include:
+
+```text
+finalizes_attempt_success = true | false
+```
+
+When an unresolved attempt exists, finalize it successfully and set the field
+true. This true field is the `MPDU_ATTEMPT_SUCCESS` ledger outcome; do not emit
+a second logical-ack row. When a timeout already finalized the attempt and no
+newer unresolved attempt exists, a late positive acknowledgement sets the
+field false. It acknowledges the logical packet but does not reverse the
+failed attempt.
+
+`mpdu_positive_acks_total` and `mpdu_positive_acks_{window}` count distinct
+logical packets first positively acknowledged, not successful transmission
+attempts. The rolling event is assigned by its positive-ACK timestamp.
 
 ### 8.3 MPDU attempt failures
 
@@ -316,22 +358,66 @@ unsuccessful attempt.
 
 ### 8.5 Terminal drops
 
-Count an MPDU abandoned without successful acknowledgement. Split where
-observable:
+Increment `mpdu_terminal_drops_total` when a logical MPDU that is not yet
+positively acknowledged is terminally removed from primary service. It is a
+cumulative, monotonic event count and increments only on the first
+`PENDING_PRIMARY -> TERMINALLY_REMOVED_PRIMARY` transition; duplicate callbacks
+do not increment it. Split where observable:
 
 ```text
-mpdu_retry_limit_drops
-mpdu_lifetime_drops
-mpdu_queue_drops
+mpdu_retry_limit_drops_total
+mpdu_lifetime_drops_total
+mpdu_queue_drops_total
 ```
 
 Do not combine terminal drops with unsuccessful attempts.
+
+Separately maintain one current state for every planned logical frame packet:
+
+```text
+PENDING_PRIMARY
+ACKNOWLEDGED
+TERMINALLY_REMOVED_PRIMARY
+```
+
+Allowed transitions are:
+
+```text
+planned packet:
+    -> PENDING_PRIMARY
+
+positive ACK:
+    PENDING_PRIMARY -> ACKNOWLEDGED
+
+terminal removal:
+    PENDING_PRIMARY -> TERMINALLY_REMOVED_PRIMARY
+
+late positive ACK:
+    TERMINALLY_REMOVED_PRIMARY -> ACKNOWLEDGED
+```
+
+`frame_packets_pending_primary`, `frame_packets_tx_succeeded`, and
+`frame_packets_terminally_dropped` are the respective current-state
+cardinalities. Despite its historical name,
+`frame_packets_terminally_dropped` is not cumulative: it counts packets
+currently terminally removed from the primary and not subsequently positively
+acknowledged. A late positive acknowledgement decrements that state count and
+increments `frame_packets_tx_succeeded`. It does not decrement
+`mpdu_terminal_drops_total` or its cumulative reason counters.
+
+For bytes, terminal removal decreases
+`frame_mac_service_bytes_pending_primary` but not
+`frame_mac_service_bytes_not_acknowledged`. A later positive acknowledgement
+then decreases only `frame_mac_service_bytes_not_acknowledged`; primary-pending
+bytes were already removed. No transition may make a packet or byte field
+negative. Test this transition directly even when it does not arise naturally
+in the selected ns-3.48 scenario.
 
 ### 8.6 Trace de-duplication
 
 A failed exchange may emit both timeout and MPDU outcome callbacks. Maintain
 per-attempt state and finalize each attempt once. Unit tests shall cover ACK,
-Block Ack, timeout, retry, and terminal-drop paths.
+Block Ack, timeout, retry, late positive ACK, and terminal-drop paths.
 
 ### 8.7 MAC service-byte domain
 
@@ -393,7 +479,7 @@ it and the dictionary states its domain.
 
 ### 8.8 MPDU latency observations
 
-Record two distinct successful-MPDU observations:
+Record two distinct positive-ACK MPDU observations:
 
 ```text
 mpdu_queue_to_ack_time_us =
@@ -428,7 +514,7 @@ For each window label `{window}` in `1ms`, `5ms`, and `20ms`, emit:
 
 ```text
 mpdu_attempts_{window}
-mpdu_successes_{window}
+mpdu_positive_acks_{window}
 mpdu_attempt_failures_{window}
 mpdu_retries_{window}
 mpdu_retry_ratio_{window}
@@ -464,7 +550,7 @@ mpdu_retry_ratio_{window} = null
 ```
 
 Latency means and percentiles are null when the window contains no applicable
-successful-MPDU observations. PHY fractions are null when
+positive-ACK MPDU observations. PHY fractions are null when
 `history_coverage_{window}_us` is zero.
 
 Use the linear-interpolation percentile convention also known as Hyndman-Fan
@@ -498,7 +584,7 @@ again; their cost is reflected in the lower achieved byte service rate.
 - rolling PHY occupancy;
 - current/recent rate, MCS, NSS, width, and guard interval;
 - ACK signal where available;
-- last-attempt and last-success age.
+- last-attempt and last-positive-ACK age.
 
 F1-ideal uses signal types related to commodity statistics but observes them
 with exact ns-3 timestamps and short windows. It is an optimistic observability
@@ -571,7 +657,7 @@ optional sample field or configured-window field pattern:
 
 ```text
 bit  0  mpdu_tx_attempts_total
-bit  1  mpdu_tx_successes_total
+bit  1  mpdu_positive_acks_total
 bit  2  mpdu_tx_attempt_failures_total
 bit  3  mpdu_retries_total
 bit  4  mpdu_terminal_drops_total
@@ -580,7 +666,7 @@ bit  6  mpdu_lifetime_drops_total
 bit  7  mpdu_queue_drops_total
 bit  8  ppdu_tx_count_total
 bit  9  last_tx_attempt_time_ns
-bit 10  last_tx_success_time_ns
+bit 10  last_positive_ack_time_ns
 bit 11  current_mcs
 bit 12  current_nss
 bit 13  current_channel_width_mhz
@@ -590,7 +676,7 @@ bit 16  center_frequency_mhz
 bit 17  current_ack_signal_dbm
 
 bit 18  mpdu_attempts_{window}
-bit 19  mpdu_successes_{window}
+bit 19  mpdu_positive_acks_{window}
 bit 20  mpdu_attempt_failures_{window}
 bit 21  mpdu_retries_{window}
 bit 22  mpdu_retry_ratio_{window}
@@ -637,9 +723,14 @@ bit 60  expected_access_reason_within_slack
 ```
 
 One rolling-pattern bit governs every configured window instance of that exact
-field pattern. Bits 61 and above are zero in mapping version 2. Mandatory
-identity, timing, eligibility, and F0 fields have no support bits because they
-must always be populated.
+field pattern. Set it only when every configured window instance is
+implemented. An individual supported instance may still be null only under its
+documented no-observation condition. If a later implementation can support
+different windows independently, a new mapping version shall assign separate
+bits. When the bit is clear, every configured instance is null. Bits 61 and
+above are zero in mapping version 2. Mandatory identity,
+timing, eligibility, and F0 fields have no support bits because they must
+always be populated.
 
 Interpret every optional field independently:
 
@@ -681,9 +772,11 @@ frame_age_us, deadline_slack_us, sender_mac_complete, actionable
 ```
 
 `latest_feature_event_sequence` is the collector-global sequence number of the
-latest feature event processed before the snapshot callback. It is zero when
-no feature event has yet been processed. Together with event time, it makes
-same-timestamp inclusion auditable.
+latest feature event processed before the snapshot callback. With no prior
+feature event, the sequence is zero and `latest_feature_event_time_ns` is null.
+With a prior event, the sequence is nonzero and the timestamp is non-null;
+event time zero is valid. Together they make same-timestamp inclusion
+auditable.
 
 Required F0:
 
@@ -703,15 +796,19 @@ is `packets_remaining_to_submit`.
 Required F1-ideal cumulative state:
 
 ```text
-mpdu_tx_attempts_total, mpdu_tx_successes_total
+mpdu_tx_attempts_total, mpdu_positive_acks_total
 mpdu_tx_attempt_failures_total, mpdu_retries_total
 mpdu_terminal_drops_total, mpdu_retry_limit_drops_total
 mpdu_lifetime_drops_total, mpdu_queue_drops_total, ppdu_tx_count_total
-last_tx_attempt_time_ns, last_tx_success_time_ns
+last_tx_attempt_time_ns, last_positive_ack_time_ns
 current_mcs, current_nss, current_channel_width_mhz
 current_guard_interval_ns, frequency_band, center_frequency_mhz
 current_ack_signal_dbm
 ```
+
+`mpdu_positive_acks_total` counts distinct logical packets at their first
+positive acknowledgement. `last_positive_ack_time_ns` is the timestamp of the
+most recent such acknowledgement. Neither field counts successful attempts.
 
 Also include all rolling fields with the exact names defined in Section 9,
 including `mpdu_retries_5ms`, `mpdu_queue_to_ack_mean_20ms_us`,
@@ -738,36 +835,45 @@ frame_mac_service_bytes_pending_primary
 MAC acknowledgement and cannot exceed `frame_packet_count`.
 `frame_mpdu_attempt_failures` counts unsuccessful MPDU attempts attributed to
 the frame and may exceed its packet count.
+`frame_packets_terminally_dropped` is the current
+`TERMINALLY_REMOVED_PRIMARY` state count from Section 8.5, not a cumulative
+event counter. Together with `frame_packets_tx_succeeded` and
+`frame_packets_pending_primary`, it forms an exclusive partition of the
+planned frame packets.
 
 Definitions:
 
 ```text
 frame_mac_service_bytes_not_acknowledged
     All planned frame MAC service bytes without positive MAC
-    acknowledgement. This includes terminally dropped packets.
+    acknowledgement. This includes packets currently terminally removed
+    from the primary path.
 
 frame_mac_service_bytes_pending_primary
     Unacknowledged MAC service bytes still expected to consume primary-path
     service. This includes planned but not yet submitted packets, queued
     packets, in-flight packets, and packets eligible for retry. It excludes
-    packets terminally dropped or otherwise permanently removed from the
-    primary path.
+    packets in `TERMINALLY_REMOVED_PRIMARY` or otherwise permanently removed
+    from the primary path.
 
 frame_packets_pending_primary
     Packet-count analogue of frame_mac_service_bytes_pending_primary.
 ```
 
 Both byte fields start from the plan's total MAC service bytes.
-`frame_mac_service_bytes_not_acknowledged` decreases only on positive MAC
-acknowledgement. `frame_mac_service_bytes_pending_primary` decreases on
-positive acknowledgement or terminal removal from the primary path; it does
-not decrease on dequeue, transmission, or a nonterminal failed attempt.
+`frame_mac_service_bytes_not_acknowledged` decreases only on the first positive
+MAC acknowledgement. `frame_mac_service_bytes_pending_primary` decreases only
+when a `PENDING_PRIMARY` packet transitions to `ACKNOWLEDGED` or
+`TERMINALLY_REMOVED_PRIMARY`; a late acknowledgement after terminal removal
+does not decrease it again. It does not decrease on dequeue, transmission, or
+a nonterminal failed attempt.
 Until the MAC service size of every packet contributing to a field is known
 and validated, that field is null rather than a partial byte sum.
 
 `frame_packets_terminally_dropped > 0` is a separate strong causal risk signal.
 It is not a final miss label: an MPDU may have reached the receiver even when
-its positive acknowledgement was lost.
+its positive acknowledgement was lost. A subsequent late acknowledgement
+moves that packet to `frame_packets_tx_succeeded` as defined in Section 8.5.
 
 Ahead-of-frame fields are null unless current queue ordering makes them exact.
 At T0, before the planned frame is enqueued, all packets currently ahead in a
@@ -851,7 +957,7 @@ Frame/packet event types include:
 
 ```text
 FRAME_REGISTERED, PACKET_SUBMITTED, MAC_ENQUEUE, MAC_DEQUEUE, MAC_DROP
-MPDU_TX_ATTEMPT, MPDU_TX_SUCCESS, MPDU_TX_ATTEMPT_FAILURE
+MPDU_TX_ATTEMPT, MPDU_POSITIVE_ACK, MPDU_TX_ATTEMPT_FAILURE
 MPDU_RETRY, MPDU_TERMINAL_DROP, PPDU_TX
 ```
 
@@ -862,10 +968,14 @@ For every row carrying packet identity, the stable key is:
 ```
 
 `Packet::GetUid()` is not part of this key and is never the sole correlation
-mechanism. `MPDU_TX_SUCCESS` means positive acknowledgement of the logical
-packet. If it follows a finalized timeout without a newer attempt, it is a
-late acknowledgement and does not convert that failed attempt into a
-successful attempt.
+mechanism. Every `MPDU_POSITIVE_ACK` row includes the non-null Boolean
+`finalizes_attempt_success`. A true value finalizes the currently unresolved
+attempt successfully. A false value records a late logical-packet
+acknowledgement after the relevant attempt was already finalized and does not
+reverse that outcome. For true, `attempt_number` identifies the finalized
+attempt; for false, `attempt_number` is null because the acknowledgement is not
+an attempt-success finalizer. `finalizes_attempt_success` is null on every
+other event type.
 
 Event logging shall also emit every interval insertion or correction used by
 rolling PHY reconstruction:
@@ -915,6 +1025,10 @@ constexpr uint32_t PREDICTION_EVENT_SCHEMA_VERSION = 2;
 constexpr uint32_t FEATURE_SUPPORT_MASK_VERSION = 2;
 ```
 
+Revision 8 is the canonical definition of these version-2 contracts. Any
+pre-freeze experimental version-2 artifact using the earlier success names or
+event semantics is invalid and must not enter Increment-2 datasets.
+
 A user must not be able to relabel unchanged output with another semantic
 version. Lists are strict, unique, ordered integers. Windows are positive.
 Record all resolved values and all three source-owned versions under
@@ -942,6 +1056,13 @@ particular,
 `mac_queue_service_bytes` must not silently equal the native
 complete-MPDU-byte queue counter.
 
+Monotonicity applies only to fields defined as cumulative. Current-state
+gauges, including `frame_packets_terminally_dropped`, may decrease under their
+documented transitions.
+
+Validate the watermark pair as an equivalence: sequence zero if and only if
+event time is null; sequence nonzero if and only if event time is non-null.
+
 Do not reject a sample because offline receiver completion occurred earlier.
 
 Unit and integration tests shall cover:
@@ -955,7 +1076,11 @@ Unit and integration tests shall cover:
 - same-timestamp callbacks before and after non-T0 snapshots;
 - receiver-independent sample presence;
 - sender completion/actionability;
+- distinct positive-ACK and attempt-success accounting, including a late ACK
+  with `finalizes_attempt_success=false`;
 - MPDU accounting without duplicate failure counts;
+- terminal removal followed by late positive acknowledgement, including
+  exclusive packet-state and byte transitions;
 - unacknowledged versus primary-pending packet and byte transitions;
 - queue-to-ACK and first-attempt-to-ACK timing;
 - ACK-timestamp rolling-window assignment;
@@ -965,10 +1090,13 @@ Unit and integration tests shall cover:
 - complete TX/RX/CCA_BUSY/IDLE/OTHER accounting;
 - bounded history;
 - queue-byte-domain invariants and canonical per-field support-mask encoding;
+- rolling-pattern bits clear unless every configured window is implemented;
 - exact channel-access status and medium-busy state;
 - absence of any collector call to `GetExpectedAccessWithin()`, a null
   `expected_access_reason_within_slack`, and clear bit 60;
 - source-owned, non-configurable schema versions;
+- empty watermark as sequence zero plus null event time, distinct from an
+  event at simulation time zero;
 - oracle-disabled nulls with each corresponding bit clear;
 - deterministic output;
 - no-background and controlled-background fixed-link runs;
@@ -1007,8 +1135,8 @@ do not receive a numerical tolerance.
 ### 14.2 Identity and conservation audit
 
 Use a small event-logged run containing a multi-packet frame, at least one
-failure-retry-success sequence, and one terminal-drop sequence. Audit every
-packet with:
+failed-attempt-retry-positive-ACK sequence, and one terminal-drop sequence.
+Audit every packet with:
 
 ```text
 (run_id, frame_id, path_id, copy_id, packet_index)
@@ -1038,12 +1166,12 @@ U = attempts still unresolved at the snapshot watermark
 A = S + F + U
 ```
 
-An `MPDU_TX_SUCCESS` finalizes `S` only when that packet has a currently
-unresolved attempt. A positive acknowledgement after a finalized timeout and
-without a newer attempt acknowledges the logical packet but does not add a
-successful attempt or reverse `F`. Consequently,
-`mpdu_tx_successes_total`, which counts positively acknowledged logical
-packets, must not be substituted for `S` in this equation.
+An `MPDU_POSITIVE_ACK` contributes to `S` only when
+`finalizes_attempt_success=true`. A positive acknowledgement after a finalized
+timeout and without a newer unresolved attempt has
+`finalizes_attempt_success=false`; it acknowledges the logical packet but does
+not add a successful attempt or reverse `F`. Consequently,
+`mpdu_positive_acks_total` must not be substituted for `S` in this equation.
 
 For each logical packet whose attempts form one continuous retry sequence:
 
@@ -1063,8 +1191,12 @@ frame_packets_tx_succeeded
     = frame_packet_count
 ```
 
-The terminal term means permanent primary-path removal, not a nonterminal
-failed attempt. Planned but not-yet-submitted packets are pending.
+The terminal term means the packet's current exclusive
+`TERMINALLY_REMOVED_PRIMARY` state, not a cumulative event count or a
+nonterminal failed attempt. Planned but not-yet-submitted packets are pending.
+A synthetic terminal-removal-then-late-ACK test shall show the terminal count
+decreasing as the positively acknowledged count increases, while
+`mpdu_terminal_drops_total` remains unchanged.
 
 When all contributing MAC service sizes are known:
 
@@ -1075,9 +1207,10 @@ frame_mac_service_bytes_not_acknowledged
 ```
 
 Not-acknowledged bytes decrease only on positive acknowledgement.
-Primary-pending bytes decrease only on positive acknowledgement or terminal
-primary-path removal. Queue dequeue, PHY transmission, and nonterminal failure
-must not decrease either quantity.
+Primary-pending bytes decrease only when a pending packet is positively
+acknowledged or terminally removed. A late positive acknowledgement after
+terminal removal changes only not-acknowledged bytes. Queue dequeue, PHY
+transmission, and nonterminal failure must not decrease either quantity.
 
 ### 14.3 Snapshot and rolling-window audit
 
@@ -1091,7 +1224,8 @@ frame_packets_mac_enqueued = 0
 frame_packets_tx_succeeded = 0
 ```
 
-Older link-level background history at T0 is valid. For every later row:
+Older link-level background history at T0 is valid. For every row with a
+nonempty watermark:
 
 ```text
 latest_feature_event_time_ns <= sample_time_ns
@@ -1108,7 +1242,8 @@ Choose at least one 5 ms snapshot and manually reconstruct from
 `prediction_events.csv`:
 
 ```text
-MPDU attempts, positive acknowledgements, failed attempts, retries
+MPDU attempts, successful-attempt finalizers, positive acknowledgements
+failed attempts, retries
 acknowledged MAC service bytes
 queue-to-ACK observations
 first-attempt-to-ACK observations
@@ -1131,8 +1266,25 @@ validator pass.
 
 Benchmark telemetry disabled, samples only, and samples plus events using
 interleaved single-worker repetitions. Report median wall time, output size,
-row count, and peak RSS where available. Samples-only overhead should target
-less than approximately 25 percent.
+row count, and peak RSS where available. Define samples-only wall-time
+overhead as:
+
+```text
+100 * (median_samples_only - median_disabled) / median_disabled
+```
+
+Classify it as:
+
+```text
+overhead <= 25%          PASS
+25% < overhead <= 35%   PASS_WITH_PERFORMANCE_WARNING
+overhead > 35%           REVIEW_REQUIRED
+```
+
+`PASS_WITH_PERFORMANCE_WARNING` does not invalidate scientifically correct
+telemetry but must be disclosed in the acceptance report.
+`REVIEW_REQUIRED` blocks production-scale Increment-2 batches until overhead
+is reduced or an explicit review records why proceeding is acceptable.
 
 ## 15. Increment-1 acceptance
 
@@ -1145,8 +1297,10 @@ Stop and review evidence before Increment 2. Produce one versioned
 4. every unsupported field, clear bit, null behavior, and reason;
 5. unit, integration, and existing regression-test commands and results;
 6. one complete multi-packet frame lifecycle trace;
-7. one failure-retry-success attempt-ledger reconstruction;
-8. one terminal-drop reconstruction;
+7. one failed-attempt-retry-positive-ACK ledger reconstruction that
+   distinguishes attempt success from logical positive acknowledgement;
+8. one terminal-drop reconstruction including the synthetic late-ACK state
+   transition;
 9. one manually reconstructed 5 ms rolling window, including PHY intervals;
 10. T0 values proving pre-submission ordering and same-time ordering tests;
 11. normalized telemetry-on/off comparisons for every pre-existing output;
@@ -1166,19 +1320,20 @@ Increment 1 passes only if the report records:
 PASS  existing regression tests
 PASS  telemetry-on/off meaningful-output equivalence
 PASS  stable frame/packet identity through A-MPDU and retries
+PASS  distinct successful-attempt and logical-positive-ACK accounting
 PASS  no duplicate MPDU attempt-outcome counting
-PASS  packet, attempt, and byte conservation
+PASS  exclusive packet-state, attempt, and byte conservation
 PASS  manual rolling-window reconstruction
 PASS  PHY-state duration conservation
 PASS  receiver-independent snapshot cardinality
 PASS  deterministic sample and event output
 PASS  per-field unsupported/null/support-bit semantics
 PASS  expected-access query never invoked
-PASS  samples-only overhead reasonably close to the 25 percent target
+PASS or PASS_WITH_PERFORMANCE_WARNING  samples-only overhead policy
 ```
 
-Any failed or missing item keeps Increment 1 open. No model or adaptive action
-may exist in C++.
+Any failed, missing, or `REVIEW_REQUIRED` item keeps Increment 1 open for
+production-scale batches. No model or adaptive action may exist in C++.
 
 # Increment 2: Dataset generation and validation
 
@@ -1321,8 +1476,8 @@ Record the fallback; never change format silently.
 Derive only from values present at the same sample or earlier:
 
 ```text
-last_success_age_us =
-    (sample_time_ns - last_tx_success_time_ns) / 1000
+last_positive_ack_age_us =
+    (sample_time_ns - last_positive_ack_time_ns) / 1000
 
 last_attempt_age_us =
     (sample_time_ns - last_tx_attempt_time_ns) / 1000
@@ -1334,10 +1489,10 @@ frame_packets_not_acknowledged =
     frame_packet_count - frame_packets_tx_succeeded
 ```
 
-`frame_packets_not_acknowledged` includes terminally dropped packets and
-answers how many packets still lack sender confirmation. It is not a
-primary-service-work estimate; use `frame_packets_pending_primary` for that
-purpose.
+`frame_packets_not_acknowledged` includes packets currently terminally removed
+until any late positive acknowledgement and answers how many packets still
+lack sender confirmation. It is not a primary-service-work estimate; use
+`frame_packets_pending_primary` for that purpose.
 
 If a source timestamp is null, the corresponding age is null. Reject negative
 ages. Rolling-window fields are taken directly from Increment-1 samples; do
@@ -1608,7 +1763,7 @@ score = mpdu_retries_5ms / max(mpdu_attempts_5ms, 1)
 ### 27.3 Delivery drought
 
 ```text
-score = last_success_age_us / max(deadline_slack_us, epsilon)
+score = last_positive_ack_age_us / max(deadline_slack_us, epsilon)
 ```
 
 ### 27.4 Byte-service queue slack
@@ -1634,9 +1789,10 @@ score = estimated_service_us / max(deadline_slack_us, epsilon)
 Use this estimate only when history coverage is positive and acknowledged
 service bytes are nonzero. Otherwise use a fallback fixed from training data,
 a longer causal history, or configured PHY assumptions. Never use test
-outcomes or zero as the fallback. Terminally dropped bytes remain
-unacknowledged but do not inflate remaining primary-path service; use
-`frame_packets_terminally_dropped` as a separate risk signal.
+outcomes or zero as the fallback. Bytes currently terminally removed remain
+unacknowledged until any late positive ACK, but do not inflate remaining
+primary-path service; use `frame_packets_terminally_dropped` as a separate risk
+signal.
 
 ### 27.5 Deliberately simple packet-count baseline
 
