@@ -5,6 +5,7 @@ build_lib(
     model/streaming-frame-tag.cc
     model/frame-source.cc
     model/frame-packetizer.cc
+    model/prediction-telemetry-collector.cc
     model/metrics-collector.cc
     model/experiment-output.cc
     model/redundancy-policy.cc
@@ -18,6 +19,7 @@ build_lib(
     model/streaming-frame-tag.h
     model/frame-source.h
     model/frame-packetizer.h
+    model/prediction-telemetry-collector.h
     model/metrics-collector.h
     model/experiment-output.h
     model/redundancy-policy.h

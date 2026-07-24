@@ -13,6 +13,7 @@
 #include "ns3/ipv4-address-helper.h"
 #include "ns3/metrics-collector.h"
 #include "ns3/multipath-sender.h"
+#include "ns3/prediction-telemetry-collector.h"
 #include "ns3/random-rate-on-off-application.h"
 #include "ns3/redundancy-policy.h"
 #include "ns3/simulator.h"
@@ -291,6 +292,86 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(emissions[2].frameTag.IsValid(),
                               true,
                               "Materialized frame tag is invalid");
+    }
+};
+
+class PredictionCollectorFoundationTestCase : public TestCase
+{
+  public:
+    PredictionCollectorFoundationTestCase()
+        : TestCase("Prediction collector synchronous T0 and causal event ordering")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        FramePacketizer packetizer;
+        packetizer.SetPayloadSize(1000);
+        const FrameDescriptor frame{17, 0, 2500, 0, 5000, FrameType::P_FRAME};
+        const auto plan = packetizer.Plan(frame, 91, 0, 1);
+        const auto emissions = packetizer.Materialize(plan);
+
+        auto collector = CreateObject<PredictionTelemetryCollector>();
+        collector->SetRunId("prediction-foundation");
+        collector->SetSampleOffsetsUs({0, 1000, 2000});
+
+        // This event is inserted before RegisterFrame schedules the T1
+        // snapshot and must therefore be visible at T1.
+        Simulator::Schedule(MicroSeconds(1000),
+                            &PredictionTelemetryCollector::RecordPacketSubmitted,
+                            PeekPointer(collector),
+                            emissions[0].frameTag,
+                            emissions[0].packet->GetSize());
+        collector->RegisterFrame(plan);
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples().size(),
+                              1,
+                              "T0 was not captured synchronously");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples()[0].sampleStage,
+                              "T0",
+                              "Synchronous sample is not T0");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples()[0].packetsSubmitted,
+                              0,
+                              "T0 observed a scheduled submission");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples()[0].packetsRemainingToSubmit,
+                              3,
+                              "T0 did not use the packetization plan");
+
+        // This event is inserted after the T1 snapshot and must not be visible
+        // until T2, despite sharing the T1 timestamp.
+        Simulator::Schedule(MicroSeconds(1000),
+                            &PredictionTelemetryCollector::RecordPacketSubmitted,
+                            PeekPointer(collector),
+                            emissions[1].frameTag,
+                            emissions[1].packet->GetSize());
+        Simulator::Stop(MicroSeconds(2000));
+        Simulator::Run();
+
+        const auto& samples = collector->GetSamples();
+        NS_TEST_ASSERT_MSG_EQ(samples.size(), 3, "Configured snapshots are missing");
+        NS_TEST_ASSERT_MSG_EQ(samples[1].sampleStage, "T1", "Wrong T1 stage name");
+        NS_TEST_ASSERT_MSG_EQ(samples[1].packetsSubmitted,
+                              1,
+                              "T1 included an event processed after its callback");
+        NS_TEST_ASSERT_MSG_EQ(samples[1].latestFeatureEventTimeNs,
+                              1000000,
+                              "T1 feature timestamp is wrong");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].packetsSubmitted,
+                              2,
+                              "T2 omitted a prior same-timestamp event");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].packetsRemainingToSubmit,
+                              1,
+                              "T2 remaining packet count is wrong");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].applicationSocketPacketBytesSubmitted,
+                              emissions[0].packet->GetSize() +
+                                  emissions[1].packet->GetSize(),
+                              "Submitted byte accounting is wrong");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].latestFeatureEventTimeNs <= samples[2].sampleTimeNs,
+                              true,
+                              "Snapshot contains a future feature event");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].deadlineSlackUs, 3000, "Deadline slack is wrong");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].actionable, true, "Incomplete frame is not actionable");
+        Simulator::Destroy();
     }
 };
 
@@ -753,9 +834,12 @@ class IntegrationDeliveryTestCase : public TestCase
                               "Sender bind failed");
         auto sender = CreateObject<MultipathSender>();
         auto policy = CreateObject<CountingFixedPolicy>();
+        auto predictionCollector = CreateObject<PredictionTelemetryCollector>();
+        predictionCollector->SetSampleOffsetsUs({0, 1000});
         sender->SetFrameSource(source);
         sender->SetPacketPayloadSize(1200);
         sender->SetPolicy(policy);
+        sender->SetPredictionTelemetryCollector(predictionCollector);
         sender->AddPath(0, socket, devices.Get(0));
         NS_TEST_ASSERT_MSG_EQ(socket->Connect(InetSocketAddress(interfaces.GetAddress(1), 9000)),
                               0,
@@ -770,6 +854,15 @@ class IntegrationDeliveryTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(policy->GetDecisionCount(),
                               2,
                               "Sender did not make exactly one decision per frame");
+        NS_TEST_ASSERT_MSG_EQ(predictionCollector->GetRegisteredFrameCount(),
+                              2,
+                              "Sender did not register prediction frame plans");
+        NS_TEST_ASSERT_MSG_EQ(predictionCollector->GetSamples().size(),
+                              4,
+                              "Sender did not produce every configured snapshot");
+        NS_TEST_ASSERT_MSG_EQ(predictionCollector->GetSamples()[0].packetsSubmitted,
+                              0,
+                              "Sender T0 was captured after packet submission");
         NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(), 2, "Not all frames delivered");
         for (const auto& result : collector->GetFrameResults())
         {
@@ -945,6 +1038,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new HeaderTestCase, TestCase::Duration::QUICK);
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionCollectorFoundationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelationSanityTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);

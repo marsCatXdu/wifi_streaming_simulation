@@ -40,6 +40,12 @@ MultipathSender::SetMetricsCollector(Ptr<MetricsCollector> collector)
 }
 
 void
+MultipathSender::SetPredictionTelemetryCollector(Ptr<PredictionTelemetryCollector> collector)
+{
+    m_predictionCollector = collector;
+}
+
+void
 MultipathSender::SetPacketPayloadSize(uint32_t bytes)
 {
     m_packetizer.SetPayloadSize(bytes);
@@ -149,6 +155,10 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
     const auto primaryPlan =
         m_packetizer.Plan(frame, m_runIdHash, 0, policyDecision.primaryPath, flags);
     frame = primaryPlan.frame;
+    if (m_predictionCollector)
+    {
+        m_predictionCollector->RegisterFrame(primaryPlan);
+    }
 
     if (m_collector)
     {
@@ -170,12 +180,20 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
         m_collector->RecordPolicyDecision(decision);
     }
 
-    ScheduleCopy(primaryPlan, false);
+    std::optional<PacketizationPlan> secondaryPlan;
     if (policyDecision.secondaryPath)
     {
-        const auto secondaryPlan =
+        secondaryPlan =
             m_packetizer.Plan(frame, m_runIdHash, 1, *policyDecision.secondaryPath, flags);
-        ScheduleCopy(secondaryPlan, true);
+        if (m_predictionCollector)
+        {
+            m_predictionCollector->RegisterFrame(*secondaryPlan);
+        }
+    }
+    ScheduleCopy(primaryPlan, false);
+    if (secondaryPlan)
+    {
+        ScheduleCopy(*secondaryPlan, true);
     }
 }
 
@@ -208,10 +226,14 @@ MultipathSender::SendPacket(PathId pathId,
     }
 
     packet->AddPacketTag(frameTag);
+    const uint32_t bytes = packet->GetSize();
     if (iterator->second.socket->Send(packet) >= 0)
     {
+        if (m_predictionCollector)
+        {
+            m_predictionCollector->RecordPacketSubmitted(frameTag, bytes);
+        }
         ++m_packetsSent;
-        const uint64_t bytes = packet->GetSize();
         m_bytesSent += bytes;
         m_pathBytesSent[pathId] += bytes;
         if (redundant)

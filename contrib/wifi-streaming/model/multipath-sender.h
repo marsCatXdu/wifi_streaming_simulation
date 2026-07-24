@@ -8,6 +8,7 @@
 #include "frame-packetizer.h"
 #include "frame-source.h"
 #include "metrics-collector.h"
+#include "prediction-telemetry-collector.h"
 #include "redundancy-policy.h"
 
 #include "ns3/application.h"
@@ -34,6 +35,13 @@ class MultipathSender : public Application
 
     void SetFrameSource(Ptr<FrameSource> source);
     void SetMetricsCollector(Ptr<MetricsCollector> collector);
+
+    /**
+     * Attach the passive prediction telemetry collector.
+     *
+     * @param collector Collector that receives plans and submission progress.
+     */
+    void SetPredictionTelemetryCollector(Ptr<PredictionTelemetryCollector> collector);
     void SetPacketPayloadSize(uint32_t bytes);
     void SetEmissionMode(EmissionMode mode);
     void SetEmissionSpan(Time span);
@@ -68,6 +76,7 @@ class MultipathSender : public Application
 
     Ptr<FrameSource> m_source;
     Ptr<MetricsCollector> m_collector;
+    Ptr<PredictionTelemetryCollector> m_predictionCollector;
     FramePacketizer m_packetizer;
     std::map<PathId, Path> m_paths;
     PathId m_primaryPath{0};
