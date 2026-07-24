@@ -26,6 +26,11 @@ from validate_outputs import validate_run
 
 ROOT = Path(__file__).resolve().parents[1]
 NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
+PREDICTION_SCHEMA_VERSIONS = {
+    "telemetry_schema_version": 1,
+    "event_schema_version": 1,
+    "feature_support_mask_version": 1,
+}
 CLI_KEYS = {
     "duration": "duration", "fps": "fps", "frame_size": "frameSize",
     "gop_length": "gopLength", "keyframe_size_multiplier": "keyframeSizeMultiplier",
@@ -93,6 +98,11 @@ CLI_KEYS = {
     "obss_placement_stream_base": "obssPlacementStreamBase",
     "obss_application_stream_base": "obssApplicationStreamBase",
     "obss_wifi_stream_base": "obssWifiStreamBase",
+    "prediction_telemetry_enabled": "predictionTelemetryEnabled",
+    "prediction_sample_offsets_us": "predictionSampleOffsetsUs",
+    "prediction_history_windows_us": "predictionHistoryWindowsUs",
+    "prediction_event_log_enabled": "predictionEventLogEnabled",
+    "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
 }
 
 
@@ -104,12 +114,31 @@ def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
 
+def _nested_leaf(value: Any, leaf: str) -> Any:
+    if not isinstance(value, dict):
+        return None
+    if leaf in value:
+        return value[leaf]
+    matches = [
+        found for child in value.values()
+        if (found := _nested_leaf(child, leaf)) is not None
+    ]
+    if len(matches) > 1:
+        raise ValueError(f"duplicate configuration leaf: {leaf}")
+    return matches[0] if matches else None
+
+
 def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
                   ns3_commit: str, project_git_commit: str) -> str:
     identity = {
         "config": resolved, "seed": seed, "run": run,
         "ns3_commit": ns3_commit, "project_commit": project_git_commit,
     }
+    prediction_enabled = _nested_leaf(resolved, "prediction_telemetry_enabled")
+    if prediction_enabled is not None and not isinstance(prediction_enabled, bool):
+        raise ValueError("prediction_telemetry_enabled must be Boolean")
+    if prediction_enabled:
+        identity["prediction_schema_versions"] = PREDICTION_SCHEMA_VERSIONS
     return hashlib.sha256(canonical_json(identity).encode()).hexdigest()[:20]
 
 
@@ -205,6 +234,11 @@ def cli_arguments(config: dict[str, Any], config_dir: Path) -> list[str]:
             value = str((config_dir / path).resolve()) if not path.is_absolute() else str(path)
         if isinstance(value, bool):
             value = "1" if value else "0"
+        elif isinstance(value, list):
+            if not value or not all(isinstance(item, int) and not isinstance(item, bool)
+                                    for item in value):
+                raise ValueError(f"{dotted} must be a nonempty integer list")
+            value = ",".join(str(item) for item in value)
         arguments.append(f"--{cli_key}={value}")
     return arguments
 
@@ -246,8 +280,56 @@ def write_experiment_description(document: dict[str, Any],
     seed_count = next(iter(seed_counts)) if len(seed_counts) == 1 else None
     ofdma_scope = wifi.get("ul_ofdma_scope", "all_he_eht_aps")
     state_text = ", ".join("enabled" if state else "disabled" for state in ofdma_states)
-    has_legacy = background.get("background_profile") == "legacy_mixed8"
-    has_obss = obss.get("obss_profile") == "mixed4x4"
+    has_legacy = any(
+        spec["config"].get("background", {}).get("background_profile") == "legacy_mixed8"
+        for spec in specs
+    )
+    has_obss = any(
+        spec["config"].get("obss", {}).get("obss_profile") == "mixed4x4"
+        for spec in specs
+    )
+    if not has_obss:
+        ofdma_obss_text = "No independent OBSS APs are installed in this matrix."
+    elif ofdma_scope == "all_he_eht_aps":
+        ofdma_obss_text = "The independent HE and EHT OBSS APs also use the scheduler."
+    else:
+        ofdma_obss_text = "The independent OBSS APs remain EDCA-only in this matrix."
+    prediction = base.get("prediction", {})
+    approaches = sorted({
+        (
+            spec["config"]["topology"],
+            spec["config"]["policy"],
+            int(spec["config"].get("wifi", {}).get("mlo_sta_max_inflights", 1)),
+        )
+        for spec in specs
+    })
+    approach_lines: list[str] = []
+    for topology, policy, inflights in approaches:
+        if topology == "dual_interface" and policy == "fixed_link_0":
+            approach_lines += [
+                "* ``Single 2.4 GHz interface``: one dual-radio 802.11be STA",
+                "  associates through separate non-MLO interfaces and sends only",
+                "  through the 2.4 GHz interface.",
+            ]
+        elif topology == "dual_interface" and policy == "fixed_link_1":
+            approach_lines += [
+                "* ``Single 5 GHz interface``: the same dual-radio association",
+                "  sends only through the 5 GHz interface.",
+            ]
+        elif topology == "dual_interface" and policy == "full_duplication":
+            approach_lines += [
+                "* ``Application full duplication``: each frame is sent over both",
+                "  independent non-MLO 802.11be interfaces.",
+            ]
+        elif topology == "mlo_str":
+            approach_lines += [
+                f"* ``MLO NMaxInflights={inflights}``: one two-link 802.11be STR",
+                f"  MLD uses a BE NMaxInflights value of {inflights}.",
+            ]
+        else:
+            approach_lines += [
+                f"* ``{topology}/{policy}``: see the resolved run configuration.",
+            ]
 
     lines = [
         document.get("name", "Wi-Fi streaming experiment"),
@@ -256,25 +338,13 @@ def write_experiment_description(document: dict[str, Any],
         "Purpose",
         "-------",
         "",
-        "This matrix compares five target-sender approaches under identical",
+        f"This matrix compares {len(approaches)} target-sender approach(es) under identical",
         f"traffic, propagation, and random seeds. UL OFDMA states: {state_text}.",
         "",
         "Target devices and approaches",
         "-----------------------------",
         "",
-        "* ``Single 2.4 GHz interface``: one dual-radio 802.11be STA node is",
-        "  associated through separate non-MLO interfaces with the target AP's",
-        "  2.4 GHz and 5 GHz BSSs; the application sends only through the",
-        "  2.4 GHz interface.",
-        "* ``Single 5 GHz interface``: the same dual-radio association is used,",
-        "  but the application sends only through the 5 GHz interface.",
-        "* ``Application full duplication``: the same frame is sent over both",
-        "  independent non-MLO 802.11be interfaces.",
-        "* ``MLO NMaxInflights=1``: one two-link 802.11be STR MLD STA is",
-        "  associated with one two-link AP MLD; each MPDU may be in flight on",
-        "  at most one link.",
-        "* ``MLO NMaxInflights=2``: the same MLD association permits an MPDU to",
-        "  be in flight on both links opportunistically.",
+        *approach_lines,
         "",
         "Both target links are 20 MHz: channel 1 at 2.4 GHz and channel 36 at",
         "5 GHz. Target data uses EHT MCS 5, an 800 ns guard interval, BE",
@@ -323,25 +393,64 @@ def write_experiment_description(document: dict[str, Any],
             "only and a 50 ms update interval.",
             "",
         ]
+    if prediction.get("prediction_telemetry_enabled", False):
+        offsets = ", ".join(
+            str(value) for value in prediction.get(
+                "prediction_sample_offsets_us", [0, 1000, 2000, 4000]
+            )
+        )
+        windows = ", ".join(
+            str(value) for value in prediction.get(
+                "prediction_history_windows_us", [1000, 5000, 20000]
+            )
+        )
+        lines += [
+            "Prediction telemetry",
+            "--------------------",
+            "",
+            "The fixed-link sender records passive, receiver-independent causal",
+            f"snapshots at offsets {offsets} us. Rolling MAC/PHY windows are",
+            f"{windows} us. Raw prediction events are "
+            f"{'enabled' if prediction.get('prediction_event_log_enabled') else 'disabled'};",
+            f"causal oracle fields are "
+            f"{'enabled' if prediction.get('prediction_oracle_features_enabled') else 'disabled'}.",
+            "A-MSDU, fragmentation, UL OFDMA, MLO, and adaptive actions are disabled.",
+            "",
+        ]
     target_sta_count = 1
     extra_sta_count = (16 if has_legacy else 0) + (16 if has_obss else 0)
+    has_dual = any(topology == "dual_interface" for topology, _, _ in approaches)
+    has_mlo = any(topology == "mlo_str" for topology, _, _ in approaches)
+    if has_dual and has_mlo:
+        target_ap_description = (
+            "The target AP is one logical node using either two independent AP "
+            "interfaces or one two-link AP MLD."
+        )
+    elif has_mlo:
+        target_ap_description = "The target AP is one logical two-link AP MLD."
+    else:
+        target_ap_description = (
+            "The target AP is one logical node with two independent AP interfaces."
+        )
+    extra_ap_description = (
+        "Four additional AP nodes provide the OBSS profile."
+        if has_obss else
+        "No additional AP nodes are installed."
+    )
     lines += [
         "Device counts per approach",
         "--------------------------",
         "",
-        f"Each approach contains {target_sta_count} logical target STA node and",
-        f"{extra_sta_count} contention STA nodes. The target AP is one logical",
-        "node with either two independent AP interfaces or one two-link AP",
-        "MLD. Four additional AP nodes exist for the OBSS profile.",
+        f"Each approach contains {target_sta_count} logical target STA node and up to",
+        f"{extra_sta_count} contention STA nodes, according to treatment. {target_ap_description}",
+        extra_ap_description,
         "",
         "UL OFDMA configuration",
         "----------------------",
         "",
         "When disabled, all uplink data uses normal EDCA channel access. When",
         "enabled, ``RrMultiUserScheduler`` is installed on the target EHT AP.",
-        ("The independent HE and EHT OBSS APs also use the scheduler."
-         if ofdma_scope == "all_he_eht_aps"
-         else "The independent OBSS APs remain EDCA-only in this matrix."),
+        ofdma_obss_text,
         "HT and VHT APs remain EDCA-only. Only associated HE/EHT STAs are",
         "trigger eligible; OFDMA does not coordinate stations across BSS",
         "boundaries.",
@@ -389,7 +498,14 @@ def run_one(spec: dict[str, Any], output_root: Path, config_dir: Path,
         if attempt.is_dir():
             shutil.move(str(log_path), attempt / "stdout.log")
         if process.returncode:
-            raise RuntimeError(f"run {run_id} failed ({process.returncode}); see {attempt}/stdout.log")
+            if attempt.is_dir():
+                failure_log = attempt / "stdout.log"
+            else:
+                failure_log = output_root / f"{run_id}.failed.stdout.log"
+                os.replace(log_path, failure_log)
+            raise RuntimeError(
+                f"run {run_id} failed ({process.returncode}); see {failure_log}"
+            )
         validate_run(attempt, run_id, project_git_commit, NS3_UPSTREAM_COMMIT)
         os.replace(attempt, final)
     finally:

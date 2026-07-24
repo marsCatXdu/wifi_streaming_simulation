@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import sys
 import tempfile
@@ -20,7 +21,13 @@ from run_experiments import (
 )
 from plot_results import _approach_key, _approach_label, plot
 from summarize_runs import group_key, summarize
-from validate_outputs import ValidationError, validate_run
+from validate_outputs import (
+    PREDICTION_BASE_COLUMNS,
+    PREDICTION_ROLLING_PREFIXES,
+    ValidationError,
+    _rolling_column,
+    validate_run,
+)
 
 
 def write_csv(path: Path, header: list[str], row: list[object]) -> None:
@@ -88,6 +95,115 @@ def make_run(path: Path, run_id: str, seed: int = 1) -> None:
     (path / "stdout.log").write_text("ok\n")
 
 
+def add_prediction_sample(path: Path) -> None:
+    config_path = path / "resolved_config.json"
+    config = json.loads(config_path.read_text())
+    config.update({
+        "topology": "dual_interface",
+        "policy": "fixed_link_0",
+        "wifi": {
+            "standard": "802.11be",
+            "ul_ofdma_enabled": False,
+            "max_amsdu_size_bytes": 0,
+            "fragmentation_threshold_bytes": 65535,
+        },
+        "stream": {
+            "source": "synthetic",
+            "deadline_us": 1000,
+            "payload_size_bytes": 1200,
+        },
+        "predictionTelemetry": {
+            "enabled": True,
+            "sample_offsets_us": [0],
+            "history_windows_us": [1000],
+            "event_log_enabled": False,
+            "oracle_features_enabled": False,
+            "telemetry_schema_version": 1,
+            "event_schema_version": 1,
+            "feature_support_mask_version": 1,
+        },
+    })
+    config_path.write_text(json.dumps(config))
+    ofdma_header = [
+        "device_group", "trigger_frames", "basic_trigger_frames", "bsrp_trigger_frames",
+        "ru_grants", "tb_ppdus_transmitted", "tb_bytes_transmitted",
+        "tb_mpdus_received", "tb_bytes_received",
+    ]
+    with (path / "ofdma_summary.csv").open("w", newline="", encoding="utf-8") as output:
+        writer = csv.writer(output)
+        writer.writerow(ofdma_header)
+        for group in ("target", "same_bss_background", "obss"):
+            writer.writerow([group, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    label = "1ms"
+    columns = PREDICTION_BASE_COLUMNS | {
+        _rolling_column(prefix, label) for prefix in PREDICTION_ROLLING_PREFIXES
+    }
+    values = {column: "" for column in columns}
+    values.update({
+        "telemetry_schema_version": 1,
+        "run_id": config["run_id"],
+        "frame_id": 7,
+        "path_id": 0,
+        "copy_id": 0,
+        "sample_stage": "T0",
+        "sample_offset_us": 0,
+        "sample_time_ns": 100000,
+        "latest_feature_event_time_ns": 100000,
+        "generation_time_ns": 100000,
+        "deadline_time_ns": 1100000,
+        "frame_age_us": 0,
+        "deadline_slack_us": 1000,
+        "sender_mac_complete": 0,
+        "actionable": 1,
+        "frame_size_bytes": 1200,
+        "frame_packet_count": 1,
+        "frame_type": "I_FRAME",
+        "packets_submitted": 0,
+        "application_socket_packet_bytes_submitted": 0,
+        "packets_remaining_to_submit": 1,
+        "mpdu_tx_attempts_total": 0,
+        "mpdu_tx_successes_total": 0,
+        "mpdu_tx_attempt_failures_total": 0,
+        "mpdu_retries_total": 0,
+        "mpdu_terminal_drops_total": 0,
+        "mpdu_retry_limit_drops_total": 0,
+        "mpdu_lifetime_drops_total": 0,
+        "mpdu_queue_drops_total": 0,
+        "ppdu_tx_count_total": 0,
+        "frequency_band": "5GHz",
+        "center_frequency_mhz": 5180,
+        "frame_packets_mac_enqueued": 0,
+        "frame_packets_mac_dequeued": 0,
+        "frame_packets_tx_succeeded": 0,
+        "frame_mpdu_attempt_failures": 0,
+        "frame_packets_terminally_dropped": 0,
+        "frame_packets_currently_queued": 0,
+        "frame_mac_service_bytes_currently_queued": 0,
+        "mac_queue_packets": 0,
+        "mac_queue_service_bytes": 0,
+        "packets_ahead_of_frame": 0,
+        "mac_service_bytes_ahead_of_frame": 0,
+        "frame_packets_pending_primary": 1,
+        "frame_mac_service_bytes_not_acknowledged": 1286,
+        "frame_mac_service_bytes_pending_primary": 1286,
+        "feature_support_mask": "0x3f",
+        "mpdu_attempts_1ms": 0,
+        "mpdu_successes_1ms": 0,
+        "mpdu_attempt_failures_1ms": 0,
+        "mpdu_retries_1ms": 0,
+        "acknowledged_mac_service_bytes_1ms": 0,
+        "phy_tx_time_1ms_us": 0,
+        "phy_rx_time_1ms_us": 0,
+        "phy_busy_time_1ms_us": 0,
+        "phy_idle_time_1ms_us": 0,
+        "phy_other_time_1ms_us": 0,
+        "history_coverage_1ms_us": 0,
+    })
+    header = sorted(columns)
+    write_csv(path / "prediction_samples.csv", header, [values[column] for column in header])
+
+
 class MatrixTests(unittest.TestCase):
     def test_deterministic_cartesian_and_compatibility(self) -> None:
         document = {
@@ -107,6 +223,18 @@ class MatrixTests(unittest.TestCase):
         first = derive_run_id(config, 1, 2, "n", "p")
         self.assertEqual(first, derive_run_id({"nested": {"b": 2}, "a": 1}, 1, 2, "n", "p"))
         self.assertNotEqual(first, derive_run_id(config, 2, 2, "n", "p"))
+        enabled = {"prediction": {"prediction_telemetry_enabled": True}}
+        disabled = {"prediction": {"prediction_telemetry_enabled": False}}
+        self.assertNotEqual(derive_run_id(enabled, 1, 2, "n", "p"),
+                            derive_run_id(disabled, 1, 2, "n", "p"))
+        historical_identity = {
+            "config": disabled, "seed": 1, "run": 2,
+            "ns3_commit": "n", "project_commit": "p",
+        }
+        historical = hashlib.sha256(
+            json.dumps(historical_identity, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()[:20]
+        self.assertEqual(derive_run_id(disabled, 1, 2, "n", "p"), historical)
 
     def test_legacy_profile_cli_translation(self) -> None:
         arguments = cli_arguments({
@@ -152,6 +280,26 @@ class MatrixTests(unittest.TestCase):
         self.assertIn("--ulOfdmaBsrpEnabled=1", ofdma_arguments)
         self.assertIn("--ulOfdmaMaxStations=4", ofdma_arguments)
         self.assertIn("--ulOfdmaPsduSize=1200", ofdma_arguments)
+        prediction_arguments = cli_arguments({
+            "prediction": {
+                "prediction_telemetry_enabled": True,
+                "prediction_sample_offsets_us": [0, 1000, 2000, 4000],
+                "prediction_history_windows_us": [1000, 5000, 20000],
+                "prediction_event_log_enabled": False,
+                "prediction_oracle_features_enabled": True,
+            },
+        }, Path("."))
+        self.assertIn("--predictionTelemetryEnabled=1", prediction_arguments)
+        self.assertIn("--predictionSampleOffsetsUs=0,1000,2000,4000",
+                      prediction_arguments)
+        self.assertIn("--predictionHistoryWindowsUs=1000,5000,20000",
+                      prediction_arguments)
+        self.assertIn("--predictionEventLogEnabled=0", prediction_arguments)
+        self.assertIn("--predictionOracleFeaturesEnabled=1", prediction_arguments)
+        with self.assertRaises(ValueError):
+            cli_arguments({
+                "prediction": {"prediction_sample_offsets_us": [0, "1000"]},
+            }, Path("."))
 
     def test_ofdma_matrices_have_paired_five_way_runs(self) -> None:
         for name in ("obss_contention_ul_ofdma.yaml",
@@ -287,6 +435,22 @@ class OutputTests(unittest.TestCase):
             self.assertIn("Four independent APs", description)
             self.assertIn("RrMultiUserScheduler", description)
 
+    def test_prediction_description_lists_only_configured_approaches(self) -> None:
+        config_path = ROOT / "experiments" / "configs" / \
+            "prediction_telemetry_smoke.yaml"
+        document = load_yaml(config_path)
+        specs = expand_config(document)
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)
+            write_experiment_description(document, specs, output)
+            description = (output / "DESCRIPTION.rst").read_text()
+            self.assertIn("compares 2 target-sender approach", description)
+            self.assertIn("Single 2.4 GHz interface", description)
+            self.assertIn("Single 5 GHz interface", description)
+            self.assertNotIn("Application full duplication", description)
+            self.assertIn("Prediction telemetry", description)
+            self.assertIn("receiver-independent causal", description)
+
     def test_validation_and_run_level_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -312,6 +476,34 @@ class OutputTests(unittest.TestCase):
             summary = json.loads((run / "summary.json").read_text())
             summary["frame_count"] = 2
             (run / "summary.json").write_text(json.dumps(summary))
+            with self.assertRaises(ValidationError):
+                validate_run(run)
+
+    def test_prediction_validator_accepts_causal_t0(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary) / "run"
+            make_run(run, "prediction")
+            add_prediction_sample(run)
+            result = validate_run(run)
+            self.assertEqual(result["prediction_sample_count"], 1)
+            self.assertEqual(result["prediction_event_count"], 0)
+
+    def test_prediction_validator_rejects_future_feature_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary) / "run"
+            make_run(run, "prediction")
+            add_prediction_sample(run)
+            sample_path = run / "prediction_samples.csv"
+            with sample_path.open(newline="", encoding="utf-8") as source:
+                reader = csv.DictReader(source)
+                rows = list(reader)
+                header = reader.fieldnames
+            self.assertIsNotNone(header)
+            rows[0]["latest_feature_event_time_ns"] = "100001"
+            with sample_path.open("w", newline="", encoding="utf-8") as output:
+                writer = csv.DictWriter(output, fieldnames=header)
+                writer.writeheader()
+                writer.writerows(rows)
             with self.assertRaises(ValidationError):
                 validate_run(run)
 

@@ -105,6 +105,10 @@ ofdma_summary.csv
 summary.json
 ```
 
+Fixed-link prediction runs additionally write `prediction_samples.csv` and,
+when requested, `prediction_events.csv`. Their causal contract, field
+dictionary, and validation workflow are defined in `prediction-telemetry.md`.
+
 `resolved_config.json` records the effective stream, propagation, channel,
 rate, guard interval, queue, aggregation, Block Ack, retry, RTS/fragmentation,
 access-category, and TXOP settings. `build_info.json` records the ns-3 version,
@@ -240,9 +244,9 @@ ID, and successful MPDUs plus PHY TX occupancy on both links.
   failed MPDUs and retry-limit drops only per device. Those device-level
   failure totals are placed on MLO link row 0 to avoid double-counting;
   successful retransmissions are summed from per-link success records.
-- Dynamic telemetry and adaptive redundancy policies are not part of this
-  phase. `StaticBestLinkPolicy` uses configured initialization scores and does
-  not switch during a run.
+- Prediction telemetry is passive and restricted to fixed-link dual-interface
+  runs. No model or adaptive action is implemented. `StaticBestLinkPolicy`
+  uses configured initialization scores and does not switch during a run.
 - A duplicated frame retains its union-completion timestamp while the receiver
   waits for both complete copy states or a finalization timeout. This permits
   independent copy-completion and duplicate accounting without changing the
