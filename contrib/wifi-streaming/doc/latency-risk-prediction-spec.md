@@ -1,7 +1,7 @@
 # Specification: Causal Wi-Fi Frame Latency-Risk Prediction Study
 
 **Status:** Revised implementation specification  
-**Revision:** 6, 2026-07-24
+**Revision:** 7, 2026-07-24
 **Scope:** Increments 1 through 3  
 **Target repository:** `wifi_streaming_simulation`  
 **Target ns-3 version:** Existing pinned ns-3.48 revision
@@ -452,7 +452,7 @@ history_coverage_{window}_us
 
 Start telemetry history during the existing warm-up. Clip PHY intervals
 exactly at window boundaries. Durations sum to available coverage within
-timestamp tolerance. A short coverage interval is not equivalent to zero
+1 ns (0.001 us). A short coverage interval is not equivalent to zero
 activity. When coverage exists but no matching events occur, event counters
 and acknowledged service bytes are zero.
 
@@ -562,15 +562,106 @@ string:
 ```text
 0x0
 0x1f
-0x10000000000000001
+0x1fffffffffffffff
 ```
 
 Bit 0 is the least-significant bit. Use lowercase hexadecimal, a `0x` prefix,
-and no unnecessary leading zeroes. The bit-to-feature-family mapping is
-documented and versioned. Changing a bit meaning requires a support-mask
-mapping version change and also a telemetry schema version change when the
-sample field contract changes. Unsupported fields remain null even when the
-mask is present.
+and no unnecessary leading zeroes. Mapping version 2 assigns one bit to every
+optional sample field or configured-window field pattern:
+
+```text
+bit  0  mpdu_tx_attempts_total
+bit  1  mpdu_tx_successes_total
+bit  2  mpdu_tx_attempt_failures_total
+bit  3  mpdu_retries_total
+bit  4  mpdu_terminal_drops_total
+bit  5  mpdu_retry_limit_drops_total
+bit  6  mpdu_lifetime_drops_total
+bit  7  mpdu_queue_drops_total
+bit  8  ppdu_tx_count_total
+bit  9  last_tx_attempt_time_ns
+bit 10  last_tx_success_time_ns
+bit 11  current_mcs
+bit 12  current_nss
+bit 13  current_channel_width_mhz
+bit 14  current_guard_interval_ns
+bit 15  frequency_band
+bit 16  center_frequency_mhz
+bit 17  current_ack_signal_dbm
+
+bit 18  mpdu_attempts_{window}
+bit 19  mpdu_successes_{window}
+bit 20  mpdu_attempt_failures_{window}
+bit 21  mpdu_retries_{window}
+bit 22  mpdu_retry_ratio_{window}
+bit 23  acknowledged_mac_service_bytes_{window}
+bit 24  mpdu_queue_to_ack_mean_{window}_us
+bit 25  mpdu_queue_to_ack_p95_{window}_us
+bit 26  mpdu_first_attempt_to_ack_mean_{window}_us
+bit 27  mpdu_first_attempt_to_ack_p95_{window}_us
+bit 28  phy_tx_time_{window}_us
+bit 29  phy_rx_time_{window}_us
+bit 30  phy_busy_time_{window}_us
+bit 31  phy_idle_time_{window}_us
+bit 32  phy_other_time_{window}_us
+bit 33  phy_tx_fraction_{window}
+bit 34  phy_rx_fraction_{window}
+bit 35  phy_busy_fraction_{window}
+bit 36  phy_idle_fraction_{window}
+bit 37  phy_other_fraction_{window}
+bit 38  history_coverage_{window}_us
+
+bit 39  frame_packets_mac_enqueued
+bit 40  frame_packets_mac_dequeued
+bit 41  frame_packets_tx_succeeded
+bit 42  frame_mpdu_attempt_failures
+bit 43  frame_packets_terminally_dropped
+bit 44  frame_packets_currently_queued
+bit 45  frame_mac_service_bytes_currently_queued
+bit 46  mac_queue_packets
+bit 47  mac_queue_service_bytes
+bit 48  mac_queue_oldest_enqueue_time_ns
+bit 49  packets_ahead_of_frame
+bit 50  mac_service_bytes_ahead_of_frame
+bit 51  frame_packets_pending_primary
+bit 52  frame_mac_service_bytes_not_acknowledged
+bit 53  frame_mac_service_bytes_pending_primary
+
+bit 54  current_cw
+bit 55  remaining_backoff_slots
+bit 56  nav_remaining_us
+bit 57  current_phy_state
+bit 58  channel_access_status
+bit 59  medium_busy_now
+bit 60  expected_access_reason_within_slack
+```
+
+One rolling-pattern bit governs every configured window instance of that exact
+field pattern. Bits 61 and above are zero in mapping version 2. Mandatory
+identity, timing, eligibility, and F0 fields have no support bits because they
+must always be populated.
+
+Interpret every optional field independently:
+
+```text
+bit clear, field null
+    unsupported or disabled for this sample
+
+bit set, field null
+    supported, but no observation exists at this sample
+
+bit set, field zero
+    supported and observed as zero
+```
+
+A clear bit with a non-null field is invalid. A set bit with a null field is
+valid only under that field's documented no-observation condition, such as no
+prior TX vector, an empty queue with no oldest enqueue time, no completed
+latency observation, or zero history coverage for a fraction. Validators shall
+check these conditions where the other row fields make them decidable.
+Changing a bit meaning requires a support-mask mapping version change; changing
+the sample columns or field semantics also requires a telemetry schema version
+change.
 
 ## 12. Output schemas
 
@@ -584,9 +675,15 @@ Required identity and timing:
 ```text
 telemetry_schema_version, run_id, frame_id, path_id, copy_id
 sample_stage, sample_offset_us, sample_time_ns
-latest_feature_event_time_ns, generation_time_ns, deadline_time_ns
+latest_feature_event_time_ns, latest_feature_event_sequence
+generation_time_ns, deadline_time_ns
 frame_age_us, deadline_slack_us, sender_mac_complete, actionable
 ```
+
+`latest_feature_event_sequence` is the collector-global sequence number of the
+latest feature event processed before the snapshot callback. It is zero when
+no feature event has yet been processed. Together with event time, it makes
+same-timestamp inclusion auditable.
 
 Required F0:
 
@@ -729,9 +826,11 @@ traces. It is therefore not behaviorally passive.
 `expected_access_reason_within_slack` remains null in Increment 1 and its
 unsupported state is documented rather than invoking the query.
 
-F3 fields are present but null when oracle collection is disabled. A field
-without a verified passive source remains null when oracle collection is
-enabled; a family support bit does not imply that every member is available.
+F3 fields are present but null with their individual bits clear when oracle
+collection is disabled. When oracle collection is enabled in Increment 1,
+bits 54, 56, 57, 58, and 59 are set for the verified passive fields. Bits 55
+and 60 remain clear and their fields remain null because exact remaining
+backoff and passive expected-access reason are unsupported.
 
 Required provenance:
 
@@ -745,15 +844,55 @@ miss labels, future events, or final run summaries.
 ### 12.2 `prediction_events.csv`
 
 Create only when explicitly enabled. Every row includes
-`event_schema_version`. Stream or bounded-buffer rows. Include time, path,
-frame, packet, attempt, queue, rate, and current MAC/PHY fields for events such
-as:
+`event_schema_version`. Stream or bounded-buffer rows. Event schema version 2
+requires a strictly increasing collector-global `event_sequence` and includes
+time, path, frame, packet, attempt, queue, rate, and current MAC/PHY fields.
+Frame/packet event types include:
 
 ```text
 FRAME_REGISTERED, PACKET_SUBMITTED, MAC_ENQUEUE, MAC_DEQUEUE, MAC_DROP
 MPDU_TX_ATTEMPT, MPDU_TX_SUCCESS, MPDU_TX_ATTEMPT_FAILURE
-MPDU_RETRY, MPDU_TERMINAL_DROP, PPDU_TX, PHY_STATE_CHANGE
+MPDU_RETRY, MPDU_TERMINAL_DROP, PPDU_TX
 ```
+
+For every row carrying packet identity, the stable key is:
+
+```text
+(run_id, frame_id, path_id, copy_id, packet_index)
+```
+
+`Packet::GetUid()` is not part of this key and is never the sole correlation
+mechanism. `MPDU_TX_SUCCESS` means positive acknowledgement of the logical
+packet. If it follows a finalized timeout without a newer attempt, it is a
+late acknowledgement and does not convert that failed attempt into a
+successful attempt.
+
+Event logging shall also emit every interval insertion or correction used by
+rolling PHY reconstruction:
+
+```text
+event_type = PHY_INTERVAL_REVISION
+phy_interval_revision_kind =
+    INITIAL | PREDICTED_START | AUTHORITATIVE | EXPLICIT_END
+phy_interval_state =
+    IDLE | CCA_BUSY | TX | RX | SWITCHING | SLEEP | OFF
+phy_interval_start_ns
+phy_interval_end_ns
+```
+
+The interval key is `(path_id, phy_interval_state,
+phy_interval_start_ns)`. The latest revision by `event_sequence` at or before a
+snapshot watermark replaces an earlier revision of that key. Clip revised
+intervals to the requested rolling window. When intervals overlap, select the
+state with this ns-3.48 priority:
+
+```text
+OFF > SLEEP > TX > RX > SWITCHING > CCA_BUSY > IDLE
+```
+
+For equal state priority, select the interval with the later revision
+sequence. This event contract must be sufficient to reproduce every rolling
+PHY duration without reading private collector state.
 
 ## 13. Configuration
 
@@ -771,9 +910,9 @@ Schema versions are implementation-owned constants, not command-line or YAML
 configuration:
 
 ```cpp
-constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 1;
-constexpr uint32_t PREDICTION_EVENT_SCHEMA_VERSION = 1;
-constexpr uint32_t FEATURE_SUPPORT_MASK_VERSION = 1;
+constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 2;
+constexpr uint32_t PREDICTION_EVENT_SCHEMA_VERSION = 2;
+constexpr uint32_t FEATURE_SUPPORT_MASK_VERSION = 2;
 ```
 
 A user must not be able to relabel unchanged output with another semantic
@@ -796,9 +935,10 @@ Validate schema, nulls, unique sample keys, fixed-path isolation, configured
 times, pre-deadline rows, receiver-independent cardinality, causal timestamps,
 nonnegative values, monotonic counters, actionable transitions, history
 coverage, complete PHY duration sums including OTHER, MAC byte conservation,
-primary-pending transitions, canonical support-mask encoding, oracle nulls,
-categorical values, and ordering. Validate every byte field against its
-declared byte domain. In particular,
+primary-pending transitions, canonical per-field support-mask encoding,
+bit/null consistency, oracle nulls, categorical values, event sequence, and
+ordering. Validate every byte field against its declared byte domain. In
+particular,
 `mac_queue_service_bytes` must not silently equal the native
 complete-MPDU-byte queue counter.
 
@@ -824,15 +964,170 @@ Unit and integration tests shall cover:
 - rolling-window boundaries and PHY clipping;
 - complete TX/RX/CCA_BUSY/IDLE/OTHER accounting;
 - bounded history;
-- queue-byte-domain invariants and canonical support-mask encoding;
-- exact channel-access status, medium-busy state, and expected-access
-  categorical serialization;
+- queue-byte-domain invariants and canonical per-field support-mask encoding;
+- exact channel-access status and medium-busy state;
+- absence of any collector call to `GetExpectedAccessWithin()`, a null
+  `expected_access_reason_within_slack`, and clear bit 60;
 - source-owned, non-configurable schema versions;
-- oracle-disabled nulls;
+- oracle-disabled nulls with each corresponding bit clear;
 - deterministic output;
 - no-background and controlled-background fixed-link runs;
 - telemetry-on/off matched frame results;
 - optional event output.
+
+### 14.1 Passive-behavior audit
+
+Run one deterministic configuration twice with identical seed, run number,
+topology, policy, traffic, and build:
+
+```text
+A: predictionTelemetryEnabled = false
+B: predictionTelemetryEnabled = true
+```
+
+Compare every pre-existing simulation result, including:
+
+```text
+frames.csv
+policy_decisions.csv
+summary.json
+mac_summary.csv
+ofdma_summary.csv
+all background-traffic output files
+```
+
+Compare parsed, deterministically ordered content. Normalize only run-ID fields
+whose values intentionally include telemetry configuration, build/execution
+timestamps, output paths, wall-clock runtime, and the added prediction
+configuration metadata. Do not normalize simulated timestamps, counters,
+packet/frame outcomes, latency, queue state, PHY state, policy decisions, or
+background results. Any meaningful difference is a failure; passive callbacks
+do not receive a numerical tolerance.
+
+### 14.2 Identity and conservation audit
+
+Use a small event-logged run containing a multi-packet frame, at least one
+failure-retry-success sequence, and one terminal-drop sequence. Audit every
+packet with:
+
+```text
+(run_id, frame_id, path_id, copy_id, packet_index)
+```
+
+Verify submission, queue insertion/removal, every constituent A-MPDU attempt,
+attempt outcome, retry, positive acknowledgement, and terminal drop against
+that key. Retransmission and `WifiMpdu` aliasing must preserve the key. Path 0
+and path 1 remain distinct even when both devices use internal Wi-Fi link ID
+zero. `Packet::GetUid()` must not be the sole identity.
+
+`WifiMacQueue::Dequeue` means queue removal after acknowledgement or terminal
+removal in ns-3.48; it does not mean selection for a PHY attempt. Do not require
+it to precede `MPDU_TX_ATTEMPT`. Same-timestamp ACK/drop and dequeue callback
+order may follow the verified ns-3 trace order, but the queue mirror must agree
+after the callback chain completes.
+
+At every audited snapshot, reconstruct the per-attempt ledger from
+`prediction_events.csv`. Let:
+
+```text
+A = actual MPDU_TX_ATTEMPT events
+S = attempts finalized successfully
+F = attempts finalized by MPDU_TX_ATTEMPT_FAILURE
+U = attempts still unresolved at the snapshot watermark
+
+A = S + F + U
+```
+
+An `MPDU_TX_SUCCESS` finalizes `S` only when that packet has a currently
+unresolved attempt. A positive acknowledgement after a finalized timeout and
+without a newer attempt acknowledges the logical packet but does not add a
+successful attempt or reverse `F`. Consequently,
+`mpdu_tx_successes_total`, which counts positively acknowledged logical
+packets, must not be substituted for `S` in this equation.
+
+For each logical packet whose attempts form one continuous retry sequence:
+
+```text
+retry_count = max(attempt_count - 1, 0)
+```
+
+Frame packet-count conservation is:
+
+```text
+0 <= frame_packets_tx_succeeded <= frame_packet_count
+0 <= frame_packets_pending_primary <= frame_packet_count
+
+frame_packets_tx_succeeded
+    + frame_packets_pending_primary
+    + frame_packets_terminally_dropped
+    = frame_packet_count
+```
+
+The terminal term means permanent primary-path removal, not a nonterminal
+failed attempt. Planned but not-yet-submitted packets are pending.
+
+When all contributing MAC service sizes are known:
+
+```text
+frame_mac_service_bytes_not_acknowledged
+    >= frame_mac_service_bytes_pending_primary
+    >= frame_mac_service_bytes_currently_queued
+```
+
+Not-acknowledged bytes decrease only on positive acknowledgement.
+Primary-pending bytes decrease only on positive acknowledgement or terminal
+primary-path removal. Queue dequeue, PHY transmission, and nonterminal failure
+must not decrease either quantity.
+
+### 14.3 Snapshot and rolling-window audit
+
+For every T0 row, verify:
+
+```text
+frame_packet_count > 0
+packets_remaining_to_submit = frame_packet_count
+packets_submitted = 0
+frame_packets_mac_enqueued = 0
+frame_packets_tx_succeeded = 0
+```
+
+Older link-level background history at T0 is valid. For every later row:
+
+```text
+latest_feature_event_time_ns <= sample_time_ns
+```
+
+Use `latest_feature_event_sequence` to prove that a same-timestamp feature
+event processed before the snapshot is included and one processed after it is
+excluded. Snapshot cardinality is determined by frame plans and configured
+offsets, never by receiver completion. Receiver completion before T4 does not
+remove T4; `actionable` becomes false only when sender-side MAC completion was
+already observed.
+
+Choose at least one 5 ms snapshot and manually reconstruct from
+`prediction_events.csv`:
+
+```text
+MPDU attempts, positive acknowledgements, failed attempts, retries
+acknowledged MAC service bytes
+queue-to-ACK observations
+first-attempt-to-ACK observations
+PHY TX, RX, CCA_BUSY, IDLE, and OTHER durations
+```
+
+The window is `(sample_time - 5 ms, sample_time]`. An event exactly at the
+lower bound is excluded. An event exactly at sample time is included only when
+its sequence does not exceed the snapshot watermark. Reconstruct PHY durations
+from the interval-revision rows in Section 12.2, clip at both boundaries, and
+verify:
+
+```text
+TX + RX + CCA_BUSY + IDLE + OTHER = history_coverage
+```
+
+within the declared timestamp tolerance. The acceptance report shall show the
+source event rows, arithmetic, and emitted sample values rather than only a
+validator pass.
 
 Benchmark telemetry disabled, samples only, and samples plus events using
 interleaved single-worker repetitions. Report median wall time, output size,
@@ -841,16 +1136,49 @@ less than approximately 25 percent.
 
 ## 15. Increment-1 acceptance
 
-Stop and review evidence before Increment 2. Increment 1 passes only if:
+Stop and review evidence before Increment 2. Produce one versioned
+`contrib/wifi-streaming/doc/prediction-telemetry-acceptance.md` containing:
 
-- existing tests pass;
-- disabled behavior remains compatible;
-- fixed-link smoke runs validate;
-- samples are causal and independent of receiver state;
-- MPDU accounting and bounded histories pass tests;
-- unsupported data remains null;
-- identical runs produce identical sample content;
-- no model or adaptive action exists in C++.
+1. the Git commit and complete modified-file list;
+2. the exact ns-3 trace/API source for every populated telemetry field;
+3. the finalized mapping-version-2 per-field support bits;
+4. every unsupported field, clear bit, null behavior, and reason;
+5. unit, integration, and existing regression-test commands and results;
+6. one complete multi-packet frame lifecycle trace;
+7. one failure-retry-success attempt-ledger reconstruction;
+8. one terminal-drop reconstruction;
+9. one manually reconstructed 5 ms rolling window, including PHY intervals;
+10. T0 values proving pre-submission ordering and same-time ordering tests;
+11. normalized telemetry-on/off comparisons for every pre-existing output;
+12. samples-only and samples-plus-events overhead measurements;
+13. an example `prediction_samples.csv` with its schema version;
+14. an example `prediction_events.csv` with its schema version; and
+15. known limitations and explicit specification deviations.
+
+Large generated files may remain outside Git, but the report shall give exact
+reproduction commands, stable artifact paths, checksums, and concise excerpts.
+Do not accept a claim based only on compilation, a unit-test summary, or
+plausible-looking CSV rows.
+
+Increment 1 passes only if the report records:
+
+```text
+PASS  existing regression tests
+PASS  telemetry-on/off meaningful-output equivalence
+PASS  stable frame/packet identity through A-MPDU and retries
+PASS  no duplicate MPDU attempt-outcome counting
+PASS  packet, attempt, and byte conservation
+PASS  manual rolling-window reconstruction
+PASS  PHY-state duration conservation
+PASS  receiver-independent snapshot cardinality
+PASS  deterministic sample and event output
+PASS  per-field unsupported/null/support-bit semantics
+PASS  expected-access query never invoked
+PASS  samples-only overhead reasonably close to the 25 percent target
+```
+
+Any failed or missing item keeps Increment 1 open. No model or adaptive action
+may exist in C++.
 
 # Increment 2: Dataset generation and validation
 
