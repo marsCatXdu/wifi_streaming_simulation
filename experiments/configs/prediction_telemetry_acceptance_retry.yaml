@@ -1,0 +1,41 @@
+name: prediction-telemetry-acceptance-retry
+output_root: results/prediction_telemetry_acceptance_retry_92
+workers: 1
+
+base:
+  stream:
+    source: synthetic
+    duration: 0.5
+    fps: 30
+    frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  propagation:
+    fixed_rss_dbm: -92
+    station_distance_m: 10
+  wifi:
+    wifi_standard: eht
+    max_amsdu_size: 0
+    fragmentation_threshold: 65535
+    ul_ofdma_enabled: false
+  background:
+    background_profile: none
+    background_traffic: none
+  prediction:
+    prediction_telemetry_enabled: true
+    prediction_sample_offsets_us: [0, 1000, 2000, 4000]
+    prediction_history_windows_us: [1000, 5000, 20000]
+    prediction_event_log_enabled: true
+    prediction_oracle_features_enabled: true
+
+seeds: [31]
+runs: [1]
+
+topologies:
+  - name: dual_interface
+
+policies:
+  - name: fixed_link_1
