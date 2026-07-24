@@ -14,6 +14,7 @@
 #include "ns3/wifi-module.h"
 #include "ns3/wifi-streaming-module.h"
 
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <ctime>
@@ -22,6 +23,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <string_view>
 #include <unistd.h>
 
 using namespace ns3;
@@ -71,6 +73,38 @@ BuildProfile()
 #else
     return "unknown";
 #endif
+}
+
+std::vector<uint64_t>
+ParseStrictUintList(const std::string& value,
+                    const std::string& name,
+                    bool allowZero)
+{
+    NS_ABORT_MSG_IF(value.empty(), name << " cannot be empty");
+    std::vector<uint64_t> result;
+    std::string_view remaining(value);
+    while (!remaining.empty())
+    {
+        const auto comma = remaining.find(',');
+        const auto token = remaining.substr(0, comma);
+        NS_ABORT_MSG_IF(token.empty(), name << " contains an empty item");
+        uint64_t parsed = 0;
+        const auto conversion =
+            std::from_chars(token.data(), token.data() + token.size(), parsed);
+        NS_ABORT_MSG_IF(conversion.ec != std::errc() ||
+                            conversion.ptr != token.data() + token.size(),
+                        name << " contains a non-integer item: " << token);
+        NS_ABORT_MSG_IF(!allowZero && parsed == 0, name << " values must be positive");
+        NS_ABORT_MSG_IF(!result.empty() && parsed <= result.back(),
+                        name << " must be strictly increasing and unique");
+        result.push_back(parsed);
+        if (comma == std::string_view::npos)
+        {
+            break;
+        }
+        remaining.remove_prefix(comma + 1);
+    }
+    return result;
 }
 
 uint64_t
@@ -325,6 +359,11 @@ main(int argc, char* argv[])
     std::string decisionsFile;
     std::string projectGitCommit;
     std::string runId = "single-link";
+    bool predictionTelemetryEnabled = false;
+    std::string predictionSampleOffsetsUs = "0,1000,2000,4000";
+    std::string predictionHistoryWindowsUs = "1000,5000,20000";
+    bool predictionEventLogEnabled = false;
+    bool predictionOracleFeaturesEnabled = false;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
     uint32_t maxAmpduSize = 65535;
@@ -439,6 +478,21 @@ main(int argc, char* argv[])
                      "Project commit (defaults to build-time repository commit)",
                      projectGitCommit);
     command.AddValue("runId", "Run identifier stored in CSV output", runId);
+    command.AddValue("predictionTelemetryEnabled",
+                     "Enable passive frame-aligned prediction telemetry",
+                     predictionTelemetryEnabled);
+    command.AddValue("predictionSampleOffsetsUs",
+                     "Strict comma-separated prediction sample offsets",
+                     predictionSampleOffsetsUs);
+    command.AddValue("predictionHistoryWindowsUs",
+                     "Strict comma-separated prediction history windows",
+                     predictionHistoryWindowsUs);
+    command.AddValue("predictionEventLogEnabled",
+                     "Write optional raw prediction event CSV",
+                     predictionEventLogEnabled);
+    command.AddValue("predictionOracleFeaturesEnabled",
+                     "Populate causal ns-3 F3 current-state fields",
+                     predictionOracleFeaturesEnabled);
     command.AddValue("queueMaxPackets", "MAC queue maximum packets", queueMaxPackets);
     command.AddValue("queueMaxDelayMs", "MAC queue maximum delay", queueMaxDelayMs);
     command.AddValue("maxAmpduSize", "BE A-MPDU maximum bytes (0 disables)", maxAmpduSize);
@@ -575,6 +629,32 @@ main(int argc, char* argv[])
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
+    NS_ABORT_MSG_IF((predictionEventLogEnabled || predictionOracleFeaturesEnabled) &&
+                        !predictionTelemetryEnabled,
+                    "Prediction event and oracle options require prediction telemetry");
+    std::vector<uint64_t> resolvedPredictionSampleOffsetsUs;
+    std::vector<uint64_t> resolvedPredictionHistoryWindowsUs;
+    if (predictionTelemetryEnabled)
+    {
+        resolvedPredictionSampleOffsetsUs =
+            ParseStrictUintList(predictionSampleOffsetsUs,
+                                "predictionSampleOffsetsUs",
+                                true);
+        resolvedPredictionHistoryWindowsUs =
+            ParseStrictUintList(predictionHistoryWindowsUs,
+                                "predictionHistoryWindowsUs",
+                                false);
+        NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs.front() != 0,
+                        "predictionSampleOffsetsUs must start with zero");
+        NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs.back() >= deadlineUs,
+                        "Every prediction sample offset must precede the frame deadline");
+        NS_ABORT_MSG_IF(topology != "dual_interface" ||
+                            (policyName != "fixed_link_0" && policyName != "fixed_link_1") ||
+                            wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
+                            fragmentationThreshold != 65535,
+                        "Increment-1 prediction telemetry requires dual_interface, a fixed-link "
+                        "policy, EHT, disabled UL OFDMA/A-MSDU, and disabled fragmentation");
+    }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
     NS_ABORT_MSG_IF(ulOfdmaScope != "target_aps" && ulOfdmaScope != "all_he_eht_aps",
@@ -1477,6 +1557,11 @@ main(int argc, char* argv[])
     resolved.staticLink0Score = staticLink0Score;
     resolved.staticLink1Score = staticLink1Score;
     resolved.packetEventLogsEnabled = false;
+    resolved.predictionTelemetryEnabled = predictionTelemetryEnabled;
+    resolved.predictionSampleOffsetsUs = resolvedPredictionSampleOffsetsUs;
+    resolved.predictionHistoryWindowsUs = resolvedPredictionHistoryWindowsUs;
+    resolved.predictionEventLogEnabled = predictionEventLogEnabled;
+    resolved.predictionOracleFeaturesEnabled = predictionOracleFeaturesEnabled;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
     resolved.backgroundDirection = backgroundDirection;
@@ -1564,6 +1649,26 @@ main(int argc, char* argv[])
     metrics->SetOutputFiles((std::filesystem::path(outputDir) / "frames.csv").string(),
                             (std::filesystem::path(outputDir) / "policy_decisions.csv").string());
 
+    Ptr<PredictionTelemetryCollector> predictionTelemetry;
+    if (predictionTelemetryEnabled)
+    {
+        predictionTelemetry = CreateObject<PredictionTelemetryCollector>();
+        predictionTelemetry->SetRunId(runId);
+        predictionTelemetry->SetSampleOffsetsUs(resolvedPredictionSampleOffsetsUs);
+        predictionTelemetry->SetHistoryWindowsUs(resolvedPredictionHistoryWindowsUs);
+        predictionTelemetry->SetOracleFeaturesEnabled(predictionOracleFeaturesEnabled);
+        const uint8_t selectedPath = policyName == "fixed_link_0" ? 0 : 1;
+        predictionTelemetry->BindWifiPath(selectedPath,
+                                          stationDevices.Get(selectedPath),
+                                          0,
+                                          AC_BE);
+        predictionTelemetry->SetOutputFiles(
+            (std::filesystem::path(outputDir) / "prediction_samples.csv").string(),
+            predictionEventLogEnabled
+                ? (std::filesystem::path(outputDir) / "prediction_events.csv").string()
+                : "");
+    }
+
     constexpr uint16_t port = 5000;
     Ptr<FrameReceiver> receiver = CreateObject<FrameReceiver>();
     receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), port));
@@ -1596,7 +1701,17 @@ main(int argc, char* argv[])
     Ptr<MultipathSender> sender = CreateObject<MultipathSender>();
     sender->SetFrameSource(source);
     sender->SetMetricsCollector(metrics);
+    if (predictionTelemetry)
+    {
+        sender->SetPredictionTelemetryCollector(predictionTelemetry);
+    }
     sender->SetPacketPayloadSize(payloadSize);
+    if (predictionTelemetry)
+    {
+        // IPv4 (20) + UDP (8) + LLC/SNAP (8). Fragmentation and
+        // A-MSDU are disabled by the prediction telemetry contract.
+        sender->SetExpectedMacServiceOverhead(36);
+    }
     sender->SetEmissionMode(emissionMode == "uniform_within_frame"
                                 ? EmissionMode::UNIFORM_WITHIN_FRAME
                                 : EmissionMode::BURST);
@@ -1860,6 +1975,10 @@ main(int argc, char* argv[])
     Simulator::Stop(Seconds(durationSeconds + 3));
     Simulator::Run();
     metrics->FinalizeMissingFrames();
+    if (predictionTelemetry)
+    {
+        predictionTelemetry->WriteOutputs();
+    }
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)
     {
         backgroundBytesSentPerStation[backgroundUdpOrdinals[i]] =

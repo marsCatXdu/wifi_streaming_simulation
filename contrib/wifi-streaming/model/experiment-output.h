@@ -96,6 +96,11 @@ struct StreamingRunConfig
     uint32_t applicationSocketCount{0};
     bool applicationDuplication{false};
     bool packetEventLogsEnabled{false};
+    bool predictionTelemetryEnabled{false};
+    std::vector<uint64_t> predictionSampleOffsetsUs;
+    std::vector<uint64_t> predictionHistoryWindowsUs;
+    bool predictionEventLogEnabled{false};
+    bool predictionOracleFeaturesEnabled{false};
     double staticLink0Score{0};
     double staticLink1Score{0};
     std::string backgroundTraffic{"none"};

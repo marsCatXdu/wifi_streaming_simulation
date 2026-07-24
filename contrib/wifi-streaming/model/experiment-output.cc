@@ -3,6 +3,7 @@
  */
 
 #include "experiment-output.h"
+#include "prediction-telemetry-collector.h"
 
 #include "ns3/abort.h"
 
@@ -424,8 +425,34 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "      \"local_on_duration_ms\": " << config.localOnDurationMs << ",\n"
            << "      \"local_off_duration_ms\": " << config.localOffDurationMs << "\n"
            << "    }\n"
-           << "  },\n"
-           << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"
+           << "  },\n";
+    if (config.predictionTelemetryEnabled)
+    {
+        output << "  \"predictionTelemetry\": {\n"
+               << "    \"enabled\": true,\n"
+               << "    \"sample_offsets_us\": [";
+        for (std::size_t index = 0; index < config.predictionSampleOffsetsUs.size(); ++index)
+        {
+            output << (index == 0 ? "" : ", ") << config.predictionSampleOffsetsUs[index];
+        }
+        output << "],\n"
+               << "    \"history_windows_us\": [";
+        for (std::size_t index = 0; index < config.predictionHistoryWindowsUs.size(); ++index)
+        {
+            output << (index == 0 ? "" : ", ") << config.predictionHistoryWindowsUs[index];
+        }
+        output << "],\n"
+               << "    \"event_log_enabled\": " << config.predictionEventLogEnabled << ",\n"
+               << "    \"oracle_features_enabled\": "
+               << config.predictionOracleFeaturesEnabled << ",\n"
+               << "    \"telemetry_schema_version\": "
+               << PREDICTION_TELEMETRY_SCHEMA_VERSION << ",\n"
+               << "    \"event_schema_version\": " << PREDICTION_EVENT_SCHEMA_VERSION << ",\n"
+               << "    \"feature_support_mask_version\": " << FEATURE_SUPPORT_MASK_VERSION
+               << "\n"
+               << "  },\n";
+    }
+    output << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"
            << "}\n";
 }
 
