@@ -1,7 +1,7 @@
 # Specification: Causal Wi-Fi Frame Latency-Risk Prediction Study
 
 **Status:** Revised implementation specification  
-**Revision:** 4, 2026-07-24  
+**Revision:** 5, 2026-07-24
 **Scope:** Increments 1 through 3  
 **Target repository:** `wifi_streaming_simulation`  
 **Target ns-3 version:** Existing pinned ns-3.48 revision
@@ -518,12 +518,13 @@ Exact internal Wi-Fi MAC queue occupancy is not F1-ideal.
 
 ### F3: causal ns-3 oracle
 
-- current contention window and remaining backoff;
+- current contention window and exact remaining backoff where a passive,
+  validated source exists;
 - NAV remaining time and exact PHY state;
 - current channel-access status;
 - whether the channel-access manager currently considers the medium busy;
-- categorical reason returned by the side-effect-free current-state
-  access-within-slack query, if supported.
+- categorical current-state access-within-slack reason only if its complete
+  call path is behaviorally passive.
 
 F3 excludes future random draws, traffic, channel events, ACKs, and outcomes.
 Do not add a vague interference-state field. Any later interference feature
@@ -672,7 +673,7 @@ Ahead-of-frame fields are null unless current queue ordering makes them exact.
 At T0, before the planned frame is enqueued, all packets currently ahead in a
 provably FIFO target queue may be counted as ahead of the planned frame.
 
-Required F3:
+Required F3 schema columns:
 
 ```text
 current_cw, remaining_backoff_slots, nav_remaining_us
@@ -686,10 +687,16 @@ selected link and uses the ns-3 `Txop::ChannelAccessStatus` values
 `ChannelAccessManager::IsBusy()`. Do not add `medium_busy_until_ns` without a
 verified API for one exact consolidated end time.
 
+In ns-3.48, `QosTxop::GetBackoffSlots()` returns a lazily updated stored
+counter, not an exact remaining-slot snapshot. Therefore
+`remaining_backoff_slots` remains null in Increment 1. Supporting it later
+requires a passive reconstruction of `ChannelAccessManager::UpdateBackoff()`
+and dedicated slot-boundary tests.
+
 `expected_access_reason_within_slack` is the categorical
 `WifiExpectedAccessReason` returned by
-`ChannelAccessManager::GetExpectedAccessWithin(deadline_slack)`. Serialize one
-of these canonical tokens:
+`ChannelAccessManager::GetExpectedAccessWithin(deadline_slack)` when that query
+is supported. Serialize one of these canonical tokens:
 
 ```text
 ACCESS_EXPECTED
@@ -711,11 +718,17 @@ BACKOFF_END
 Do not serialize the enum's underlying integer or rely on its stream insertion
 spelling. The query considers current link-wide channel-access state and all
 TXOPs registered with that `ChannelAccessManager`; it is not a promise that
-the sampled frame itself will gain access. At T0, `NOT_REQUESTED` or a reason
-caused by older traffic is valid because the new frame has not yet been
-submitted.
+the sampled frame itself will gain access.
 
-F3 fields are present but null when oracle collection is disabled.
+In ns-3.48 this nominally `const` query calls
+`QosTxop::HasFramesToTransmit()`, which can wipe expired queue entries and fire
+traces. It is therefore not behaviorally passive.
+`expected_access_reason_within_slack` remains null in Increment 1 and its
+unsupported state is documented rather than invoking the query.
+
+F3 fields are present but null when oracle collection is disabled. A field
+without a verified passive source remains null when oracle collection is
+enabled; a family support bit does not imply that every member is available.
 
 Required provenance:
 

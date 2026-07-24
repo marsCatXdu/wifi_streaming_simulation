@@ -10,12 +10,14 @@
 #include "ns3/event-id.h"
 #include "ns3/net-device.h"
 #include "ns3/object.h"
+#include "ns3/wifi-mac-queue-container.h"
 
 #include <cstdint>
 #include <deque>
 #include <fstream>
 #include <list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -27,7 +29,9 @@ class WifiMacQueue;
 class WifiMpdu;
 class WifiNetDevice;
 class PredictionTelemetryCollectorTestAccess;
+class PredictionTelemetryPhyListener;
 class WifiPhy;
+class WifiPhyListener;
 class WifiPhyStateHelper;
 class WifiPsdu;
 class WifiTxVector;
@@ -35,7 +39,6 @@ class ChannelAccessManager;
 class Txop;
 enum AcIndex : uint8_t;
 enum WifiMacDropReason : uint8_t;
-enum class WifiExpectedAccessReason : uint8_t;
 enum class WifiPhyState;
 
 /**
@@ -331,6 +334,8 @@ class PredictionTelemetryCollector : public Object
   private:
     friend class PredictionTelemetryCollectorTestAccess;
 
+    friend class PredictionTelemetryPhyListener;
+
     friend class PredictionTelemetryTraceAdapter;
 
     struct PacketState
@@ -404,10 +409,11 @@ class PredictionTelemetryCollector : public Object
         Ptr<WifiNetDevice> device;        ///< Bound sender Wi-Fi device.
         Ptr<WifiPhy> phy;                 ///< Bound internal PHY.
         Ptr<WifiPhyStateHelper> phyState; ///< Bound PHY state helper.
+        std::shared_ptr<WifiPhyListener> phyListener; ///< Causal PHY activity listener.
         Ptr<WifiMacQueue> queue;          ///< Bound target access-category queue.
         Ptr<Txop> txop;                   ///< Bound target access-category TXOP.
         Ptr<ChannelAccessManager> channelAccessManager; ///< Bound channel manager.
-        uint8_t phyId{0};                 ///< Internal PHY identifier.
+        uint8_t linkId{0};                ///< MAC link served by the selected PHY.
         int64_t telemetryStartNs{0};      ///< Start of available history.
         uint64_t latestFeatureEventTimeNs{0}; ///< Latest path-level feature event.
         uint64_t mpduAttempts{0};         ///< Cumulative tagged attempts.
@@ -430,6 +436,7 @@ class PredictionTelemetryCollector : public Object
         std::deque<MacEvent> macEvents;                ///< Bounded recent MAC history.
         std::deque<PhyInterval> phyIntervals;          ///< Bounded recent PHY history.
         std::list<QueueEntry> queueEntries;            ///< Current access-category queue order.
+        std::optional<WifiContainerQueueId> targetQueueId; ///< Target receiver/TID queue.
         uint64_t phyIntervalSerial{0};                 ///< Next interval ordering serial.
     };
 
@@ -445,6 +452,13 @@ class PredictionTelemetryCollector : public Object
     void NotifyPhyTxBegin(uint8_t pathId, Ptr<const Packet> packet);
     void NotifyPpduTx(uint8_t pathId, const WifiTxVector& txVector, bool taggedTarget);
     void NotifyPhyState(uint8_t pathId, Time start, Time duration, WifiPhyState state);
+    void NotifyPhyActivity(uint8_t pathId, WifiPhyState state, Time duration);
+    void NotifyPhyActivityEnd(uint8_t pathId, WifiPhyState state);
+    void UpsertPhyInterval(PathState& path,
+                           int64_t startNs,
+                           int64_t endNs,
+                           WifiPhyState state,
+                           uint64_t reportedAtNs);
     void FinalizeAttemptFailure(PathState& path,
                                 FrameState& frame,
                                 PacketState& packet,
@@ -473,8 +487,8 @@ class PredictionTelemetryCollector : public Object
                                        bool oracleSupported);
     static std::string PhyStateToString(WifiPhyState state);
     static std::string AccessStatusToString(uint8_t status);
-    static std::string ExpectedAccessReasonToString(WifiExpectedAccessReason reason);
     static std::string WindowLabel(uint64_t windowUs);
+    static uint8_t PhyStatePriority(WifiPhyState state);
     static PredictionFrameKey MakeKey(const PacketizationPlan& plan);
     static PredictionFrameKey MakeKey(const StreamingFrameTag& tag);
 

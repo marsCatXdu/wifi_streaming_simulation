@@ -15,6 +15,7 @@
 #include "ns3/wifi-mpdu.h"
 #include "ns3/wifi-net-device.h"
 #include "ns3/wifi-phy-state-helper.h"
+#include "ns3/wifi-phy-listener.h"
 #include "ns3/wifi-phy.h"
 #include "ns3/wifi-psdu.h"
 #include "ns3/wifi-tx-vector.h"
@@ -192,14 +193,6 @@ class PredictionTelemetryTraceAdapter
         collector->NotifyDroppedMpdu(pathId, reason, mpdu);
     }
 
-    static void PhyTxBegin(PredictionTelemetryCollector* collector,
-                           uint8_t pathId,
-                           Ptr<const Packet> packet,
-                           double)
-    {
-        collector->NotifyPhyTxBegin(pathId, packet);
-    }
-
     static void PhyTxPsduBegin(PredictionTelemetryCollector* collector,
                                uint8_t pathId,
                                WifiConstPsduMap psduMap,
@@ -213,15 +206,14 @@ class PredictionTelemetryTraceAdapter
             for (const auto& mpdu : *psdu)
             {
                 StreamingFrameTag tag;
-                if (PredictionTelemetryCollector::GetTag(mpdu, tag) && tag.pathId == pathId)
+                const auto& header = mpdu->GetHeader();
+                if (header.IsData() && header.HasData() &&
+                    PredictionTelemetryCollector::GetTag(mpdu, tag) &&
+                    tag.pathId == pathId)
                 {
                     taggedTarget = true;
-                    break;
+                    collector->NotifyPhyTxBegin(pathId, mpdu->GetPacket());
                 }
-            }
-            if (taggedTarget)
-            {
-                break;
             }
         }
         collector->NotifyPpduTx(pathId, txVector, taggedTarget);
@@ -235,6 +227,92 @@ class PredictionTelemetryTraceAdapter
     {
         collector->NotifyPhyState(pathId, start, duration, state);
     }
+};
+
+/**
+ * Converts causal PHY listener notifications into bounded state intervals.
+ */
+class PredictionTelemetryPhyListener : public WifiPhyListener
+{
+  public:
+    PredictionTelemetryPhyListener(PredictionTelemetryCollector* collector, uint8_t pathId)
+        : m_collector(collector),
+          m_pathId(pathId)
+    {
+    }
+
+    void NotifyRxStart(Time duration) override
+    {
+        m_collector->NotifyPhyActivity(m_pathId, WifiPhyState::RX, duration);
+    }
+
+    void NotifyRxEndOk() override
+    {
+        m_collector->NotifyPhyActivityEnd(m_pathId, WifiPhyState::RX);
+    }
+
+    void NotifyRxEndError(const WifiTxVector&) override
+    {
+        m_collector->NotifyPhyActivityEnd(m_pathId, WifiPhyState::RX);
+    }
+
+    void NotifyTxStart(Time duration, dBm_u) override
+    {
+        m_collector->NotifyPhyActivity(m_pathId, WifiPhyState::TX, duration);
+    }
+
+    void NotifyCcaBusyStart(Time duration,
+                            WifiChannelListType channelType,
+                            const std::vector<Time>&) override
+    {
+        if (channelType != WIFI_CHANLIST_PRIMARY)
+        {
+            return;
+        }
+        if (duration.IsStrictlyPositive())
+        {
+            m_collector->NotifyPhyActivity(m_pathId, WifiPhyState::CCA_BUSY, duration);
+        }
+        else
+        {
+            m_collector->NotifyPhyActivityEnd(m_pathId, WifiPhyState::CCA_BUSY);
+        }
+    }
+
+    void NotifySwitchingStart(Time duration) override
+    {
+        m_collector->NotifyPhyActivity(m_pathId, WifiPhyState::SWITCHING, duration);
+    }
+
+    void NotifySleep() override
+    {
+        m_collector->NotifyPhyActivity(
+            m_pathId,
+            WifiPhyState::SLEEP,
+            Simulator::GetMaximumSimulationTime() - Simulator::Now());
+    }
+
+    void NotifyOff() override
+    {
+        m_collector->NotifyPhyActivity(
+            m_pathId,
+            WifiPhyState::OFF,
+            Simulator::GetMaximumSimulationTime() - Simulator::Now());
+    }
+
+    void NotifyWakeup() override
+    {
+        m_collector->NotifyPhyActivityEnd(m_pathId, WifiPhyState::SLEEP);
+    }
+
+    void NotifyOn() override
+    {
+        m_collector->NotifyPhyActivityEnd(m_pathId, WifiPhyState::OFF);
+    }
+
+  private:
+    PredictionTelemetryCollector* m_collector; ///< Passive collector.
+    uint8_t m_pathId;                          ///< Bound application path.
 };
 
 bool
@@ -329,7 +407,11 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
     NS_ABORT_MSG_IF(!wifiDevice, "Prediction telemetry requires a WifiNetDevice");
     NS_ABORT_MSG_IF(phyId >= wifiDevice->GetNPhys(),
                     "Prediction telemetry PHY ID is not present on the Wi-Fi device");
-    auto queue = wifiDevice->GetMac()->GetTxopQueue(accessCategory);
+    auto mac = wifiDevice->GetMac();
+    const auto linkId = mac->GetLinkForPhy(phyId);
+    NS_ABORT_MSG_IF(!linkId,
+                    "Prediction telemetry PHY is not operating on a MAC link");
+    auto queue = mac->GetTxopQueue(accessCategory);
     NS_ABORT_MSG_IF(!queue, "Prediction telemetry target access category has no MAC queue");
     NS_ABORT_MSG_IF(queue->GetNPackets() != 0,
                     "Prediction telemetry path must be bound before target queue traffic");
@@ -339,13 +421,16 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
     state.phy = wifiDevice->GetPhy(phyId);
     state.phyState = state.phy->GetState();
     state.queue = queue;
-    state.txop = wifiDevice->GetMac()->GetTxopFor(accessCategory);
+    state.txop = mac->GetTxopFor(accessCategory);
     NS_ABORT_MSG_IF(!state.txop, "Prediction telemetry target access category has no TXOP");
-    state.channelAccessManager = wifiDevice->GetMac()->GetChannelAccessManager(phyId);
+    state.channelAccessManager = mac->GetChannelAccessManager(*linkId);
     NS_ABORT_MSG_IF(!state.channelAccessManager,
                     "Prediction telemetry target PHY has no channel access manager");
-    state.phyId = phyId;
+    state.linkId = *linkId;
     state.telemetryStartNs = Simulator::Now().GetNanoSeconds();
+    NS_ABORT_MSG_IF(state.telemetryStartNs != 0 ||
+                        state.phyState->GetState() != WifiPhyState::IDLE,
+                    "Prediction telemetry paths must bind at time zero while PHY is idle");
     state.latestFeatureEventTimeNs =
         static_cast<uint64_t>(std::max<int64_t>(state.telemetryStartNs, 0));
     state.centerFrequencyMhz = state.phy->GetFrequency();
@@ -367,9 +452,12 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
          state.phyState->GetState(),
          state.latestFeatureEventTimeNs,
          state.phyIntervalSerial++});
+    state.phyListener =
+        std::make_shared<PredictionTelemetryPhyListener>(this, pathId);
     m_paths.emplace(pathId, std::move(state));
 
     auto& path = m_paths.at(pathId);
+    path.phy->RegisterListener(path.phyListener);
     NS_ABORT_MSG_IF(
         !path.queue->TraceConnectWithoutContext(
             "Enqueue",
@@ -409,11 +497,6 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
             "DroppedMpdu",
             MakeBoundCallback(&PredictionTelemetryTraceAdapter::DroppedMpdu, this, pathId)),
         "Cannot connect prediction telemetry DroppedMpdu trace");
-    NS_ABORT_MSG_IF(
-        !path.phy->TraceConnectWithoutContext(
-            "PhyTxBegin",
-            MakeBoundCallback(&PredictionTelemetryTraceAdapter::PhyTxBegin, this, pathId)),
-        "Cannot connect prediction telemetry PhyTxBegin trace");
     NS_ABORT_MSG_IF(
         !path.phy->TraceConnectWithoutContext(
             "PhyTxPsduBegin",
@@ -854,14 +937,35 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
 {
     auto pathIterator = m_paths.find(pathId);
     NS_ABORT_MSG_IF(pathIterator == m_paths.end(), "MAC enqueue references an unbound path");
+    auto& path = pathIterator->second;
     StreamingFrameTag tag;
-    if (!GetTag(mpdu, tag))
+    const bool tagged = GetTag(mpdu, tag);
+    if (tagged)
+    {
+        NS_ABORT_MSG_IF(tag.pathId != pathId,
+                        "Tagged MPDU appeared in the queue for a different application path");
+    }
+    const auto queueId = WifiMacQueueContainer::GetQueueId(mpdu);
+    if (!path.targetQueueId)
+    {
+        if (!tagged)
+        {
+            return;
+        }
+        path.targetQueueId = queueId;
+        NS_ABORT_MSG_IF(path.queue && path.queue->GetNPackets(queueId) != 1,
+                        "Target logical queue was not empty before its first tagged enqueue");
+    }
+    else if (tagged)
+    {
+        NS_ABORT_MSG_IF(queueId != *path.targetQueueId,
+                        "Tagged streaming packets use multiple receiver/TID queues");
+    }
+    if (queueId != *path.targetQueueId)
     {
         return;
     }
-    NS_ABORT_MSG_IF(tag.pathId != pathId,
-                    "Tagged MPDU appeared in the queue for a different application path");
-    auto& path = pathIterator->second;
+
     const uint64_t nowNs = NowNs();
     path.latestFeatureEventTimeNs = nowNs;
 
@@ -869,7 +973,10 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
     entry.stableMpdu = GetStableMpdu(mpdu);
     entry.macServiceBytes = mpdu->GetPacketSize();
     entry.enqueueTimeNs = nowNs;
-    entry.tag = tag;
+    if (tagged)
+    {
+        entry.tag = tag;
+    }
     const auto duplicate =
         std::find_if(path.queueEntries.begin(),
                      path.queueEntries.end(),
@@ -880,12 +987,23 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
                     "A stable MPDU identity was enqueued more than once");
     path.queueEntries.push_back(entry);
 
+    if (!entry.tag)
+    {
+        WriteEvent("MAC_ENQUEUE",
+                   pathId,
+                   std::nullopt,
+                   std::nullopt,
+                   entry.macServiceBytes);
+        return;
+    }
     const auto key = MakeKey(*entry.tag);
     auto frameIterator = m_frames.find(key);
     NS_ABORT_MSG_IF(frameIterator == m_frames.end(),
                     "Tagged MAC enqueue references an unregistered frame");
     auto& frame = frameIterator->second;
     auto& packet = frame.packets.at(entry.tag->packetIndex);
+    NS_ABORT_MSG_IF(!packet.submitted,
+                    "MAC enqueue occurred before application submission was recorded");
     NS_ABORT_MSG_IF(packet.enqueued, "One logical streaming packet mapped to multiple MPDUs");
     const auto& planned = frame.plan.packets.at(entry.tag->packetIndex);
     if (planned.expectedMacServiceBytes)
@@ -912,14 +1030,19 @@ PredictionTelemetryCollector::NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiM
 {
     auto pathIterator = m_paths.find(pathId);
     NS_ABORT_MSG_IF(pathIterator == m_paths.end(), "MAC dequeue references an unbound path");
-    StreamingFrameTag observedTag;
-    if (!GetTag(mpdu, observedTag))
+    auto& path = pathIterator->second;
+    const auto queueId = WifiMacQueueContainer::GetQueueId(mpdu);
+    if (!path.targetQueueId || queueId != *path.targetQueueId)
     {
         return;
     }
-    NS_ABORT_MSG_IF(observedTag.pathId != pathId,
-                    "Tagged MPDU dequeued on a different application path");
-    auto& path = pathIterator->second;
+    StreamingFrameTag observedTag;
+    const bool tagged = GetTag(mpdu, observedTag);
+    if (tagged)
+    {
+        NS_ABORT_MSG_IF(observedTag.pathId != pathId,
+                        "Tagged MPDU dequeued on a different application path");
+    }
     const uint64_t nowNs = NowNs();
     path.latestFeatureEventTimeNs = nowNs;
     const auto stableMpdu = GetStableMpdu(mpdu);
@@ -933,7 +1056,15 @@ PredictionTelemetryCollector::NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiM
                     "MAC dequeue has no matching observed enqueue");
     const auto tag = queued->tag;
     path.queueEntries.erase(queued);
-    NS_ABORT_MSG_IF(!tag, "Tagged MAC dequeue matched an untagged queue entry");
+    if (!tag)
+    {
+        WriteEvent("MAC_DEQUEUE",
+                   pathId,
+                   std::nullopt,
+                   std::nullopt,
+                   mpdu->GetPacketSize());
+        return;
+    }
 
     auto frameIterator = m_frames.find(MakeKey(*tag));
     NS_ABORT_MSG_IF(frameIterator == m_frames.end(),
@@ -1084,13 +1215,16 @@ PredictionTelemetryCollector::NotifyAckedMpdu(uint8_t pathId, Ptr<const WifiMpdu
     }
     NS_ABORT_MSG_IF(packet.terminallyDropped,
                     "A packet was acknowledged after a terminal drop");
-    NS_ABORT_MSG_IF(!packet.attemptPending,
-                    "Positive acknowledgement has no pending PHY attempt");
+    NS_ABORT_MSG_IF(packet.attemptCount == 0,
+                    "Positive acknowledgement has no prior PHY attempt");
     NS_ABORT_MSG_IF(!packet.macServiceBytes || !packet.enqueueTimeNs ||
                         !packet.firstAttemptTimeNs,
                     "Positive acknowledgement lacks required MPDU timing state");
 
     const uint64_t nowNs = NowNs();
+    // A Block ACK obtained after an explicit BAR can arrive after the original
+    // data attempt timed out. It acknowledges the packet without creating a
+    // second attempt or undoing the timeout failure.
     packet.attemptPending = false;
     packet.acknowledged = true;
     ++frame.packetsTxSucceeded;
@@ -1145,10 +1279,8 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
                      [stableMpdu](const QueueEntry& entry) {
                          return entry.stableMpdu == stableMpdu;
                      });
-    if (queued != path.queueEntries.end())
-    {
-        path.queueEntries.erase(queued);
-    }
+    NS_ABORT_MSG_IF(packet.enqueued && queued == path.queueEntries.end(),
+                    "Terminally dropped queued MPDU is absent from the queue mirror");
     if (!packet.macServiceBytes)
     {
         packet.macServiceBytes = mpdu->GetPacketSize();
@@ -1158,7 +1290,9 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
         packet.stableMpdu = stableMpdu;
     }
     packet.terminallyDropped = true;
-    packet.queued = false;
+    // DroppedMpdu is emitted before queue Dequeue for terminal removal.
+    // Preserve occupancy until that authoritative queue trace arrives.
+    packet.queued = queued != path.queueEntries.end();
     ++frame.packetsTerminallyDropped;
     ++path.mpduTerminalDrops;
     switch (reason)
@@ -1233,6 +1367,64 @@ PredictionTelemetryCollector::NotifyPhyState(uint8_t pathId,
     const uint64_t nowNs = NowNs();
     const int64_t startNs = start.GetNanoSeconds();
     const int64_t endNs = (start + duration).GetNanoSeconds();
+    UpsertPhyInterval(path, startNs, endNs, state, nowNs);
+    path.latestFeatureEventTimeNs = nowNs;
+    WriteEvent("PHY_STATE_CHANGE", pathId, std::nullopt, std::nullopt, std::nullopt);
+    PruneHistories(path, nowNs);
+}
+
+void
+PredictionTelemetryCollector::NotifyPhyActivity(uint8_t pathId,
+                                                 WifiPhyState state,
+                                                 Time duration)
+{
+    if (!duration.IsStrictlyPositive())
+    {
+        return;
+    }
+    auto& path = m_paths.at(pathId);
+    const uint64_t nowNs = NowNs();
+    const int64_t startNs = static_cast<int64_t>(nowNs);
+    const int64_t endNs = (Simulator::Now() + duration).GetNanoSeconds();
+    UpsertPhyInterval(path, startNs, endNs, state, nowNs);
+    path.latestFeatureEventTimeNs = nowNs;
+    PruneHistories(path, nowNs);
+}
+
+void
+PredictionTelemetryCollector::NotifyPhyActivityEnd(uint8_t pathId, WifiPhyState state)
+{
+    auto& path = m_paths.at(pathId);
+    const uint64_t nowNs = NowNs();
+    const int64_t endNs = static_cast<int64_t>(nowNs);
+    for (auto& interval : path.phyIntervals)
+    {
+        if (interval.serial != 0 && interval.state == state && interval.startNs <= endNs &&
+            interval.endNs > endNs)
+        {
+            interval.endNs = endNs;
+            interval.reportedAtNs = nowNs;
+            interval.serial = path.phyIntervalSerial++;
+        }
+    }
+    path.phyIntervals.erase(
+        std::remove_if(path.phyIntervals.begin(),
+                       path.phyIntervals.end(),
+                       [](const PhyInterval& interval) {
+                           return interval.serial != 0 && interval.endNs <= interval.startNs;
+                       }),
+        path.phyIntervals.end());
+    path.latestFeatureEventTimeNs = nowNs;
+    PruneHistories(path, nowNs);
+}
+
+void
+PredictionTelemetryCollector::UpsertPhyInterval(PathState& path,
+                                                  int64_t startNs,
+                                                  int64_t endNs,
+                                                  WifiPhyState state,
+                                                  uint64_t reportedAtNs)
+{
     NS_ABORT_MSG_IF(startNs < path.telemetryStartNs || endNs <= startNs,
                     "Invalid PHY state interval for prediction telemetry");
     auto existing =
@@ -1243,7 +1435,7 @@ PredictionTelemetryCollector::NotifyPhyState(uint8_t pathId,
                                 interval.state == state;
                      });
     PhyInterval interval{
-        startNs, endNs, state, nowNs, path.phyIntervalSerial++};
+        startNs, endNs, state, reportedAtNs, path.phyIntervalSerial++};
     if (existing == path.phyIntervals.end())
     {
         path.phyIntervals.push_back(interval);
@@ -1252,9 +1444,6 @@ PredictionTelemetryCollector::NotifyPhyState(uint8_t pathId,
     {
         *existing = interval;
     }
-    path.latestFeatureEventTimeNs = nowNs;
-    WriteEvent("PHY_STATE_CHANGE", pathId, std::nullopt, std::nullopt, std::nullopt);
-    PruneHistories(path, nowNs);
 }
 
 void
@@ -1374,19 +1563,6 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
         }
         std::sort(boundaries.begin(), boundaries.end());
         boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
-        int64_t currentTailStartNs = coverageStartNs;
-        for (const auto& interval : path.phyIntervals)
-        {
-            if (interval.serial != 0 && interval.reportedAtNs <= nowNs &&
-                interval.startNs < coverageEndNs)
-            {
-                currentTailStartNs =
-                    std::max(currentTailStartNs, std::min(interval.endNs, coverageEndNs));
-            }
-        }
-        boundaries.push_back(currentTailStartNs);
-        std::sort(boundaries.begin(), boundaries.end());
-        boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
         for (std::size_t index = 1; index < boundaries.size(); ++index)
         {
             const int64_t segmentStart = boundaries[index - 1];
@@ -1402,8 +1578,12 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
                 if (interval.reportedAtNs <= nowNs && interval.startNs <= midpoint &&
                     midpoint < interval.endNs &&
                     (!selected ||
-                     std::tie(interval.reportedAtNs, interval.serial) >
-                         std::tie(selected->reportedAtNs, selected->serial)))
+                     std::tuple(PhyStatePriority(interval.state),
+                                interval.reportedAtNs,
+                                interval.serial) >
+                         std::tuple(PhyStatePriority(selected->state),
+                                    selected->reportedAtNs,
+                                    selected->serial)))
                 {
                     selected = &interval;
                 }
@@ -1411,11 +1591,7 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
             NS_ABORT_MSG_IF(!selected,
                             "PHY history has an uncovered interval within available coverage");
             const double durationUs = (segmentEnd - segmentStart) / 1000.0;
-            const WifiPhyState selectedState =
-                selected->serial == 0 && midpoint >= currentTailStartNs
-                    ? path.phyState->GetState()
-                    : selected->state;
-            switch (selectedState)
+            switch (selected->state)
             {
             case WifiPhyState::TX:
                 result.phyTxTimeUs += durationUs;
@@ -1485,6 +1661,29 @@ PredictionTelemetryCollector::PhyStateToString(WifiPhyState state)
     return output.str();
 }
 
+uint8_t
+PredictionTelemetryCollector::PhyStatePriority(WifiPhyState state)
+{
+    switch (state)
+    {
+    case WifiPhyState::OFF:
+        return 7;
+    case WifiPhyState::SLEEP:
+        return 6;
+    case WifiPhyState::TX:
+        return 5;
+    case WifiPhyState::RX:
+        return 4;
+    case WifiPhyState::SWITCHING:
+        return 3;
+    case WifiPhyState::CCA_BUSY:
+        return 2;
+    case WifiPhyState::IDLE:
+        return 1;
+    }
+    NS_ABORT_MSG("Unknown WifiPhyState");
+}
+
 std::string
 PredictionTelemetryCollector::AccessStatusToString(uint8_t status)
 {
@@ -1498,44 +1697,6 @@ PredictionTelemetryCollector::AccessStatusToString(uint8_t status)
         return "GRANTED";
     }
     NS_ABORT_MSG("Unknown Txop channel access status");
-}
-
-std::string
-PredictionTelemetryCollector::ExpectedAccessReasonToString(
-    WifiExpectedAccessReason reason)
-{
-    switch (reason)
-    {
-    case WifiExpectedAccessReason::ACCESS_EXPECTED:
-        return "ACCESS_EXPECTED";
-    case WifiExpectedAccessReason::NOT_REQUESTED:
-        return "NOT_REQUESTED";
-    case WifiExpectedAccessReason::NOTHING_TO_TX:
-        return "NOTHING_TO_TX";
-    case WifiExpectedAccessReason::RX_END:
-        return "RX_END";
-    case WifiExpectedAccessReason::BUSY_END:
-        return "BUSY_END";
-    case WifiExpectedAccessReason::TX_END:
-        return "TX_END";
-    case WifiExpectedAccessReason::NAV_END:
-        return "NAV_END";
-    case WifiExpectedAccessReason::ACK_TIMER_END:
-        return "ACK_TIMER_END";
-    case WifiExpectedAccessReason::CTS_TIMER_END:
-        return "CTS_TIMER_END";
-    case WifiExpectedAccessReason::SWITCHING_END:
-        return "SWITCHING_END";
-    case WifiExpectedAccessReason::NO_PHY_END:
-        return "NO_PHY_END";
-    case WifiExpectedAccessReason::SLEEP_END:
-        return "SLEEP_END";
-    case WifiExpectedAccessReason::OFF_END:
-        return "OFF_END";
-    case WifiExpectedAccessReason::BACKOFF_END:
-        return "BACKOFF_END";
-    }
-    NS_ABORT_MSG("Unknown WifiExpectedAccessReason");
 }
 
 void
@@ -1652,18 +1813,19 @@ PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
 
     if (m_oracleFeaturesEnabled)
     {
-        sample.currentCw = path.txop->GetCw(path.phyId);
-        sample.remainingBackoffSlots = path.txop->GetBackoffSlots(path.phyId);
+        sample.currentCw = path.txop->GetCw(path.linkId);
+        // GetBackoffSlots() is lazily updated and is not an exact remaining-slot
+        // snapshot. Keep the exact-schema field unsupported until a passive
+        // reconstruction has dedicated boundary tests.
         const Time navRemaining =
             std::max(path.channelAccessManager->GetNavEnd() - Simulator::Now(), Time());
         sample.navRemainingUs = navRemaining.GetNanoSeconds() / 1000.0;
         sample.currentPhyState = PhyStateToString(path.phyState->GetState());
         sample.channelAccessStatus = AccessStatusToString(
-            static_cast<uint8_t>(path.txop->GetAccessStatus(path.phyId)));
+            static_cast<uint8_t>(path.txop->GetAccessStatus(path.linkId)));
         sample.mediumBusyNow = path.channelAccessManager->IsBusy();
-        sample.expectedAccessReasonWithinSlack = ExpectedAccessReasonToString(
-            path.channelAccessManager->GetExpectedAccessWithin(
-                MicroSeconds(sample.deadlineSlackUs)));
+        // GetExpectedAccessWithin() can expire queued MPDUs despite being const.
+        // A passive collector must therefore leave this field unsupported.
     }
     sample.featureSupportMask =
         MakeSupportMask(true, true, m_oracleFeaturesEnabled);
@@ -1751,6 +1913,10 @@ PredictionTelemetryCollector::DoDispose()
         event.Cancel();
     }
     m_snapshotEvents.clear();
+    for (auto& entry : m_paths)
+    {
+        entry.second.phyListener.reset();
+    }
     Object::DoDispose();
 }
 

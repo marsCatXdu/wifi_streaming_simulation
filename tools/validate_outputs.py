@@ -124,11 +124,6 @@ PREDICTION_EVENT_TYPES = {
 }
 PHY_STATES = {"IDLE", "CCA_BUSY", "TX", "RX", "SWITCHING", "SLEEP", "OFF"}
 ACCESS_STATUSES = {"NOT_REQUESTED", "REQUESTED", "GRANTED"}
-EXPECTED_ACCESS_REASONS = {
-    "ACCESS_EXPECTED", "NOT_REQUESTED", "NOTHING_TO_TX", "RX_END", "BUSY_END",
-    "TX_END", "NAV_END", "ACK_TIMER_END", "CTS_TIMER_END", "SWITCHING_END",
-    "NO_PHY_END", "SLEEP_END", "OFF_END", "BACKOFF_END",
-}
 
 
 class ValidationError(ValueError):
@@ -493,23 +488,25 @@ def _validate_prediction(
             _require(ahead_packets <= queue_packets and ahead_bytes <= queue_bytes,
                      f"{file_name}: ahead-of-frame state exceeds queue")
 
-        oracle_fields = (
-            "current_cw", "remaining_backoff_slots", "nav_remaining_us",
-            "current_phy_state", "channel_access_status", "medium_busy_now",
-            "expected_access_reason_within_slack",
+        supported_oracle_fields = (
+            "current_cw", "nav_remaining_us", "current_phy_state",
+            "channel_access_status", "medium_busy_now",
         )
+        unsupported_oracle_fields = (
+            "remaining_backoff_slots", "expected_access_reason_within_slack",
+        )
+        oracle_fields = supported_oracle_fields + unsupported_oracle_fields
         if oracle_enabled:
-            _require(all(row[field] != "" for field in oracle_fields),
-                     f"{file_name}: enabled oracle field is null")
+            _require(all(row[field] != "" for field in supported_oracle_fields),
+                     f"{file_name}: enabled supported oracle field is null")
+            _require(all(row[field] == "" for field in unsupported_oracle_fields),
+                     f"{file_name}: unsafe oracle field is non-null")
             _require(row["current_phy_state"] in PHY_STATES,
                      f"{file_name}: invalid PHY state")
             _require(row["channel_access_status"] in ACCESS_STATUSES,
                      f"{file_name}: invalid access status")
             _require(row["medium_busy_now"] in {"0", "1"},
                      f"{file_name}: invalid medium-busy flag")
-            _require(row["expected_access_reason_within_slack"] in
-                     EXPECTED_ACCESS_REASONS,
-                     f"{file_name}: invalid expected-access reason")
         else:
             _require(all(row[field] == "" for field in oracle_fields),
                      f"{file_name}: disabled oracle field is non-null")
@@ -607,6 +604,10 @@ def _validate_prediction(
                  "prediction_events.csv: rows exceed the declared schema")
         previous_time = -1
         payload_size = int(config["stream"]["payload_size_bytes"])
+        registered_frames: set[tuple[int, int, int]] = set()
+        submitted_packets: set[tuple[int, int, int, int]] = set()
+        enqueued_packets: set[tuple[int, int, int, int]] = set()
+        attempted_packets: set[tuple[int, int, int, int]] = set()
         for row in events:
             file_name = "prediction_events.csv"
             _require(row["run_id"] == run_id, f"{file_name}: run_id mismatch")
@@ -640,6 +641,33 @@ def _validate_prediction(
                 packet_count = int(frame["packet_count"])
                 _require(0 <= packet_index < packet_count,
                          f"{file_name}: invalid packet index")
+                frame_key = (
+                    selected_path, int(row["copy_id"]), event_frame_id
+                )
+                packet_key = frame_key + (packet_index,)
+                event_type = row["event_type"]
+                if event_type == "FRAME_REGISTERED":
+                    registered_frames.add(frame_key)
+                elif event_type == "PACKET_SUBMITTED":
+                    _require(frame_key in registered_frames,
+                             f"{file_name}: submission precedes frame registration")
+                    submitted_packets.add(packet_key)
+                elif event_type == "MAC_ENQUEUE":
+                    _require(packet_key in submitted_packets,
+                             f"{file_name}: MAC enqueue precedes submission")
+                    enqueued_packets.add(packet_key)
+                elif event_type == "MPDU_TX_ATTEMPT":
+                    _require(packet_key in enqueued_packets,
+                             f"{file_name}: PHY attempt precedes MAC enqueue")
+                    attempted_packets.add(packet_key)
+                elif event_type in {
+                    "MPDU_TX_SUCCESS", "MPDU_TX_ATTEMPT_FAILURE", "MPDU_RETRY"
+                }:
+                    _require(packet_key in attempted_packets,
+                             f"{file_name}: MPDU outcome precedes PHY attempt")
+                elif event_type == "MAC_DEQUEUE":
+                    _require(packet_key in enqueued_packets,
+                             f"{file_name}: MAC dequeue precedes enqueue")
                 if row["mac_service_bytes"]:
                     frame_size = int(frame["frame_size_bytes"])
                     packet_payload = min(

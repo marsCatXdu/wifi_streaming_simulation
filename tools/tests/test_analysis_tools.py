@@ -23,6 +23,7 @@ from plot_results import _approach_key, _approach_label, plot
 from summarize_runs import group_key, summarize
 from validate_outputs import (
     PREDICTION_BASE_COLUMNS,
+    PREDICTION_EVENT_COLUMNS,
     PREDICTION_ROLLING_PREFIXES,
     ValidationError,
     _rolling_column,
@@ -95,7 +96,7 @@ def make_run(path: Path, run_id: str, seed: int = 1) -> None:
     (path / "stdout.log").write_text("ok\n")
 
 
-def add_prediction_sample(path: Path) -> None:
+def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
     config_path = path / "resolved_config.json"
     config = json.loads(config_path.read_text())
     config.update({
@@ -117,7 +118,7 @@ def add_prediction_sample(path: Path) -> None:
             "sample_offsets_us": [0],
             "history_windows_us": [1000],
             "event_log_enabled": False,
-            "oracle_features_enabled": False,
+            "oracle_features_enabled": oracle_enabled,
             "telemetry_schema_version": 1,
             "event_schema_version": 1,
             "feature_support_mask_version": 1,
@@ -187,7 +188,7 @@ def add_prediction_sample(path: Path) -> None:
         "frame_packets_pending_primary": 1,
         "frame_mac_service_bytes_not_acknowledged": 1286,
         "frame_mac_service_bytes_pending_primary": 1286,
-        "feature_support_mask": "0x3f",
+        "feature_support_mask": "0x7f" if oracle_enabled else "0x3f",
         "mpdu_attempts_1ms": 0,
         "mpdu_successes_1ms": 0,
         "mpdu_attempt_failures_1ms": 0,
@@ -200,6 +201,14 @@ def add_prediction_sample(path: Path) -> None:
         "phy_other_time_1ms_us": 0,
         "history_coverage_1ms_us": 0,
     })
+    if oracle_enabled:
+        values.update({
+            "current_cw": 15,
+            "nav_remaining_us": 0,
+            "current_phy_state": "IDLE",
+            "channel_access_status": "NOT_REQUESTED",
+            "medium_busy_now": 0,
+        })
     header = sorted(columns)
     write_csv(path / "prediction_samples.csv", header, [values[column] for column in header])
 
@@ -504,6 +513,70 @@ class OutputTests(unittest.TestCase):
                 writer = csv.DictWriter(output, fieldnames=header)
                 writer.writeheader()
                 writer.writerows(rows)
+            with self.assertRaises(ValidationError):
+                validate_run(run)
+
+    def test_prediction_validator_enforces_passive_oracle_nulls(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary) / "run"
+            make_run(run, "prediction")
+            add_prediction_sample(run, oracle_enabled=True)
+            self.assertEqual(validate_run(run)["prediction_sample_count"], 1)
+
+            sample_path = run / "prediction_samples.csv"
+            with sample_path.open(newline="", encoding="utf-8") as source:
+                reader = csv.DictReader(source)
+                rows = list(reader)
+                header = reader.fieldnames
+            self.assertIsNotNone(header)
+            rows[0]["remaining_backoff_slots"] = "3"
+            with sample_path.open("w", newline="", encoding="utf-8") as output:
+                writer = csv.DictWriter(output, fieldnames=header)
+                writer.writeheader()
+                writer.writerows(rows)
+            with self.assertRaises(ValidationError):
+                validate_run(run)
+
+    def test_prediction_validator_rejects_enqueue_before_submission(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary) / "run"
+            make_run(run, "prediction")
+            add_prediction_sample(run)
+            config_path = run / "resolved_config.json"
+            config = json.loads(config_path.read_text())
+            config["predictionTelemetry"]["event_log_enabled"] = True
+            config_path.write_text(json.dumps(config))
+
+            header = sorted(PREDICTION_EVENT_COLUMNS)
+            common = {
+                field: "" for field in header
+            }
+            common.update({
+                "event_schema_version": 1,
+                "run_id": "prediction",
+                "event_time_ns": 100000,
+                "path_id": 0,
+                "copy_id": 0,
+                "frame_id": 7,
+                "packet_index": 0,
+                "mac_queue_packets": 0,
+                "mac_queue_service_bytes": 0,
+                "current_phy_state": "IDLE",
+            })
+            registered = {**common, "event_type": "FRAME_REGISTERED"}
+            enqueued = {
+                **common,
+                "event_type": "MAC_ENQUEUE",
+                "mac_service_bytes": 1286,
+                "mac_queue_packets": 1,
+                "mac_queue_service_bytes": 1286,
+            }
+            with (run / "prediction_events.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as output:
+                writer = csv.DictWriter(output, fieldnames=header)
+                writer.writeheader()
+                writer.writerows([registered, enqueued])
             with self.assertRaises(ValidationError):
                 validate_run(run)
 

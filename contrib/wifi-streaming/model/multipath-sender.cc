@@ -233,12 +233,18 @@ MultipathSender::SendPacket(PathId pathId,
 
     packet->AddPacketTag(frameTag);
     const uint32_t bytes = packet->GetSize();
-    if (iterator->second.socket->Send(packet) >= 0)
+    if (m_predictionCollector)
     {
-        if (m_predictionCollector)
-        {
-            m_predictionCollector->RecordPacketSubmitted(frameTag, bytes);
-        }
+        // Socket::Send can synchronously enqueue the packet at the MAC. Record
+        // application submission first so every lower-layer trace has a
+        // causally prior packet record.
+        m_predictionCollector->RecordPacketSubmitted(frameTag, bytes);
+    }
+    const int sent = iterator->second.socket->Send(packet);
+    NS_ABORT_MSG_IF(sent < 0 && m_predictionCollector,
+                    "Prediction telemetry requires successful UDP socket submission");
+    if (sent >= 0)
+    {
         ++m_packetsSent;
         m_bytesSent += bytes;
         m_pathBytesSent[pathId] += bytes;

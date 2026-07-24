@@ -29,6 +29,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <sstream>
 
 namespace ns3
@@ -194,6 +195,47 @@ class PredictionTelemetryCollectorTestAccess
                                   50.0,
                                   60.0});
         return collector->BuildRollingSample(path, nowNs, 1000);
+    }
+
+    static void InitializePhyHistory(Ptr<PredictionTelemetryCollector> collector,
+                                     uint8_t pathId,
+                                     WifiPhyState state)
+    {
+        auto& path = collector->m_paths.at(pathId);
+        path.telemetryStartNs = Simulator::Now().GetNanoSeconds();
+        path.latestFeatureEventTimeNs = path.telemetryStartNs;
+        path.phyIntervals.clear();
+        path.phyIntervalSerial = 0;
+        path.phyIntervals.push_back({path.telemetryStartNs,
+                                     std::numeric_limits<int64_t>::max(),
+                                     state,
+                                     path.latestFeatureEventTimeNs,
+                                     path.phyIntervalSerial++});
+    }
+
+    static void PhyActivity(Ptr<PredictionTelemetryCollector> collector,
+                            uint8_t pathId,
+                            WifiPhyState state,
+                            Time duration)
+    {
+        collector->NotifyPhyActivity(pathId, state, duration);
+    }
+
+    static void PhyStateTrace(Ptr<PredictionTelemetryCollector> collector,
+                              uint8_t pathId,
+                              Time start,
+                              Time duration,
+                              WifiPhyState state)
+    {
+        collector->NotifyPhyState(pathId, start, duration, state);
+    }
+
+    static PredictionRollingSample BuildPhyWindow(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId,
+        uint64_t nowNs)
+    {
+        return collector->BuildRollingSample(collector->m_paths.at(pathId), nowNs, 1000);
     }
 };
 
@@ -559,6 +601,110 @@ class PredictionCollectorFoundationTestCase : public TestCase
     }
 };
 
+class PredictionPhyHistoryTestCase : public TestCase
+{
+  public:
+    PredictionPhyHistoryTestCase()
+        : TestCase("Prediction PHY histories reconcile causal activity intervals")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto collector = CreateObject<PredictionTelemetryCollector>();
+        PredictionTelemetryCollectorTestAccess::AddPath(collector, 0);
+        PredictionTelemetryCollectorTestAccess::AddPath(collector, 1);
+        PredictionTelemetryCollectorTestAccess::InitializePhyHistory(
+            collector,
+            0,
+            WifiPhyState::IDLE);
+        PredictionTelemetryCollectorTestAccess::InitializePhyHistory(
+            collector,
+            1,
+            WifiPhyState::IDLE);
+
+        // CCA is known at its start and resumes after an overlapping local TX.
+        Simulator::Schedule(
+            MicroSeconds(100),
+            &PredictionTelemetryCollectorTestAccess::PhyActivity,
+            collector,
+            0,
+            WifiPhyState::CCA_BUSY,
+            MicroSeconds(200));
+        Simulator::Schedule(
+            MicroSeconds(150),
+            &PredictionTelemetryCollectorTestAccess::PhyActivity,
+            collector,
+            0,
+            WifiPhyState::TX,
+            MicroSeconds(100));
+
+        // RX starts with a predicted duration, then an authoritative state trace
+        // truncates it when a local TX interrupts reception.
+        Simulator::Schedule(
+            MicroSeconds(100),
+            &PredictionTelemetryCollectorTestAccess::PhyActivity,
+            collector,
+            1,
+            WifiPhyState::RX,
+            MicroSeconds(300));
+        Simulator::Schedule(
+            MicroSeconds(200),
+            &PredictionTelemetryCollectorTestAccess::PhyStateTrace,
+            collector,
+            1,
+            MicroSeconds(100),
+            MicroSeconds(100),
+            WifiPhyState::RX);
+        Simulator::Schedule(
+            MicroSeconds(200),
+            &PredictionTelemetryCollectorTestAccess::PhyActivity,
+            collector,
+            1,
+            WifiPhyState::TX,
+            MicroSeconds(100));
+
+        Simulator::Stop(MicroSeconds(500));
+        Simulator::Run();
+
+        const auto ccaWindow =
+            PredictionTelemetryCollectorTestAccess::BuildPhyWindow(collector, 0, 500000);
+        NS_TEST_ASSERT_MSG_EQ_TOL(ccaWindow.historyCoverageUs,
+                                  500,
+                                  1e-9,
+                                  "CCA history coverage is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(ccaWindow.phyIdleTimeUs,
+                                  300,
+                                  1e-9,
+                                  "CCA history idle duration is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(ccaWindow.phyBusyTimeUs,
+                                  100,
+                                  1e-9,
+                                  "Overlapping TX did not mask CCA");
+        NS_TEST_ASSERT_MSG_EQ_TOL(ccaWindow.phyTxTimeUs,
+                                  100,
+                                  1e-9,
+                                  "CCA history TX duration is incorrect");
+
+        const auto rxWindow =
+            PredictionTelemetryCollectorTestAccess::BuildPhyWindow(collector, 1, 500000);
+        NS_TEST_ASSERT_MSG_EQ_TOL(rxWindow.phyIdleTimeUs,
+                                  300,
+                                  1e-9,
+                                  "Corrected RX history idle duration is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(rxWindow.phyRxTimeUs,
+                                  100,
+                                  1e-9,
+                                  "Authoritative trace did not truncate RX");
+        NS_TEST_ASSERT_MSG_EQ_TOL(rxWindow.phyTxTimeUs,
+                                  100,
+                                  1e-9,
+                                  "Corrected RX history TX duration is incorrect");
+        Simulator::Destroy();
+    }
+};
+
 class PredictionMpduAccountingTestCase : public TestCase
 {
   public:
@@ -572,7 +718,7 @@ class PredictionMpduAccountingTestCase : public TestCase
     {
         FramePacketizer packetizer;
         packetizer.SetPayloadSize(1000);
-        const FrameDescriptor frame{21, 0, 2000, 0, 5000, FrameType::P_FRAME};
+        const FrameDescriptor frame{21, 0, 3000, 0, 5000, FrameType::P_FRAME};
         const auto plan = packetizer.Plan(frame, 27, 0, 0);
         auto emissions = packetizer.Materialize(plan);
 
@@ -587,20 +733,17 @@ class PredictionMpduAccountingTestCase : public TestCase
         header.SetAddr1(Mac48Address("00:00:00:00:00:01"));
         header.SetAddr2(Mac48Address("00:00:00:00:00:02"));
         header.SetQosTid(0);
-        std::array<Ptr<WifiMpdu>, 2> mpdus;
+        std::array<Ptr<WifiMpdu>, 3> mpdus;
         for (std::size_t index = 0; index < emissions.size(); ++index)
         {
             emissions[index].packet->AddPacketTag(emissions[index].frameTag);
             mpdus[index] = Create<WifiMpdu>(emissions[index].packet, header);
+            collector->RecordPacketSubmitted(emissions[index].frameTag,
+                                             emissions[index].packet->GetSize());
         }
 
         Simulator::Schedule(MicroSeconds(100),
                             &PredictionTelemetryCollectorTestAccess::Enqueue,
-                            collector,
-                            0,
-                            mpdus[0]);
-        Simulator::Schedule(MicroSeconds(100),
-                            &PredictionTelemetryCollectorTestAccess::Dequeue,
                             collector,
                             0,
                             mpdus[0]);
@@ -631,33 +774,71 @@ class PredictionMpduAccountingTestCase : public TestCase
                             collector,
                             0,
                             mpdus[0]);
+        Simulator::Schedule(MicroSeconds(400),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[0]);
         Simulator::Schedule(MicroSeconds(100),
                             &PredictionTelemetryCollectorTestAccess::Enqueue,
                             collector,
                             0,
                             mpdus[1]);
+        Simulator::Schedule(MicroSeconds(110),
+                            &PredictionTelemetryCollectorTestAccess::Attempt,
+                            collector,
+                            0,
+                            mpdus[1]);
+        Simulator::Schedule(MicroSeconds(210),
+                            &PredictionTelemetryCollectorTestAccess::Timeout,
+                            collector,
+                            0,
+                            mpdus[1]);
+        // A later explicit BAR can positively acknowledge the timed-out data
+        // attempt. It is a success outcome, but not a second PHY attempt.
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Ack,
+                            collector,
+                            0,
+                            mpdus[1]);
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[1]);
+        Simulator::Schedule(MicroSeconds(100),
+                            &PredictionTelemetryCollectorTestAccess::Enqueue,
+                            collector,
+                            0,
+                            mpdus[2]);
         Simulator::Schedule(MicroSeconds(250),
                             &PredictionTelemetryCollectorTestAccess::Drop,
                             collector,
                             0,
                             WIFI_MAC_DROP_EXPIRED_LIFETIME,
-                            mpdus[1]);
+                            mpdus[2]);
+        // DroppedMpdu precedes the authoritative queue removal trace.
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[2]);
         Simulator::Stop(MicroSeconds(500));
         Simulator::Run();
 
         const auto counts =
             PredictionTelemetryCollectorTestAccess::GetCounts(collector,
                                                                emissions[0].frameTag);
-        NS_TEST_ASSERT_MSG_EQ(counts[0], 2, "Incorrect attempt count");
-        NS_TEST_ASSERT_MSG_EQ(counts[1], 1, "Incorrect success count");
-        NS_TEST_ASSERT_MSG_EQ(counts[2], 1, "Duplicate failure callback was counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[0], 3, "Incorrect attempt count");
+        NS_TEST_ASSERT_MSG_EQ(counts[1], 2, "Late BAR acknowledgement was not counted");
+        NS_TEST_ASSERT_MSG_EQ(counts[2], 2, "Duplicate failure callback was counted");
         NS_TEST_ASSERT_MSG_EQ(counts[3], 1, "Retry was not identified");
         NS_TEST_ASSERT_MSG_EQ(counts[4], 1, "Terminal drop was not counted");
         NS_TEST_ASSERT_MSG_EQ(counts[5], 0, "Retry-limit drop was invented");
         NS_TEST_ASSERT_MSG_EQ(counts[6], 1, "Lifetime drop was not classified");
         NS_TEST_ASSERT_MSG_EQ(counts[7], 0, "Queue drop was invented");
-        NS_TEST_ASSERT_MSG_EQ(counts[8], 1, "Frame failure count is incorrect");
-        NS_TEST_ASSERT_MSG_EQ(counts[9], 1, "Distinct frame success count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[8], 2, "Frame failure count is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(counts[9], 2, "Distinct frame success count is incorrect");
         NS_TEST_ASSERT_MSG_EQ(counts[10], 1, "Frame terminal count is incorrect");
         NS_TEST_ASSERT_MSG_EQ(counts[11], 0, "Dropped packet remained in the queue");
 
@@ -676,7 +857,7 @@ class PredictionMpduAccountingTestCase : public TestCase
                                                                      emissions[0].frameTag);
         NS_TEST_ASSERT_MSG_EQ(pending[0], 0, "Terminal work remains pending on primary");
         NS_TEST_ASSERT_MSG_EQ(pending[1],
-                              mpdus[1]->GetPacketSize(),
+                              mpdus[2]->GetPacketSize(),
                               "Unacknowledged bytes excluded the terminal drop");
         NS_TEST_ASSERT_MSG_EQ(pending[2],
                               0,
@@ -1349,6 +1530,20 @@ class PredictionWifiTelemetryTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(samples.back().actionable,
                               false,
                               "MAC-complete frame was marked actionable");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().macQueuePackets.has_value() &&
+                                  *samples.back().macQueuePackets == 0,
+                              true,
+                              "Logical queue mirror retained acknowledged packets");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().currentCw.has_value(),
+                              true,
+                              "Passive current-CW oracle is unsupported");
+        NS_TEST_ASSERT_MSG_EQ(samples.back().remainingBackoffSlots.has_value(),
+                              false,
+                              "Lazily updated backoff getter was exposed as exact");
+        NS_TEST_ASSERT_MSG_EQ(
+            samples.back().expectedAccessReasonWithinSlack.has_value(),
+            false,
+            "Behavior-changing expected-access query was exposed as passive");
         NS_TEST_ASSERT_MSG_EQ(samples.back().rolling.size(),
                               3,
                               "Rolling Wi-Fi histories are missing");
@@ -1541,6 +1736,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionCollectorFoundationTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionPhyHistoryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionMpduAccountingTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelationSanityTestCase, TestCase::Duration::QUICK);

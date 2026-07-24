@@ -1974,11 +1974,13 @@ main(int argc, char* argv[])
     Simulator::Schedule(Seconds(0.9), &PopulateNeighborCaches);
     Simulator::Stop(Seconds(durationSeconds + 3));
     Simulator::Run();
-    metrics->FinalizeMissingFrames();
     if (predictionTelemetry)
     {
+        // Prediction rows are sender-side artifacts and must be finalized
+        // independently of receiver outcome bookkeeping.
         predictionTelemetry->WriteOutputs();
     }
+    metrics->FinalizeMissingFrames();
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)
     {
         backgroundBytesSentPerStation[backgroundUdpOrdinals[i]] =
