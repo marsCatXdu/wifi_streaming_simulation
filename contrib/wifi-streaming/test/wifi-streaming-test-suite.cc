@@ -17,6 +17,7 @@
 #include "ns3/redundancy-policy.h"
 #include "ns3/simulator.h"
 #include "ns3/string.h"
+#include "ns3/streaming-frame-tag.h"
 #include "ns3/streaming-header.h"
 #include "ns3/test.h"
 #include "ns3/udp-socket-factory.h"
@@ -54,6 +55,68 @@ MakeStreamingPacket(uint64_t frameId,
     packet->AddHeader(header);
     return packet;
 }
+
+class FrameTagTestCase : public TestCase
+{
+  public:
+    FrameTagTestCase()
+        : TestCase("StreamingFrameTag serialization, copying, and printing")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        StreamingFrameTag source;
+        source.frameId = 0x1122334455667788;
+        source.pathId = 3;
+        source.copyId = 1;
+        source.packetIndex = 4;
+        source.packetCount = 9;
+        source.generationTimeNs = 123456789;
+        source.deadlineTimeNs = 156789789;
+        source.frameSizeBytes = 54321;
+        source.frameType = FrameType::I_FRAME;
+
+        auto packet = Create<Packet>(100);
+        const uint32_t wireSize = packet->GetSize();
+        packet->AddPacketTag(source);
+        NS_TEST_ASSERT_MSG_EQ(packet->GetSize(), wireSize, "Packet tag changed wire bytes");
+
+        StreamingFrameTag decoded;
+        NS_TEST_ASSERT_MSG_EQ(packet->PeekPacketTag(decoded), true, "Packet tag is absent");
+        NS_TEST_ASSERT_MSG_EQ(decoded.frameId, source.frameId, "Frame ID changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.pathId, source.pathId, "Path ID changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.copyId, source.copyId, "Copy ID changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.packetIndex, source.packetIndex, "Packet index changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.packetCount, source.packetCount, "Packet count changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.generationTimeNs,
+                              source.generationTimeNs,
+                              "Generation time changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.deadlineTimeNs,
+                              source.deadlineTimeNs,
+                              "Deadline time changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.frameSizeBytes,
+                              source.frameSizeBytes,
+                              "Frame size changed");
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(decoded.frameType),
+                              static_cast<uint8_t>(source.frameType),
+                              "Frame type changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.IsValid(), true, "Valid tag was rejected");
+
+        auto copy = packet->Copy();
+        StreamingFrameTag copied;
+        NS_TEST_ASSERT_MSG_EQ(copy->PeekPacketTag(copied), true, "Copied packet lost tag");
+        NS_TEST_ASSERT_MSG_EQ(copied.frameId, source.frameId, "Copied tag changed identity");
+
+        std::ostringstream printed;
+        decoded.Print(printed);
+        NS_TEST_ASSERT_MSG_EQ(printed.str().find("frame=1234605616436508552") !=
+                                  std::string::npos,
+                              true,
+                              "Printed tag omits frame identity");
+    }
+};
 
 class HeaderTestCase : public TestCase
 {
@@ -196,7 +259,19 @@ class PacketizerTestCase : public TestCase
         packetizer.SetPayloadSize(1000);
         packetizer.SetEmissionMode(EmissionMode::UNIFORM_WITHIN_FRAME);
         packetizer.SetEmissionSpan(MilliSeconds(2));
-        const auto emissions = packetizer.Packetize(frame, 42, 1, 3);
+        const auto plan = packetizer.Plan(frame, 42, 1, 3);
+        NS_TEST_ASSERT_MSG_EQ(plan.frame.packetCount, 3, "Plan has wrong packet count");
+        NS_TEST_ASSERT_MSG_EQ(plan.packets.size(), 3, "Plan has wrong packet vector size");
+        NS_TEST_ASSERT_MSG_EQ(plan.packets[0].applicationPayloadBytes,
+                              1000,
+                              "Plan has wrong full payload");
+        NS_TEST_ASSERT_MSG_EQ(plan.packets[2].applicationPayloadBytes,
+                              501,
+                              "Plan has wrong final payload");
+        NS_TEST_ASSERT_MSG_EQ(plan.packets[1].offset,
+                              MilliSeconds(1),
+                              "Plan has wrong emission offset");
+        const auto emissions = packetizer.Materialize(plan);
         NS_TEST_ASSERT_MSG_EQ(emissions.size(), 3, "Incorrect packet count");
         NS_TEST_ASSERT_MSG_EQ(emissions[0].packet->GetSize(),
                               1000 + StreamingHeader::SERIALIZED_SIZE,
@@ -207,6 +282,15 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(emissions[0].offset, Time(), "First offset is not zero");
         NS_TEST_ASSERT_MSG_EQ(emissions[1].offset, MilliSeconds(1), "Middle offset is wrong");
         NS_TEST_ASSERT_MSG_EQ(emissions[2].offset, MilliSeconds(2), "Last offset is wrong");
+        NS_TEST_ASSERT_MSG_EQ(emissions[2].frameTag.packetIndex,
+                              2,
+                              "Materialization changed packet index");
+        NS_TEST_ASSERT_MSG_EQ(emissions[2].frameTag.deadlineTimeNs,
+                              5000123,
+                              "Materialization changed absolute deadline");
+        NS_TEST_ASSERT_MSG_EQ(emissions[2].frameTag.IsValid(),
+                              true,
+                              "Materialized frame tag is invalid");
     }
 };
 
@@ -857,6 +941,7 @@ class WifiStreamingTestSuite : public TestSuite
     WifiStreamingTestSuite()
         : TestSuite("wifi-streaming", Type::UNIT)
     {
+        AddTestCase(new FrameTagTestCase, TestCase::Duration::QUICK);
         AddTestCase(new HeaderTestCase, TestCase::Duration::QUICK);
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);

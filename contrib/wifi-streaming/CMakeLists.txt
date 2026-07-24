@@ -2,6 +2,7 @@ build_lib(
   LIBNAME wifi-streaming
   SOURCE_FILES
     model/streaming-header.cc
+    model/streaming-frame-tag.cc
     model/frame-source.cc
     model/frame-packetizer.cc
     model/metrics-collector.cc
@@ -14,6 +15,7 @@ build_lib(
     model/random-rate-on-off-application.cc
   HEADER_FILES
     model/streaming-header.h
+    model/streaming-frame-tag.h
     model/frame-source.h
     model/frame-packetizer.h
     model/metrics-collector.h

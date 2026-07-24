@@ -7,6 +7,7 @@
 #include "ns3/abort.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace ns3
 {
@@ -38,45 +39,92 @@ FramePacketizer::SetEmissionSpan(Time span)
 }
 
 std::vector<PacketEmission>
+FramePacketizer::Materialize(const PacketizationPlan& plan) const
+{
+    std::vector<PacketEmission> emissions;
+    emissions.reserve(plan.packets.size());
+    for (const auto& planned : plan.packets)
+    {
+        StreamingHeader header;
+        header.runIdHash = plan.runIdHash;
+        header.frameId = plan.frame.frameId;
+        header.packetIndex = planned.packetIndex;
+        header.packetCount = plan.frame.packetCount;
+        header.frameSizeBytes = plan.frame.frameSizeBytes;
+        header.frameType = plan.frame.frameType;
+        header.generationTimeNs = plan.frame.generationTimeNs;
+        header.deadlineUs = plan.frame.deadlineUs;
+        header.copyId = plan.copyId;
+        header.senderLinkId = plan.pathId;
+        header.flags = plan.flags;
+
+        auto packet = Create<Packet>(planned.applicationPayloadBytes);
+        packet->AddHeader(header);
+
+        StreamingFrameTag tag;
+        tag.frameId = plan.frame.frameId;
+        tag.pathId = plan.pathId;
+        tag.copyId = plan.copyId;
+        tag.packetIndex = planned.packetIndex;
+        tag.packetCount = plan.frame.packetCount;
+        tag.generationTimeNs = plan.frame.generationTimeNs;
+        tag.deadlineTimeNs =
+            plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
+        tag.frameSizeBytes = plan.frame.frameSizeBytes;
+        tag.frameType = plan.frame.frameType;
+        emissions.push_back({packet, tag, planned.offset});
+    }
+    return emissions;
+}
+
+PacketizationPlan
+FramePacketizer::Plan(const FrameDescriptor& frame,
+                      uint64_t runIdHash,
+                      uint8_t copyId,
+                      uint8_t pathId,
+                      uint16_t flags) const
+{
+    NS_ABORT_MSG_IF(frame.frameSizeBytes == 0, "Cannot packetize an empty frame");
+    const uint64_t deadlineOffsetNs = static_cast<uint64_t>(frame.deadlineUs) * 1000;
+    NS_ABORT_MSG_IF(frame.generationTimeNs >
+                        std::numeric_limits<uint64_t>::max() - deadlineOffsetNs,
+                    "Frame deadline overflows nanosecond timestamp");
+
+    PacketizationPlan plan;
+    plan.frame = frame;
+    plan.runIdHash = runIdHash;
+    plan.copyId = copyId;
+    plan.pathId = pathId;
+    plan.flags = flags;
+    plan.frame.packetCount = 1 + (frame.frameSizeBytes - 1) / m_payloadSize;
+    plan.packets.reserve(plan.frame.packetCount);
+
+    uint32_t remaining = frame.frameSizeBytes;
+    for (uint32_t index = 0; index < plan.frame.packetCount; ++index)
+    {
+        PlannedPacket packet;
+        packet.packetIndex = index;
+        packet.applicationPayloadBytes = std::min(remaining, m_payloadSize);
+        if (m_mode == EmissionMode::UNIFORM_WITHIN_FRAME && plan.frame.packetCount > 1)
+        {
+            packet.offset = m_emissionSpan * index / (plan.frame.packetCount - 1);
+        }
+        // TRACE_DEFINED has no per-packet timestamps in FrameDescriptor, so its
+        // deterministic fallback remains burst emission.
+        plan.packets.push_back(packet);
+        remaining -= packet.applicationPayloadBytes;
+    }
+    return plan;
+}
+
+std::vector<PacketEmission>
 FramePacketizer::Packetize(const FrameDescriptor& frame,
                            uint64_t runIdHash,
                            uint8_t copyId,
                            uint8_t linkId,
                            uint16_t flags) const
 {
-    NS_ABORT_MSG_IF(frame.frameSizeBytes == 0, "Cannot packetize an empty frame");
-    const uint32_t count = (frame.frameSizeBytes + m_payloadSize - 1) / m_payloadSize;
-    std::vector<PacketEmission> emissions;
-    emissions.reserve(count);
-    uint32_t remaining = frame.frameSizeBytes;
-    for (uint32_t index = 0; index < count; ++index)
-    {
-        StreamingHeader header;
-        header.runIdHash = runIdHash;
-        header.frameId = frame.frameId;
-        header.packetIndex = index;
-        header.packetCount = count;
-        header.frameSizeBytes = frame.frameSizeBytes;
-        header.frameType = frame.frameType;
-        header.generationTimeNs = frame.generationTimeNs;
-        header.deadlineUs = frame.deadlineUs;
-        header.copyId = copyId;
-        header.senderLinkId = linkId;
-        header.flags = flags;
-
-        auto packet = Create<Packet>(std::min(remaining, m_payloadSize));
-        packet->AddHeader(header);
-        Time offset;
-        if (m_mode == EmissionMode::UNIFORM_WITHIN_FRAME && count > 1)
-        {
-            offset = m_emissionSpan * index / (count - 1);
-        }
-        // TRACE_DEFINED currently has no per-packet timestamps in FrameDescriptor,
-        // so its deterministic fallback is burst emission.
-        emissions.push_back({packet, offset});
-        remaining -= std::min(remaining, m_payloadSize);
-    }
-    return emissions;
+    return Materialize(Plan(frame, runIdHash, copyId, linkId, flags));
 }
 
 } // namespace ns3

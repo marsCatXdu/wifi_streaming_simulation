@@ -144,9 +144,11 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
                             << +*policyDecision.secondaryPath);
     }
 
-    frame.packetCount =
-        (frame.frameSizeBytes + m_packetizer.GetPayloadSize() - 1) /
-        m_packetizer.GetPayloadSize();
+    const uint16_t flags =
+        policyDecision.duplicate ? StreamingHeader::FLAG_DUPLICATED_FRAME : 0;
+    const auto primaryPlan =
+        m_packetizer.Plan(frame, m_runIdHash, 0, policyDecision.primaryPath, flags);
+    frame = primaryPlan.frame;
 
     if (m_collector)
     {
@@ -168,39 +170,45 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
         m_collector->RecordPolicyDecision(decision);
     }
 
-    ScheduleCopy(frame, policyDecision.primaryPath, 0, false, policyDecision.duplicate);
+    ScheduleCopy(primaryPlan, false);
     if (policyDecision.secondaryPath)
     {
-        ScheduleCopy(frame, *policyDecision.secondaryPath, 1, true, true);
+        const auto secondaryPlan =
+            m_packetizer.Plan(frame, m_runIdHash, 1, *policyDecision.secondaryPath, flags);
+        ScheduleCopy(secondaryPlan, true);
     }
 }
 
 void
-MultipathSender::ScheduleCopy(const FrameDescriptor& frame,
-                              PathId pathId,
-                              uint8_t copyId,
-                              bool redundant,
-                              bool duplicatedFrame)
+MultipathSender::ScheduleCopy(const PacketizationPlan& plan, bool redundant)
 {
-    const uint16_t flags =
-        duplicatedFrame ? StreamingHeader::FLAG_DUPLICATED_FRAME : 0;
-    const auto emissions = m_packetizer.Packetize(frame, m_runIdHash, copyId, pathId, flags);
+    const auto emissions = m_packetizer.Materialize(plan);
     for (const auto& emission : emissions)
     {
         m_events.push_back(Simulator::Schedule(emission.offset,
                                                &MultipathSender::SendPacket,
                                                this,
-                                               pathId,
+                                               plan.pathId,
                                                emission.packet,
+                                               emission.frameTag,
                                                redundant));
     }
 }
 
 void
-MultipathSender::SendPacket(PathId pathId, Ptr<Packet> packet, bool redundant)
+MultipathSender::SendPacket(PathId pathId,
+                            Ptr<Packet> packet,
+                            StreamingFrameTag frameTag,
+                            bool redundant)
 {
     const auto iterator = m_paths.find(pathId);
-    if (iterator != m_paths.end() && iterator->second.socket->Send(packet) >= 0)
+    if (iterator == m_paths.end())
+    {
+        return;
+    }
+
+    packet->AddPacketTag(frameTag);
+    if (iterator->second.socket->Send(packet) >= 0)
     {
         ++m_packetsSent;
         const uint64_t bytes = packet->GetSize();

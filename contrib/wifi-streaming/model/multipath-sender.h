@@ -60,12 +60,11 @@ class MultipathSender : public Application
     };
 
     void GenerateFrame(FrameDescriptor frame);
-    void ScheduleCopy(const FrameDescriptor& frame,
-                      PathId pathId,
-                      uint8_t copyId,
-                      bool redundant,
-                      bool duplicatedFrame);
-    void SendPacket(PathId pathId, Ptr<Packet> packet, bool redundant);
+    void ScheduleCopy(const PacketizationPlan& plan, bool redundant);
+    void SendPacket(PathId pathId,
+                    Ptr<Packet> packet,
+                    StreamingFrameTag frameTag,
+                    bool redundant);
 
     Ptr<FrameSource> m_source;
     Ptr<MetricsCollector> m_collector;
