@@ -1,7 +1,7 @@
 # Specification: Causal Wi-Fi Frame Latency-Risk Prediction Study
 
 **Status:** Revised implementation specification  
-**Revision:** 5, 2026-07-24
+**Revision:** 6, 2026-07-24
 **Scope:** Increments 1 through 3  
 **Target repository:** `wifi_streaming_simulation`  
 **Target ns-3 version:** Existing pinned ns-3.48 revision
@@ -489,7 +489,8 @@ again; their cost is reflected in the lower achieved byte service rate.
 ### F0: application-only
 
 - frame size, type, packet count, age, and deadline slack;
-- submitted and remaining application packets/bytes.
+- submitted application packets and socket bytes, and remaining application
+  packets.
 
 ### F1-ideal: idealized commodity-statistic-equivalent telemetry
 
@@ -599,6 +600,8 @@ packets_remaining_to_submit
 `application_socket_packet_bytes_submitted` is the sum of
 `Packet::GetSize()` immediately before socket submission. It includes each
 `StreamingHeader` and excludes UDP/IP and lower-layer headers.
+F0 does not contain a remaining-byte field; the explicit remaining-work field
+is `packets_remaining_to_submit`.
 
 Required F1-ideal cumulative state:
 
@@ -926,6 +929,7 @@ Add without changing existing matrices:
 experiments/configs/prediction_telemetry_smoke.yaml
 experiments/configs/prediction_stage_a.yaml
 experiments/configs/prediction_obss.yaml
+experiments/configs/prediction_analysis.yaml
 ```
 
 Production batches enable samples, disable event logging, and use explicit
@@ -1084,6 +1088,23 @@ Rules:
 - require both classes and the configured minimum run-group count in each
   validation and test subset or mark that subset insufficient.
 
+Before constructing a split, freeze these stable keys in the versioned analysis
+YAML:
+
+```yaml
+minimum_run_groups_validation_selection: 10
+minimum_run_groups_validation_calibration: 10
+minimum_run_groups_id_test: 20
+minimum_run_groups_per_required_ood_scenario: 20
+```
+
+These values count complete `run_group_id` units after run validation and
+partition eligibility filters. The OOD minimum applies separately to every
+required scenario, not to pooled OOD data. They are lower bounds, not target
+split ratios. Both outcome classes remain mandatory independently of satisfying
+the count. The split builder shall not supply hidden defaults or move groups
+after examining model scores; an unmet minimum produces `insufficient_data`.
+
 Never collapse the two validation subsets after examining outcomes. If the
 available complete run groups cannot support both subsets, generate additional
 runs or report `insufficient_data`. Grouped cross-fitting requires a separate
@@ -1123,7 +1144,10 @@ tools/prediction/reporting.py
 ```
 
 Inputs are the labelled dataset, dataset manifest, fixed split manifest,
-versioned analysis YAML, and explicit random seed.
+versioned analysis YAML, and explicit random seed. The analysis YAML shall
+exist and be frozen before Increment 2 constructs the split manifest because
+split-sufficiency keys affect dataset acceptance. Analysis tools shall reject a
+missing required key rather than provide an implementation default.
 
 Outputs:
 
@@ -1483,6 +1507,64 @@ Also report:
 - run, frame, sample, and miss counts;
 - per-run metrics and run-aware confidence intervals.
 
+Freeze these metric settings in the analysis YAML:
+
+```yaml
+pr_auc_metric: average_precision
+calibration_bin_count: 10
+```
+
+`pr_auc_metric` has no implicit alternative. Average precision uses the
+positive class `deadline_miss = 1`. Group exact score ties, order distinct
+finite score groups from highest to lowest, and let `precision_k` and
+`recall_k` be the cumulative values after group `k`:
+
+```text
+average_precision =
+    sum over k of (recall_k - recall_(k - 1)) * precision_k
+
+recall_0 = 0
+```
+
+This is the step-wise average-precision definition, not trapezoidal
+integration of the precision-recall curve. The primary ranking report uses the
+frozen uncalibrated ranking score. Any separately reported calibrated average
+precision must be named as such. Average precision is `insufficient_data` when
+there are no eligible rows or no positive examples; an all-positive partition
+has average precision 1.
+
+Equal-frequency calibration error uses calibrated probabilities and:
+
+```text
+calibration_error =
+    sum over bins b of
+        (n_b / N)
+        * abs(mean_predicted_probability_b - observed_miss_rate_b)
+```
+
+Reject nonfinite probabilities and probabilities outside `[0, 1]`. Group
+exactly equal probabilities before binning and never split one tie group.
+For `N` rows and `D` distinct probabilities, use:
+
+```text
+effective_calibration_bin_count =
+    min(calibration_bin_count, N, D)
+```
+
+If the effective count is zero, calibration error is `insufficient_data`.
+Otherwise, sort the `D` tie groups by increasing probability and create that
+many contiguous nonempty bins. For boundary `b` from 1 through
+`effective_calibration_bin_count - 1`, target cumulative row count
+`b * N / effective_calibration_bin_count`. Among boundaries after the previous
+one that leave at least one tie group for every remaining bin, choose the
+boundary with cumulative row count closest to the target; break an exact
+distance tie toward the smaller cumulative count. Report the requested and
+effective bin counts and each bin's row count, probability range, mean
+probability, and observed miss rate. Recompute bins within each evaluated
+partition and each bootstrap replicate. Score equality is exact equality of
+the frozen emitted probability; do not introduce a tolerance or row-identity
+tie break.
+
 Rows from one run are correlated. Confidence intervals, bootstrap units, and
 dispersion treat runs or matched run groups, not frames, as independent. The
 analysis configuration shall record `confidence_level`,
@@ -1501,17 +1583,24 @@ nested run-group procedure and label it separately.
 For fixed relative deadlines and fixed T0/T1/T2/T4 offsets:
 
 ```text
-nominal_rescue_slack(stage) =
-    configured_deadline - sample_offset(stage)
+nominal_rescue_slack_us(stage) =
+    configured_deadline_us - sample_offset_us(stage)
 ```
 
 This value is constant at one stage and is not a meaningful distribution.
 Write `stage_rescue_eligibility.csv` containing each stage, nominal rescue
 slack, configured minimum rescue time, and:
 
+```yaml
+minimum_rescue_time_us: 5000
+```
+
+This stable key and its value shall be present in the analysis YAML. The
+implementation shall not supply a fallback. Evaluate:
+
 ```text
 rescue_eligible =
-    nominal_rescue_slack >= minimum_rescue_time
+    nominal_rescue_slack_us >= minimum_rescue_time_us
 ```
 
 A stage can satisfy go/no-go criteria only when `rescue_eligible = true`.
@@ -1621,6 +1710,23 @@ importance alone does not prove driver exportability.
 evidence partition. A missing required partition yields
 `insufficient_data`, not an implicit no-go.
 
+Its top-level decision fields are:
+
+```json
+{
+  "prediction_recommendation": "go",
+  "modified_driver_supported": "pass"
+}
+```
+
+`prediction_recommendation` is one of `go`, `go_limited_domain`,
+`go_ranking_only`, `redirect_reactive`, `no_go`, or `insufficient_data`. It
+describes whether the evidence supports continued latency-risk prediction
+research. `modified_driver_supported` is independently one of `pass`, `fail`,
+or `insufficient_data` and describes whether the predeclared
+`F2-exportable` telemetry is sufficient. A prediction recommendation never
+implicitly authorizes modified-driver implementation.
+
 In this section, F2 performance means `F0 + F1-ideal + F2` unless the
 deployment-sensitivity track is named explicitly.
 
@@ -1686,8 +1792,10 @@ minimum_later_stage_gain = 0.10
 maximum_fixed_threshold_action_rate_overshoot = 0.02
 ```
 
-The analysis YAML may change values but not criterion names or formulas. Every
-resolved value is written to `go_no_go.json`.
+The analysis YAML may change values but not criterion names or formulas. These
+thresholds and the split, metric, calibration-bin, and rescue-time settings
+defined in Sections 22, 29, and 30 are required explicit keys. Every resolved
+value is written to `go_no_go.json`.
 
 ### 33.3 ID predictability and threshold stability
 
@@ -1824,13 +1932,18 @@ required_ood_exportable_incremental_gain_positive =
     required_ood_min_exportable_incremental_gain > 0
 ```
 
-`modified_driver_supported = true` only when:
+The `modified_driver_supported` conjunction requires:
 
 1. the selected stage is rescue-eligible;
 2. `R2E(ID, s*) >= minimum_f2_recall`;
 3. `R2E(ID, s*) >= minimum_random_multiple * RR(ID, s*)`;
 4. `f2_exportable_incremental_gain_id >= minimum_f2_incremental_gain`; and
 5. both required-OOD exportable conditions pass.
+
+Emit `modified_driver_supported = pass` when every requirement passes, `fail`
+when at least one requirement fails, and `insufficient_data` when none fails
+but at least one cannot be evaluated. This status does not inherit from
+`prediction_recommendation`.
 
 The OOD incremental-gain condition is distinct from excess over random; both
 must hold in every required scenario under the worst-case bootstrap.
@@ -1901,7 +2014,8 @@ decision based on all required scenarios.
 
 ### 33.7 Recommendation hierarchy
 
-The mutually exclusive machine-readable recommendations are:
+The mutually exclusive machine-readable `prediction_recommendation` values
+are:
 
 ```text
 go:
@@ -1938,6 +2052,10 @@ no_go:
 every failed required OOD ranking or threshold criterion.
 `go_ranking_only` reports predictability without a stable online action
 threshold. Secondary OOD warnings accompany but do not change these statuses.
+All three `go` variants concern the prediction-research question using full
+F2. Proceeding to modified-driver implementation additionally requires
+`modified_driver_supported = pass`; a `go` value with driver status `fail` or
+`insufficient_data` is valid and must not be rewritten.
 
 Each criterion record contains its stable name, status
 (`pass`, `fail`, or `insufficient_data`), estimate, confidence bounds,
@@ -1974,7 +2092,10 @@ Increment 3 passes only if:
 - F1 degradation is deterministic and uses no future source snapshot;
 - ID and OOD results are separated;
 - exact features supporting or rejecting driver work are identified;
-- a reproducible written and machine-readable decision is produced;
+- the versioned analysis YAML contains every required split, metric,
+  calibration, rescue, and decision key;
+- a reproducible written and machine-readable decision is produced with
+  separate `prediction_recommendation` and `modified_driver_supported` fields;
 - no adaptive simulation policy exists.
 
 # Cross-increment requirements
