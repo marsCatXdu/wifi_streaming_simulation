@@ -301,7 +301,9 @@ def main() -> None:
         "samples_only_overhead_classification": samples_classification,
         "telemetry_on_off_meaningful_output_equivalence": {
             "status": "PASS",
-            "normalization": "run_id only",
+            "normalization": (
+                "run_id, resolved predictionTelemetry block, and build timestamp"
+            ),
             "files": list(MEANINGFUL_OUTPUT_FILES),
             "normalized_sha256": reference_outputs,
         },

@@ -954,7 +954,22 @@ class PredictionMpduAccountingTestCase : public TestCase
                               2,
                               "Current terminal state before late ACK is incorrect");
 
-        Simulator::Stop(MicroSeconds(500));
+        Simulator::Stop(MicroSeconds(75));
+        Simulator::Run();
+        const auto afterLateAck =
+            PredictionTelemetryCollectorTestAccess::GetCounts(collector,
+                                                               emissions[0].frameTag);
+        NS_TEST_ASSERT_MSG_EQ(afterLateAck[4],
+                              2,
+                              "Late ACK reversed the terminal-drop event count");
+        NS_TEST_ASSERT_MSG_EQ(afterLateAck[9],
+                              2,
+                              "Late ACK did not increase the positive-ACK state");
+        NS_TEST_ASSERT_MSG_EQ(afterLateAck[10],
+                              1,
+                              "Late ACK did not decrease the current terminal state");
+
+        Simulator::Stop(MicroSeconds(150));
         Simulator::Run();
 
         const auto counts =
@@ -1077,7 +1092,7 @@ class CorrelatedLoadControllerTestCase : public TestCase
 {
   public:
     CorrelatedLoadControllerTestCase()
-        : TestCase("Deterministic common/local transitions and replay")
+        : TestCase("Deterministic common and local transitions and replay")
     {
     }
 
@@ -1851,7 +1866,7 @@ class RandomRateOnOffApplicationTestCase : public TestCase
 {
   public:
     RandomRateOnOffApplicationTestCase()
-        : TestCase("Random-rate ON/OFF application resamples every ON period")
+        : TestCase("Random-rate ON-OFF application resamples every ON period")
     {
     }
 
