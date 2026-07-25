@@ -1,6 +1,6 @@
 name: prediction-stage-a
 output_root: results/prediction_stage_a
-workers: 4
+workers: 10
 
 base:
   stream:

@@ -1,6 +1,6 @@
 name: prediction-obss
 output_root: results/prediction_obss
-workers: 4
+workers: 10
 
 base:
   stream:

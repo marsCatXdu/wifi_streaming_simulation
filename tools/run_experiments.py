@@ -185,26 +185,37 @@ def expand_config(document: dict[str, Any]) -> list[dict[str, Any]]:
         *(sweep[key] for key in sweep_keys)
     ) if sweep_keys else [()]
     expanded = []
-    for topology, policy, seed, run, values in itertools.product(
-        topologies, policies, seeds, runs, list(sweep_products)
-    ):
+    sweep_values = list(sweep_products)
+    for topology, policy in itertools.product(topologies, policies):
         compatible = policy.get("topologies")
         if compatible is not None and topology["name"] not in compatible:
             continue
         compatible_policies = topology.get("policies")
         if compatible_policies is not None and policy["name"] not in compatible_policies:
             continue
-        resolved = copy.deepcopy(base)
-        resolved["topology"] = topology["name"]
-        resolved["policy"] = policy["name"]
-        for overlay in (topology.get("config", {}), policy.get("config", {})):
-            if not isinstance(overlay, dict):
-                raise ValueError("topology/policy config must be a mapping")
-            for key, value in overlay.items():
+        policy_seeds = policy.get("seeds", seeds)
+        policy_runs = policy.get("runs", runs)
+        if (
+            not isinstance(policy_seeds, list)
+            or not isinstance(policy_runs, list)
+            or not all(
+                isinstance(value, int) and value > 0
+                for value in [*policy_seeds, *policy_runs]
+            )
+        ):
+            raise ValueError("policy seeds and runs must contain positive integers")
+        for seed, run, values in itertools.product(policy_seeds, policy_runs, sweep_values):
+            resolved = copy.deepcopy(base)
+            resolved["topology"] = topology["name"]
+            resolved["policy"] = policy["name"]
+            for overlay in (topology.get("config", {}), policy.get("config", {})):
+                if not isinstance(overlay, dict):
+                    raise ValueError("topology/policy config must be a mapping")
+                for key, value in overlay.items():
+                    set_dotted(resolved, key, value)
+            for key, value in zip(sweep_keys, values):
                 set_dotted(resolved, key, value)
-        for key, value in zip(sweep_keys, values):
-            set_dotted(resolved, key, value)
-        expanded.append({"config": resolved, "seed": seed, "run": run})
+            expanded.append({"config": resolved, "seed": seed, "run": run})
     if not expanded:
         raise ValueError("matrix expansion produced no compatible runs")
     return expanded

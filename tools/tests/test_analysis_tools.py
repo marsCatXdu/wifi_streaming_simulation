@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 TOOLS = Path(__file__).resolve().parents[1]
 ROOT = TOOLS.parent
@@ -246,6 +247,40 @@ class MatrixTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 load_yaml(root / "a.yaml")
 
+    def test_prediction_obss_repair_uses_matched_policy_seed_overrides(self) -> None:
+        document = load_yaml(
+            ROOT / "experiments/configs/prediction_obss_repair_v1.yaml"
+        )
+        specs = expand_config(document)
+        self.assertEqual(document["workers"], 10)
+        self.assertEqual(len(specs), 46)
+        by_scenario: dict[str, list[dict[str, Any]]] = {
+            "obss_only": [],
+            "obss_plus_legacy_mixed8": [],
+        }
+        for spec in specs:
+            scenario = (
+                "obss_plus_legacy_mixed8"
+                if spec["config"]["background"]["background_profile"]
+                == "legacy_mixed8"
+                else "obss_only"
+            )
+            by_scenario[scenario].append(spec)
+        self.assertEqual(len(by_scenario["obss_only"]), 2)
+        self.assertEqual(len(by_scenario["obss_plus_legacy_mixed8"]), 44)
+        for scenario_specs in by_scenario.values():
+            policies_by_seed: dict[int, set[str]] = {}
+            for spec in scenario_specs:
+                policies_by_seed.setdefault(spec["seed"], set()).add(
+                    spec["config"]["policy"]
+                )
+            self.assertTrue(
+                all(
+                    policies == {"fixed_link_0", "fixed_link_1"}
+                    for policies in policies_by_seed.values()
+                )
+            )
+
     def test_prediction_production_matrices_match_frozen_loads(self) -> None:
         loads = load_yaml(ROOT / "experiments/configs/prediction_loads.yaml")
         stage_a = expand_config(
@@ -266,6 +301,16 @@ class MatrixTests(unittest.TestCase):
         )
         self.assertEqual(len(stage_a), 320)
         self.assertEqual(len(obss), 96)
+        self.assertEqual(
+            load_yaml(ROOT / "experiments/configs/prediction_stage_a.yaml")[
+                "workers"
+            ],
+            10,
+        )
+        self.assertEqual(
+            load_yaml(ROOT / "experiments/configs/prediction_obss.yaml")["workers"],
+            10,
+        )
         self.assertEqual(len(stage_a_smoke), 32)
         self.assertEqual(len(obss_smoke), 4)
         self.assertEqual({spec["seed"] for spec in stage_a_smoke}, {501})
