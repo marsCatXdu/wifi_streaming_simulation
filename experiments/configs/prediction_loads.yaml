@@ -1,0 +1,52 @@
+# Frozen Increment-2 load selection from telemetry-disabled pilots.
+load_schema_version: 1
+pilot_review:
+  table: results/prediction_load_pilot_review_v3/pilot_table.csv
+  sha256: 24d9c2f479b9019f6d016df89adc78090a3845119d084512a465ce22635e701d
+  run_count: 195
+  seeds: [101, 102, 103]
+  frames_per_candidate: 900
+
+target_miss_rate_bands:
+  low: [0.01, 0.03]
+  medium: [0.05, 0.10]
+  high: [0.15, 0.25]
+
+# Stage-A production runs use every listed rate with both fixed-link policies.
+# Regime labels are assigned per selected link from the mapping below.
+matched_rate_unions_mbps_per_station:
+  common_bursts: [2.5, 3.5, 5, 5.5, 7]
+  independent: [2.5, 3.5, 5, 5.5, 7]
+  mixed_common_and_independent: [2.25, 3, 3.25, 4, 5.5]
+
+selected_loads:
+  - correlation_mode: common_bursts
+    link: 0
+    low: {rate_mbps_per_station: 3.5, measured_miss_rate: 0.023333333}
+    medium: {rate_mbps_per_station: 5, measured_miss_rate: 0.091111111}
+    high: {rate_mbps_per_station: 7, measured_miss_rate: 0.186666667}
+  - correlation_mode: common_bursts
+    link: 1
+    low: {rate_mbps_per_station: 2.5, measured_miss_rate: 0.027777778}
+    medium: {rate_mbps_per_station: 3.5, measured_miss_rate: 0.057777778}
+    high: {rate_mbps_per_station: 5.5, measured_miss_rate: 0.216666667}
+  - correlation_mode: independent
+    link: 0
+    low: {rate_mbps_per_station: 3.5, measured_miss_rate: 0.024444444}
+    medium: {rate_mbps_per_station: 5, measured_miss_rate: 0.073333333}
+    high: {rate_mbps_per_station: 7, measured_miss_rate: 0.176666667}
+  - correlation_mode: independent
+    link: 1
+    low: {rate_mbps_per_station: 2.5, measured_miss_rate: 0.018888889}
+    medium: {rate_mbps_per_station: 3.5, measured_miss_rate: 0.061111111}
+    high: {rate_mbps_per_station: 5.5, measured_miss_rate: 0.188888889}
+  - correlation_mode: mixed_common_and_independent
+    link: 0
+    low: {rate_mbps_per_station: 3.25, measured_miss_rate: 0.022222222}
+    medium: {rate_mbps_per_station: 4, measured_miss_rate: 0.052222222}
+    high: {rate_mbps_per_station: 5.5, measured_miss_rate: 0.223333333}
+  - correlation_mode: mixed_common_and_independent
+    link: 1
+    low: {rate_mbps_per_station: 2.25, measured_miss_rate: 0.012222222}
+    medium: {rate_mbps_per_station: 3, measured_miss_rate: 0.057777778}
+    high: {rate_mbps_per_station: 4, measured_miss_rate: 0.21}

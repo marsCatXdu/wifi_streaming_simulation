@@ -222,6 +222,62 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
 
 
 class MatrixTests(unittest.TestCase):
+    def test_prediction_production_matrices_match_frozen_loads(self) -> None:
+        loads = load_yaml(ROOT / "experiments/configs/prediction_loads.yaml")
+        stage_a = expand_config(
+            load_yaml(ROOT / "experiments/configs/prediction_stage_a.yaml")
+        )
+        obss = expand_config(
+            load_yaml(ROOT / "experiments/configs/prediction_obss.yaml")
+        )
+        self.assertEqual(len(stage_a), 320)
+        self.assertEqual(len(obss), 96)
+        for spec in stage_a + obss:
+            prediction = spec["config"]["prediction"]
+            self.assertTrue(prediction["prediction_telemetry_enabled"])
+            self.assertFalse(prediction["prediction_event_log_enabled"])
+
+        loaded_stage_a = [
+            spec for spec in stage_a
+            if spec["config"]["background"]["background_profile"] == "legacy_mixed8"
+        ]
+        frozen_unions = loads["matched_rate_unions_mbps_per_station"]
+        for mode, rates in frozen_unions.items():
+            observed = {
+                spec["config"]["background"]["background_rate_mbps"]
+                for spec in loaded_stage_a
+                if spec["config"]["background"]["correlation_mode"] == mode
+            }
+            self.assertEqual(observed, set(rates))
+        for mode in frozen_unions:
+            for rate in frozen_unions[mode]:
+                for seed in range(201, 211):
+                    policies = {
+                        spec["config"]["policy"]
+                        for spec in loaded_stage_a
+                        if (
+                            spec["seed"] == seed
+                            and spec["config"]["background"]["correlation_mode"] == mode
+                            and spec["config"]["background"]["background_rate_mbps"] == rate
+                        )
+                    }
+                    self.assertEqual(policies, {"fixed_link_0", "fixed_link_1"})
+
+        self.assertEqual(
+            sum(
+                spec["config"]["background"]["background_profile"] == "none"
+                for spec in obss
+            ),
+            48,
+        )
+        self.assertEqual(
+            sum(
+                spec["config"]["background"]["background_profile"] == "legacy_mixed8"
+                for spec in obss
+            ),
+            48,
+        )
+
     def test_prediction_load_pilot_matrix(self) -> None:
         loaded = load_yaml(ROOT / "experiments/configs/prediction_load_pilot.yaml")
         baseline = load_yaml(
