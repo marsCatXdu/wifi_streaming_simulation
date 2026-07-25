@@ -40,16 +40,46 @@ ood_scenarios:
     run_filter:
       scenario_id: obss_only
       topology: dual_interface
+      policies: [fixed_link_0, fixed_link_1]
+      wifi_standard: 802.11be
+      data_mode: EhtMcs5
+      ul_ofdma_enabled: false
       obss_profile: mixed4x4
+      obss_stations_per_bss: 4
+      obss_ul_min_rate_mbps: 0.5
+      obss_ul_max_rate_mbps: 3
+      obss_dl_min_rate_mbps: 2
+      obss_dl_max_rate_mbps: 8
+      obss_on_mean_ms: 100
+      obss_off_mean_ms: 300
+      obss_station_manager: minstrel_ht
       background_profile: none
+      background_traffic: none
+      background_rate_mbps_per_station: 2
       propagation_model: log_distance_nakagami
   - scenario_id: obss_plus_legacy_mixed8
     status: required
     run_filter:
       scenario_id: obss_plus_legacy_mixed8
       topology: dual_interface
+      policies: [fixed_link_0, fixed_link_1]
+      wifi_standard: 802.11be
+      data_mode: EhtMcs5
+      ul_ofdma_enabled: false
       obss_profile: mixed4x4
+      obss_stations_per_bss: 4
+      obss_ul_min_rate_mbps: 0.5
+      obss_ul_max_rate_mbps: 3
+      obss_dl_min_rate_mbps: 2
+      obss_dl_max_rate_mbps: 8
+      obss_on_mean_ms: 100
+      obss_off_mean_ms: 300
+      obss_station_manager: minstrel_ht
       background_profile: legacy_mixed8
+      background_traffic: udp_random_onoff
+      background_rate_mbps_per_station: 2
+      background_random_on_mean_ms: 100
+      background_random_off_mean_ms: 100
       propagation_model: log_distance_nakagami
 ood_formal_aggregation: per_scenario_worst_case
 pooled_ood_decision_use: false

@@ -467,11 +467,34 @@ def write_experiment_description(document: dict[str, Any],
     (output_root / "DESCRIPTION.rst").write_text("\n".join(lines), encoding="utf-8")
 
 
-def load_yaml(path: Path) -> dict[str, Any]:
+def _merge_yaml(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    result = copy.deepcopy(base)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _merge_yaml(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def load_yaml(path: Path, seen: set[Path] | None = None) -> dict[str, Any]:
+    path = path.resolve()
+    visited = set() if seen is None else set(seen)
+    if path in visited:
+        raise ValueError(f"experiment YAML inheritance cycle at {path}")
+    visited.add(path)
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
         raise ValueError("experiment YAML root must be a mapping")
-    return value
+    extends = value.pop("extends", None)
+    if extends is None:
+        return value
+    if not isinstance(extends, str) or not extends:
+        raise ValueError("experiment YAML extends must be a nonempty path")
+    parent = Path(extends)
+    if not parent.is_absolute():
+        parent = path.parent / parent
+    return _merge_yaml(load_yaml(parent, visited), value)
 
 
 def run_one(spec: dict[str, Any], output_root: Path, config_dir: Path,

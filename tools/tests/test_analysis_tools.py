@@ -20,9 +20,12 @@ from run_experiments import (
     write_experiment_description,
 )
 from benchmark_prediction_telemetry import _overhead_classification
+from build_prediction_dataset import build_dataset
 from plot_results import _approach_key, _approach_label, plot
+from prediction_dataset import SourceRun, make_run_group_id, sha256_file
 from summarize_prediction_pilots import _candidate_id, _load_key, _target_band
 from summarize_runs import group_key, summarize
+from validate_prediction_dataset import DatasetValidationError, validate_dataset
 from validate_outputs import (
     PREDICTION_BASE_COLUMNS,
     PREDICTION_EVENT_COLUMNS,
@@ -114,6 +117,19 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
             "source": "synthetic",
             "deadline_us": 1000,
             "payload_size_bytes": 1200,
+        },
+        "propagation": {
+            "model": "log_distance_nakagami",
+        },
+        "background": {
+            "profile": "none",
+            "traffic": "none",
+            "correlation": {
+                "mode": "independent",
+            },
+            "obss": {
+                "profile": "none",
+            },
         },
         "predictionTelemetry": {
             "enabled": True,
@@ -222,6 +238,14 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
 
 
 class MatrixTests(unittest.TestCase):
+    def test_yaml_inheritance_rejects_cycles(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "a.yaml").write_text("extends: b.yaml\n")
+            (root / "b.yaml").write_text("extends: a.yaml\n")
+            with self.assertRaises(ValueError):
+                load_yaml(root / "a.yaml")
+
     def test_prediction_production_matrices_match_frozen_loads(self) -> None:
         loads = load_yaml(ROOT / "experiments/configs/prediction_loads.yaml")
         stage_a = expand_config(
@@ -230,8 +254,30 @@ class MatrixTests(unittest.TestCase):
         obss = expand_config(
             load_yaml(ROOT / "experiments/configs/prediction_obss.yaml")
         )
+        stage_a_smoke = expand_config(
+            load_yaml(
+                ROOT / "experiments/configs/prediction_dataset_smoke_stage_a.yaml"
+            )
+        )
+        obss_smoke = expand_config(
+            load_yaml(
+                ROOT / "experiments/configs/prediction_dataset_smoke_obss.yaml"
+            )
+        )
         self.assertEqual(len(stage_a), 320)
         self.assertEqual(len(obss), 96)
+        self.assertEqual(len(stage_a_smoke), 32)
+        self.assertEqual(len(obss_smoke), 4)
+        self.assertEqual({spec["seed"] for spec in stage_a_smoke}, {501})
+        self.assertEqual({spec["seed"] for spec in obss_smoke}, {601})
+        self.assertEqual(
+            {spec["config"]["stream"]["duration"] for spec in stage_a_smoke},
+            {5},
+        )
+        self.assertEqual(
+            {spec["config"]["stream"]["duration"] for spec in obss_smoke},
+            {10},
+        )
         for spec in stage_a + obss:
             prediction = spec["config"]["prediction"]
             self.assertTrue(prediction["prediction_telemetry_enabled"])
@@ -572,6 +618,117 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(group_key(first), group_key(second))
         second["config"]["background"]["obss"]["ul_min_rate_mbps"] = 1
         self.assertNotEqual(group_key(first), group_key(second))
+
+
+class PredictionDatasetTests(unittest.TestCase):
+    def test_builder_joins_labels_and_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = root / "run"
+            output = root / "dataset"
+            make_run(run, "dataset-run", seed=31)
+            add_prediction_sample(run, oracle_enabled=True)
+            manifest = build_dataset(
+                inputs=[run],
+                output_dir=output,
+                analysis_path=ROOT / "experiments/configs/prediction_analysis.yaml",
+                loads_path=ROOT / "experiments/configs/prediction_loads.yaml",
+                requested_format="csv",
+            )
+            self.assertEqual(manifest["counts"], {
+                "run_count": 1,
+                "run_group_count": 1,
+                "frame_count": 1,
+                "sample_count": 1,
+                "miss_count": 0,
+            })
+            with (output / "labelled_samples.csv").open(
+                newline="", encoding="utf-8"
+            ) as source:
+                rows = list(csv.DictReader(source))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["frame_complete"], "1")
+            self.assertEqual(rows[0]["frame_completion_time_ns"], "200000")
+            self.assertEqual(rows[0]["frame_latency_us"], "100")
+            self.assertEqual(rows[0]["deadline_miss"], "0")
+            self.assertEqual(rows[0]["scenario_name"], "stage_a_none")
+            self.assertEqual(rows[0]["miss_regime"], "unloaded")
+            self.assertEqual(rows[0]["frame_packets_not_acknowledged"], "1")
+            report = validate_dataset(
+                output,
+                ROOT / "experiments/configs/prediction_analysis.yaml",
+            )
+            self.assertEqual(report["status"], "PASS")
+            self.assertEqual(report["split_sufficiency_status"], "insufficient_data")
+
+    def test_validator_rejects_label_tampering(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = root / "run"
+            output = root / "dataset"
+            make_run(run, "dataset-run", seed=32)
+            add_prediction_sample(run)
+            build_dataset(
+                inputs=[run],
+                output_dir=output,
+                analysis_path=ROOT / "experiments/configs/prediction_analysis.yaml",
+                loads_path=ROOT / "experiments/configs/prediction_loads.yaml",
+                requested_format="csv",
+            )
+            dataset_path = output / "labelled_samples.csv"
+            with dataset_path.open(newline="", encoding="utf-8") as source:
+                reader = csv.DictReader(source)
+                rows = list(reader)
+                header = reader.fieldnames
+            self.assertIsNotNone(header)
+            rows[0]["deadline_miss"] = "1"
+            with dataset_path.open("w", newline="", encoding="utf-8") as output_file:
+                writer = csv.DictWriter(output_file, fieldnames=header)
+                writer.writeheader()
+                writer.writerows(rows)
+            manifest_path = output / "dataset_manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["dataset_sha256"] = sha256_file(dataset_path)
+            manifest_path.write_text(json.dumps(manifest))
+            with self.assertRaises(DatasetValidationError):
+                validate_dataset(
+                    output,
+                    ROOT / "experiments/configs/prediction_analysis.yaml",
+                )
+
+    def test_run_group_identity_ignores_selected_fixed_policy(self) -> None:
+        nominal = {
+            "topology": "dual_interface",
+            "policy": "fixed_link_0",
+            "background": {"background_profile": "none"},
+        }
+        config = {
+            "seed": 17,
+            "run": 3,
+            "topology": "dual_interface",
+            "policy": "fixed_link_0",
+            "background": {
+                "profile": "none",
+                "obss": {"profile": "none"},
+            },
+        }
+        build = {
+            "project_git_commit": "project",
+            "ns3_upstream_commit": "upstream",
+        }
+        left = make_run_group_id(
+            SourceRun(Path("/left"), Path("/"), nominal),
+            config,
+            build,
+        )
+        nominal["policy"] = "fixed_link_1"
+        config["policy"] = "fixed_link_1"
+        right = make_run_group_id(
+            SourceRun(Path("/right"), Path("/"), nominal),
+            config,
+            build,
+        )
+        self.assertEqual(left, right)
 
 
 class OutputTests(unittest.TestCase):

@@ -1,0 +1,10 @@
+extends: prediction_obss.yaml
+name: prediction-dataset-smoke-obss
+output_root: results/prediction_dataset_smoke_obss
+workers: 2
+
+base:
+  stream:
+    duration: 10
+
+seeds: [601]

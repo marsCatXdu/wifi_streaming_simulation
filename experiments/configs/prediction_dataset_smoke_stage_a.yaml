@@ -1,0 +1,10 @@
+extends: prediction_stage_a.yaml
+name: prediction-dataset-smoke-stage-a
+output_root: results/prediction_dataset_smoke_stage_a
+workers: 4
+
+base:
+  stream:
+    duration: 5
+
+seeds: [501]
