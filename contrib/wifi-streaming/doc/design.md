@@ -110,7 +110,8 @@ when requested, `prediction_events.csv`. Their causal contract, field
 dictionary, and validation workflow are defined in `prediction-telemetry.md`.
 Increment 1 verification is recorded in
 `prediction-telemetry-acceptance.md`. The offline join, label, provenance, and
-run-grouped split workflow is defined in `prediction-dataset.md`.
+run-grouped split workflow is defined in `prediction-dataset.md`; its
+pre-production smoke evidence is recorded in `prediction-dataset-smoke.md`.
 
 `resolved_config.json` records the effective stream, propagation, channel,
 rate, guard interval, queue, aggregation, Block Ack, retry, RTS/fragmentation,

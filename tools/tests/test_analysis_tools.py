@@ -660,6 +660,12 @@ class PredictionDatasetTests(unittest.TestCase):
             )
             self.assertEqual(report["status"], "PASS")
             self.assertEqual(report["split_sufficiency_status"], "insufficient_data")
+            self.assertEqual(
+                report["stratified_class_balance"]["scenario"]["stage_a_none"][
+                    "frame_count"
+                ],
+                1,
+            )
 
     def test_validator_rejects_label_tampering(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

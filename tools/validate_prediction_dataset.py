@@ -203,6 +203,56 @@ def _distribution_report(
     return missingness, numeric_quantiles, sorted(constant_features), suspicious
 
 
+def _stratified_class_balance(
+    rows: list[dict[str, str]],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    strata = {
+        "scenario": ("scenario_name",),
+        "selected_policy": ("selected_policy",),
+        "miss_regime": ("miss_regime",),
+        "scenario_policy_regime": (
+            "scenario_name",
+            "selected_policy",
+            "miss_regime",
+        ),
+    }
+    report: dict[str, dict[str, dict[str, Any]]] = {}
+    for stratum, columns in strata.items():
+        groups: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            key = "|".join(row[column] for column in columns)
+            entry = groups.setdefault(
+                key,
+                {
+                    "sample_count": 0,
+                    "frame_labels": {},
+                    "run_ids": set(),
+                    "run_group_ids": set(),
+                },
+            )
+            entry["sample_count"] += 1
+            entry["run_ids"].add(row["run_id"])
+            entry["run_group_ids"].add(row["run_group_id"])
+            frame_key = (row["run_id"], row["frame_id"])
+            label = _integer(row["deadline_miss"], "deadline_miss")
+            previous = entry["frame_labels"].setdefault(frame_key, label)
+            _require(previous == label, f"inconsistent frame label in {stratum}")
+        report[stratum] = {}
+        for key, entry in sorted(groups.items()):
+            labels = entry["frame_labels"]
+            misses = sum(labels.values())
+            frames = len(labels)
+            report[stratum][key] = {
+                "frame_count": frames,
+                "miss_count": misses,
+                "miss_rate": misses / frames if frames else 0.0,
+                "run_count": len(entry["run_ids"]),
+                "run_group_count": len(entry["run_group_ids"]),
+                "sample_count": entry["sample_count"],
+            }
+    return report
+
+
 def validate_dataset(
     dataset_dir: Path | str,
     analysis_path: Path | str | None = None,
@@ -647,6 +697,7 @@ def validate_dataset(
             "miss_count": miss_count,
             "miss_rate": miss_count / len(labels_by_frame),
         },
+        "stratified_class_balance": _stratified_class_balance(rows),
         "feature_support_mask_distribution": dict(sorted(mask_distribution.items())),
         "field_support_rates": support_rates,
         "missingness": missingness,
