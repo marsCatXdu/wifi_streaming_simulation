@@ -1102,7 +1102,6 @@ PredictionTelemetryCollector::NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiM
         NS_ABORT_MSG_IF(observedTag.pathId != pathId,
                         "Tagged MPDU dequeued on a different application path");
     }
-    const uint64_t nowNs = NowNs();
     const auto stableMpdu = GetStableMpdu(mpdu);
     const auto queued =
         std::find_if(path.queueEntries.begin(),
@@ -1341,8 +1340,8 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
                      [stableMpdu](const QueueEntry& entry) {
                          return entry.stableMpdu == stableMpdu;
                      });
-    NS_ABORT_MSG_IF(packet.enqueued && queued == path.queueEntries.end(),
-                    "Terminally dropped queued MPDU is absent from the queue mirror");
+    NS_ABORT_MSG_IF(packet.queued != (queued != path.queueEntries.end()),
+                    "Terminal-drop packet state disagrees with the queue mirror");
     if (!packet.macServiceBytes)
     {
         packet.macServiceBytes = mpdu->GetPacketSize();
@@ -1352,8 +1351,8 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
         packet.stableMpdu = stableMpdu;
     }
     packet.terminallyDropped = true;
-    // DroppedMpdu is emitted before queue Dequeue for terminal removal.
-    // Preserve occupancy until that authoritative queue trace arrives.
+    // DroppedMpdu can be emitted before or after the authoritative queue
+    // Dequeue trace. Preserve occupancy only when the mirrored entry remains.
     packet.queued = queued != path.queueEntries.end();
     ++frame.packetsTerminallyDropped;
     ++path.mpduTerminalDrops;

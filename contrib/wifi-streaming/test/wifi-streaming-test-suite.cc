@@ -894,17 +894,17 @@ class PredictionMpduAccountingTestCase : public TestCase
                             collector,
                             0,
                             mpdus[2]);
+        // Some queue-removal paths emit Dequeue before DroppedMpdu.
+        Simulator::Schedule(MicroSeconds(250),
+                            &PredictionTelemetryCollectorTestAccess::Dequeue,
+                            collector,
+                            0,
+                            mpdus[2]);
         Simulator::Schedule(MicroSeconds(250),
                             &PredictionTelemetryCollectorTestAccess::Drop,
                             collector,
                             0,
                             WIFI_MAC_DROP_EXPIRED_LIFETIME,
-                            mpdus[2]);
-        // DroppedMpdu precedes the authoritative queue removal trace.
-        Simulator::Schedule(MicroSeconds(250),
-                            &PredictionTelemetryCollectorTestAccess::Dequeue,
-                            collector,
-                            0,
                             mpdus[2]);
         Simulator::Schedule(MicroSeconds(100),
                             &PredictionTelemetryCollectorTestAccess::Enqueue,
@@ -927,6 +927,7 @@ class PredictionMpduAccountingTestCase : public TestCase
                             0,
                             WIFI_MAC_DROP_EXPIRED_LIFETIME,
                             mpdus[3]);
+        // Other paths emit DroppedMpdu before Dequeue.
         Simulator::Schedule(MicroSeconds(250),
                             &PredictionTelemetryCollectorTestAccess::Dequeue,
                             collector,

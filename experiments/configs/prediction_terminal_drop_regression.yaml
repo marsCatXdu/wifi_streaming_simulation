@@ -1,0 +1,21 @@
+extends: prediction_obss.yaml
+name: prediction-terminal-drop-regression
+output_root: results/prediction_terminal_drop_regression
+workers: 1
+
+base:
+  stream:
+    duration: 6
+
+seeds: [423]
+
+policies:
+  - name: fixed-link-1-obss-plus-legacy
+    config:
+      policy: fixed_link_1
+      background:
+        background_profile: legacy_mixed8
+        background_traffic: udp_random_onoff
+        background_rate_mbps: 2
+        random_on_mean_ms: 100
+        random_off_mean_ms: 100

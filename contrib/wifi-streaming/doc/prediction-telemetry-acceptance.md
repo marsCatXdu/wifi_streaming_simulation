@@ -562,3 +562,18 @@ required properties:
 
 No concrete failure condition requiring another specification revision was
 observed. Increment 2 may proceed against the frozen Revision 8 contracts.
+
+## Increment 2 terminal-drop ordering correction
+
+The first 60-second production attempt exposed a reproducible implementation
+defect that the short Increment 1 tests did not exercise. Depending on the
+queue-removal path, ns-3 may emit `Dequeue` either before or after
+`DroppedMpdu`. The collector incorrectly required every terminally dropped
+packet that had ever been enqueued to remain in its queue mirror. It therefore
+aborted when the authoritative `Dequeue` trace had already removed the packet.
+
+The correction does not change the frozen telemetry contract. It checks the
+packet's current `queued` state against current queue-mirror membership and
+supports both valid trace orders. The MPDU accounting test now exercises both
+orders. The module test suite passes, and the original OBSS-plus-legacy seed
+423 failure completes in the targeted six-second regression.
