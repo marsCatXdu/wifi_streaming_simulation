@@ -75,7 +75,7 @@ Each run receives:
 
 - `online_frame_scores.csv`, containing stage-local frozen model scores;
 - `online_replay_metrics.csv`, containing all threshold and budget results;
-- `online_replay_audit_events.csv`, containing representative frame decisions;
+- `online_replay_events.csv`, containing representative frame decisions;
 - `online_replay_run.json`, containing source checksums and provenance.
 
 The result root contains per-run and aggregate metrics, group-bootstrap

@@ -242,21 +242,25 @@ def fit_frozen_predictor(
             float(analysis["confidence_level"]),
         )["recall"]
         candidates.append((float("-inf") if recall is None else float(recall), candidate))
+        del fitted, score
     order = {name: index for index, name in enumerate(analysis["model_name_order"])}
     selection_recall, chosen = max(
         candidates, key=lambda item: (item[0], -order[item[1].name])
     )
+    del train_x, selection_x
     refit = train | selection
+    refit_x = _take_features(data, refit, names, degraded, f1_names)
     final = fit_pipeline(
         chosen,
-        _take_features(data, refit, names, degraded, f1_names),
+        refit_x,
         data.label[refit],
         categorical,
         int(analysis["analysis_seed"]),
     )
-    calibration_score = ranking_score(
-        final, _take_features(data, calibration, names, degraded, f1_names)
-    )
+    del refit_x
+    calibration_x = _take_features(data, calibration, names, degraded, f1_names)
+    calibration_score = ranking_score(final, calibration_x)
+    del calibration_x
     calibrator = fit_platt(
         calibration_score,
         data.label[calibration],

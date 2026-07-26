@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import json
 import os
 import resource
@@ -22,6 +23,7 @@ if str(TOOLS) not in sys.path:
 
 from evaluate_prediction import ROLES, _load_config, load_stage
 from prediction.features import build_feature_sets
+from prediction.metrics import topk_metrics
 from prediction.online_replay import (
     MODEL_BUNDLE_SCHEMA_VERSION,
     ModelBundle,
@@ -38,6 +40,7 @@ from prediction.online_replay import (
     write_model_bundle,
 )
 from prediction.online_reporting import (
+    plot_miss_outcomes,
     plot_recall_heatmap,
     plot_recall_resource_tradeoff,
     plot_warning_lead_cdf,
@@ -149,7 +152,9 @@ def train_bundle(args: argparse.Namespace) -> dict[str, Any]:
                 sets,
                 analysis,
             )
+            gc.collect()
         del data
+        gc.collect()
     if median_frame_size is None or p99_frame_size is None:
         raise AssertionError("T0 training statistics were not collected")
 
@@ -239,6 +244,46 @@ def _verify_run_is_5ghz(run: dict[str, Any]) -> None:
         raise ValueError(f"{run['run_id']}: path 1 is not 5 GHz")
 
 
+def _offline_topk_upper_bounds(
+    records: list[dict[str, Any]],
+    replay: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Compute explicit future-aware ranking bounds for comparison only."""
+    output = []
+    for role in replay["replay_split_roles"]:
+        role_rows = [row for row in records if row["split_role"] == role]
+        scenarios = sorted({row["scenario_name"] for row in role_rows})
+        for scenario in scenarios + ["__all_selected__"]:
+            scenario_rows = (
+                role_rows
+                if scenario == "__all_selected__"
+                else [row for row in role_rows if row["scenario_name"] == scenario]
+            )
+            for stage in replay["stages"]:
+                selected = [row for row in scenario_rows if row["stage"] == stage]
+                if not selected:
+                    continue
+                labels = np.asarray([row["deadline_miss"] for row in selected], dtype=np.int8)
+                scores = np.asarray([row["ranking_score"] for row in selected], dtype=float)
+                for budget in map(float, replay["budgets"]):
+                    output.append(
+                        {
+                            "bound_type": "future_aware_global_topk",
+                            "split_role": role,
+                            "scenario_name": scenario,
+                            "pipeline_id": "commodity_polling_1ms",
+                            "stage": stage,
+                            **topk_metrics(
+                                labels,
+                                scores,
+                                budget,
+                                float(replay["confidence_level"]),
+                            ),
+                        }
+                    )
+    return output
+
+
 def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     """Replay selected raw run directories and atomically publish results."""
     started = time.perf_counter()
@@ -266,6 +311,7 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
         plot_root.mkdir()
         all_metrics = []
         selected_audits = []
+        upper_bound_records = []
         completed = []
         for index, run in enumerate(selected, start=1):
             _verify_run_is_5ghz(run)
@@ -297,7 +343,7 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
             output = run_root / run["run_id"]
             output.mkdir()
             write_csv(output / "online_replay_metrics.csv", metrics)
-            write_csv(output / "online_replay_audit_events.csv", audits)
+            write_csv(output / "online_replay_events.csv", audits)
             if replay.get("write_frame_scores", False):
                 write_csv(output / "online_frame_scores.csv", scores)
             write_json(
@@ -315,6 +361,16 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
                 },
             )
             all_metrics.extend(metrics)
+            upper_bound_records.extend(
+                {
+                    **row,
+                    "deadline_miss": labels[row["frame_id"]],
+                    "split_role": run["split_role"],
+                    "scenario_name": run["scenario_name"],
+                }
+                for row in scores
+                if row["pipeline_id"] == "commodity_polling_1ms"
+            )
             selected_audits.extend(
                 row
                 for row in audits
@@ -331,6 +387,8 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
         )
         write_csv(staging / "per_run_metrics.csv", all_metrics)
         write_csv(staging / "aggregate_metrics.csv", aggregate)
+        upper_bounds = _offline_topk_upper_bounds(upper_bound_records, replay)
+        write_csv(staging / "offline_topk_upper_bound.csv", upper_bounds)
         for role in replay["replay_split_roles"]:
             for budget_kind in replay["budget_kinds"]:
                 plot_recall_heatmap(
@@ -339,11 +397,25 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
                     role,
                     budget_kind,
                 )
-            plot_recall_resource_tradeoff(
-                plot_root / f"{role}_recall_action_tradeoff.png",
-                aggregate,
-                role,
-            )
+                plot_recall_heatmap(
+                    plot_root / f"{role}_{budget_kind}_precision_heatmap.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                    metric="precision",
+                )
+                plot_recall_resource_tradeoff(
+                    plot_root / f"{role}_{budget_kind}_recall_tradeoff.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                )
+                plot_miss_outcomes(
+                    plot_root / f"{role}_{budget_kind}_miss_outcomes.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                )
         plot_warning_lead_cdf(
             plot_root / "warning_lead_time_cdf.png",
             selected_audits,
@@ -352,6 +424,7 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
             staging / "online_replay_report.md",
             aggregate,
             len(completed),
+            upper_bounds,
         )
         result_manifest = {
             "online_replay_schema_version": replay["online_replay_schema_version"],
