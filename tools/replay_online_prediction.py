@@ -37,6 +37,12 @@ from prediction.online_replay import (
     write_json,
     write_model_bundle,
 )
+from prediction.online_reporting import (
+    plot_recall_heatmap,
+    plot_recall_resource_tradeoff,
+    plot_warning_lead_cdf,
+    write_replay_report,
+)
 
 
 def _json(path: Path) -> dict[str, Any]:
@@ -256,7 +262,10 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     def publish(staging: Path) -> dict[str, Any]:
         run_root = staging / "runs"
         run_root.mkdir()
+        plot_root = staging / "plots"
+        plot_root.mkdir()
         all_metrics = []
+        selected_audits = []
         completed = []
         for index, run in enumerate(selected, start=1):
             _verify_run_is_5ghz(run)
@@ -306,10 +315,44 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
                 },
             )
             all_metrics.extend(metrics)
+            selected_audits.extend(
+                row
+                for row in audits
+                if row["decision"] == "action"
+                and row["pipeline_id"] == "commodity_polling_1ms"
+                and row["decision_policy"] == "sequential"
+            )
             completed.append(run["run_id"])
-        aggregate = aggregate_metrics(all_metrics)
+        aggregate = aggregate_metrics(
+            all_metrics,
+            confidence=float(replay["confidence_level"]),
+            bootstrap_replicates=int(replay["bootstrap_replicates"]),
+            bootstrap_seed=int(replay["bootstrap_seed"]),
+        )
         write_csv(staging / "per_run_metrics.csv", all_metrics)
         write_csv(staging / "aggregate_metrics.csv", aggregate)
+        for role in replay["replay_split_roles"]:
+            for budget_kind in replay["budget_kinds"]:
+                plot_recall_heatmap(
+                    plot_root / f"{role}_{budget_kind}_recall_heatmap.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                )
+            plot_recall_resource_tradeoff(
+                plot_root / f"{role}_recall_action_tradeoff.png",
+                aggregate,
+                role,
+            )
+        plot_warning_lead_cdf(
+            plot_root / "warning_lead_time_cdf.png",
+            selected_audits,
+        )
+        write_replay_report(
+            staging / "online_replay_report.md",
+            aggregate,
+            len(completed),
+        )
         result_manifest = {
             "online_replay_schema_version": replay["online_replay_schema_version"],
             "replay_config": str(replay_path),

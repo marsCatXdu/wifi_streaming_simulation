@@ -429,12 +429,18 @@ def _finalize_counts(row: dict[str, Any]) -> dict[str, Any]:
     misses = row["eligible_misses"]
     actions = row["actions"]
     frames = row["eligible_frames"]
+    nonmisses = frames - misses
     source_bytes = row["eligible_source_bytes"]
     row.update(
         {
             "recall": row["true_positive_actions"] / misses if misses else None,
             "precision": row["true_positive_actions"] / actions if actions else None,
-            "false_alarm_rate": row["false_positive_actions"] / actions if actions else None,
+            "false_positive_rate": row["false_positive_actions"] / nonmisses
+            if nonmisses
+            else None,
+            "false_action_fraction": row["false_positive_actions"] / actions
+            if actions
+            else None,
             "realized_action_rate": actions / frames if frames else None,
             "realized_byte_overhead": row["action_bytes"] / source_bytes
             if source_bytes
@@ -612,7 +618,68 @@ def write_csv(path: Path, rows: Iterable[dict[str, Any]]) -> None:
         )
 
 
-def aggregate_metrics(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _bootstrap_intervals(
+    sources: list[dict[str, Any]],
+    confidence: float,
+    replicates: int,
+    seed: int,
+) -> dict[str, float | None]:
+    """Return run-group bootstrap intervals for operational ratios."""
+    by_group: dict[str, dict[str, int]] = {}
+    for source in sources:
+        target = by_group.setdefault(
+            source["run_group_id"], {name: 0 for name in COUNT_FIELDS}
+        )
+        for name in COUNT_FIELDS:
+            target[name] += int(source[name])
+    groups = sorted(by_group)
+    if not groups or replicates <= 0:
+        return {}
+    values = np.asarray(
+        [[by_group[group][name] for name in COUNT_FIELDS] for group in groups],
+        dtype=np.float64,
+    )
+    index = {name: position for position, name in enumerate(COUNT_FIELDS)}
+    rng = np.random.default_rng(seed)
+    sampled = rng.integers(0, len(groups), size=(replicates, len(groups)))
+    totals = values[sampled].sum(axis=1)
+    definitions = {
+        "recall": ("true_positive_actions", "eligible_misses"),
+        "precision": ("true_positive_actions", "actions"),
+        "false_action_fraction": ("false_positive_actions", "actions"),
+        "realized_action_rate": ("actions", "eligible_frames"),
+        "realized_byte_overhead": ("action_bytes", "eligible_source_bytes"),
+        "useful_lead_recall": ("useful_lead_true_positives", "eligible_misses"),
+    }
+    alpha = 1 - confidence
+    result: dict[str, float | None] = {}
+    for metric, (numerator, denominator) in definitions.items():
+        den = totals[:, index[denominator]]
+        ratio = np.divide(
+            totals[:, index[numerator]],
+            den,
+            out=np.full(replicates, np.nan),
+            where=den > 0,
+        )
+        finite = ratio[np.isfinite(ratio)]
+        if len(finite):
+            low, high = np.quantile(
+                finite, [alpha / 2, 1 - alpha / 2], method="linear"
+            )
+            result[f"{metric}_ci_lower"] = float(low)
+            result[f"{metric}_ci_upper"] = float(high)
+        else:
+            result[f"{metric}_ci_lower"] = None
+            result[f"{metric}_ci_upper"] = None
+    return result
+
+
+def aggregate_metrics(
+    rows: list[dict[str, Any]],
+    confidence: float = 0.95,
+    bootstrap_replicates: int = 0,
+    bootstrap_seed: int = 0,
+) -> list[dict[str, Any]]:
     """Combine replay counts across any selected set of individual runs."""
     dimensions = (
         "split_role",
@@ -636,15 +703,28 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     **{name: 0 for name in COUNT_FIELDS},
                     "run_count": 0,
                     "run_group_ids": set(),
+                    "_sources": [],
                 },
             )
             target["run_count"] += 1
             target["run_group_ids"].add(source["run_group_id"])
+            target["_sources"].append(source)
             for name in COUNT_FIELDS:
                 target[name] += int(source[name])
     result = []
     for target in grouped.values():
         target["run_group_count"] = len(target.pop("run_group_ids"))
+        sources = target.pop("_sources")
+        key = "|".join(str(target[name]) for name in dimensions)
+        key_seed = int.from_bytes(hashlib.sha256(key.encode()).digest()[:4], "big")
+        target.update(
+            _bootstrap_intervals(
+                sources,
+                confidence,
+                bootstrap_replicates,
+                bootstrap_seed + key_seed,
+            )
+        )
         result.append(_finalize_counts(target))
     return sorted(result, key=lambda row: tuple(str(row[name]) for name in dimensions))
 

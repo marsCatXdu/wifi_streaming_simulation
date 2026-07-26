@@ -183,7 +183,12 @@ class ReplayTests(unittest.TestCase):
             run_metadata=self.metadata,
         )
         second = [dict(row, run_id="run-2", run_group_id="group-2") for row in first]
-        aggregate = aggregate_metrics(first + second)
+        aggregate = aggregate_metrics(
+            first + second,
+            confidence=0.95,
+            bootstrap_replicates=20,
+            bootstrap_seed=7,
+        )
         combined = next(
             row
             for row in aggregate
@@ -194,6 +199,8 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(combined["run_count"], 2)
         self.assertEqual(combined["run_group_count"], 2)
         self.assertEqual(combined["eligible_frames"], 12)
+        self.assertIsNotNone(combined["recall_ci_lower"])
+        self.assertIsNotNone(combined["recall_ci_upper"])
 
 
 class ConfigurationTests(unittest.TestCase):
