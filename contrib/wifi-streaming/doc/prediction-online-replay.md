@@ -69,6 +69,19 @@ provided for bounded smoke tests. The aggregate is always built from exactly
 the selected per-run results, so later analysis may combine part or all of the
 runs without changing the replay rule.
 
+Re-aggregate any subset without rerunning model inference:
+
+```bash
+python3 tools/replay_online_prediction.py aggregate \
+    results/prediction_online_replay_v1 \
+    --replay-config experiments/configs/prediction_online_replay.yaml \
+    --run-id RUN_ID_A \
+    --run-id RUN_ID_B \
+    --output-dir results/prediction_online_replay_subset
+```
+
+Omit `--run-id` to combine every completed run under the replay root.
+
 ## Outputs
 
 Each run receives:

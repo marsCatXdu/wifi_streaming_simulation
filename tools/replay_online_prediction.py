@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import gc
 import json
 import os
@@ -53,6 +54,11 @@ def _json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"{path}: JSON root must be an object")
     return value
+
+
+def _csv(path: Path) -> list[dict[str, str]]:
+    with path.open(newline="", encoding="utf-8") as source:
+        return list(csv.DictReader(source))
 
 
 def _atomic_directory(destination: Path, operation: Any) -> Any:
@@ -284,6 +290,67 @@ def _offline_topk_upper_bounds(
     return output
 
 
+def _write_aggregate_outputs(
+    output: Path,
+    all_metrics: list[dict[str, Any]],
+    upper_bound_records: list[dict[str, Any]],
+    selected_audits: list[dict[str, Any]],
+    replay: dict[str, Any],
+    run_count: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Write aggregation artifacts for freshly or previously replayed runs."""
+    plot_root = output / "plots"
+    plot_root.mkdir()
+    aggregate = aggregate_metrics(
+        all_metrics,
+        confidence=float(replay["confidence_level"]),
+        bootstrap_replicates=int(replay["bootstrap_replicates"]),
+        bootstrap_seed=int(replay["bootstrap_seed"]),
+    )
+    write_csv(output / "per_run_metrics.csv", all_metrics)
+    write_csv(output / "aggregate_metrics.csv", aggregate)
+    upper_bounds = _offline_topk_upper_bounds(upper_bound_records, replay)
+    write_csv(output / "offline_topk_upper_bound.csv", upper_bounds)
+    for role in replay["replay_split_roles"]:
+        for budget_kind in replay["budget_kinds"]:
+            plot_recall_heatmap(
+                plot_root / f"{role}_{budget_kind}_recall_heatmap.png",
+                aggregate,
+                role,
+                budget_kind,
+            )
+            plot_recall_heatmap(
+                plot_root / f"{role}_{budget_kind}_precision_heatmap.png",
+                aggregate,
+                role,
+                budget_kind,
+                metric="precision",
+            )
+            plot_recall_resource_tradeoff(
+                plot_root / f"{role}_{budget_kind}_recall_tradeoff.png",
+                aggregate,
+                role,
+                budget_kind,
+            )
+            plot_miss_outcomes(
+                plot_root / f"{role}_{budget_kind}_miss_outcomes.png",
+                aggregate,
+                role,
+                budget_kind,
+            )
+    plot_warning_lead_cdf(
+        plot_root / "warning_lead_time_cdf.png",
+        selected_audits,
+    )
+    write_replay_report(
+        output / "online_replay_report.md",
+        aggregate,
+        run_count,
+        upper_bounds,
+    )
+    return aggregate, upper_bounds
+
+
 def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     """Replay selected raw run directories and atomically publish results."""
     started = time.perf_counter()
@@ -307,8 +374,6 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     def publish(staging: Path) -> dict[str, Any]:
         run_root = staging / "runs"
         run_root.mkdir()
-        plot_root = staging / "plots"
-        plot_root.mkdir()
         all_metrics = []
         selected_audits = []
         upper_bound_records = []
@@ -379,52 +444,13 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
                 and row["decision_policy"] == "sequential"
             )
             completed.append(run["run_id"])
-        aggregate = aggregate_metrics(
+        aggregate, _ = _write_aggregate_outputs(
+            staging,
             all_metrics,
-            confidence=float(replay["confidence_level"]),
-            bootstrap_replicates=int(replay["bootstrap_replicates"]),
-            bootstrap_seed=int(replay["bootstrap_seed"]),
-        )
-        write_csv(staging / "per_run_metrics.csv", all_metrics)
-        write_csv(staging / "aggregate_metrics.csv", aggregate)
-        upper_bounds = _offline_topk_upper_bounds(upper_bound_records, replay)
-        write_csv(staging / "offline_topk_upper_bound.csv", upper_bounds)
-        for role in replay["replay_split_roles"]:
-            for budget_kind in replay["budget_kinds"]:
-                plot_recall_heatmap(
-                    plot_root / f"{role}_{budget_kind}_recall_heatmap.png",
-                    aggregate,
-                    role,
-                    budget_kind,
-                )
-                plot_recall_heatmap(
-                    plot_root / f"{role}_{budget_kind}_precision_heatmap.png",
-                    aggregate,
-                    role,
-                    budget_kind,
-                    metric="precision",
-                )
-                plot_recall_resource_tradeoff(
-                    plot_root / f"{role}_{budget_kind}_recall_tradeoff.png",
-                    aggregate,
-                    role,
-                    budget_kind,
-                )
-                plot_miss_outcomes(
-                    plot_root / f"{role}_{budget_kind}_miss_outcomes.png",
-                    aggregate,
-                    role,
-                    budget_kind,
-                )
-        plot_warning_lead_cdf(
-            plot_root / "warning_lead_time_cdf.png",
+            upper_bound_records,
             selected_audits,
-        )
-        write_replay_report(
-            staging / "online_replay_report.md",
-            aggregate,
+            replay,
             len(completed),
-            upper_bounds,
         )
         result_manifest = {
             "online_replay_schema_version": replay["online_replay_schema_version"],
@@ -452,6 +478,80 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     return _atomic_directory(args.output_dir, publish)
 
 
+def aggregate_existing(args: argparse.Namespace) -> dict[str, Any]:
+    """Aggregate any selected subset of previously replayed run directories."""
+    started = time.perf_counter()
+    replay_root = args.replay_root.resolve()
+    replay_path = args.replay_config.resolve()
+    replay = load_replay_config(replay_path)
+    run_root = replay_root / "runs"
+    available = sorted(path for path in run_root.iterdir() if path.is_dir())
+    requested = set(args.run_id or [])
+    selected = [
+        path for path in available if not requested or path.name in requested
+    ]
+    if requested - {path.name for path in selected}:
+        raise ValueError(
+            f"requested replay run IDs do not exist: "
+            f"{sorted(requested - {path.name for path in selected})}"
+        )
+    if not selected:
+        raise ValueError("no existing replay runs selected")
+
+    def publish(staging: Path) -> dict[str, Any]:
+        all_metrics: list[dict[str, Any]] = []
+        upper_bound_records: list[dict[str, Any]] = []
+        selected_audits: list[dict[str, Any]] = []
+        for run_output in selected:
+            run_manifest = _json(run_output / "online_replay_run.json")
+            all_metrics.extend(_csv(run_output / "online_replay_metrics.csv"))
+            selected_audits.extend(
+                row
+                for row in _csv(run_output / "online_replay_events.csv")
+                if row["decision"] == "action"
+                and row["pipeline_id"] == "commodity_polling_1ms"
+                and row["decision_policy"] == "sequential"
+            )
+            labels = read_frame_labels(Path(run_manifest["source_directory"]))
+            upper_bound_records.extend(
+                {
+                    **row,
+                    "frame_id": int(row["frame_id"]),
+                    "ranking_score": float(row["ranking_score"]),
+                    "deadline_miss": labels[int(row["frame_id"])],
+                    "split_role": run_manifest["split_role"],
+                    "scenario_name": run_manifest["scenario_name"],
+                }
+                for row in _csv(run_output / "online_frame_scores.csv")
+                if row["pipeline_id"] == "commodity_polling_1ms"
+            )
+        aggregate, _ = _write_aggregate_outputs(
+            staging,
+            all_metrics,
+            upper_bound_records,
+            selected_audits,
+            replay,
+            len(selected),
+        )
+        result = {
+            "online_replay_schema_version": replay["online_replay_schema_version"],
+            "source_replay_root": str(replay_root),
+            "replay_config": str(replay_path),
+            "replay_config_sha256": sha256_file(replay_path),
+            "run_count": len(selected),
+            "run_ids": [path.name for path in selected],
+            "aggregate_metric_rows": len(aggregate),
+            "runtime_seconds": time.perf_counter() - started,
+            "interpretation": (
+                "This aggregate contains only the explicitly selected completed replays."
+            ),
+        }
+        write_json(staging / "online_replay_aggregate_manifest.json", result)
+        return result
+
+    return _atomic_directory(args.output_dir, publish)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -470,6 +570,15 @@ def parse_args() -> argparse.Namespace:
     replay.add_argument("--output-dir", required=True, type=Path)
     replay.add_argument("--run-id", action="append")
     replay.add_argument("--max-runs", type=int)
+
+    aggregate = subparsers.add_parser(
+        "aggregate",
+        help="combine a subset of previously replayed individual runs",
+    )
+    aggregate.add_argument("replay_root", type=Path)
+    aggregate.add_argument("--replay-config", required=True, type=Path)
+    aggregate.add_argument("--output-dir", required=True, type=Path)
+    aggregate.add_argument("--run-id", action="append")
     return parser.parse_args()
 
 
@@ -478,7 +587,12 @@ def main() -> None:
     if getattr(args, "max_runs", None) is not None and args.max_runs <= 0:
         raise SystemExit("error: --max-runs must be positive")
     try:
-        result = train_bundle(args) if args.command == "train" else replay_runs(args)
+        if args.command == "train":
+            result = train_bundle(args)
+        elif args.command == "replay":
+            result = replay_runs(args)
+        else:
+            result = aggregate_existing(args)
     except (OSError, ValueError) as error:
         raise SystemExit(f"error: {error}") from error
     print(json.dumps(result, indent=2, sort_keys=True))
