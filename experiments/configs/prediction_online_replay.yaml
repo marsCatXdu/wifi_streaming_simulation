@@ -1,0 +1,59 @@
+# Causal offline replay contract for the 5 GHz fixed-link runs.
+online_replay_schema_version: 1
+analysis_schema_version: 1
+primary_link: 1
+primary_band: 5GHz
+analysis_config: prediction_analysis.yaml
+
+stages: [T0, T1, T2, T4]
+decision_policies:
+  - policy_id: fixed_t0
+    stages: [T0]
+  - policy_id: fixed_t1
+    stages: [T1]
+  - policy_id: sequential
+    stages: [T0, T1, T2, T4]
+
+pipelines:
+  - pipeline_id: commodity_polling_1ms
+    feature_set: F0+F1-degraded
+    degradation_profile: polling_1ms
+    evidence_role: primary
+  - pipeline_id: exportable_driver_polling_1ms
+    feature_set: F0+F1-degraded+F2-exportable
+    degradation_profile: polling_1ms
+    evidence_role: sensitivity
+  - pipeline_id: ideal_telemetry_upper_bound
+    feature_set: F0+F1-ideal+F2
+    degradation_profile:
+    evidence_role: upper_bound
+
+probability_thresholds: [0.05, 0.10, 0.20, 0.30, 0.50, 0.70, 0.90]
+budgets: [0.01, 0.02, 0.05, 0.10, 0.20, 0.50, 1.00]
+budget_kinds: [frames, bytes]
+
+token_bucket:
+  initial_fill: full
+  burst_horizon_frames: 30
+  minimum_frame_capacity: 1.0
+  byte_capacity_minimum_quantile: 0.99
+
+replay_split_roles:
+  - in_distribution_test
+  - out_of_distribution_test
+minimum_useful_lead_time_us: 5000
+confidence_level: 0.95
+bootstrap_replicates: 2000
+bootstrap_seed: 20260726
+
+# Full per-frame score files are useful for auditing and are much smaller than
+# materializing every threshold x budget decision. Detailed decision events are
+# written only for these representative operating points.
+write_frame_scores: true
+audit_operating_points:
+  - probability_threshold: 0.20
+    budget_kind: frames
+    budget: 0.10
+  - probability_threshold: 0.20
+    budget_kind: bytes
+    budget: 0.10
