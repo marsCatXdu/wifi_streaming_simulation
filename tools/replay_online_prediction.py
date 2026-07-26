@@ -312,32 +312,53 @@ def _write_aggregate_outputs(
     upper_bounds = _offline_topk_upper_bounds(upper_bound_records, replay)
     write_csv(output / "offline_topk_upper_bound.csv", upper_bounds)
     for role in replay["replay_split_roles"]:
-        for budget_kind in replay["budget_kinds"]:
-            plot_recall_heatmap(
-                plot_root / f"{role}_{budget_kind}_recall_heatmap.png",
-                aggregate,
-                role,
-                budget_kind,
+        scenarios = ["__all_selected__"]
+        if role == "out_of_distribution_test":
+            scenarios += sorted(
+                {
+                    row["scenario_name"]
+                    for row in aggregate
+                    if row["split_role"] == role
+                    and row["scenario_name"] != "__all_selected__"
+                }
             )
-            plot_recall_heatmap(
-                plot_root / f"{role}_{budget_kind}_precision_heatmap.png",
-                aggregate,
-                role,
-                budget_kind,
-                metric="precision",
+        for scenario_name in scenarios:
+            scenario_slug = (
+                "all_selected"
+                if scenario_name == "__all_selected__"
+                else scenario_name
             )
-            plot_recall_resource_tradeoff(
-                plot_root / f"{role}_{budget_kind}_recall_tradeoff.png",
-                aggregate,
-                role,
-                budget_kind,
-            )
-            plot_miss_outcomes(
-                plot_root / f"{role}_{budget_kind}_miss_outcomes.png",
-                aggregate,
-                role,
-                budget_kind,
-            )
+            prefix = f"{role}_{scenario_slug}"
+            for budget_kind in replay["budget_kinds"]:
+                plot_recall_heatmap(
+                    plot_root / f"{prefix}_{budget_kind}_recall_heatmap.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                    scenario_name=scenario_name,
+                )
+                plot_recall_heatmap(
+                    plot_root / f"{prefix}_{budget_kind}_precision_heatmap.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                    metric="precision",
+                    scenario_name=scenario_name,
+                )
+                plot_recall_resource_tradeoff(
+                    plot_root / f"{prefix}_{budget_kind}_recall_tradeoff.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                    scenario_name=scenario_name,
+                )
+                plot_miss_outcomes(
+                    plot_root / f"{prefix}_{budget_kind}_miss_outcomes.png",
+                    aggregate,
+                    role,
+                    budget_kind,
+                    scenario_name=scenario_name,
+                )
     plot_warning_lead_cdf(
         plot_root / "warning_lead_time_cdf.png",
         selected_audits,
