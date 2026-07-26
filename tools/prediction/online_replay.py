@@ -75,8 +75,13 @@ def load_replay_config(path: Path) -> dict[str, Any]:
         raise ValueError("probability thresholds must be unique, sorted, and in [0, 1]")
     if budgets != sorted(set(budgets)) or not all(0 < item <= 1 for item in budgets):
         raise ValueError("budgets must be unique, sorted, and in (0, 1]")
-    if set(value["budget_kinds"]) != {"frames", "bytes"}:
-        raise ValueError("budget_kinds must contain frames and bytes")
+    budget_kinds = value["budget_kinds"]
+    if (
+        not budget_kinds
+        or len(budget_kinds) != len(set(budget_kinds))
+        or not set(budget_kinds) <= {"frames", "bytes"}
+    ):
+        raise ValueError("budget_kinds must be a unique nonempty subset of frames and bytes")
     policies = value["decision_policies"]
     for policy in policies:
         if not policy.get("stages") or not set(policy["stages"]) <= set(stages):

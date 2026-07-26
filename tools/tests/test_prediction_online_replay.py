@@ -21,7 +21,10 @@ from prediction.online_replay import (
     replay_scores,
     score_individual_run,
 )
-from replay_online_prediction import _verify_run_is_5ghz
+from replay_online_prediction import (
+    _bundle_matches_predictor_contract,
+    _verify_run_is_5ghz,
+)
 
 
 class StubPipeline:
@@ -270,6 +273,17 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "path 1"):
                 load_replay_config(path)
 
+    def test_frame_only_budget_grid_is_valid(self) -> None:
+        path = (
+            TOOLS.parent
+            / "experiments"
+            / "configs"
+            / "prediction_online_replay_frame30.yaml"
+        )
+        value = load_replay_config(path)
+        self.assertEqual(value["budget_kinds"], ["frames"])
+        self.assertIn(0.3, value["budgets"])
+
     def test_resolved_run_must_map_path_1_to_5ghz(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -366,6 +380,16 @@ class RawRunScoringTests(unittest.TestCase):
             self.assertEqual(scores[0]["frame_id"], 7)
             self.assertAlmostEqual(scores[0]["calibrated_probability"], 0.8)
             self.assertFalse((root / "frames.csv").exists())
+
+            replay = replay_config()
+            replay["stages"] = ["T0"]
+            replay["pipelines"][0]["pipeline_id"] = "stub"
+            replay["pipelines"][0]["feature_set"] = "F0"
+            replay["pipelines"][0]["degradation_profile"] = None
+            replay["pipelines"][0]["evidence_role"] = "primary"
+            self.assertTrue(_bundle_matches_predictor_contract(bundle, replay))
+            replay["pipelines"][0]["feature_set"] = "F0+F1-degraded"
+            self.assertFalse(_bundle_matches_predictor_contract(bundle, replay))
 
 
 if __name__ == "__main__":

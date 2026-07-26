@@ -250,6 +250,39 @@ def _verify_run_is_5ghz(run: dict[str, Any]) -> None:
         raise ValueError(f"{run['run_id']}: path 1 is not 5 GHz")
 
 
+def _bundle_matches_predictor_contract(
+    bundle: ModelBundle,
+    replay: dict[str, Any],
+) -> bool:
+    """Allow a new threshold/budget grid with unchanged frozen predictors."""
+    if bundle.primary_link != replay["primary_link"]:
+        return False
+    specs = {item["pipeline_id"]: item for item in replay["pipelines"]}
+    expected = {
+        (pipeline_id, stage)
+        for pipeline_id in specs
+        for stage in replay["stages"]
+    }
+    if set(bundle.predictors) != expected:
+        return False
+    for (pipeline_id, stage), predictor in bundle.predictors.items():
+        spec = specs[pipeline_id]
+        profile = spec.get("degradation_profile")
+        actual_profile = (
+            None
+            if predictor.degradation_profile is None
+            else predictor.degradation_profile.get("profile_id")
+        )
+        if (
+            predictor.stage != stage
+            or predictor.feature_set != spec["feature_set"]
+            or predictor.evidence_role != spec["evidence_role"]
+            or actual_profile != profile
+        ):
+            return False
+    return True
+
+
 def _offline_topk_upper_bounds(
     records: list[dict[str, Any]],
     replay: dict[str, Any],
@@ -299,6 +332,8 @@ def _write_aggregate_outputs(
     run_count: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Write aggregation artifacts for freshly or previously replayed runs."""
+    report_threshold = float(replay.get("report_probability_threshold", 0.2))
+    report_budget = float(replay.get("report_budget", 0.1))
     plot_root = output / "plots"
     plot_root.mkdir()
     aggregate = aggregate_metrics(
@@ -358,16 +393,21 @@ def _write_aggregate_outputs(
                     role,
                     budget_kind,
                     scenario_name=scenario_name,
+                    probability_threshold=report_threshold,
                 )
     plot_warning_lead_cdf(
         plot_root / "warning_lead_time_cdf.png",
         selected_audits,
+        probability_threshold=report_threshold,
+        budget=report_budget,
     )
     write_replay_report(
         output / "online_replay_report.md",
         aggregate,
         run_count,
         upper_bounds,
+        probability_threshold=report_threshold,
+        budget=report_budget,
     )
     return aggregate, upper_bounds
 
@@ -385,8 +425,11 @@ def replay_runs(args: argparse.Namespace) -> dict[str, Any]:
     if sha256_file(bundle_path) != bundle_manifest["model_sha256"]:
         raise ValueError("model bundle checksum mismatch")
     bundle = read_model_bundle(bundle_path)
-    if bundle.replay_config_sha256 != sha256_file(replay_path):
-        raise ValueError("model bundle was trained for a different replay contract")
+    if (
+        bundle.replay_config_sha256 != sha256_file(replay_path)
+        and not _bundle_matches_predictor_contract(bundle, replay)
+    ):
+        raise ValueError("model bundle was trained for different predictor inputs")
     if bundle.dataset_sha256 != dataset_manifest["dataset_sha256"]:
         raise ValueError("model bundle and dataset manifest differ")
     requested = set(args.run_id or [])

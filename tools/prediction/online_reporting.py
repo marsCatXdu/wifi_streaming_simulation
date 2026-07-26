@@ -133,12 +133,13 @@ def plot_miss_outcomes(
     split_role: str,
     budget_kind: str,
     scenario_name: str = "__all_selected__",
+    probability_threshold: float = 0.2,
 ) -> None:
     """Separate detected, budget-suppressed, and low-score misses."""
     selected = [
         row
         for row in _primary_rows(rows, split_role, budget_kind, scenario_name)
-        if float(row["probability_threshold"]) == 0.2
+        if float(row["probability_threshold"]) == probability_threshold
     ]
     selected.sort(key=lambda row: float(row["budget"]))
     if not selected:
@@ -167,7 +168,7 @@ def plot_miss_outcomes(
     axis.set_ylim(0, 1)
     axis.legend()
     axis.set_title(
-        f"5 GHz miss disposition at risk threshold 0.2: "
+        f"5 GHz miss disposition at risk threshold {probability_threshold:g}: "
         f"{split_role.replace('_', ' ')} / {scenario_name.replace('_', ' ')}"
     )
     fig.tight_layout()
@@ -175,7 +176,12 @@ def plot_miss_outcomes(
     plt.close(fig)
 
 
-def plot_warning_lead_cdf(path: Path, audit_rows: list[dict[str, Any]]) -> None:
+def plot_warning_lead_cdf(
+    path: Path,
+    audit_rows: list[dict[str, Any]],
+    probability_threshold: float = 0.2,
+    budget: float = 0.1,
+) -> None:
     """Plot warning lead time for representative successful actions."""
     fig, axis = plt.subplots(figsize=(8, 5))
     plotted = False
@@ -187,8 +193,8 @@ def plot_warning_lead_cdf(path: Path, audit_rows: list[dict[str, Any]]) -> None:
             and row["pipeline_id"] == "commodity_polling_1ms"
             and row["decision_policy"] == "sequential"
             and row["budget_kind"] == "frames"
-            and float(row["budget"]) == 0.1
-            and float(row["probability_threshold"]) == 0.2
+            and float(row["budget"]) == budget
+            and float(row["probability_threshold"]) == probability_threshold
             and row["decision"] == "action"
         )
         if values:
@@ -217,6 +223,8 @@ def write_replay_report(
     rows: list[dict[str, Any]],
     run_count: int,
     upper_bounds: list[dict[str, Any]],
+    probability_threshold: float = 0.2,
+    budget: float = 0.1,
 ) -> None:
     """Write a compact report without claiming hypothetical actions succeed."""
     lines = [
@@ -245,8 +253,8 @@ def write_replay_report(
         for row in representative
         if row["pipeline_id"] == "commodity_polling_1ms"
         and row["decision_policy"] == "sequential"
-        and float(row["probability_threshold"]) == 0.2
-        and float(row["budget"]) == 0.1
+        and float(row["probability_threshold"]) == probability_threshold
+        and float(row["budget"]) == budget
     ]
     for row in sorted(
         representative,
@@ -277,19 +285,20 @@ def write_replay_report(
         )
     lines += [
         "",
-        "This table uses the predeclared probability threshold 0.2 and budget 10%.",
+        f"This table uses the predeclared probability threshold "
+        f"{probability_threshold:g} and budget {100 * budget:g}%.",
         "The heatmaps report every threshold and budget combination; no test-set",
         "operating point is promoted as a newly tuned deployment threshold.",
         "",
         "## Offline ranking upper bound",
         "",
-        "| Split | Stage | Global Top-10% recall |",
+        f"| Split | Stage | Global Top-{100 * budget:g}% recall |",
         "|---|---|---:|",
     ]
     for row in upper_bounds:
         if (
             row["scenario_name"] == "__all_selected__"
-            and float(row["budget"]) == 0.1
+            and float(row["budget"]) == budget
             and row["stage"] in {"T0", "T1"}
         ):
             recall = row["recall"]
