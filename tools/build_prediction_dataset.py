@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import sys
 import tempfile
 from collections import defaultdict
@@ -27,6 +28,8 @@ from prediction_dataset import (
     derive_age,
     discover_source_runs,
     feature_dictionary,
+    csv_header,
+    iter_csv,
     load_regime,
     make_run_group_id,
     read_csv,
@@ -127,7 +130,7 @@ def _split_groups(
 
 def _write_dataset(
     output_dir: Path,
-    rows: list[dict[str, Any]],
+    rows: Any,
     columns: list[str],
     requested_format: str,
 ) -> tuple[Path, str, str | None, str | None]:
@@ -141,8 +144,22 @@ def _write_dataset(
             fallback_reason = "pyarrow is unavailable; explicit CSV fallback used"
         else:
             path = output_dir / "labelled_samples.parquet"
-            table = pa.Table.from_pylist(rows)
-            pq.write_table(table, path)
+            writer = None
+            schema = None
+            try:
+                for batch in rows:
+                    if not batch:
+                        continue
+                    table = pa.Table.from_pylist(batch, schema=schema)
+                    if writer is None:
+                        schema = table.schema
+                        writer = pq.ParquetWriter(path, table.schema)
+                    writer.write_table(table)
+            finally:
+                if writer is not None:
+                    writer.close()
+            if writer is None:
+                raise ValueError("labelled dataset is empty")
             dependency_version = pa.__version__
             return path, "parquet", None, dependency_version
 
@@ -150,7 +167,8 @@ def _write_dataset(
     with path.open("w", newline="", encoding="utf-8") as output:
         writer = csv.DictWriter(output, fieldnames=columns)
         writer.writeheader()
-        writer.writerows(rows)
+        for batch in rows:
+            writer.writerows(batch)
     return path, "csv", fallback_reason, dependency_version
 
 
@@ -262,7 +280,161 @@ def _resolve_split_sufficiency(
     return "pass", []
 
 
-def build_dataset(
+def _joined_batches(
+    records: list[dict[str, Any]],
+    loads: dict[str, Any],
+    split_assignment: dict[str, str],
+    raw_header: list[str],
+    stats: dict[str, Any],
+) -> Any:
+    """Yield one sorted run at a time and update bounded build statistics."""
+    for record in sorted(records, key=lambda item: item["run_id"]):
+        source: SourceRun = record["source"]
+        config = record["config"]
+        run_id = record["run_id"]
+        path_id = record["selected_path"]
+        group_id = record["run_group_id"]
+        role = split_assignment[group_id]
+        background = config["background"]
+        background_profile = background["profile"]
+        correlation_mode = (
+            "none"
+            if background_profile == "none"
+            else background["correlation"]["mode"]
+        )
+        regime = load_regime(config, loads, path_id)
+        _, frames = read_csv(source.run_dir / "frames.csv")
+        frames_by_id = {row["frame_id"]: row for row in frames}
+        if len(frames_by_id) != len(frames):
+            raise ValueError(f"{source.run_dir}: duplicate frame IDs")
+
+        batch: list[dict[str, Any]] = []
+        sample_keys: set[tuple[str, str, str, str, str]] = set()
+        sampled_frames: dict[str, int] = {}
+        for sample in iter_csv(source.run_dir / "prediction_samples.csv"):
+            key = (
+                sample["frame_id"],
+                sample["path_id"],
+                sample["copy_id"],
+                sample["sample_stage"],
+                sample["sample_offset_us"],
+            )
+            if key in sample_keys:
+                raise ValueError(f"duplicate dataset sample key: {(run_id, *key)}")
+            sample_keys.add(key)
+            if sample["run_id"] != run_id:
+                raise ValueError(f"{source.run_dir}: sample run ID mismatch")
+            if int(sample["path_id"]) != path_id or int(sample["copy_id"]) != 0:
+                raise ValueError(f"{source.run_dir}: sample uses the wrong fixed path")
+            frame = frames_by_id.get(sample["frame_id"])
+            if frame is None:
+                raise ValueError(f"{source.run_dir}: sample has no matching frame")
+            if int(frame["primary_link"]) != path_id:
+                raise ValueError(f"{source.run_dir}: frame uses the wrong fixed path")
+            incomplete = int(frame["incomplete"])
+            deadline_miss = int(frame["deadline_miss"])
+            completion_us = frame["union_completion_us"]
+            latency_us = frame["union_latency_us"]
+            if incomplete:
+                if completion_us or latency_us or deadline_miss != 1:
+                    raise ValueError(f"{source.run_dir}: invalid incomplete-frame label")
+                completion_ns: int | str = ""
+                final_latency: int | str = ""
+            else:
+                if not completion_us or not latency_us:
+                    raise ValueError(f"{source.run_dir}: complete frame lacks timing")
+                completion_ns = int(completion_us) * 1000
+                final_latency = int(latency_us)
+            previous_label = sampled_frames.setdefault(sample["frame_id"], deadline_miss)
+            if previous_label != deadline_miss:
+                raise ValueError(f"{source.run_dir}: frame label changed")
+            sample_time_ns = int(sample["sample_time_ns"])
+            packet_count = int(sample["frame_packet_count"])
+            tx_succeeded = int(sample["frame_packets_tx_succeeded"])
+            if tx_succeeded > packet_count:
+                raise ValueError(f"{source.run_dir}: acknowledged packets exceed frame")
+            attached = {
+                "dataset_schema_version": DATASET_SCHEMA_VERSION,
+                "frame_complete": 1 - incomplete,
+                "frame_completion_time_ns": completion_ns,
+                "frame_latency_us": final_latency,
+                "deadline_miss": deadline_miss,
+                "run_seed": config["seed"],
+                "run_number": config["run"],
+                "scenario_name": record["scenario_name"],
+                "background_profile": background_profile,
+                "correlation_mode": correlation_mode,
+                "selected_policy": config["policy"],
+                "run_group_id": group_id,
+                "miss_regime": regime,
+                "split_role": role,
+            }
+            derived = {
+                "last_positive_ack_age_us": derive_age(
+                    sample_time_ns,
+                    sample["last_positive_ack_time_ns"],
+                    "last_positive_ack_time_ns",
+                ),
+                "last_attempt_age_us": derive_age(
+                    sample_time_ns,
+                    sample["last_tx_attempt_time_ns"],
+                    "last_tx_attempt_time_ns",
+                ),
+                "queue_oldest_age_us": derive_age(
+                    sample_time_ns,
+                    sample["mac_queue_oldest_enqueue_time_ns"],
+                    "mac_queue_oldest_enqueue_time_ns",
+                ),
+                "frame_packets_not_acknowledged": packet_count - tx_succeeded,
+            }
+            batch.append({**attached, **sample, **derived})
+
+        batch.sort(
+            key=lambda row: (
+                row["run_id"],
+                int(row["frame_id"]),
+                int(row["sample_offset_us"]),
+                int(row["path_id"]),
+                int(row["copy_id"]),
+            )
+        )
+        split_entry = stats["split"][role]
+        split_entry["groups"].add(group_id)
+        split_entry["frame_count"] += len(sampled_frames)
+        split_entry["miss_count"] += sum(sampled_frames.values())
+        scenario = record["scenario_name"]
+        if scenario.startswith("obss_"):
+            ood_entry = stats["ood"][scenario]
+            ood_entry["groups"].add(group_id)
+            ood_entry["runs"].add(run_id)
+            ood_entry["frame_count"] += len(sampled_frames)
+            ood_entry["miss_count"] += sum(sampled_frames.values())
+        stats["frame_count"] += len(sampled_frames)
+        stats["miss_count"] += sum(sampled_frames.values())
+        stats["sample_count"] += len(batch)
+        stats["included_runs"].append(
+            {
+                "run_id": run_id,
+                "run_group_id": group_id,
+                "source_directory": str(source.run_dir),
+                "source_root": str(source.source_root),
+                "scenario_name": scenario,
+                "selected_policy": config["policy"],
+                "selected_path": path_id,
+                "seed": config["seed"],
+                "run": config["run"],
+                "frame_count": len(frames),
+                "sample_count": len(batch),
+                "miss_count": sum(
+                    int(frame["deadline_miss"]) for frame in frames_by_id.values()
+                ),
+                "split_role": role,
+            }
+        )
+        yield batch
+
+
+def _build_dataset_at(
     inputs: list[Path],
     output_dir: Path,
     analysis_path: Path,
@@ -279,8 +451,6 @@ def build_dataset(
     if loads.get("load_schema_version") != 1:
         raise ValueError("unsupported prediction load schema")
     output_dir = output_dir.resolve()
-    if output_dir.exists() and any(output_dir.iterdir()):
-        raise FileExistsError(f"dataset output directory is not empty: {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     sources = discover_source_runs(inputs)
@@ -311,15 +481,11 @@ def build_dataset(
                 {"run_id": run_id, "reason": "scenario_filter", "scenario_name": name}
             )
             continue
-        sample_header, samples = read_csv(source.run_dir / "prediction_samples.csv")
+        sample_header = csv_header(source.run_dir / "prediction_samples.csv")
         if raw_header is None:
             raw_header = sample_header
         elif sample_header != raw_header:
             raise ValueError(f"{source.run_dir}: prediction sample header differs")
-        _, frames = read_csv(source.run_dir / "frames.csv")
-        frames_by_id = {row["frame_id"]: row for row in frames}
-        if len(frames_by_id) != len(frames):
-            raise ValueError(f"{source.run_dir}: duplicate frame IDs")
         group_id = make_run_group_id(source, config, build)
         records.append(
             {
@@ -330,8 +496,6 @@ def build_dataset(
                 "scenario_name": name,
                 "selected_path": path_id,
                 "run_group_id": group_id,
-                "samples": samples,
-                "frames": frames_by_id,
             }
         )
     if not records:
@@ -352,106 +516,27 @@ def build_dataset(
             raise ValueError(f"run group {group_id} spans scenarios")
 
     split_assignment, initial_sufficiency = _split_groups(groups, analysis)
-    dataset_rows: list[dict[str, Any]] = []
-    sample_keys: set[tuple[str, str, str, str, str, str]] = set()
-    included_runs: list[dict[str, Any]] = []
+    stats: dict[str, Any] = {
+        "sample_count": 0,
+        "frame_count": 0,
+        "miss_count": 0,
+        "included_runs": [],
+        "split": defaultdict(
+            lambda: {"groups": set(), "frame_count": 0, "miss_count": 0}
+        ),
+        "ood": defaultdict(
+            lambda: {
+                "groups": set(),
+                "runs": set(),
+                "frame_count": 0,
+                "miss_count": 0,
+            }
+        ),
+    }
     source_checksums: dict[str, dict[str, str]] = {}
     for record in records:
-        source: SourceRun = record["source"]
-        config = record["config"]
-        run_id = record["run_id"]
-        path_id = record["selected_path"]
-        group_id = record["run_group_id"]
-        background = config["background"]
-        background_profile = background["profile"]
-        correlation_mode = (
-            "none"
-            if background_profile == "none"
-            else background["correlation"]["mode"]
-        )
-        regime = load_regime(config, loads, path_id)
-        for sample in record["samples"]:
-            key = (
-                sample["run_id"],
-                sample["frame_id"],
-                sample["path_id"],
-                sample["copy_id"],
-                sample["sample_stage"],
-                sample["sample_offset_us"],
-            )
-            if key in sample_keys:
-                raise ValueError(f"duplicate dataset sample key: {key}")
-            sample_keys.add(key)
-            if sample["run_id"] != run_id:
-                raise ValueError(f"{source.run_dir}: sample run ID mismatch")
-            if int(sample["path_id"]) != path_id or int(sample["copy_id"]) != 0:
-                raise ValueError(f"{source.run_dir}: sample uses the wrong fixed path")
-            frame = record["frames"].get(sample["frame_id"])
-            if frame is None:
-                raise ValueError(f"{source.run_dir}: sample has no matching frame")
-            if int(frame["primary_link"]) != path_id:
-                raise ValueError(f"{source.run_dir}: frame uses the wrong fixed path")
-            incomplete = int(frame["incomplete"])
-            deadline_miss = int(frame["deadline_miss"])
-            completion_us = frame["union_completion_us"]
-            latency_us = frame["union_latency_us"]
-            if incomplete:
-                if completion_us or latency_us or deadline_miss != 1:
-                    raise ValueError(f"{source.run_dir}: invalid incomplete-frame label")
-                completion_ns: int | str = ""
-                final_latency: int | str = ""
-            else:
-                if not completion_us or not latency_us:
-                    raise ValueError(f"{source.run_dir}: complete frame lacks timing")
-                completion_ns = int(completion_us) * 1000
-                final_latency = int(latency_us)
-            sample_time_ns = int(sample["sample_time_ns"])
-            packet_count = int(sample["frame_packet_count"])
-            tx_succeeded = int(sample["frame_packets_tx_succeeded"])
-            if tx_succeeded > packet_count:
-                raise ValueError(f"{source.run_dir}: acknowledged packets exceed frame")
-            attached = {
-                "dataset_schema_version": DATASET_SCHEMA_VERSION,
-                "frame_complete": 1 - incomplete,
-                "frame_completion_time_ns": completion_ns,
-                "frame_latency_us": final_latency,
-                "deadline_miss": deadline_miss,
-                "run_seed": config["seed"],
-                "run_number": config["run"],
-                "scenario_name": record["scenario_name"],
-                "background_profile": background_profile,
-                "correlation_mode": correlation_mode,
-                "selected_policy": config["policy"],
-                "run_group_id": group_id,
-                "miss_regime": regime,
-                "split_role": split_assignment[group_id],
-            }
-            derived = {
-                "last_positive_ack_age_us": derive_age(
-                    sample_time_ns,
-                    sample["last_positive_ack_time_ns"],
-                    "last_positive_ack_time_ns",
-                ),
-                "last_attempt_age_us": derive_age(
-                    sample_time_ns,
-                    sample["last_tx_attempt_time_ns"],
-                    "last_tx_attempt_time_ns",
-                ),
-                "queue_oldest_age_us": derive_age(
-                    sample_time_ns,
-                    sample["mac_queue_oldest_enqueue_time_ns"],
-                    "mac_queue_oldest_enqueue_time_ns",
-                ),
-                "frame_packets_not_acknowledged": packet_count - tx_succeeded,
-            }
-            dataset_rows.append({**attached, **sample, **derived})
-        unique_misses = {
-            frame_id
-            for frame_id, frame in record["frames"].items()
-            if int(frame["deadline_miss"]) == 1
-        }
-        frame_misses = len(unique_misses)
-        checksums = {
+        source = record["source"]
+        source_checksums[record["run_id"]] = {
             name: sha256_file(source.run_dir / name)
             for name in (
                 "prediction_samples.csv",
@@ -460,46 +545,34 @@ def build_dataset(
                 "build_info.json",
             )
         }
-        source_checksums[run_id] = checksums
-        included_runs.append(
-            {
-                "run_id": run_id,
-                "run_group_id": group_id,
-                "source_directory": str(source.run_dir),
-                "source_root": str(source.source_root),
-                "scenario_name": record["scenario_name"],
-                "selected_policy": config["policy"],
-                "selected_path": path_id,
-                "seed": config["seed"],
-                "run": config["run"],
-                "frame_count": len(record["frames"]),
-                "sample_count": len(record["samples"]),
-                "miss_count": frame_misses,
-                "split_role": split_assignment[group_id],
-            }
-        )
 
-    dataset_rows.sort(
-        key=lambda row: (
-            row["run_id"],
-            int(row["frame_id"]),
-            int(row["sample_offset_us"]),
-            int(row["path_id"]),
-            int(row["copy_id"]),
-        )
-    )
     columns = ATTACHED_COLUMNS + raw_header + DERIVED_COLUMNS
     if len(columns) != len(set(columns)):
         raise ValueError("dataset schema contains duplicate columns")
     dataset_path, actual_format, fallback_reason, pyarrow_version = _write_dataset(
         output_dir,
-        dataset_rows,
+        _joined_batches(records, loads, split_assignment, raw_header, stats),
         columns,
         requested_format,
     )
 
-    split_counts = _frame_and_miss_counts(dataset_rows, split_assignment)
-    ood_counts = _ood_scenario_counts(dataset_rows)
+    split_counts = {
+        role: {
+            "run_group_count": len(stats["split"][role]["groups"]),
+            "frame_count": stats["split"][role]["frame_count"],
+            "miss_count": stats["split"][role]["miss_count"],
+        }
+        for role in sorted(SPLIT_ROLES)
+    }
+    ood_counts = {
+        scenario: {
+            "run_group_count": len(entry["groups"]),
+            "run_count": len(entry["runs"]),
+            "frame_count": entry["frame_count"],
+            "miss_count": entry["miss_count"],
+        }
+        for scenario, entry in sorted(stats["ood"].items())
+    }
     split_status, split_reasons = _resolve_split_sufficiency(
         initial_sufficiency,
         split_counts,
@@ -529,10 +602,6 @@ def build_dataset(
     }
     _atomic_json(output_dir / "splits.json", splits)
 
-    unique_frames = {
-        (row["run_id"], row["frame_id"]): int(row["deadline_miss"])
-        for row in dataset_rows
-    }
     project_commits = sorted({record["build"]["project_git_commit"] for record in records})
     ns3_commits = sorted({record["build"]["ns3_upstream_commit"] for record in records})
     build_profiles = sorted({record["build"]["build_profile"] for record in records})
@@ -562,7 +631,9 @@ def build_dataset(
         "ns3_upstream_commits": ns3_commits,
         "build_profiles": build_profiles,
         "source_roots": sorted({str(source.source_root) for source in sources}),
-        "included_runs": sorted(included_runs, key=lambda item: item["run_id"]),
+        "included_runs": sorted(
+            stats["included_runs"], key=lambda item: item["run_id"]
+        ),
         "excluded_runs": sorted(excluded_runs, key=lambda item: item["run_id"]),
         "rejected_runs": [],
         "source_checksums": source_checksums,
@@ -577,9 +648,9 @@ def build_dataset(
         "counts": {
             "run_count": len(records),
             "run_group_count": len(groups),
-            "frame_count": len(unique_frames),
-            "sample_count": len(dataset_rows),
-            "miss_count": sum(unique_frames.values()),
+            "frame_count": stats["frame_count"],
+            "sample_count": stats["sample_count"],
+            "miss_count": stats["miss_count"],
         },
         "counts_by_split_role": split_counts,
         "counts_by_ood_scenario": ood_counts,
@@ -602,6 +673,45 @@ def build_dataset(
     manifest["dataset_validation_file"] = "dataset_validation.json"
     _atomic_json(output_dir / "dataset_manifest.json", manifest)
     return manifest
+
+
+def build_dataset(
+    inputs: list[Path],
+    output_dir: Path,
+    analysis_path: Path,
+    loads_path: Path,
+    requested_format: str,
+    scenario_filters: set[str] | None = None,
+    command: list[str] | None = None,
+) -> dict[str, Any]:
+    """Build and validate privately, then atomically publish the directory."""
+    output_dir = output_dir.resolve()
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        if any(output_dir.iterdir()):
+            raise FileExistsError(f"dataset output directory is not empty: {output_dir}")
+        output_dir.rmdir()
+    staging = Path(
+        tempfile.mkdtemp(
+            prefix=f".{output_dir.name}.building-",
+            dir=output_dir.parent,
+        )
+    )
+    try:
+        manifest = _build_dataset_at(
+            inputs=inputs,
+            output_dir=staging,
+            analysis_path=analysis_path,
+            loads_path=loads_path,
+            requested_format=requested_format,
+            scenario_filters=scenario_filters,
+            command=command,
+        )
+        os.replace(staging, output_dir)
+        return manifest
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
 
 
 def main() -> None:

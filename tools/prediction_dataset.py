@@ -9,7 +9,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 import yaml
 
@@ -183,6 +183,25 @@ def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
         if reader.fieldnames is None:
             raise ValueError(f"{path}: missing CSV header")
         return list(reader.fieldnames), list(reader)
+
+
+def csv_header(path: Path) -> list[str]:
+    """Read a CSV header without materializing its rows."""
+    with path.open(newline="", encoding="utf-8") as source:
+        reader = csv.reader(source)
+        try:
+            return next(reader)
+        except StopIteration as error:
+            raise ValueError(f"{path}: missing CSV header") from error
+
+
+def iter_csv(path: Path) -> Iterator[dict[str, str]]:
+    """Yield CSV rows while keeping memory independent of file size."""
+    with path.open(newline="", encoding="utf-8") as source:
+        reader = csv.DictReader(source)
+        if reader.fieldnames is None:
+            raise ValueError(f"{path}: missing CSV header")
+        yield from reader
 
 
 def discover_source_runs(inputs: Iterable[Path]) -> list[SourceRun]:

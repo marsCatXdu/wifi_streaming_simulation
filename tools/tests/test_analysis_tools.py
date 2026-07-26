@@ -26,7 +26,11 @@ from plot_results import _approach_key, _approach_label, plot
 from prediction_dataset import SourceRun, make_run_group_id, sha256_file
 from summarize_prediction_pilots import _candidate_id, _load_key, _target_band
 from summarize_runs import group_key, summarize
-from validate_prediction_dataset import DatasetValidationError, validate_dataset
+from validate_prediction_dataset import (
+    DatasetValidationError,
+    _validate_dataset_materialized,
+    validate_dataset,
+)
 from validate_outputs import (
     PREDICTION_BASE_COLUMNS,
     PREDICTION_EVENT_COLUMNS,
@@ -703,7 +707,12 @@ class PredictionDatasetTests(unittest.TestCase):
                 output,
                 ROOT / "experiments/configs/prediction_analysis.yaml",
             )
+            materialized_report = _validate_dataset_materialized(
+                output,
+                ROOT / "experiments/configs/prediction_analysis.yaml",
+            )
             self.assertEqual(report["status"], "PASS")
+            self.assertEqual(report, materialized_report)
             self.assertEqual(report["split_sufficiency_status"], "insufficient_data")
             self.assertEqual(
                 report["stratified_class_balance"]["scenario"]["stage_a_none"][
