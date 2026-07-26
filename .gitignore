@@ -25,6 +25,7 @@ testpy-output
 bindings/python/pybindgen/
 
 venv/
+.venv*/
 
 ms_print.*
 massif.*
