@@ -1,0 +1,43 @@
+extends: prediction_obss.yaml
+name: prediction-obss-repair-v1-round3
+output_root: results/prediction_obss_repair_v1_round3
+workers: 10
+policies:
+- name: fixed_link_0
+  seeds:
+  - 442
+  - 443
+  - 444
+  - 445
+  - 446
+  - 447
+  - 448
+  - 449
+  - 450
+  - 451
+  - 452
+  - 453
+  - 454
+  - 455
+  config:
+    background.background_profile: legacy_mixed8
+    background.background_traffic: udp_random_onoff
+- name: fixed_link_1
+  seeds:
+  - 442
+  - 443
+  - 444
+  - 445
+  - 446
+  - 447
+  - 448
+  - 449
+  - 450
+  - 451
+  - 452
+  - 453
+  - 454
+  - 455
+  config:
+    background.background_profile: legacy_mixed8
+    background.background_traffic: udp_random_onoff

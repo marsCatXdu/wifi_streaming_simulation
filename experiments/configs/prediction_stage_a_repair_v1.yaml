@@ -1,0 +1,126 @@
+extends: prediction_stage_a.yaml
+
+name: prediction-stage-a-repair-v1
+output_root: results/prediction_stage_a_repair_v1
+workers: 10
+
+policies:
+  # Common cross-link bursts.
+  - name: fixed_link_0
+    seeds: &common_5_seeds [202, 203, 205, 206, 207, 210]
+    config: &common_5
+      background.correlation_mode: common_bursts
+      background.background_rate_mbps: 5
+  - name: fixed_link_1
+    seeds: *common_5_seeds
+    config: *common_5
+
+  - name: fixed_link_0
+    seeds: &common_5_5_seeds [201, 202, 203, 204, 207, 208, 210]
+    config: &common_5_5
+      background.correlation_mode: common_bursts
+      background.background_rate_mbps: 5.5
+  - name: fixed_link_1
+    seeds: *common_5_5_seeds
+    config: *common_5_5
+
+  - name: fixed_link_0
+    seeds: &common_7_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &common_7
+      background.correlation_mode: common_bursts
+      background.background_rate_mbps: 7
+  - name: fixed_link_1
+    seeds: *common_7_seeds
+    config: *common_7
+
+  # Independent per-link bursts.
+  - name: fixed_link_0
+    seeds: &independent_2_5_seeds [202, 210]
+    config: &independent_2_5
+      background.correlation_mode: independent
+      background.background_rate_mbps: 2.5
+  - name: fixed_link_1
+    seeds: *independent_2_5_seeds
+    config: *independent_2_5
+
+  - name: fixed_link_0
+    seeds: &independent_3_5_seeds [207]
+    config: &independent_3_5
+      background.correlation_mode: independent
+      background.background_rate_mbps: 3.5
+  - name: fixed_link_1
+    seeds: *independent_3_5_seeds
+    config: *independent_3_5
+
+  - name: fixed_link_0
+    seeds: &independent_5_seeds [203, 210]
+    config: &independent_5
+      background.correlation_mode: independent
+      background.background_rate_mbps: 5
+  - name: fixed_link_1
+    seeds: *independent_5_seeds
+    config: *independent_5
+
+  - name: fixed_link_0
+    seeds: &independent_5_5_seeds [202, 206, 207, 210]
+    config: &independent_5_5
+      background.correlation_mode: independent
+      background.background_rate_mbps: 5.5
+  - name: fixed_link_1
+    seeds: *independent_5_5_seeds
+    config: *independent_5_5
+
+  - name: fixed_link_0
+    seeds: &independent_7_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &independent_7
+      background.correlation_mode: independent
+      background.background_rate_mbps: 7
+  - name: fixed_link_1
+    seeds: *independent_7_seeds
+    config: *independent_7
+
+  # Mixed common and independent bursts.
+  - name: fixed_link_0
+    seeds: &mixed_2_25_seeds [210]
+    config: &mixed_2_25
+      background.correlation_mode: mixed_common_and_independent
+      background.background_rate_mbps: 2.25
+  - name: fixed_link_1
+    seeds: *mixed_2_25_seeds
+    config: *mixed_2_25
+
+  - name: fixed_link_0
+    seeds: &mixed_3_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &mixed_3
+      background.correlation_mode: mixed_common_and_independent
+      background.background_rate_mbps: 3
+  - name: fixed_link_1
+    seeds: *mixed_3_seeds
+    config: *mixed_3
+
+  - name: fixed_link_0
+    seeds: &mixed_3_25_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &mixed_3_25
+      background.correlation_mode: mixed_common_and_independent
+      background.background_rate_mbps: 3.25
+  - name: fixed_link_1
+    seeds: *mixed_3_25_seeds
+    config: *mixed_3_25
+
+  - name: fixed_link_0
+    seeds: &mixed_4_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &mixed_4
+      background.correlation_mode: mixed_common_and_independent
+      background.background_rate_mbps: 4
+  - name: fixed_link_1
+    seeds: *mixed_4_seeds
+    config: *mixed_4
+
+  - name: fixed_link_0
+    seeds: &mixed_5_5_seeds [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    config: &mixed_5_5
+      background.correlation_mode: mixed_common_and_independent
+      background.background_rate_mbps: 5.5
+  - name: fixed_link_1
+    seeds: *mixed_5_5_seeds
+    config: *mixed_5_5

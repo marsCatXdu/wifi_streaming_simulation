@@ -1,0 +1,69 @@
+extends: prediction_stage_a.yaml
+name: prediction-stage-a-repair-v1-round2
+output_root: results/prediction_stage_a_repair_v1_round2
+workers: 10
+policies:
+- name: fixed_link_0
+  seeds:
+  - 211
+  - 212
+  config:
+    background.correlation_mode: independent
+    background.background_rate_mbps: 2.5
+- name: fixed_link_1
+  seeds:
+  - 211
+  - 212
+  config:
+    background.correlation_mode: independent
+    background.background_rate_mbps: 2.5
+- name: fixed_link_0
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: independent
+    background.background_rate_mbps: 3.5
+- name: fixed_link_1
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: independent
+    background.background_rate_mbps: 3.5
+- name: fixed_link_0
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 2.25
+- name: fixed_link_1
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 2.25
+- name: fixed_link_0
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 3
+- name: fixed_link_1
+  seeds:
+  - 211
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 3
+- name: fixed_link_0
+  seeds:
+  - 211
+  - 212
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 4
+- name: fixed_link_1
+  seeds:
+  - 211
+  - 212
+  config:
+    background.correlation_mode: mixed_common_and_independent
+    background.background_rate_mbps: 4
