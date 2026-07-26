@@ -1,19 +1,37 @@
 from __future__ import annotations
 
+import csv
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from prediction.online_replay import (
+    FrozenPredictor,
+    ModelBundle,
     TokenBucket,
     aggregate_metrics,
     load_replay_config,
     replay_scores,
+    score_individual_run,
 )
+from replay_online_prediction import _verify_run_is_5ghz
+
+
+class StubPipeline:
+    def decision_function(self, matrix: np.ndarray) -> np.ndarray:
+        return matrix[:, 0] / 100
+
+
+class StubCalibrator:
+    def predict(self, score: np.ndarray) -> np.ndarray:
+        return np.clip(score, 0, 1)
 
 
 def replay_config() -> dict:
@@ -143,6 +161,35 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(fixed["threshold_negative_misses"], 0)
         self.assertAlmostEqual(fixed["recall"], 2 / 3)
         self.assertEqual(len(audits), 18)
+        byte = next(
+            row
+            for row in metrics
+            if row["decision_policy"] == "fixed_t0"
+            and row["budget_kind"] == "bytes"
+        )
+        self.assertEqual(byte["actions"], 2)
+        self.assertAlmostEqual(byte["realized_byte_overhead"], 1 / 3)
+        self.assertEqual(labels, {index: int(index in {0, 1, 5}) for index in range(6)})
+
+    def test_input_order_does_not_change_chronological_replay(self) -> None:
+        labels = {index: int(index in {0, 1, 5}) for index in range(6)}
+        forward, _ = replay_scores(
+            score_rows(),
+            labels,
+            replay_config(),
+            median_frame_size=100,
+            p99_frame_size=100,
+            run_metadata=self.metadata,
+        )
+        reverse, _ = replay_scores(
+            list(reversed(score_rows())),
+            labels,
+            replay_config(),
+            median_frame_size=100,
+            p99_frame_size=100,
+            run_metadata=self.metadata,
+        )
+        self.assertEqual(forward, reverse)
 
     def test_sequential_uses_first_threshold_crossing(self) -> None:
         labels = {index: 0 for index in range(6)}
@@ -222,6 +269,103 @@ class ConfigurationTests(unittest.TestCase):
             path.write_text(text.replace("primary_link: 1", "primary_link: 0"), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "path 1"):
                 load_replay_config(path)
+
+    def test_resolved_run_must_map_path_1_to_5ghz(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = {
+                "run_id": "run",
+                "source_directory": str(root),
+            }
+            config = {
+                "policy": "fixed_link_1",
+                "wifi": {
+                    "frequency_ranges": [
+                        "WIFI_SPECTRUM_2_4_GHZ",
+                        "WIFI_SPECTRUM_5_GHZ",
+                    ]
+                },
+            }
+            (root / "resolved_config.json").write_text(json.dumps(config), encoding="utf-8")
+            _verify_run_is_5ghz(run)
+            config["wifi"]["frequency_ranges"][1] = "WIFI_SPECTRUM_6_GHZ"
+            (root / "resolved_config.json").write_text(json.dumps(config), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "not 5 GHz"):
+                _verify_run_is_5ghz(run)
+
+
+class RawRunScoringTests(unittest.TestCase):
+    def test_scores_are_generated_without_reading_frame_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            fields = [
+                "run_id",
+                "frame_id",
+                "path_id",
+                "sample_stage",
+                "sample_time_ns",
+                "generation_time_ns",
+                "deadline_time_ns",
+                "frame_size_bytes",
+                "actionable",
+                "frame_packet_count",
+                "frame_packets_tx_succeeded",
+                "last_positive_ack_time_ns",
+                "last_tx_attempt_time_ns",
+                "mac_queue_oldest_enqueue_time_ns",
+            ]
+            with (root / "prediction_samples.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as output:
+                writer = csv.DictWriter(output, fieldnames=fields)
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "run_id": "run",
+                        "frame_id": 7,
+                        "path_id": 1,
+                        "sample_stage": "T0",
+                        "sample_time_ns": 1_000_000,
+                        "generation_time_ns": 1_000_000,
+                        "deadline_time_ns": 34_333_000,
+                        "frame_size_bytes": 80,
+                        "actionable": 1,
+                        "frame_packet_count": 1,
+                        "frame_packets_tx_succeeded": 0,
+                        "last_positive_ack_time_ns": "",
+                        "last_tx_attempt_time_ns": "",
+                        "mac_queue_oldest_enqueue_time_ns": "",
+                    }
+                )
+            predictor = FrozenPredictor(
+                pipeline_id="stub",
+                feature_set="F0",
+                evidence_role="primary",
+                stage="T0",
+                feature_names=("frame_size_bytes",),
+                f1_feature_names=(),
+                degradation_profile=None,
+                model_name="stub",
+                selection_recall=0,
+                pipeline=StubPipeline(),
+                calibrator=StubCalibrator(),
+            )
+            bundle = ModelBundle(
+                schema_version=1,
+                replay_config_sha256="",
+                analysis_config_sha256="",
+                dataset_sha256="",
+                primary_link=1,
+                feature_dictionary={},
+                predictors={("stub", "T0"): predictor},
+                median_frame_size_bytes=80,
+                p99_frame_size_bytes=80,
+            )
+            scores = score_individual_run(root, bundle, 1)
+            self.assertEqual(len(scores), 1)
+            self.assertEqual(scores[0]["frame_id"], 7)
+            self.assertAlmostEqual(scores[0]["calibrated_probability"], 0.8)
+            self.assertFalse((root / "frames.csv").exists())
 
 
 if __name__ == "__main__":
