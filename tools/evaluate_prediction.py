@@ -514,11 +514,11 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     started = time.perf_counter()
     dataset_dir = args.dataset_dir.resolve()
     output = args.output_dir.resolve()
-    output.mkdir(parents=True, exist_ok=False)
-    (output / "plots").mkdir()
     config = _load_config(args.analysis_config.resolve())
     if args.seed != int(config["analysis_seed"]):
         raise ValueError("--seed must equal the frozen analysis_seed")
+    output.mkdir(parents=True, exist_ok=False)
+    (output / "plots").mkdir()
     manifest = _load_json(dataset_dir / "dataset_manifest.json")
     splits = _load_json(dataset_dir / "splits.json")
     if manifest.get("dataset_schema_version") != 2:

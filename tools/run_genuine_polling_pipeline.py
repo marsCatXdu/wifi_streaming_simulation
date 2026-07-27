@@ -191,10 +191,50 @@ def dependency_version(distribution: str) -> str | None:
         return None
 
 
+def read_analysis_seed(path: Path) -> int:
+    """Read the single frozen analysis seed from its authoritative YAML."""
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError(f"{path}: YAML root must be a mapping")
+    value = document.get("analysis_seed")
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{path}: analysis_seed must be a positive integer")
+    return value
+
+
+def run_evaluation(dataset: Path, evaluation: Path, analysis_seed: int) -> None:
+    """Run evaluation, preserving any incomplete output from an earlier attempt."""
+    if (evaluation / "analysis_manifest.json").is_file():
+        return
+    if evaluation.exists():
+        failed_root = RESULTS / "failed_phase_outputs"
+        failed_root.mkdir(parents=True, exist_ok=True)
+        index = 1
+        while (failed_root / f"evaluation_attempt_{index}").exists():
+            index += 1
+        shutil.move(str(evaluation), failed_root / f"evaluation_attempt_{index}")
+    command(
+        "evaluation",
+        [
+            sys.executable,
+            "tools/evaluate_prediction.py",
+            "--dataset-dir",
+            str(dataset),
+            "--output-dir",
+            str(evaluation),
+            "--analysis-config",
+            str(ANALYSIS),
+            "--seed",
+            str(analysis_seed),
+        ],
+    )
+
+
 def main() -> int:
     if len(sys.argv) != 1:
         raise SystemExit("run_genuine_polling_pipeline.py accepts no arguments")
     workers = max(1, os.cpu_count() or 1)
+    analysis_seed = read_analysis_seed(ANALYSIS)
     RESULTS.mkdir(parents=True, exist_ok=True)
     state = load_state()
     if "initial_provenance" not in state:
@@ -267,21 +307,7 @@ def main() -> int:
     run_phase(
         state,
         "evaluation",
-        lambda: command(
-            "evaluation",
-            [
-                sys.executable,
-                "tools/evaluate_prediction.py",
-                "--dataset-dir",
-                str(dataset),
-                "--output-dir",
-                str(evaluation),
-                "--analysis-config",
-                str(ANALYSIS),
-                "--seed",
-                "20250308",
-            ],
-        ),
+        lambda: run_evaluation(dataset, evaluation, analysis_seed),
     )
     models = RESULTS / "models"
     run_phase(
