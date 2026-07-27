@@ -585,9 +585,8 @@ class MatrixTests(unittest.TestCase):
         }
         for name in ("closed_loop_selective_duplication_obss.yaml",
                      "closed_loop_selective_duplication_combined.yaml"):
-            expanded = expand_config(
-                load_yaml(ROOT / "experiments" / "configs" / name)
-            )
+            document = load_yaml(ROOT / "experiments" / "configs" / name)
+            expanded = expand_config(document)
             self.assertEqual(len(expanded), 40)
             self.assertEqual({
                 (item["config"]["topology"], item["config"]["policy"])
@@ -604,6 +603,11 @@ class MatrixTests(unittest.TestCase):
                 item["prediction"]["selective_duplication_frame_budget"] == 0.3
                 for item in selective
             ))
+            with tempfile.TemporaryDirectory() as directory:
+                write_experiment_description(document, expanded, Path(directory))
+                description = (Path(directory) / "DESCRIPTION.rst").read_text()
+                self.assertIn("Closed-loop selective duplication", description)
+                self.assertIn("receiver outcomes never enter the decision", description)
 
     def test_selective_control_summary_counts_actions_and_suppressions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -388,13 +388,13 @@ def write_experiment_description(document: dict[str, Any],
         f"{stream.get('payload_size', 1200)}-byte UDP payloads.",
         "",
     ]
+    action_text = (
+        "The selective arm feeds these snapshots to the frozen F0+F1-degraded "
+        "commodity predictor; receiver outcomes never enter the decision."
+        if has_selective else
+        "Adaptive actions are disabled in this telemetry matrix."
+    )
     if has_legacy:
-        action_text = (
-            "The selective arm feeds these snapshots to the frozen F0+F1-degraded "
-            "commodity predictor; receiver outcomes never enter the decision."
-            if has_selective else
-            "Adaptive actions are disabled in this telemetry matrix."
-        )
         lines += [
             "Same-BSS contention devices",
             "---------------------------",
