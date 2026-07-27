@@ -70,6 +70,8 @@ policies:
       prediction.prediction_telemetry_enabled: true
       prediction.prediction_sample_offsets_us: [0, 1000, 2000, 4000]
       prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
       prediction.prediction_event_log_enabled: false
       prediction.prediction_oracle_features_enabled: false
       prediction.selective_duplication_threshold: 0.2

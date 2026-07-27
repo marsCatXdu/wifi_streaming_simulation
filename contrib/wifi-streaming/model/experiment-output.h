@@ -99,6 +99,8 @@ struct StreamingRunConfig
     bool predictionTelemetryEnabled{false};
     std::vector<uint64_t> predictionSampleOffsetsUs;
     std::vector<uint64_t> predictionHistoryWindowsUs;
+    uint64_t predictionPollingIntervalUs{1000};
+    uint64_t predictionPollingReportDelayUs{1000};
     bool predictionEventLogEnabled{false};
     bool predictionOracleFeaturesEnabled{false};
     double selectiveDuplicationThreshold{0};

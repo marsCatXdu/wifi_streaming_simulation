@@ -103,6 +103,8 @@ def train_bundle(args: argparse.Namespace) -> dict[str, Any]:
     if replay["analysis_schema_version"] != analysis["analysis_schema_version"]:
         raise ValueError("replay and analysis schema versions differ")
     manifest = _json(dataset_dir / "dataset_manifest.json")
+    if manifest.get("dataset_schema_version") != 2:
+        raise ValueError("online training requires the genuine-polling dataset schema")
     dataset_path = dataset_dir / manifest["dataset_file"]
     if manifest["analysis_config_sha256"] != sha256_file(analysis_path):
         raise ValueError("dataset and analysis configuration checksums differ")
@@ -183,11 +185,13 @@ def train_bundle(args: argparse.Namespace) -> dict[str, Any]:
             "model_bundle_schema_version": MODEL_BUNDLE_SCHEMA_VERSION,
             "model_file": model_path.name,
             "model_sha256": sha256_file(model_path),
-            "dataset": str(dataset_path),
+            "dataset_schema_version": manifest["dataset_schema_version"],
+            "f1_observation_source": "recorded_periodic_observation",
+            "dataset": os.path.relpath(dataset_path, args.output_dir.resolve()),
             "dataset_sha256": bundle.dataset_sha256,
-            "analysis_config": str(analysis_path),
+            "analysis_config": os.path.relpath(analysis_path, args.output_dir.resolve()),
             "analysis_config_sha256": bundle.analysis_config_sha256,
-            "replay_config": str(replay_path),
+            "replay_config": os.path.relpath(replay_path, args.output_dir.resolve()),
             "replay_config_sha256": bundle.replay_config_sha256,
             "primary_link": bundle.primary_link,
             "primary_band": replay["primary_band"],

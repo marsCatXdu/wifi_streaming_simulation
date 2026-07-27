@@ -11,8 +11,6 @@
 #include "ns3/object.h"
 
 #include <cstdint>
-#include <deque>
-#include <map>
 #include <vector>
 
 namespace ns3
@@ -35,7 +33,7 @@ class ClosedLoopRiskPredictor : public Object
     ~ClosedLoopRiskPredictor() override;
 
     /**
-     * Score one immutable snapshot and update the causal polling history.
+     * Score one immutable snapshot using its selected polling report.
      *
      * @param sample Current primary-path snapshot.
      * @return Platt-calibrated deadline-miss probability.
@@ -55,15 +53,10 @@ class ClosedLoopRiskPredictor : public Object
     static double AgeUs(uint64_t sampleTimeNs, const std::optional<uint64_t>& eventTimeNs);
     static double EncodeFrameType(FrameType type);
     static double EncodeFrequencyBand(const std::optional<std::string>& band);
-    static const PredictionRollingSample* FindWindow(const PredictionSample& sample,
+    static const PredictionRollingSample* FindWindow(const PredictionPollingReport& report,
                                                      uint64_t windowUs);
     static std::vector<double> BuildFeatures(const PredictionSample& current,
-                                             const PredictionSample* delayedF1);
-
-    const PredictionSample* FindDelayedF1(const PredictionSample& sample) const;
-    void Remember(const PredictionSample& sample);
-
-    std::map<uint64_t, std::deque<PredictionSample>> m_history; ///< Per-stage polling history.
+                                             const PredictionPollingReport* report);
 };
 
 } // namespace ns3

@@ -362,6 +362,8 @@ main(int argc, char* argv[])
     bool predictionTelemetryEnabled = false;
     std::string predictionSampleOffsetsUs = "0,1000,2000,4000";
     std::string predictionHistoryWindowsUs = "1000,5000,20000";
+    uint64_t predictionPollingIntervalUs = 1000;
+    uint64_t predictionPollingReportDelayUs = 1000;
     bool predictionEventLogEnabled = false;
     bool predictionOracleFeaturesEnabled = false;
     double selectiveDuplicationThreshold = 0.2;
@@ -493,6 +495,12 @@ main(int argc, char* argv[])
     command.AddValue("predictionHistoryWindowsUs",
                      "Strict comma-separated prediction history windows",
                      predictionHistoryWindowsUs);
+    command.AddValue("predictionPollingIntervalUs",
+                     "Frame-independent prediction polling interval",
+                     predictionPollingIntervalUs);
+    command.AddValue("predictionPollingReportDelayUs",
+                     "Prediction polling report availability delay",
+                     predictionPollingReportDelayUs);
     command.AddValue("predictionEventLogEnabled",
                      "Write optional raw prediction event CSV",
                      predictionEventLogEnabled);
@@ -658,6 +666,8 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedSelectiveDecisionOffsetsUs;
     if (predictionTelemetryEnabled)
     {
+        NS_ABORT_MSG_IF(predictionPollingIntervalUs == 0,
+                        "predictionPollingIntervalUs must be positive");
         resolvedPredictionSampleOffsetsUs =
             ParseStrictUintList(predictionSampleOffsetsUs,
                                 "predictionSampleOffsetsUs",
@@ -1622,6 +1632,8 @@ main(int argc, char* argv[])
     resolved.predictionTelemetryEnabled = predictionTelemetryEnabled;
     resolved.predictionSampleOffsetsUs = resolvedPredictionSampleOffsetsUs;
     resolved.predictionHistoryWindowsUs = resolvedPredictionHistoryWindowsUs;
+    resolved.predictionPollingIntervalUs = predictionPollingIntervalUs;
+    resolved.predictionPollingReportDelayUs = predictionPollingReportDelayUs;
     resolved.predictionEventLogEnabled = predictionEventLogEnabled;
     resolved.predictionOracleFeaturesEnabled = predictionOracleFeaturesEnabled;
     resolved.selectiveDuplicationThreshold = selectiveDuplicationThreshold;
@@ -1724,12 +1736,15 @@ main(int argc, char* argv[])
         predictionTelemetry->SetRunId(runId);
         predictionTelemetry->SetSampleOffsetsUs(resolvedPredictionSampleOffsetsUs);
         predictionTelemetry->SetHistoryWindowsUs(resolvedPredictionHistoryWindowsUs);
+        predictionTelemetry->SetPollingIntervalUs(predictionPollingIntervalUs);
+        predictionTelemetry->SetPollingReportDelayUs(predictionPollingReportDelayUs);
         predictionTelemetry->SetOracleFeaturesEnabled(predictionOracleFeaturesEnabled);
         predictionTelemetry->SetOutputFiles(
             (std::filesystem::path(outputDir) / "prediction_samples.csv").string(),
             predictionEventLogEnabled
                 ? (std::filesystem::path(outputDir) / "prediction_events.csv").string()
-                : "");
+                : "",
+            (std::filesystem::path(outputDir) / "prediction_polling_samples.csv").string());
         const uint8_t selectedPath = policyName == "fixed_link_0" ? 0 : 1;
         predictionTelemetry->BindWifiPath(selectedPath,
                                           stationDevices.Get(selectedPath),

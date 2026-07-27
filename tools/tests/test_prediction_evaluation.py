@@ -226,6 +226,7 @@ class EndToEndSmokeTest(unittest.TestCase):
                 "f1_degradation_profiles": [
                     {
                         "profile_id": "polling",
+                        "source": "recorded_periodic_observation",
                         "report_interval_us": 1000,
                         "observation_delay_us": 1000,
                         "counter_quantization": 1,
@@ -254,12 +255,18 @@ class EndToEndSmokeTest(unittest.TestCase):
                 "frame_packets_pending_primary": ("F2", True),
                 "current_cw": ("F3", True),
             }
+            features.update({
+                f"polling_1ms_{name}": ("F1-polling-1ms", True)
+                for name, (tier, _) in tuple(features.items())
+                if tier == "F1-ideal"
+            })
             metadata = [
                 "dataset_schema_version", "deadline_miss", "actionable", "path_id",
                 "split_role", "scenario_name", "miss_regime", "correlation_mode",
                 "run_group_id", "run_id", "frame_id",
                 "sample_stage", "sample_time_ns", "sample_offset_us",
                 "generation_time_ns", "deadline_time_ns",
+                "polling_1ms_capture_time_ns", "polling_1ms_staleness_us",
             ]
             header = metadata + list(features)
             groups = [
@@ -279,7 +286,7 @@ class EndToEndSmokeTest(unittest.TestCase):
                     miss = int(local >= 3)
                     generation = (frame_id + 1) * 20_000_000
                     values = {
-                        "dataset_schema_version": 1,
+                        "dataset_schema_version": 2,
                         "deadline_miss": miss,
                         "actionable": 1,
                         "path_id": 0,
@@ -295,6 +302,8 @@ class EndToEndSmokeTest(unittest.TestCase):
                         "sample_offset_us": 0,
                         "generation_time_ns": generation,
                         "deadline_time_ns": generation + 33_333_000,
+                        "polling_1ms_capture_time_ns": generation - 1_000_000,
+                        "polling_1ms_staleness_us": 1000,
                         "deadline_slack_us": 33333,
                         "frame_size_bytes": 40000 + miss * 10000,
                         "frame_type": "I_FRAME" if local == 0 else "P_FRAME",
@@ -312,6 +321,9 @@ class EndToEndSmokeTest(unittest.TestCase):
                         "frame_packets_pending_primary": 40,
                         "current_cw": 15 + miss * 16,
                     }
+                    for name, (tier, _) in features.items():
+                        if tier == "F1-polling-1ms":
+                            values[name] = values[name.removeprefix("polling_1ms_")]
                     rows.append([values[name] for name in header])
                     frame_id += 1
             csv_path = dataset / "labelled_samples.csv"
@@ -330,7 +342,7 @@ class EndToEndSmokeTest(unittest.TestCase):
                     "model_eligible": False,
                 }
             manifest = {
-                "dataset_schema_version": 1,
+                "dataset_schema_version": 2,
                 "analysis_schema_version": 1,
                 "analysis_config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest(),
                 "dataset_file": csv_path.name,

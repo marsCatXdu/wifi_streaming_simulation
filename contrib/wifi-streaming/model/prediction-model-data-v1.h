@@ -84,6 +84,20 @@ struct Predictor
 std::span<const std::string_view> GetFeatureNames();
 
 /**
+ * Get the immutable predictor identity.
+ *
+ * @return Model identifier.
+ */
+std::string_view GetModelId();
+
+/**
+ * Get the SHA-256 of the exported Python model bundle.
+ *
+ * @return Lowercase hexadecimal SHA-256.
+ */
+std::string_view GetSourceModelSha256();
+
+/**
  * Get the fitted predictor for a stage.
  *
  * @param stage Prediction stage.

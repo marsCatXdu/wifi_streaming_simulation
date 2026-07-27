@@ -114,16 +114,6 @@ f2_exportable_allowlist:
 # Deterministic commodity-observation sensitivity profiles.
 f1_degradation_profiles:
   - profile_id: polling_1ms
+    source: recorded_periodic_observation
     report_interval_us: 1000
     observation_delay_us: 1000
-    counter_quantization: 1
-    signal_quantization_db: 1
-    rate_quantization: 1
-    disabled_feature_families: []
-  - profile_id: polling_5ms
-    report_interval_us: 5000
-    observation_delay_us: 2000
-    counter_quantization: 4
-    signal_quantization_db: 2
-    rate_quantization: 1
-    disabled_feature_families: []

@@ -42,6 +42,49 @@ from prediction_dataset import (
 )
 from validate_outputs import validate_run
 
+POLLING_KEY_AND_METADATA = {
+    "polling_schema_version",
+    "run_id",
+    "frame_id",
+    "path_id",
+    "copy_id",
+    "sample_stage",
+    "sample_offset_us",
+    "report_available",
+    "capture_time_ns",
+    "available_time_ns",
+    "staleness_us",
+    "latest_feature_event_time_ns",
+    "latest_feature_event_sequence",
+    "feature_support_mask",
+}
+
+
+def _polling_output_columns(header: list[str]) -> list[str]:
+    """Return deterministic dataset columns for one polling sidecar schema."""
+    columns = [
+        "polling_1ms_schema_version",
+        "polling_1ms_report_available",
+        "polling_1ms_capture_time_ns",
+        "polling_1ms_available_time_ns",
+        "polling_1ms_staleness_us",
+        "polling_1ms_latest_feature_event_time_ns",
+        "polling_1ms_latest_feature_event_sequence",
+        "polling_1ms_feature_support_mask",
+    ]
+    columns.extend(
+        f"polling_1ms_{name}" for name in header if name not in POLLING_KEY_AND_METADATA
+    )
+    columns.extend(
+        [
+            "polling_1ms_last_positive_ack_age_us",
+            "polling_1ms_last_attempt_age_us",
+        ]
+    )
+    if len(columns) != len(set(columns)):
+        raise ValueError("polling sidecar maps to duplicate dataset columns")
+    return columns
+
 
 def _atomic_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -307,6 +350,26 @@ def _joined_batches(
         frames_by_id = {row["frame_id"]: row for row in frames}
         if len(frames_by_id) != len(frames):
             raise ValueError(f"{source.run_dir}: duplicate frame IDs")
+        polling_by_key: dict[tuple[str, str, str, str, str], dict[str, str]] = {}
+        polling_header, polling_rows = read_csv(
+            source.run_dir / "prediction_polling_samples.csv"
+        )
+        for polling in polling_rows:
+            polling_key = tuple(
+                polling[name]
+                for name in (
+                    "frame_id",
+                    "path_id",
+                    "copy_id",
+                    "sample_stage",
+                    "sample_offset_us",
+                )
+            )
+            if polling_key in polling_by_key:
+                raise ValueError(
+                    f"{source.run_dir}: duplicate periodic observation key {polling_key}"
+                )
+            polling_by_key[polling_key] = polling
 
         batch: list[dict[str, Any]] = []
         sample_keys: set[tuple[str, str, str, str, str]] = set()
@@ -322,6 +385,11 @@ def _joined_batches(
             if key in sample_keys:
                 raise ValueError(f"duplicate dataset sample key: {(run_id, *key)}")
             sample_keys.add(key)
+            polling = polling_by_key.pop(key, None)
+            if polling is None:
+                raise ValueError(
+                    f"{source.run_dir}: sample has no recorded periodic observation"
+                )
             if sample["run_id"] != run_id:
                 raise ValueError(f"{source.run_dir}: sample run ID mismatch")
             if int(sample["path_id"]) != path_id or int(sample["copy_id"]) != 0:
@@ -349,6 +417,20 @@ def _joined_batches(
             if previous_label != deadline_miss:
                 raise ValueError(f"{source.run_dir}: frame label changed")
             sample_time_ns = int(sample["sample_time_ns"])
+            capture_time_ns = int(polling["capture_time_ns"])
+            available_time_ns = int(polling["available_time_ns"])
+            staleness_us = float(polling["staleness_us"])
+            if available_time_ns > sample_time_ns:
+                raise ValueError(
+                    f"{source.run_dir}: periodic report was not causally available"
+                )
+            expected_staleness = (sample_time_ns - capture_time_ns) // 1000
+            if abs(staleness_us - expected_staleness) > 1e-9:
+                raise ValueError(f"{source.run_dir}: periodic staleness is inconsistent")
+            if not 1000 <= staleness_us < 2000:
+                raise ValueError(
+                    f"{source.run_dir}: genuine 1 ms report has {staleness_us} us staleness"
+                )
             packet_count = int(sample["frame_packet_count"])
             tx_succeeded = int(sample["frame_packets_tx_succeeded"])
             if tx_succeeded > packet_count:
@@ -387,7 +469,39 @@ def _joined_batches(
                 ),
                 "frame_packets_not_acknowledged": packet_count - tx_succeeded,
             }
-            batch.append({**attached, **sample, **derived})
+            polling_attached = {
+                "polling_1ms_schema_version": polling["polling_schema_version"],
+                "polling_1ms_report_available": polling["report_available"],
+                "polling_1ms_capture_time_ns": polling["capture_time_ns"],
+                "polling_1ms_available_time_ns": polling["available_time_ns"],
+                "polling_1ms_staleness_us": polling["staleness_us"],
+                "polling_1ms_latest_feature_event_time_ns": polling[
+                    "latest_feature_event_time_ns"
+                ],
+                "polling_1ms_latest_feature_event_sequence": polling[
+                    "latest_feature_event_sequence"
+                ],
+                "polling_1ms_feature_support_mask": polling["feature_support_mask"],
+            }
+            for name in polling_header:
+                if name not in POLLING_KEY_AND_METADATA:
+                    polling_attached[f"polling_1ms_{name}"] = polling[name]
+            polling_attached["polling_1ms_last_positive_ack_age_us"] = derive_age(
+                capture_time_ns,
+                polling["last_positive_ack_time_ns"],
+                "polling last_positive_ack_time_ns",
+            )
+            polling_attached["polling_1ms_last_attempt_age_us"] = derive_age(
+                capture_time_ns,
+                polling["last_tx_attempt_time_ns"],
+                "polling last_tx_attempt_time_ns",
+            )
+            batch.append(
+                {**attached, **sample, **derived, **polling_attached}
+            )
+
+        if polling_by_key:
+            raise ValueError(f"{source.run_dir}: orphan periodic observation rows")
 
         batch.sort(
             key=lambda row: (
@@ -458,6 +572,7 @@ def _build_dataset_at(
     excluded_runs: list[dict[str, str]] = []
     seen_run_ids: set[str] = set()
     raw_header: list[str] | None = None
+    polling_header: list[str] | None = None
     for source in sources:
         validated = validate_run(source.run_dir)
         config = _json(source.run_dir / "resolved_config.json")
@@ -486,6 +601,13 @@ def _build_dataset_at(
             raw_header = sample_header
         elif sample_header != raw_header:
             raise ValueError(f"{source.run_dir}: prediction sample header differs")
+        candidate_polling_header = csv_header(
+            source.run_dir / "prediction_polling_samples.csv"
+        )
+        if polling_header is None:
+            polling_header = candidate_polling_header
+        elif candidate_polling_header != polling_header:
+            raise ValueError(f"{source.run_dir}: prediction polling header differs")
         group_id = make_run_group_id(source, config, build)
         records.append(
             {
@@ -500,8 +622,8 @@ def _build_dataset_at(
         )
     if not records:
         raise ValueError("scenario filters excluded every source run")
-    if raw_header is None:
-        raise ValueError("prediction sample schema was not discovered")
+    if raw_header is None or polling_header is None:
+        raise ValueError("prediction sample schemas were not discovered")
 
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for record in records:
@@ -540,13 +662,19 @@ def _build_dataset_at(
             name: sha256_file(source.run_dir / name)
             for name in (
                 "prediction_samples.csv",
+                "prediction_polling_samples.csv",
                 "frames.csv",
                 "resolved_config.json",
                 "build_info.json",
             )
         }
 
-    columns = ATTACHED_COLUMNS + raw_header + DERIVED_COLUMNS
+    columns = (
+        ATTACHED_COLUMNS
+        + raw_header
+        + DERIVED_COLUMNS
+        + _polling_output_columns(polling_header)
+    )
     if len(columns) != len(set(columns)):
         raise ValueError("dataset schema contains duplicate columns")
     dataset_path, actual_format, fallback_reason, pyarrow_version = _write_dataset(

@@ -16,7 +16,7 @@ import numpy as np
 import yaml
 
 from prediction.calibration import fit_platt
-from prediction.features import FeatureSets, degrade_f1, encode_value
+from prediction.features import FeatureSets, encode_value
 from prediction.models import CANDIDATES, fit_pipeline, ranking_score
 from prediction_dataset import derive_age
 
@@ -208,14 +208,12 @@ def fit_frozen_predictor(
     profile = _degradation_profile(spec, analysis)
     degraded = None
     if profile is not None:
-        f1_indices = [data.names.index(name) for name in f1_names]
-        degraded, _, _ = degrade_f1(
-            data.matrix[:, f1_indices],
-            f1_names,
-            data.sample_time_us,
-            data.run,
-            profile,
-        )
+        if profile.get("source") != "recorded_periodic_observation":
+            raise ValueError("online predictors require recorded periodic F1 observations")
+        polling_indices = [
+            data.names.index(f"polling_1ms_{name}") for name in f1_names
+        ]
+        degraded = data.matrix[:, polling_indices]
 
     def mask(role: str) -> np.ndarray:
         return data.actionable & (data.link == link) & (data.role == ROLES[role])
@@ -286,14 +284,16 @@ def fit_frozen_predictor(
     )
 
 
-def raw_feature_row(sample: dict[str, str]) -> dict[str, str]:
+def raw_feature_row(
+    sample: dict[str, str], polling: dict[str, str] | None = None
+) -> dict[str, str]:
     """Add the same causal derived fields used by the dataset builder."""
     sample_time_ns = int(sample["sample_time_ns"])
     packet_count = int(sample["frame_packet_count"])
     succeeded = int(sample["frame_packets_tx_succeeded"])
     if succeeded > packet_count:
         raise ValueError("acknowledged packets exceed frame packet count")
-    return {
+    result = {
         **sample,
         "last_positive_ack_age_us": derive_age(
             sample_time_ns,
@@ -312,6 +312,40 @@ def raw_feature_row(sample: dict[str, str]) -> dict[str, str]:
         ),
         "frame_packets_not_acknowledged": str(packet_count - succeeded),
     }
+    if polling is not None:
+        if polling["report_available"].lower() not in {"1", "true"}:
+            raise ValueError("prediction row has no available periodic report")
+        capture_time_ns = int(polling["capture_time_ns"])
+        for name, value in polling.items():
+            if name in {
+                "polling_schema_version",
+                "run_id",
+                "frame_id",
+                "path_id",
+                "copy_id",
+                "sample_stage",
+                "sample_offset_us",
+                "report_available",
+                "capture_time_ns",
+                "available_time_ns",
+                "staleness_us",
+                "latest_feature_event_time_ns",
+                "latest_feature_event_sequence",
+                "feature_support_mask",
+            }:
+                continue
+            result[name] = value
+        result["last_positive_ack_age_us"] = derive_age(
+            capture_time_ns,
+            polling["last_positive_ack_time_ns"],
+            "polling last_positive_ack_time_ns",
+        )
+        result["last_attempt_age_us"] = derive_age(
+            capture_time_ns,
+            polling["last_tx_attempt_time_ns"],
+            "polling last_tx_attempt_time_ns",
+        )
+    return result
 
 
 def score_individual_run(
@@ -320,12 +354,45 @@ def score_individual_run(
     primary_link: int,
 ) -> list[dict[str, Any]]:
     """Score one raw run without consulting its frame outcomes."""
+    polling_by_key: dict[tuple[str, str, str, str, str], dict[str, str]] = {}
+    with (run_dir / "prediction_polling_samples.csv").open(
+        newline="", encoding="utf-8"
+    ) as source:
+        for row in csv.DictReader(source):
+            key = tuple(
+                row[name]
+                for name in (
+                    "frame_id",
+                    "path_id",
+                    "copy_id",
+                    "sample_stage",
+                    "sample_offset_us",
+                )
+            )
+            if key in polling_by_key:
+                raise ValueError(f"{run_dir}: duplicate periodic observation key")
+            polling_by_key[key] = row
     by_stage: dict[str, list[dict[str, str]]] = defaultdict(list)
     with (run_dir / "prediction_samples.csv").open(newline="", encoding="utf-8") as source:
         reader = csv.DictReader(source)
         for raw in reader:
             if int(raw["path_id"]) == primary_link:
-                by_stage[raw["sample_stage"]].append(raw_feature_row(raw))
+                key = tuple(
+                    raw[name]
+                    for name in (
+                        "frame_id",
+                        "path_id",
+                        "copy_id",
+                        "sample_stage",
+                        "sample_offset_us",
+                    )
+                )
+                polling = polling_by_key.get(key)
+                if polling is None:
+                    raise ValueError(f"{run_dir}: missing periodic observation for {key}")
+                by_stage[raw["sample_stage"]].append(
+                    raw_feature_row(raw, polling)
+                )
     scores: list[dict[str, Any]] = []
     for (pipeline_id, stage), predictor in sorted(bundle.predictors.items()):
         rows = sorted(
@@ -342,20 +409,11 @@ def score_individual_run(
             dtype=np.float32,
         )
         if predictor.degradation_profile is not None:
-            f1_positions = [
-                predictor.feature_names.index(name)
-                for name in predictor.f1_feature_names
-                if name in predictor.feature_names
-            ]
-            f1_names = tuple(predictor.feature_names[index] for index in f1_positions)
-            degraded, _, _ = degrade_f1(
-                matrix[:, f1_positions],
-                f1_names,
-                np.asarray([int(row["sample_time_ns"]) // 1000 for row in rows]),
-                np.zeros(len(rows), dtype=np.int8),
-                predictor.degradation_profile,
-            )
-            matrix[:, f1_positions] = degraded
+            if (
+                predictor.degradation_profile.get("source")
+                != "recorded_periodic_observation"
+            ):
+                raise ValueError("raw replay requires recorded periodic observations")
         ranking, probability = predictor.predict(matrix)
         for row, raw_score, risk in zip(rows, ranking, probability):
             scores.append(

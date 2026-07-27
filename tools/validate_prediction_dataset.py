@@ -157,6 +157,53 @@ def _close(left: float, right: float) -> bool:
     return math.isclose(left, right, rel_tol=1e-9, abs_tol=1e-6)
 
 
+def _validate_recorded_polling(row: dict[str, str]) -> None:
+    """Validate one joined genuine 1 ms periodic observation."""
+    _require(
+        row["polling_1ms_report_available"].lower() in {"1", "true"},
+        "dataset row has no periodic report",
+    )
+    sample_time = _integer(row["sample_time_ns"], "sample_time_ns")
+    capture_time = _integer(
+        row["polling_1ms_capture_time_ns"], "polling_1ms_capture_time_ns"
+    )
+    available_time = _integer(
+        row["polling_1ms_available_time_ns"], "polling_1ms_available_time_ns"
+    )
+    staleness = _number(
+        row["polling_1ms_staleness_us"], "polling_1ms_staleness_us"
+    )
+    _require(available_time <= sample_time, "polling report is not causally available")
+    _require(capture_time <= available_time, "polling availability precedes capture")
+    _require(
+        _close(staleness, (sample_time - capture_time) // 1000),
+        "polling staleness derivation mismatch",
+    )
+    _require(
+        1000 <= staleness < 2000,
+        "genuine 1 ms polling staleness is outside [1 ms, 2 ms)",
+    )
+    for source_field, age_field in (
+        (
+            "polling_1ms_last_positive_ack_time_ns",
+            "polling_1ms_last_positive_ack_age_us",
+        ),
+        ("polling_1ms_last_tx_attempt_time_ns", "polling_1ms_last_attempt_age_us"),
+    ):
+        source_time = _optional_integer(row[source_field], source_field)
+        if source_time is None:
+            _require(row[age_field] == "", f"{age_field} exists without source")
+        else:
+            _require(source_time <= capture_time, f"{source_field} exceeds poll capture")
+            _require(
+                _close(
+                    _number(row[age_field], age_field),
+                    (capture_time - source_time) / 1000.0,
+                ),
+                f"{age_field} derivation mismatch",
+            )
+
+
 def _source_map(manifest: dict[str, Any]) -> dict[Path, SourceRun]:
     sources = discover_source_runs([Path(path) for path in manifest["source_roots"]])
     return {source.run_dir.resolve(): source for source in sources}
@@ -799,6 +846,7 @@ def _validate_dataset_materialized(
         _require(prior_label == label_tuple, "labels vary across frame snapshots")
 
         sample_time = _integer(row["sample_time_ns"], "sample_time_ns")
+        _validate_recorded_polling(row)
         for source_field, age_field in (
             ("last_positive_ack_time_ns", "last_positive_ack_age_us"),
             ("last_tx_attempt_time_ns", "last_attempt_age_us"),
@@ -1316,6 +1364,7 @@ def validate_dataset(
                 previous = labels_by_frame.setdefault(row["frame_id"], label_tuple)
                 _require(previous == label_tuple, "labels vary across frame snapshots")
                 sample_time = _integer(row["sample_time_ns"], "sample_time_ns")
+                _validate_recorded_polling(row)
                 for source_field, age_field in (
                     ("last_positive_ack_time_ns", "last_positive_ack_age_us"),
                     ("last_tx_attempt_time_ns", "last_attempt_age_us"),

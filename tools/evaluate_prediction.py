@@ -28,7 +28,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 from prediction.calibration import fit_platt, select_threshold
-from prediction.features import ablation_sets, build_feature_sets, degrade_f1, encode_value
+from prediction.features import ablation_sets, build_feature_sets, encode_value
 from prediction.heuristics import fit_byte_service_fallback, score_heuristics
 from prediction.metrics import (
     average_precision_tied,
@@ -123,6 +123,8 @@ class StageData:
     run: np.ndarray
     frame: np.ndarray
     sample_time_us: np.ndarray
+    polling_capture_time_us: np.ndarray
+    polling_staleness_us: np.ndarray
     offset_us: int
     deadline_us: int
     rows_scanned: int
@@ -198,6 +200,8 @@ def load_stage(
     run = np.empty(capacity, dtype=np.int16)
     frame = np.empty(capacity, dtype=np.int64)
     sample_time_us = np.empty(capacity, dtype=np.int64)
+    polling_capture_time_us = np.empty(capacity, dtype=np.int64)
+    polling_staleness_us = np.empty(capacity, dtype=np.float64)
     count = 0
     rows_scanned = 0
     offset = deadline = None
@@ -223,6 +227,8 @@ def load_stage(
             "sample_offset_us",
             "generation_time_ns",
             "deadline_time_ns",
+            "polling_1ms_capture_time_ns",
+            "polling_1ms_staleness_us",
         }
         missing = sorted(required - index.keys())
         if missing:
@@ -259,6 +265,12 @@ def load_stage(
             run[count] = run_codes.setdefault(run_value, len(run_codes))
             frame[count] = int(row[index["frame_id"]])
             sample_time_us[count] = int(row[index["sample_time_ns"]]) // 1000
+            polling_capture_time_us[count] = (
+                int(row[index["polling_1ms_capture_time_ns"]]) // 1000
+            )
+            polling_staleness_us[count] = float(
+                row[index["polling_1ms_staleness_us"]]
+            )
             row_offset = int(row[index["sample_offset_us"]])
             row_deadline = (
                 int(row[index["deadline_time_ns"]]) - int(row[index["generation_time_ns"]])
@@ -284,6 +296,8 @@ def load_stage(
         run,
         frame,
         sample_time_us,
+        polling_capture_time_us,
+        polling_staleness_us,
         int(offset),
         int(deadline),
         rows_scanned,
@@ -507,7 +521,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("--seed must equal the frozen analysis_seed")
     manifest = _load_json(dataset_dir / "dataset_manifest.json")
     splits = _load_json(dataset_dir / "splits.json")
-    if manifest.get("dataset_schema_version") != 1:
+    if manifest.get("dataset_schema_version") != 2:
         raise ValueError("unsupported dataset schema")
     if manifest.get("analysis_schema_version") != config["analysis_schema_version"]:
         raise ValueError("analysis schema mismatch")
@@ -1008,13 +1022,15 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                 f1_names = feature_sets.by_tier["F1-ideal"]
                 f1_indices = [data.names.index(name) for name in f1_names]
                 for profile in config["f1_degradation_profiles"]:
-                    degraded, sources, staleness = degrade_f1(
-                        data.matrix[:, f1_indices],
-                        f1_names,
-                        data.sample_time_us,
-                        data.run,
-                        profile,
-                    )
+                    if profile.get("source") != "recorded_periodic_observation":
+                        raise ValueError(
+                            "formal F1 profiles must use recorded periodic observations"
+                        )
+                    polling_names = tuple(f"polling_1ms_{name}" for name in f1_names)
+                    polling_indices = [data.names.index(name) for name in polling_names]
+                    degraded = data.matrix[:, polling_indices]
+                    sources = data.polling_capture_time_us
+                    staleness = data.polling_staleness_us
                     override = data.matrix.copy()
                     override[:, f1_indices] = degraded
                     for suffix, base_set in (

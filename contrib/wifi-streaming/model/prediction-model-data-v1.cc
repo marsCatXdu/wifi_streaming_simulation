@@ -17,6 +17,10 @@ namespace prediction_model_v1
 {
 namespace
 {
+constexpr std::string_view g_modelId{"commodity_polling_1ms_legacy_frame_delayed_v1"};
+constexpr std::string_view g_sourceModelSha256{
+    "f674699d6c10a34fbc7f08bd1f28e8a562e77bcfeadbbc1bdff127538588548c"};
+
 constexpr std::array<std::string_view, 86> g_featureNames{{
     "application_socket_packet_bytes_submitted",
     "deadline_slack_us",
@@ -15252,6 +15256,18 @@ std::span<const std::string_view>
 GetFeatureNames()
 {
     return g_featureNames;
+}
+
+std::string_view
+GetModelId()
+{
+    return g_modelId;
+}
+
+std::string_view
+GetSourceModelSha256()
+{
+    return g_sourceModelSha256;
 }
 
 const Predictor&

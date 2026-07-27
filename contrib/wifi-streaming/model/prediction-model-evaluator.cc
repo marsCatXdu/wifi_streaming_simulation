@@ -74,13 +74,13 @@ Logistic(double value)
 std::string_view
 PredictionModelEvaluator::GetModelId()
 {
-    return "commodity_polling_1ms_v1";
+    return prediction_model_v1::GetModelId();
 }
 
 std::string_view
 PredictionModelEvaluator::GetSourceModelSha256()
 {
-    return "f674699d6c10a34fbc7f08bd1f28e8a562e77bcfeadbbc1bdff127538588548c";
+    return prediction_model_v1::GetSourceModelSha256();
 }
 
 std::span<const std::string_view>

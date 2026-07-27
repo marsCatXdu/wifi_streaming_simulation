@@ -51,6 +51,42 @@ class PredictionTelemetryCollectorTestAccess
         collector->m_paths.try_emplace(pathId);
     }
 
+    static void StartPolling(Ptr<PredictionTelemetryCollector> collector, uint8_t pathId)
+    {
+        collector->m_paths.at(pathId).pollingEvent =
+            Simulator::ScheduleNow(&PredictionTelemetryCollector::PollPath,
+                                   PeekPointer(collector),
+                                   pathId);
+    }
+
+    static uint64_t GetPollingCaptureCount(Ptr<PredictionTelemetryCollector> collector,
+                                           uint8_t pathId)
+    {
+        return collector->m_paths.at(pathId).pollingCaptureCount;
+    }
+
+    static std::vector<uint64_t> GetPollingCaptureTimes(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId)
+    {
+        std::vector<uint64_t> times;
+        for (const auto& report : collector->m_paths.at(pathId).pollingReports)
+        {
+            times.push_back(report.captureTimeNs);
+        }
+        return times;
+    }
+
+    static std::optional<PredictionPollingReport> SelectPollingReport(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId,
+        uint64_t sampleTimeNs)
+    {
+        const auto* report =
+            collector->SelectPollingReport(collector->m_paths.at(pathId), sampleTimeNs);
+        return report ? std::optional<PredictionPollingReport>(*report) : std::nullopt;
+    }
+
     static void Enqueue(Ptr<PredictionTelemetryCollector> collector,
                         uint8_t pathId,
                         Ptr<const WifiMpdu> mpdu)
@@ -684,6 +720,116 @@ class PredictionCollectorFoundationTestCase : public TestCase
                               "T2 feature sequence is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].deadlineSlackUs, 3000, "Deadline slack is wrong");
         NS_TEST_ASSERT_MSG_EQ(samples[2].actionable, true, "Incomplete frame is not actionable");
+        Simulator::Destroy();
+    }
+};
+
+class PredictionPollingTestCase : public TestCase
+{
+  public:
+    PredictionPollingTestCase()
+        : TestCase("Prediction polling is frame-independent, delayed, and latest-report")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto collector = CreateObject<PredictionTelemetryCollector>();
+        collector->SetSampleOffsetsUs({0, 1000, 2000});
+        collector->SetPollingIntervalUs(1000);
+        collector->SetPollingReportDelayUs(1000);
+        const auto samplesFile = CreateTempDirFilename("polling-frame-samples.csv");
+        const auto pollingFile = CreateTempDirFilename("prediction-polling-samples.csv");
+        collector->SetOutputFiles(samplesFile, "", pollingFile);
+        PredictionTelemetryCollectorTestAccess::AddPath(collector, 0);
+        PredictionTelemetryCollectorTestAccess::InitializePhyHistory(collector,
+                                                                    0,
+                                                                    WifiPhyState::IDLE);
+
+        std::optional<PredictionPollingReport> beforeAvailability;
+        std::optional<PredictionPollingReport> firstAvailable;
+        std::optional<PredictionPollingReport> stillFirst;
+        std::optional<PredictionPollingReport> secondAvailable;
+        std::optional<PredictionPollingReport> newestAtThreeAndHalf;
+        PredictionTelemetryCollectorTestAccess::StartPolling(collector, 0);
+        FramePacketizer packetizer;
+        packetizer.SetPayloadSize(1000);
+        const FrameDescriptor frame{99, 0, 1000, 0, 5000, FrameType::P_FRAME};
+        collector->RegisterFrame(packetizer.Plan(frame, 1, 0, 0));
+        NS_TEST_ASSERT_MSG_EQ(collector->GetSamples().front().pollingReport.has_value(),
+                              false,
+                              "Synchronous T0 snapshot exposed a report before its delay");
+        Simulator::Schedule(MicroSeconds(999), [&]() {
+            beforeAvailability =
+                PredictionTelemetryCollectorTestAccess::SelectPollingReport(collector, 0, 999000);
+        });
+        Simulator::Schedule(MicroSeconds(1000), [&]() {
+            firstAvailable =
+                PredictionTelemetryCollectorTestAccess::SelectPollingReport(collector, 0, 1000000);
+        });
+        Simulator::Schedule(MicroSeconds(1999), [&]() {
+            stillFirst =
+                PredictionTelemetryCollectorTestAccess::SelectPollingReport(collector, 0, 1999000);
+        });
+        Simulator::Schedule(MicroSeconds(2000), [&]() {
+            secondAvailable =
+                PredictionTelemetryCollectorTestAccess::SelectPollingReport(collector, 0, 2000000);
+        });
+        Simulator::Schedule(MicroSeconds(3500), [&]() {
+            newestAtThreeAndHalf =
+                PredictionTelemetryCollectorTestAccess::SelectPollingReport(collector, 0, 3500000);
+        });
+        Simulator::Stop(MicroSeconds(3500));
+        Simulator::Run();
+
+        NS_TEST_ASSERT_MSG_EQ(beforeAvailability.has_value(),
+                              false,
+                              "Startup incorrectly exposed an unavailable T0 report");
+        NS_TEST_ASSERT_MSG_EQ(firstAvailable.has_value(),
+                              true,
+                              "The time-zero poll was not available after 1 ms");
+        NS_TEST_ASSERT_MSG_EQ(firstAvailable->captureTimeNs,
+                              0,
+                              "The first report was not captured at simulation time zero");
+        NS_TEST_ASSERT_MSG_EQ(firstAvailable->availableTimeNs,
+                              1000000,
+                              "The first report did not model the 1 ms delay");
+        NS_TEST_ASSERT_MSG_EQ(stillFirst->captureTimeNs,
+                              0,
+                              "An unavailable newer report replaced the retained report");
+        NS_TEST_ASSERT_MSG_EQ(secondAvailable->captureTimeNs,
+                              1000000,
+                              "The newest available report was not selected at 2 ms");
+        NS_TEST_ASSERT_MSG_EQ(newestAtThreeAndHalf->captureTimeNs,
+                              2000000,
+                              "Latest-report selection did not honor availability");
+        NS_TEST_ASSERT_MSG_EQ(
+            PredictionTelemetryCollectorTestAccess::GetPollingCaptureCount(collector, 0),
+            4,
+            "Polling did not run at 0, 1, 2, and 3 ms without any frames");
+        const auto retained =
+            PredictionTelemetryCollectorTestAccess::GetPollingCaptureTimes(collector, 0);
+        NS_TEST_ASSERT_MSG_EQ(retained.back(), 3000000, "Polling cadence drifted from 1 ms");
+        const auto& samples = collector->GetSamples();
+        NS_TEST_ASSERT_MSG_EQ(samples.size(), 3, "Frame snapshots were not all captured");
+        NS_TEST_ASSERT_MSG_EQ(samples[1].pollingReport->captureTimeNs,
+                              0,
+                              "T1 snapshot did not attach the time-zero report");
+        NS_TEST_ASSERT_MSG_EQ(samples[2].pollingReport->captureTimeNs,
+                              1000000,
+                              "T2 snapshot did not attach the newest available report");
+        collector->WriteOutputs();
+        std::ifstream pollingInput(pollingFile);
+        std::string pollingHeader;
+        std::getline(pollingInput, pollingHeader);
+        NS_TEST_ASSERT_MSG_NE(
+            pollingHeader.find("capture_time_ns,available_time_ns,staleness_us"),
+            std::string::npos,
+            "Polling sidecar omitted timing metadata");
+        NS_TEST_ASSERT_MSG_NE(pollingHeader.find("mpdu_attempts_20ms"),
+                              std::string::npos,
+                              "Polling sidecar omitted configured rolling F1 fields");
         Simulator::Destroy();
     }
 };
@@ -1823,7 +1969,8 @@ class PredictionWifiTelemetryTestCase : public TestCase
         prediction->SetOracleFeaturesEnabled(true);
         prediction->BindWifiPath(0, stationDevice.Get(0), 0, AC_BE);
         prediction->SetOutputFiles(directory + "/prediction_samples.csv",
-                                   directory + "/prediction_events.csv");
+                                   directory + "/prediction_events.csv",
+                                   directory + "/prediction_polling_samples.csv");
 
         auto socket = Socket::CreateSocket(station.Get(0), UdpSocketFactory::GetTypeId());
         NS_TEST_ASSERT_MSG_EQ(
@@ -1857,6 +2004,13 @@ class PredictionWifiTelemetryTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(samples.front().mpduTxAttemptsTotal.has_value(),
                               true,
                               "Bound Wi-Fi MPDU counters are unsupported");
+        NS_TEST_ASSERT_MSG_EQ(samples.front().pollingReport.has_value(),
+                              true,
+                              "Wi-Fi snapshot omitted its latest available polling report");
+        NS_TEST_ASSERT_MSG_EQ(samples.front().sampleTimeNs -
+                                  samples.front().pollingReport->captureTimeNs,
+                              1000000,
+                              "Wi-Fi snapshot did not select the 1 ms-old report");
         NS_TEST_ASSERT_MSG_EQ(samples.front().frameMacServiceBytesNotAcknowledged.has_value(),
                               true,
                               "T0 omitted deterministic MAC service bytes");
@@ -2135,6 +2289,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionCollectorFoundationTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionPollingTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionPhyHistoryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionMpduAccountingTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);

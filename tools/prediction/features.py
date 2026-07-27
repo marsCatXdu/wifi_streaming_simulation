@@ -85,7 +85,7 @@ def build_feature_sets(
 ) -> FeatureSets:
     """Build nested allowlists and reject metadata/outcome leakage."""
     by_tier: dict[str, tuple[str, ...]] = {}
-    for tier in ("F0", "F1-ideal", "F2", "F3"):
+    for tier in ("F0", "F1-ideal", "F1-polling-1ms", "F2", "F3"):
         by_tier[tier] = tuple(
             sorted(
                 name
@@ -93,7 +93,7 @@ def build_feature_sets(
                 if entry.get("tier") == tier and entry.get("model_eligible") is True
             )
         )
-        if not by_tier[tier]:
+        if not by_tier[tier] and tier != "F1-polling-1ms":
             raise ValueError(f"manifest has no model-eligible {tier} features")
     all_allowed = set().union(*map(set, by_tier.values()))
     leaked = all_allowed & PROHIBITED
@@ -116,14 +116,23 @@ def build_feature_sets(
         raise ValueError(f"F2-exportable fields are not eligible F2 fields: {sorted(unknown)}")
 
     f0, f1, f2, f3 = (by_tier[key] for key in ("F0", "F1-ideal", "F2", "F3"))
+    polling = by_tier["F1-polling-1ms"]
     sets = {
         "F0": f0,
         "F0+F1-ideal": f0 + f1,
         "F0+F1-ideal+F2": f0 + f1 + f2,
         "F0+F1-ideal+F2-exportable": f0 + f1 + exportable,
         "F0+F1-ideal+F2+F3": f0 + f1 + f2 + f3,
+        "F0+F1-polling-1ms": f0 + polling,
+        "F0+F1-polling-1ms+F2": f0 + polling + f2,
+        "F0+F1-polling-1ms+F2-exportable": f0 + polling + exportable,
     }
-    categorical = tuple(sorted(all_allowed & CATEGORICAL_VOCABULARIES.keys()))
+    polling_categorical = {
+        f"polling_1ms_{name}" for name in CATEGORICAL_VOCABULARIES
+    }
+    categorical = tuple(
+        sorted(all_allowed & (set(CATEGORICAL_VOCABULARIES) | polling_categorical))
+    )
     return FeatureSets(by_tier, sets, categorical)
 
 
@@ -141,7 +150,8 @@ def encode_value(name: str, value: str) -> float:
     """Encode one CSV field without data-dependent category fitting."""
     if value == "":
         return np.nan
-    vocabulary = CATEGORICAL_VOCABULARIES.get(name)
+    canonical_name = name.removeprefix("polling_1ms_")
+    vocabulary = CATEGORICAL_VOCABULARIES.get(canonical_name)
     if vocabulary is not None:
         try:
             return float(vocabulary.index(value))

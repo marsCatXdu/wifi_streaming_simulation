@@ -316,7 +316,9 @@ class RawRunScoringTests(unittest.TestCase):
                 "run_id",
                 "frame_id",
                 "path_id",
+                "copy_id",
                 "sample_stage",
+                "sample_offset_us",
                 "sample_time_ns",
                 "generation_time_ns",
                 "deadline_time_ns",
@@ -338,7 +340,9 @@ class RawRunScoringTests(unittest.TestCase):
                         "run_id": "run",
                         "frame_id": 7,
                         "path_id": 1,
+                        "copy_id": 0,
                         "sample_stage": "T0",
+                        "sample_offset_us": 0,
                         "sample_time_ns": 1_000_000,
                         "generation_time_ns": 1_000_000,
                         "deadline_time_ns": 34_333_000,
@@ -351,6 +355,47 @@ class RawRunScoringTests(unittest.TestCase):
                         "mac_queue_oldest_enqueue_time_ns": "",
                     }
                 )
+            polling_fields = [
+                "polling_schema_version",
+                "run_id",
+                "frame_id",
+                "path_id",
+                "copy_id",
+                "sample_stage",
+                "sample_offset_us",
+                "report_available",
+                "capture_time_ns",
+                "available_time_ns",
+                "staleness_us",
+                "latest_feature_event_time_ns",
+                "latest_feature_event_sequence",
+                "feature_support_mask",
+                "last_positive_ack_time_ns",
+                "last_tx_attempt_time_ns",
+            ]
+            with (root / "prediction_polling_samples.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as output:
+                writer = csv.DictWriter(output, fieldnames=polling_fields)
+                writer.writeheader()
+                writer.writerow({
+                    "polling_schema_version": 1,
+                    "run_id": "run",
+                    "frame_id": 7,
+                    "path_id": 1,
+                    "copy_id": 0,
+                    "sample_stage": "T0",
+                    "sample_offset_us": 0,
+                    "report_available": 1,
+                    "capture_time_ns": 0,
+                    "available_time_ns": 1_000_000,
+                    "staleness_us": 1000,
+                    "latest_feature_event_time_ns": "",
+                    "latest_feature_event_sequence": 0,
+                    "feature_support_mask": "0x0",
+                    "last_positive_ack_time_ns": "",
+                    "last_tx_attempt_time_ns": "",
+                })
             predictor = FrozenPredictor(
                 pipeline_id="stub",
                 feature_set="F0",

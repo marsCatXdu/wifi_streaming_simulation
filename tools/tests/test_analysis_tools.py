@@ -30,11 +30,13 @@ from summarize_runs import group_key, summarize
 from validate_prediction_dataset import (
     DatasetValidationError,
     _validate_dataset_materialized,
+    _validate_recorded_polling,
     validate_dataset,
 )
 from validate_outputs import (
     PREDICTION_BASE_COLUMNS,
     PREDICTION_EVENT_COLUMNS,
+    PREDICTION_POLLING_BASE_COLUMNS,
     PREDICTION_ROLLING_PREFIXES,
     ValidationError,
     _rolling_column,
@@ -69,13 +71,13 @@ def make_run(path: Path, run_id: str, seed: int = 1) -> None:
         "duplicate_packets_received", "deadline_miss", "incomplete", "completion_mode",
     ]
     write_csv(path / "frames.csv", frame_header, [
-        run_id, 7, 100, 1200, 1, "I_FRAME", 1000, "fixed_link_0", 0, 0, 100,
-        0, 0, 150, 200, 100, 200, "", 1, 0, 0, 0, "union_complete",
+        run_id, 7, 2100, 1200, 1, "I_FRAME", 1000, "fixed_link_0", 0, 0, 2100,
+        0, 0, 2150, 2200, 100, 2200, "", 1, 0, 0, 0, "union_complete",
     ])
     write_csv(path / "policy_decisions.csv", [
         "run_id", "frame_id", "decision_time_us", "policy", "primary_link",
         "duplicated", "secondary_link", "reason", "primary_score", "secondary_score",
-    ], [run_id, 7, 100, "fixed_link_0", 0, 0, "", "configured", 0, 0])
+    ], [run_id, 7, 2100, "fixed_link_0", 0, 0, "", "configured", 0, 0])
     write_csv(path / "link_intervals.csv", [
         "timestamp_us", "link_id", "application_bytes_sent",
         "application_bytes_received", "redundant_bytes", "probe_bytes",
@@ -143,7 +145,10 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
             "history_windows_us": [1000],
             "event_log_enabled": False,
             "oracle_features_enabled": oracle_enabled,
-            "telemetry_schema_version": 2,
+            "polling_interval_us": 1000,
+            "polling_report_delay_us": 1000,
+            "telemetry_schema_version": 3,
+            "polling_schema_version": 1,
             "event_schema_version": 2,
             "feature_support_mask_version": 2,
         },
@@ -166,18 +171,18 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
     }
     values = {column: "" for column in columns}
     values.update({
-        "telemetry_schema_version": 2,
+        "telemetry_schema_version": 3,
         "run_id": config["run_id"],
         "frame_id": 7,
         "path_id": 0,
         "copy_id": 0,
         "sample_stage": "T0",
         "sample_offset_us": 0,
-        "sample_time_ns": 100000,
+        "sample_time_ns": 2100000,
         "latest_feature_event_time_ns": "",
         "latest_feature_event_sequence": 0,
-        "generation_time_ns": 100000,
-        "deadline_time_ns": 1100000,
+        "generation_time_ns": 2100000,
+        "deadline_time_ns": 3100000,
         "frame_age_us": 0,
         "deadline_slack_us": 1000,
         "sender_mac_complete": 0,
@@ -241,6 +246,34 @@ def add_prediction_sample(path: Path, oracle_enabled: bool = False) -> None:
         })
     header = sorted(columns)
     write_csv(path / "prediction_samples.csv", header, [values[column] for column in header])
+    polling_columns = PREDICTION_POLLING_BASE_COLUMNS | {
+        _rolling_column(prefix, label) for prefix in PREDICTION_ROLLING_PREFIXES
+    }
+    polling_values = {
+        column: values.get(column, "") for column in polling_columns
+    }
+    polling_values.update({
+        "polling_schema_version": 1,
+        "run_id": config["run_id"],
+        "frame_id": 7,
+        "path_id": 0,
+        "copy_id": 0,
+        "sample_stage": "T0",
+        "sample_offset_us": 0,
+        "report_available": 1,
+        "capture_time_ns": 1000000,
+        "available_time_ns": 2000000,
+        "staleness_us": 1100,
+        "latest_feature_event_time_ns": "",
+        "latest_feature_event_sequence": 0,
+        "feature_support_mask": values["feature_support_mask"],
+    })
+    polling_header = sorted(polling_columns)
+    write_csv(
+        path / "prediction_polling_samples.csv",
+        polling_header,
+        [polling_values[column] for column in polling_header],
+    )
 
 
 class MatrixTests(unittest.TestCase):
@@ -755,6 +788,22 @@ class MatrixTests(unittest.TestCase):
 
 
 class PredictionDatasetTests(unittest.TestCase):
+    def test_dataset_rejects_frame_period_polling_staleness(self) -> None:
+        with self.assertRaisesRegex(
+            DatasetValidationError, r"outside \[1 ms, 2 ms\)"
+        ):
+            _validate_recorded_polling({
+                "sample_time_ns": "33333000",
+                "polling_1ms_report_available": "1",
+                "polling_1ms_capture_time_ns": "0",
+                "polling_1ms_available_time_ns": "1000000",
+                "polling_1ms_staleness_us": "33333",
+                "polling_1ms_last_positive_ack_time_ns": "",
+                "polling_1ms_last_positive_ack_age_us": "",
+                "polling_1ms_last_tx_attempt_time_ns": "",
+                "polling_1ms_last_attempt_age_us": "",
+            })
+
     def test_builder_joins_labels_and_validates(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -782,12 +831,14 @@ class PredictionDatasetTests(unittest.TestCase):
                 rows = list(csv.DictReader(source))
             self.assertEqual(len(rows), 1)
             self.assertEqual(rows[0]["frame_complete"], "1")
-            self.assertEqual(rows[0]["frame_completion_time_ns"], "200000")
+            self.assertEqual(rows[0]["frame_completion_time_ns"], "2200000")
             self.assertEqual(rows[0]["frame_latency_us"], "100")
             self.assertEqual(rows[0]["deadline_miss"], "0")
             self.assertEqual(rows[0]["scenario_name"], "stage_a_none")
             self.assertEqual(rows[0]["miss_regime"], "unloaded")
             self.assertEqual(rows[0]["frame_packets_not_acknowledged"], "1")
+            self.assertEqual(rows[0]["polling_1ms_capture_time_ns"], "1000000")
+            self.assertEqual(rows[0]["polling_1ms_staleness_us"], "1100")
             report = validate_dataset(
                 output,
                 ROOT / "experiments/configs/prediction_analysis.yaml",
@@ -955,13 +1006,36 @@ class OutputTests(unittest.TestCase):
                 rows = list(reader)
                 header = reader.fieldnames
             self.assertIsNotNone(header)
-            rows[0]["latest_feature_event_time_ns"] = "100001"
+            rows[0]["latest_feature_event_time_ns"] = "2100001"
             rows[0]["latest_feature_event_sequence"] = "1"
             with sample_path.open("w", newline="", encoding="utf-8") as output:
                 writer = csv.DictWriter(output, fieldnames=header)
                 writer.writeheader()
                 writer.writerows(rows)
             with self.assertRaises(ValidationError):
+                validate_run(run)
+
+    def test_prediction_validator_rejects_one_frame_old_polling(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary) / "run"
+            make_run(run, "prediction-stale")
+            add_prediction_sample(run)
+            polling_path = run / "prediction_polling_samples.csv"
+            with polling_path.open(newline="", encoding="utf-8") as source:
+                reader = csv.DictReader(source)
+                rows = list(reader)
+                header = reader.fieldnames
+            self.assertIsNotNone(header)
+            rows[0]["capture_time_ns"] = "0"
+            rows[0]["available_time_ns"] = "1000000"
+            rows[0]["staleness_us"] = "2100"
+            with polling_path.open("w", newline="", encoding="utf-8") as output:
+                writer = csv.DictWriter(output, fieldnames=header)
+                writer.writeheader()
+                writer.writerows(rows)
+            with self.assertRaisesRegex(
+                ValidationError, r"staleness is outside \[1 ms, 2 ms\)"
+            ):
                 validate_run(run)
 
     def test_prediction_validator_enforces_passive_oracle_nulls(self) -> None:

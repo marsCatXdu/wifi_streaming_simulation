@@ -1,0 +1,29 @@
+extends: closed_loop_selective_duplication_obss.yaml
+name: closed-loop-selective-duplication-genuine-polling-smoke
+output_root: results/closed_loop_selective_duplication_smoke
+workers: 1
+
+base:
+  stream:
+    duration: 0.2
+  obss:
+    obss_profile: none
+
+seeds: [17]
+topologies:
+  - name: dual_interface
+policies:
+  - name: selective_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 1000, 2000, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.selective_duplication_threshold: 0.2
+      prediction.selective_duplication_frame_budget: 0.3
+      prediction.selective_duplication_burst_horizon_frames: 30
+      prediction.selective_duplication_decision_offsets_us: [0, 1000, 2000, 4000]

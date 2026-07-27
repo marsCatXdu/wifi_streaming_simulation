@@ -78,7 +78,8 @@ BUILD_KEYS = {
     "ns3_version", "ns3_upstream_commit", "project_git_commit", "compiler",
     "build_profile", "execution_timestamp_utc", "host",
 }
-PREDICTION_SCHEMA_VERSION = 2
+PREDICTION_SCHEMA_VERSION = 3
+PREDICTION_POLLING_SCHEMA_VERSION = 1
 PREDICTION_EVENT_SCHEMA_VERSION = 2
 PREDICTION_SUPPORT_MASK_VERSION = 2
 PREDICTION_BASE_COLUMNS = {
@@ -107,6 +108,19 @@ PREDICTION_BASE_COLUMNS = {
     "remaining_backoff_slots", "nav_remaining_us", "current_phy_state",
     "channel_access_status", "medium_busy_now",
     "expected_access_reason_within_slack", "feature_support_mask",
+}
+PREDICTION_POLLING_BASE_COLUMNS = {
+    "polling_schema_version", "run_id", "frame_id", "path_id", "copy_id",
+    "sample_stage", "sample_offset_us", "report_available", "capture_time_ns",
+    "available_time_ns", "staleness_us", "latest_feature_event_time_ns",
+    "latest_feature_event_sequence", "feature_support_mask",
+    "mpdu_tx_attempts_total", "mpdu_positive_acks_total",
+    "mpdu_tx_attempt_failures_total", "mpdu_retries_total",
+    "mpdu_terminal_drops_total", "mpdu_retry_limit_drops_total",
+    "mpdu_lifetime_drops_total", "mpdu_queue_drops_total", "ppdu_tx_count_total",
+    "last_tx_attempt_time_ns", "last_positive_ack_time_ns", "current_mcs",
+    "current_nss", "current_channel_width_mhz", "current_guard_interval_ns",
+    "frequency_band", "center_frequency_mhz", "current_ack_signal_dbm",
 }
 PREDICTION_ROLLING_PREFIXES = {
     "mpdu_attempts", "mpdu_positive_acks", "mpdu_attempt_failures", "mpdu_retries",
@@ -337,12 +351,15 @@ def _validate_prediction(
 ) -> dict[str, int]:
     prediction = config.get("predictionTelemetry")
     samples_path = run_dir / "prediction_samples.csv"
+    polling_path = run_dir / "prediction_polling_samples.csv"
     events_path = run_dir / "prediction_events.csv"
     if prediction is None:
         _require(not samples_path.exists(),
                  "prediction_samples.csv exists while telemetry is disabled")
         _require(not events_path.exists(),
                  "prediction_events.csv exists while telemetry is disabled")
+        _require(not polling_path.exists(),
+                 "prediction_polling_samples.csv exists while telemetry is disabled")
         return {"prediction_sample_count": 0, "prediction_event_count": 0}
 
     _require(isinstance(prediction, dict) and prediction.get("enabled") is True,
@@ -374,6 +391,16 @@ def _validate_prediction(
              "prediction sample offsets must precede the deadline")
     _require(prediction.get("telemetry_schema_version") == PREDICTION_SCHEMA_VERSION,
              "resolved_config.json: unsupported prediction telemetry schema")
+    _require(
+        prediction.get("polling_schema_version") == PREDICTION_POLLING_SCHEMA_VERSION,
+        "resolved_config.json: unsupported prediction polling schema",
+    )
+    polling_interval_us = int(prediction.get("polling_interval_us", 0))
+    polling_delay_us = int(prediction.get("polling_report_delay_us", 0))
+    _require(
+        polling_interval_us == 1000 and polling_delay_us == 1000,
+        "prediction telemetry does not use genuine delayed 1 ms polling",
+    )
     _require(prediction.get("event_schema_version") == PREDICTION_EVENT_SCHEMA_VERSION,
              "resolved_config.json: unsupported prediction event schema")
     _require(prediction.get("feature_support_mask_version") ==
@@ -386,6 +413,7 @@ def _validate_prediction(
     _require(isinstance(oracle_enabled, bool),
              "resolved_config.json: invalid prediction oracle flag")
     _require(samples_path.is_file(), "missing core file: prediction_samples.csv")
+    _require(polling_path.is_file(), "missing core file: prediction_polling_samples.csv")
     _require(events_path.is_file() == event_enabled,
              "prediction_events.csv presence does not match configuration")
 
@@ -712,6 +740,61 @@ def _validate_prediction(
                  int(t0["packets_submitted"]) == 0 and
                  int(t0["frame_packets_mac_enqueued"]) == 0,
                  "prediction_samples.csv: T0 contains frame-caused sender state")
+
+    polling_required = PREDICTION_POLLING_BASE_COLUMNS | rolling_columns
+    polling_rows = _csv(polling_path, polling_required)
+    _require(
+        len(polling_rows) == len(samples),
+        "prediction_polling_samples.csv: cardinality mismatch",
+    )
+    sample_times = {
+        (
+            row["frame_id"],
+            row["path_id"],
+            row["copy_id"],
+            row["sample_stage"],
+            row["sample_offset_us"],
+        ): int(row["sample_time_ns"])
+        for row in samples
+    }
+    polling_keys: set[tuple[str, str, str, str, str]] = set()
+    for row in polling_rows:
+        file_name = "prediction_polling_samples.csv"
+        key = (
+            row["frame_id"],
+            row["path_id"],
+            row["copy_id"],
+            row["sample_stage"],
+            row["sample_offset_us"],
+        )
+        _require(key in sample_times, f"{file_name}: orphan observation")
+        _require(key not in polling_keys, f"{file_name}: duplicate observation key")
+        polling_keys.add(key)
+        _require(row["run_id"] == run_id, f"{file_name}: run_id mismatch")
+        _require(
+            _integer(row, "polling_schema_version", file_name)
+            == PREDICTION_POLLING_SCHEMA_VERSION,
+            f"{file_name}: invalid schema version",
+        )
+        _require(_flag(row, "report_available", file_name), f"{file_name}: missing report")
+        sample_time = sample_times[key]
+        capture_time = _integer(row, "capture_time_ns", file_name)
+        available_time = _integer(row, "available_time_ns", file_name)
+        staleness_us = _number(row, "staleness_us", file_name)
+        _require(capture_time % (polling_interval_us * 1000) == 0,
+                 f"{file_name}: report is off the polling cadence")
+        _require(available_time == capture_time + polling_delay_us * 1000,
+                 f"{file_name}: report delay mismatch")
+        _require(available_time <= sample_time, f"{file_name}: report is not available")
+        _require(
+            staleness_us == (sample_time - capture_time) // 1000,
+            f"{file_name}: staleness mismatch",
+        )
+        _require(1000 <= staleness_us < 2000,
+                 f"{file_name}: staleness is outside [1 ms, 2 ms)")
+        latest = _optional_integer(row, "latest_feature_event_time_ns", file_name)
+        if latest is not None:
+            _require(latest <= capture_time, f"{file_name}: future feature event")
 
     event_count = 0
     if event_enabled:
@@ -1280,9 +1363,14 @@ def validate_run(
         _require(isinstance(selective_config, dict),
                  "resolved_config.json: missing selectiveDuplication object")
         _require(
-            selective_config.get("model_id") == "commodity_polling_1ms_v1" and
-            selective_config.get("source_model_sha256") ==
-            "f674699d6c10a34fbc7f08bd1f28e8a562e77bcfeadbbc1bdff127538588548c" and
+            selective_config.get("model_id") in {
+                "commodity_polling_1ms_genuine_v1",
+                "commodity_polling_1ms_legacy_frame_delayed_v1",
+            } and
+            isinstance(selective_config.get("source_model_sha256"), str) and
+            len(selective_config["source_model_sha256"]) == 64 and
+            all(character in "0123456789abcdef"
+                for character in selective_config["source_model_sha256"]) and
             selective_config.get("feature_set") == "F0+F1-degraded" and
             selective_config.get("degradation_profile") == "polling_1ms" and
             selective_config.get("calibration") == "platt" and

@@ -28,7 +28,8 @@ from validate_outputs import validate_run
 ROOT = Path(__file__).resolve().parents[1]
 NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
 PREDICTION_SCHEMA_VERSIONS = {
-    "telemetry_schema_version": 2,
+    "telemetry_schema_version": 3,
+    "polling_schema_version": 1,
     "event_schema_version": 2,
     "feature_support_mask_version": 2,
 }
@@ -102,6 +103,8 @@ CLI_KEYS = {
     "prediction_telemetry_enabled": "predictionTelemetryEnabled",
     "prediction_sample_offsets_us": "predictionSampleOffsetsUs",
     "prediction_history_windows_us": "predictionHistoryWindowsUs",
+    "prediction_polling_interval_us": "predictionPollingIntervalUs",
+    "prediction_polling_report_delay_us": "predictionPollingReportDelayUs",
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
     "selective_duplication_threshold": "selectiveDuplicationThreshold",
@@ -447,7 +450,10 @@ def write_experiment_description(document: dict[str, Any],
             "",
             "The primary-link sender records passive, receiver-independent causal",
             f"snapshots at offsets {offsets} us. Rolling MAC/PHY windows are",
-            f"{windows} us. Raw prediction events are "
+            f"{windows} us. F1 reports are captured by a frame-independent "
+            f"{prediction.get('prediction_polling_interval_us', 1000)} us clock and become "
+            f"available after {prediction.get('prediction_polling_report_delay_us', 1000)} us. "
+            "Raw prediction events are "
             f"{'enabled' if prediction.get('prediction_event_log_enabled') else 'disabled'};",
             f"causal oracle fields are "
             f"{'enabled' if prediction.get('prediction_oracle_features_enabled') else 'disabled'}.",

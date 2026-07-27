@@ -5,6 +5,11 @@ experimental evidence generated through 2026-07-27. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
+The prediction artifacts under `03_prediction_pipeline/` are legacy,
+one-frame-delayed evidence and are no longer formal claims. See
+`03_prediction_pipeline/LEGACY_FRAME_DELAYED_NOTICE.md`. Corrected evidence is
+produced separately by the `genuine_polling_v1` workstation pipeline.
+
 ## Contents
 
 | Directory | Experiment | Included evidence |
@@ -13,12 +18,12 @@ labelled dataset. Those artifacts remain under the ignored `results/` tree.
 | `01_streaming_five_way/obss_only` | The same five approaches with OBSS-only contention | Aggregate CSV/JSON and the same eight figures |
 | `02_ul_ofdma/combined_contention` | UL OFDMA disabled/enabled under combined contention | Configuration description, aggregate tables, paired comparisons, and per-approach latency distributions |
 | `02_ul_ofdma/obss_only` | UL OFDMA disabled/enabled under OBSS-only contention | Configuration description, aggregate tables, paired comparisons, and per-approach latency distributions |
-| `03_prediction_pipeline/telemetry_acceptance` | Increment 1 causal telemetry acceptance | Reconciliation and causality audit |
-| `03_prediction_pipeline/load_pilots` | Increment 2 load selection | Final 195-run pilot table |
-| `03_prediction_pipeline/dataset` | Curated prediction dataset | Manifest, split assignment, and validation report; labelled samples are excluded |
-| `03_prediction_pipeline/offline_evaluation` | Increment 3 offline predictability evaluation | Report, decision, metric tables, and three principal figures |
-| `03_prediction_pipeline/online_replay_10pct` | Causal 5 GHz online replay with the original 10% operating point | Report, aggregate metrics, global Top-K reference, and all replay figures |
-| `03_prediction_pipeline/online_replay_30pct` | Separate frame-budget replay including 30% | Report, validation, aggregate metrics, global Top-K reference, and all replay figures |
+| `03_prediction_pipeline/telemetry_acceptance` | Legacy frame-aligned telemetry acceptance | Retained, non-formal reconciliation audit |
+| `03_prediction_pipeline/load_pilots` | Legacy load selection | Retained, non-formal pilot table |
+| `03_prediction_pipeline/dataset` | Legacy prediction dataset | Retained manifest and validation metadata |
+| `03_prediction_pipeline/offline_evaluation` | Legacy frame-delayed predictability evaluation | Retained, non-formal report and metrics |
+| `03_prediction_pipeline/online_replay_10pct` | Legacy frame-delayed online replay | Retained, non-formal 10% operating point |
+| `03_prediction_pipeline/online_replay_30pct` | Legacy frame-delayed online replay | Retained, non-formal 30% operating point |
 
 ## Principal streaming results
 

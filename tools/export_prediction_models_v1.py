@@ -155,6 +155,9 @@ def emit_model_source(
         "{",
         "namespace",
         "{",
+        'constexpr std::string_view g_modelId{"commodity_polling_1ms_genuine_v1"};',
+        f'constexpr std::string_view g_sourceModelSha256{{"{model_digest}"}};',
+        "",
         f"constexpr std::array<std::string_view, {len(feature_names)}> g_featureNames{{{{",
     ]
     lines.extend(f'    "{name}",' for name in feature_names)
@@ -211,6 +214,18 @@ def emit_model_source(
             "GetFeatureNames()",
             "{",
             "    return g_featureNames;",
+            "}",
+            "",
+            "std::string_view",
+            "GetModelId()",
+            "{",
+            "    return g_modelId;",
+            "}",
+            "",
+            "std::string_view",
+            "GetSourceModelSha256()",
+            "{",
+            "    return g_sourceModelSha256;",
             "}",
             "",
             "const Predictor&",
@@ -377,6 +392,10 @@ def main() -> int:
     model_digest = sha256(args.bundle)
     if manifest.get("model_bundle_schema_version") != 1:
         raise ValueError("unsupported input model bundle schema")
+    if manifest.get("dataset_schema_version") != 2:
+        raise ValueError("export requires a genuine-polling dataset")
+    if manifest.get("f1_observation_source") != "recorded_periodic_observation":
+        raise ValueError("export requires recorded periodic F1 observations")
     if manifest.get("model_sha256") != model_digest:
         raise ValueError("model bundle checksum does not match its manifest")
     bundle = read_model_bundle(args.bundle)

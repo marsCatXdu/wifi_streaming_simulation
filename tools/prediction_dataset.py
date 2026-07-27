@@ -13,7 +13,18 @@ from typing import Any, Iterable, Iterator
 
 import yaml
 
-DATASET_SCHEMA_VERSION = 1
+DATASET_SCHEMA_VERSION = 2
+POLLING_PREFIX = "polling_1ms_"
+POLLING_PROVENANCE_COLUMNS = {
+    f"{POLLING_PREFIX}schema_version",
+    f"{POLLING_PREFIX}report_available",
+    f"{POLLING_PREFIX}capture_time_ns",
+    f"{POLLING_PREFIX}available_time_ns",
+    f"{POLLING_PREFIX}staleness_us",
+    f"{POLLING_PREFIX}latest_feature_event_time_ns",
+    f"{POLLING_PREFIX}latest_feature_event_sequence",
+    f"{POLLING_PREFIX}feature_support_mask",
+}
 ATTACHED_COLUMNS = [
     "dataset_schema_version",
     "frame_complete",
@@ -447,6 +458,13 @@ def load_regime(
 
 
 def feature_tier(column: str) -> str:
+    if column.startswith(POLLING_PREFIX):
+        return (
+            "provenance"
+            if column in POLLING_PROVENANCE_COLUMNS
+            or column.endswith("_time_ns")
+            else "F1-polling-1ms"
+        )
     if column in OUTCOME_COLUMNS:
         return "outcome"
     if column in CONTEXT_COLUMNS:
@@ -468,7 +486,7 @@ def feature_dictionary(columns: Iterable[str]) -> dict[str, dict[str, Any]]:
     result = {}
     for column in columns:
         tier = feature_tier(column)
-        model_eligible = tier in {"F0", "F1-ideal", "F2", "F3"}
+        model_eligible = tier in {"F0", "F1-ideal", "F1-polling-1ms", "F2", "F3"}
         if column in ABSOLUTE_TIMESTAMP_COLUMNS:
             model_eligible = False
         result[column] = {

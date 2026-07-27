@@ -45,7 +45,12 @@ enum class WifiPhyState;
 /**
  * Source-owned prediction telemetry schema version.
  */
-constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 2;
+constexpr uint32_t PREDICTION_TELEMETRY_SCHEMA_VERSION = 3;
+
+/**
+ * Frame-independent polling sidecar schema version.
+ */
+constexpr uint32_t PREDICTION_POLLING_SCHEMA_VERSION = 1;
 
 /**
  * Source-owned prediction event schema version.
@@ -173,6 +178,37 @@ struct PredictionRollingSample
 };
 
 /**
+ * Sender-side F1 report captured by the frame-independent polling clock.
+ */
+struct PredictionPollingReport
+{
+    uint64_t captureTimeNs{0};             ///< Poll capture time.
+    uint64_t availableTimeNs{0};           ///< Time at which the report becomes available.
+    std::optional<uint64_t> latestFeatureEventTimeNs; ///< Included feature watermark time.
+    uint64_t latestFeatureEventSequence{0}; ///< Included feature watermark sequence.
+    std::optional<uint64_t> mpduTxAttemptsTotal;
+    std::optional<uint64_t> mpduPositiveAcksTotal;
+    std::optional<uint64_t> mpduTxAttemptFailuresTotal;
+    std::optional<uint64_t> mpduRetriesTotal;
+    std::optional<uint64_t> mpduTerminalDropsTotal;
+    std::optional<uint64_t> mpduRetryLimitDropsTotal;
+    std::optional<uint64_t> mpduLifetimeDropsTotal;
+    std::optional<uint64_t> mpduQueueDropsTotal;
+    std::optional<uint64_t> ppduTxCountTotal;
+    std::optional<uint64_t> lastTxAttemptTimeNs;
+    std::optional<uint64_t> lastPositiveAckTimeNs;
+    std::optional<uint8_t> currentMcs;
+    std::optional<uint8_t> currentNss;
+    std::optional<uint16_t> currentChannelWidthMhz;
+    std::optional<uint64_t> currentGuardIntervalNs;
+    std::optional<std::string> frequencyBand;
+    std::optional<double> centerFrequencyMhz;
+    std::optional<double> currentAckSignalDbm;
+    std::vector<PredictionRollingSample> rolling;
+    std::string featureSupportMask{"0x0"};
+};
+
+/**
  * Immutable sender-side observation captured at a configured frame offset.
  */
 struct PredictionSample
@@ -243,6 +279,7 @@ struct PredictionSample
     std::optional<std::string> expectedAccessReasonWithinSlack; ///< Access-within-slack reason.
 
     std::string featureSupportMask{"0x0"}; ///< Canonical per-field support mask.
+    std::optional<PredictionPollingReport> pollingReport; ///< Newest available F1 report.
 };
 
 /**
@@ -303,6 +340,34 @@ class PredictionTelemetryCollector : public Object
     const std::vector<uint64_t>& GetHistoryWindowsUs() const;
 
     /**
+     * Configure the frame-independent polling cadence.
+     *
+     * @param intervalUs Positive polling interval in microseconds.
+     */
+    void SetPollingIntervalUs(uint64_t intervalUs);
+
+    /**
+     * Return the polling cadence.
+     *
+     * @return Polling interval in microseconds.
+     */
+    uint64_t GetPollingIntervalUs() const;
+
+    /**
+     * Configure report availability delay.
+     *
+     * @param delayUs Report delay in microseconds.
+     */
+    void SetPollingReportDelayUs(uint64_t delayUs);
+
+    /**
+     * Return the report availability delay.
+     *
+     * @return Report delay in microseconds.
+     */
+    uint64_t GetPollingReportDelayUs() const;
+
+    /**
      * Enable or disable causal ns-3 oracle fields.
      *
      * @param enabled True to populate F3 current-state fields.
@@ -329,8 +394,11 @@ class PredictionTelemetryCollector : public Object
      *
      * @param samplesFile Prediction sample CSV path.
      * @param eventsFile Optional prediction event CSV path.
+     * @param pollingSamplesFile Frame-independent polling sidecar CSV path.
      */
-    void SetOutputFiles(const std::string& samplesFile, const std::string& eventsFile = "");
+    void SetOutputFiles(const std::string& samplesFile,
+                        const std::string& eventsFile = "",
+                        const std::string& pollingSamplesFile = "");
 
     /**
      * Set a passive callback invoked after each immutable snapshot is captured.
@@ -507,9 +575,17 @@ class PredictionTelemetryCollector : public Object
         std::list<QueueEntry> queueEntries;            ///< Current access-category queue order.
         std::optional<WifiContainerQueueId> targetQueueId; ///< Target receiver/TID queue.
         uint64_t phyIntervalSerial{0};                 ///< Next interval ordering serial.
+        std::deque<PredictionPollingReport> pollingReports; ///< Captured delayed reports.
+        EventId pollingEvent;                         ///< Next frame-independent poll.
+        uint64_t pollingCaptureCount{0};              ///< Number of completed polls.
+        std::optional<uint64_t> lastPollingCaptureTimeNs; ///< Previous poll time.
     };
 
     void CaptureSnapshot(PredictionFrameKey key, uint64_t offsetUs);
+    void PollPath(uint8_t pathId);
+    PredictionPollingReport BuildPollingReport(PathState& path, uint64_t captureTimeNs);
+    const PredictionPollingReport* SelectPollingReport(const PathState& path,
+                                                       uint64_t sampleTimeNs) const;
     void NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiMpdu> mpdu);
     void NotifyQueueDequeue(uint8_t pathId, Ptr<const WifiMpdu> mpdu);
     void NotifyAckedMpdu(uint8_t pathId, Ptr<const WifiMpdu> mpdu);
@@ -555,6 +631,8 @@ class PredictionTelemetryCollector : public Object
     void WriteEventHeader();
     void WriteSampleHeader(std::ostream& output) const;
     void WriteSample(std::ostream& output, const PredictionSample& sample) const;
+    void WritePollingSampleHeader(std::ostream& output) const;
+    void WritePollingSample(std::ostream& output, const PredictionSample& sample) const;
     static bool GetTag(Ptr<const WifiMpdu> mpdu, StreamingFrameTag& tag);
     static const WifiMpdu* GetStableMpdu(Ptr<const WifiMpdu> mpdu);
     static std::string MakeSupportMask(bool wifiBound, bool oracleSupported);
@@ -568,11 +646,14 @@ class PredictionTelemetryCollector : public Object
     std::string m_runId{"run"};
     std::vector<uint64_t> m_sampleOffsetsUs{0, 1000, 2000, 4000};
     std::vector<uint64_t> m_historyWindowsUs{1000, 5000, 20000};
+    uint64_t m_pollingIntervalUs{1000};
+    uint64_t m_pollingReportDelayUs{1000};
     std::map<PredictionFrameKey, FrameState> m_frames;
     std::map<uint8_t, PathState> m_paths;
     std::vector<PredictionSample> m_samples;
     std::vector<EventId> m_snapshotEvents;
     std::string m_samplesFile;
+    std::string m_pollingSamplesFile;
     std::ofstream m_eventsOutput;
     Callback<void, const PredictionSample&> m_snapshotCallback;
     uint64_t m_featureEventSequence{0};

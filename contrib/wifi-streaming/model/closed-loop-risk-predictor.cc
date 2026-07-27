@@ -19,9 +19,6 @@ NS_OBJECT_ENSURE_REGISTERED(ClosedLoopRiskPredictor);
 namespace
 {
 
-constexpr uint64_t REPORT_INTERVAL_US = 1000;
-constexpr uint64_t OBSERVATION_DELAY_US = 1000;
-
 double
 Missing()
 {
@@ -47,11 +44,10 @@ ClosedLoopRiskPredictor::~ClosedLoopRiskPredictor() = default;
 double
 ClosedLoopRiskPredictor::Score(const PredictionSample& sample)
 {
-    const PredictionSample* delayed = FindDelayedF1(sample);
-    auto features = BuildFeatures(sample, delayed);
+    const auto* report = sample.pollingReport ? &*sample.pollingReport : nullptr;
+    auto features = BuildFeatures(sample, report);
     const auto result = PredictionModelEvaluator::Evaluate(ResolveStage(sample.sampleOffsetUs),
                                                             features);
-    Remember(sample);
     return result.calibratedProbability;
 }
 
@@ -154,21 +150,21 @@ ClosedLoopRiskPredictor::EncodeFrequencyBand(const std::optional<std::string>& b
 }
 
 const PredictionRollingSample*
-ClosedLoopRiskPredictor::FindWindow(const PredictionSample& sample, uint64_t windowUs)
+ClosedLoopRiskPredictor::FindWindow(const PredictionPollingReport& report, uint64_t windowUs)
 {
-    auto found = std::find_if(sample.rolling.begin(),
-                              sample.rolling.end(),
+    auto found = std::find_if(report.rolling.begin(),
+                              report.rolling.end(),
                               [windowUs](const auto& window) {
                                   return window.windowUs == windowUs;
                               });
-    NS_ABORT_MSG_IF(found == sample.rolling.end(),
-                    "Prediction snapshot lacks required rolling window " << windowUs);
+    NS_ABORT_MSG_IF(found == report.rolling.end(),
+                    "Prediction polling report lacks required rolling window " << windowUs);
     return &*found;
 }
 
 std::vector<double>
 ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
-                                       const PredictionSample* delayedF1)
+                                       const PredictionPollingReport* report)
 {
     std::vector<double> values;
     values.reserve(86);
@@ -181,7 +177,7 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
     values.push_back(static_cast<double>(current.packetsRemainingToSubmit));
     values.push_back(static_cast<double>(current.packetsSubmitted));
 
-    if (!delayedF1)
+    if (!report)
     {
         values.resize(86, Missing());
         for (auto& value : values)
@@ -194,21 +190,21 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
         return values;
     }
 
-    const auto* w1 = FindWindow(*delayedF1, 1000);
-    const auto* w20 = FindWindow(*delayedF1, 20000);
-    const auto* w5 = FindWindow(*delayedF1, 5000);
+    const auto* w1 = FindWindow(*report, 1000);
+    const auto* w20 = FindWindow(*report, 20000);
+    const auto* w5 = FindWindow(*report, 5000);
     values.push_back(static_cast<double>(w1->acknowledgedMacServiceBytes));
     values.push_back(static_cast<double>(w20->acknowledgedMacServiceBytes));
     values.push_back(static_cast<double>(w5->acknowledgedMacServiceBytes));
-    values.push_back(OptionalValue(delayedF1->centerFrequencyMhz));
-    values.push_back(OptionalValue(delayedF1->currentAckSignalDbm));
-    values.push_back(OptionalValue(delayedF1->currentChannelWidthMhz));
-    values.push_back(OptionalValue(delayedF1->currentGuardIntervalNs));
-    values.push_back(OptionalValue(delayedF1->currentMcs));
-    values.push_back(OptionalValue(delayedF1->currentNss));
-    values.push_back(EncodeFrequencyBand(delayedF1->frequencyBand));
-    values.push_back(AgeUs(delayedF1->sampleTimeNs, delayedF1->lastTxAttemptTimeNs));
-    values.push_back(AgeUs(delayedF1->sampleTimeNs, delayedF1->lastPositiveAckTimeNs));
+    values.push_back(OptionalValue(report->centerFrequencyMhz));
+    values.push_back(OptionalValue(report->currentAckSignalDbm));
+    values.push_back(OptionalValue(report->currentChannelWidthMhz));
+    values.push_back(OptionalValue(report->currentGuardIntervalNs));
+    values.push_back(OptionalValue(report->currentMcs));
+    values.push_back(OptionalValue(report->currentNss));
+    values.push_back(EncodeFrequencyBand(report->frequencyBand));
+    values.push_back(AgeUs(report->captureTimeNs, report->lastTxAttemptTimeNs));
+    values.push_back(AgeUs(report->captureTimeNs, report->lastPositiveAckTimeNs));
     values.push_back(static_cast<double>(w1->mpduAttemptFailures));
     values.push_back(static_cast<double>(w20->mpduAttemptFailures));
     values.push_back(static_cast<double>(w5->mpduAttemptFailures));
@@ -221,12 +217,12 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
     values.push_back(OptionalValue(w1->mpduFirstAttemptToAckP95Us));
     values.push_back(OptionalValue(w20->mpduFirstAttemptToAckP95Us));
     values.push_back(OptionalValue(w5->mpduFirstAttemptToAckP95Us));
-    values.push_back(OptionalValue(delayedF1->mpduLifetimeDropsTotal));
+    values.push_back(OptionalValue(report->mpduLifetimeDropsTotal));
     values.push_back(static_cast<double>(w1->mpduPositiveAcks));
     values.push_back(static_cast<double>(w20->mpduPositiveAcks));
     values.push_back(static_cast<double>(w5->mpduPositiveAcks));
-    values.push_back(OptionalValue(delayedF1->mpduPositiveAcksTotal));
-    values.push_back(OptionalValue(delayedF1->mpduQueueDropsTotal));
+    values.push_back(OptionalValue(report->mpduPositiveAcksTotal));
+    values.push_back(OptionalValue(report->mpduQueueDropsTotal));
     values.push_back(OptionalValue(w1->mpduQueueToAckMeanUs));
     values.push_back(OptionalValue(w20->mpduQueueToAckMeanUs));
     values.push_back(OptionalValue(w5->mpduQueueToAckMeanUs));
@@ -236,14 +232,14 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
     values.push_back(static_cast<double>(w1->mpduRetries));
     values.push_back(static_cast<double>(w20->mpduRetries));
     values.push_back(static_cast<double>(w5->mpduRetries));
-    values.push_back(OptionalValue(delayedF1->mpduRetriesTotal));
-    values.push_back(OptionalValue(delayedF1->mpduRetryLimitDropsTotal));
+    values.push_back(OptionalValue(report->mpduRetriesTotal));
+    values.push_back(OptionalValue(report->mpduRetryLimitDropsTotal));
     values.push_back(OptionalValue(w1->mpduRetryRatio));
     values.push_back(OptionalValue(w20->mpduRetryRatio));
     values.push_back(OptionalValue(w5->mpduRetryRatio));
-    values.push_back(OptionalValue(delayedF1->mpduTerminalDropsTotal));
-    values.push_back(OptionalValue(delayedF1->mpduTxAttemptFailuresTotal));
-    values.push_back(OptionalValue(delayedF1->mpduTxAttemptsTotal));
+    values.push_back(OptionalValue(report->mpduTerminalDropsTotal));
+    values.push_back(OptionalValue(report->mpduTxAttemptFailuresTotal));
+    values.push_back(OptionalValue(report->mpduTxAttemptsTotal));
     values.push_back(OptionalValue(w1->phyBusyFraction));
     values.push_back(OptionalValue(w20->phyBusyFraction));
     values.push_back(OptionalValue(w5->phyBusyFraction));
@@ -274,7 +270,7 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
     values.push_back(w1->phyTxTimeUs);
     values.push_back(w20->phyTxTimeUs);
     values.push_back(w5->phyTxTimeUs);
-    values.push_back(OptionalValue(delayedF1->ppduTxCountTotal));
+    values.push_back(OptionalValue(report->ppduTxCountTotal));
     NS_ABORT_MSG_IF(values.size() != PredictionModelEvaluator::GetFeatureNames().size(),
                     "Closed-loop feature count does not match frozen model");
 
@@ -313,46 +309,9 @@ ClosedLoopRiskPredictor::BuildFeatures(const PredictionSample& current,
     return values;
 }
 
-const PredictionSample*
-ClosedLoopRiskPredictor::FindDelayedF1(const PredictionSample& sample) const
-{
-    const uint64_t sampleTimeUs = sample.sampleTimeNs / 1000;
-    if (sampleTimeUs < OBSERVATION_DELAY_US)
-    {
-        return nullptr;
-    }
-    const uint64_t reportTimeUs =
-        ((sampleTimeUs - OBSERVATION_DELAY_US) / REPORT_INTERVAL_US) * REPORT_INTERVAL_US;
-    auto stage = m_history.find(sample.sampleOffsetUs);
-    if (stage == m_history.end())
-    {
-        return nullptr;
-    }
-    for (auto candidate = stage->second.rbegin(); candidate != stage->second.rend(); ++candidate)
-    {
-        if (candidate->sampleTimeNs / 1000 <= reportTimeUs)
-        {
-            return &*candidate;
-        }
-    }
-    return nullptr;
-}
-
-void
-ClosedLoopRiskPredictor::Remember(const PredictionSample& sample)
-{
-    auto& history = m_history[sample.sampleOffsetUs];
-    history.push_back(sample);
-    while (history.size() > 4)
-    {
-        history.pop_front();
-    }
-}
-
 void
 ClosedLoopRiskPredictor::DoDispose()
 {
-    m_history.clear();
     Object::DoDispose();
 }
 

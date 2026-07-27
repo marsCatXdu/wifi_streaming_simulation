@@ -443,6 +443,11 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
             output << (index == 0 ? "" : ", ") << config.predictionHistoryWindowsUs[index];
         }
         output << "],\n"
+               << "    \"polling_interval_us\": " << config.predictionPollingIntervalUs << ",\n"
+               << "    \"polling_report_delay_us\": "
+               << config.predictionPollingReportDelayUs << ",\n"
+               << "    \"polling_schema_version\": " << PREDICTION_POLLING_SCHEMA_VERSION
+               << ",\n"
                << "    \"event_log_enabled\": " << config.predictionEventLogEnabled << ",\n"
                << "    \"oracle_features_enabled\": "
                << config.predictionOracleFeaturesEnabled << ",\n"

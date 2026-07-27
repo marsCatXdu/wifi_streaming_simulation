@@ -388,6 +388,36 @@ PredictionTelemetryCollector::GetHistoryWindowsUs() const
 }
 
 void
+PredictionTelemetryCollector::SetPollingIntervalUs(uint64_t intervalUs)
+{
+    NS_ABORT_MSG_IF(!m_paths.empty(), "Cannot change polling interval after path binding");
+    NS_ABORT_MSG_IF(intervalUs == 0, "Prediction polling interval must be positive");
+    m_pollingIntervalUs = intervalUs;
+}
+
+uint64_t
+PredictionTelemetryCollector::GetPollingIntervalUs() const
+{
+    return m_pollingIntervalUs;
+}
+
+void
+PredictionTelemetryCollector::SetPollingReportDelayUs(uint64_t delayUs)
+{
+    NS_ABORT_MSG_IF(!m_paths.empty(), "Cannot change polling delay after path binding");
+    NS_ABORT_MSG_IF(delayUs >
+                        static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / 1000,
+                    "Prediction polling delay exceeds supported nanosecond range");
+    m_pollingReportDelayUs = delayUs;
+}
+
+uint64_t
+PredictionTelemetryCollector::GetPollingReportDelayUs() const
+{
+    return m_pollingReportDelayUs;
+}
+
+void
 PredictionTelemetryCollector::SetOracleFeaturesEnabled(bool enabled)
 {
     NS_ABORT_MSG_IF(!m_frames.empty(),
@@ -515,15 +545,19 @@ PredictionTelemetryCollector::BindWifiPath(uint8_t pathId,
                path.phyState->GetState(),
                path.telemetryStartNs,
                std::numeric_limits<int64_t>::max());
+    path.pollingEvent =
+        Simulator::ScheduleNow(&PredictionTelemetryCollector::PollPath, this, pathId);
 }
 
 void
 PredictionTelemetryCollector::SetOutputFiles(const std::string& samplesFile,
-                                             const std::string& eventsFile)
+                                             const std::string& eventsFile,
+                                             const std::string& pollingSamplesFile)
 {
     NS_ABORT_MSG_IF(samplesFile.empty(), "Prediction sample output path cannot be empty");
     NS_ABORT_MSG_IF(!m_samplesFile.empty(), "Prediction output files were configured twice");
     m_samplesFile = samplesFile;
+    m_pollingSamplesFile = pollingSamplesFile;
     if (!eventsFile.empty())
     {
         m_eventsOutput.open(eventsFile, std::ios::out | std::ios::trunc);
@@ -737,6 +771,122 @@ PredictionTelemetryCollector::WriteSample(std::ostream& output,
 }
 
 void
+PredictionTelemetryCollector::WritePollingSampleHeader(std::ostream& output) const
+{
+    output
+        << "polling_schema_version,run_id,frame_id,path_id,copy_id,sample_stage,"
+           "sample_offset_us,report_available,capture_time_ns,available_time_ns,staleness_us,"
+           "latest_feature_event_time_ns,latest_feature_event_sequence,feature_support_mask,"
+           "mpdu_tx_attempts_total,mpdu_positive_acks_total,mpdu_tx_attempt_failures_total,"
+           "mpdu_retries_total,mpdu_terminal_drops_total,mpdu_retry_limit_drops_total,"
+           "mpdu_lifetime_drops_total,mpdu_queue_drops_total,ppdu_tx_count_total,"
+           "last_tx_attempt_time_ns,last_positive_ack_time_ns,current_mcs,current_nss,"
+           "current_channel_width_mhz,current_guard_interval_ns,frequency_band,"
+           "center_frequency_mhz,current_ack_signal_dbm";
+    for (const auto windowUs : m_historyWindowsUs)
+    {
+        const auto label = WindowLabel(windowUs);
+        output << ",mpdu_attempts_" << label << ",mpdu_positive_acks_" << label
+               << ",mpdu_attempt_failures_" << label << ",mpdu_retries_" << label
+               << ",mpdu_retry_ratio_" << label << ",acknowledged_mac_service_bytes_" << label
+               << ",mpdu_queue_to_ack_mean_" << label << "_us"
+               << ",mpdu_queue_to_ack_p95_" << label << "_us"
+               << ",mpdu_first_attempt_to_ack_mean_" << label << "_us"
+               << ",mpdu_first_attempt_to_ack_p95_" << label << "_us"
+               << ",phy_tx_time_" << label << "_us"
+               << ",phy_rx_time_" << label << "_us"
+               << ",phy_busy_time_" << label << "_us"
+               << ",phy_idle_time_" << label << "_us"
+               << ",phy_other_time_" << label << "_us"
+               << ",phy_tx_fraction_" << label << ",phy_rx_fraction_" << label
+               << ",phy_busy_fraction_" << label << ",phy_idle_fraction_" << label
+               << ",phy_other_fraction_" << label << ",history_coverage_" << label << "_us";
+    }
+    output << '\n';
+}
+
+void
+PredictionTelemetryCollector::WritePollingSample(std::ostream& output,
+                                                 const PredictionSample& sample) const
+{
+    CsvRow row(output);
+    row.Add(PREDICTION_POLLING_SCHEMA_VERSION);
+    row.Add(sample.runId);
+    row.Add(sample.key.frameId);
+    row.Add(sample.key.pathId);
+    row.Add(sample.key.copyId);
+    row.Add(sample.sampleStage);
+    row.Add(sample.sampleOffsetUs);
+    row.Add(sample.pollingReport.has_value());
+    if (!sample.pollingReport)
+    {
+        for (std::size_t index = 0; index < 24 + 21 * m_historyWindowsUs.size(); ++index)
+        {
+            row.Add(std::string{});
+        }
+        row.End();
+        return;
+    }
+    const auto& report = *sample.pollingReport;
+    NS_ABORT_MSG_IF(report.availableTimeNs > sample.sampleTimeNs,
+                    "Selected prediction polling report is not yet available");
+    row.Add(report.captureTimeNs);
+    row.Add(report.availableTimeNs);
+    row.Add((sample.sampleTimeNs - report.captureTimeNs) / 1000);
+    row.Add(report.latestFeatureEventTimeNs);
+    row.Add(report.latestFeatureEventSequence);
+    row.Add(report.featureSupportMask);
+    row.Add(report.mpduTxAttemptsTotal);
+    row.Add(report.mpduPositiveAcksTotal);
+    row.Add(report.mpduTxAttemptFailuresTotal);
+    row.Add(report.mpduRetriesTotal);
+    row.Add(report.mpduTerminalDropsTotal);
+    row.Add(report.mpduRetryLimitDropsTotal);
+    row.Add(report.mpduLifetimeDropsTotal);
+    row.Add(report.mpduQueueDropsTotal);
+    row.Add(report.ppduTxCountTotal);
+    row.Add(report.lastTxAttemptTimeNs);
+    row.Add(report.lastPositiveAckTimeNs);
+    row.Add(report.currentMcs);
+    row.Add(report.currentNss);
+    row.Add(report.currentChannelWidthMhz);
+    row.Add(report.currentGuardIntervalNs);
+    row.Add(report.frequencyBand);
+    row.Add(report.centerFrequencyMhz);
+    row.Add(report.currentAckSignalDbm);
+    NS_ABORT_MSG_IF(report.rolling.size() != m_historyWindowsUs.size(),
+                    "Polling report rolling-window count does not match configuration");
+    for (std::size_t index = 0; index < report.rolling.size(); ++index)
+    {
+        const auto& rolling = report.rolling[index];
+        NS_ABORT_MSG_IF(rolling.windowUs != m_historyWindowsUs[index],
+                        "Polling report rolling windows are out of order");
+        row.Add(rolling.mpduAttempts);
+        row.Add(rolling.mpduPositiveAcks);
+        row.Add(rolling.mpduAttemptFailures);
+        row.Add(rolling.mpduRetries);
+        row.Add(rolling.mpduRetryRatio);
+        row.Add(rolling.acknowledgedMacServiceBytes);
+        row.Add(rolling.mpduQueueToAckMeanUs);
+        row.Add(rolling.mpduQueueToAckP95Us);
+        row.Add(rolling.mpduFirstAttemptToAckMeanUs);
+        row.Add(rolling.mpduFirstAttemptToAckP95Us);
+        row.Add(rolling.phyTxTimeUs);
+        row.Add(rolling.phyRxTimeUs);
+        row.Add(rolling.phyBusyTimeUs);
+        row.Add(rolling.phyIdleTimeUs);
+        row.Add(rolling.phyOtherTimeUs);
+        row.Add(rolling.phyTxFraction);
+        row.Add(rolling.phyRxFraction);
+        row.Add(rolling.phyBusyFraction);
+        row.Add(rolling.phyIdleFraction);
+        row.Add(rolling.phyOtherFraction);
+        row.Add(rolling.historyCoverageUs);
+    }
+    row.End();
+}
+
+void
 PredictionTelemetryCollector::WriteOutputs()
 {
     NS_ABORT_MSG_IF(m_samplesFile.empty(), "Prediction sample output path was not configured");
@@ -764,6 +914,18 @@ PredictionTelemetryCollector::WriteOutputs()
         WriteSample(output, sample);
     }
     output.close();
+    if (!m_pollingSamplesFile.empty())
+    {
+        std::ofstream pollingOutput(m_pollingSamplesFile, std::ios::out | std::ios::trunc);
+        NS_ABORT_MSG_IF(!pollingOutput,
+                        "Cannot open prediction polling output " << m_pollingSamplesFile);
+        pollingOutput << std::setprecision(12);
+        WritePollingSampleHeader(pollingOutput);
+        for (const auto& sample : m_samples)
+        {
+            WritePollingSample(pollingOutput, sample);
+        }
+    }
     if (m_eventsOutput.is_open())
     {
         m_eventsOutput.flush();
@@ -1802,6 +1964,91 @@ PredictionTelemetryCollector::AccessStatusToString(uint8_t status)
     NS_ABORT_MSG("Unknown Txop channel access status");
 }
 
+PredictionPollingReport
+PredictionTelemetryCollector::BuildPollingReport(PathState& path, uint64_t captureTimeNs)
+{
+    PruneHistories(path, captureTimeNs);
+    PredictionPollingReport report;
+    report.captureTimeNs = captureTimeNs;
+    const uint64_t delayNs = m_pollingReportDelayUs * 1000;
+    NS_ABORT_MSG_IF(captureTimeNs > std::numeric_limits<uint64_t>::max() - delayNs,
+                    "Prediction polling report availability time overflow");
+    report.availableTimeNs = captureTimeNs + delayNs;
+    report.latestFeatureEventTimeNs = path.latestFeatureEventTimeNs;
+    report.latestFeatureEventSequence = path.latestFeatureEventSequence;
+    report.mpduTxAttemptsTotal = path.mpduAttempts;
+    report.mpduPositiveAcksTotal = path.mpduPositiveAcks;
+    report.mpduTxAttemptFailuresTotal = path.mpduAttemptFailures;
+    report.mpduRetriesTotal = path.mpduRetries;
+    report.mpduTerminalDropsTotal = path.mpduTerminalDrops;
+    report.mpduRetryLimitDropsTotal = path.mpduRetryLimitDrops;
+    report.mpduLifetimeDropsTotal = path.mpduLifetimeDrops;
+    report.mpduQueueDropsTotal = path.mpduQueueDrops;
+    report.ppduTxCountTotal = path.ppduTxCount;
+    report.lastTxAttemptTimeNs = path.lastTxAttemptTimeNs;
+    report.lastPositiveAckTimeNs = path.lastPositiveAckTimeNs;
+    report.currentMcs = path.currentMcs;
+    report.currentNss = path.currentNss;
+    report.currentChannelWidthMhz = path.currentChannelWidthMhz;
+    report.currentGuardIntervalNs = path.currentGuardIntervalNs;
+    if (!path.frequencyBand.empty())
+    {
+        report.frequencyBand = path.frequencyBand;
+        report.centerFrequencyMhz = path.centerFrequencyMhz;
+    }
+    report.rolling.reserve(m_historyWindowsUs.size());
+    for (const auto windowUs : m_historyWindowsUs)
+    {
+        report.rolling.push_back(BuildRollingSample(path, captureTimeNs, windowUs));
+    }
+    report.featureSupportMask = MakeSupportMask(true, m_oracleFeaturesEnabled);
+    return report;
+}
+
+void
+PredictionTelemetryCollector::PollPath(uint8_t pathId)
+{
+    auto pathIterator = m_paths.find(pathId);
+    if (pathIterator == m_paths.end())
+    {
+        return;
+    }
+    auto& path = pathIterator->second;
+    const uint64_t captureTimeNs = NowNs();
+    if (path.lastPollingCaptureTimeNs)
+    {
+        NS_ABORT_MSG_IF(captureTimeNs - *path.lastPollingCaptureTimeNs !=
+                            m_pollingIntervalUs * 1000,
+                        "Prediction polling clock lost its configured cadence");
+    }
+    path.lastPollingCaptureTimeNs = captureTimeNs;
+    ++path.pollingCaptureCount;
+    while (path.pollingReports.size() > 1 &&
+           path.pollingReports[1].availableTimeNs <= captureTimeNs)
+    {
+        path.pollingReports.pop_front();
+    }
+    path.pollingReports.push_back(BuildPollingReport(path, captureTimeNs));
+    path.pollingEvent = Simulator::Schedule(MicroSeconds(m_pollingIntervalUs),
+                                            &PredictionTelemetryCollector::PollPath,
+                                            this,
+                                            pathId);
+}
+
+const PredictionPollingReport*
+PredictionTelemetryCollector::SelectPollingReport(const PathState& path,
+                                                  uint64_t sampleTimeNs) const
+{
+    for (auto report = path.pollingReports.rbegin(); report != path.pollingReports.rend(); ++report)
+    {
+        if (report->availableTimeNs <= sampleTimeNs)
+        {
+            return &*report;
+        }
+    }
+    return nullptr;
+}
+
 void
 PredictionTelemetryCollector::PopulateLinkSample(PredictionSample& sample,
                                                  const PredictionFrameKey& key,
@@ -2003,6 +2250,10 @@ PredictionTelemetryCollector::CaptureSnapshot(PredictionFrameKey key, uint64_t o
     if (auto path = m_paths.find(key.pathId); path != m_paths.end())
     {
         PopulateLinkSample(sample, key, state, path->second);
+        if (const auto* report = SelectPollingReport(path->second, sampleTimeNs))
+        {
+            sample.pollingReport = *report;
+        }
     }
     else
     {
@@ -2053,6 +2304,7 @@ PredictionTelemetryCollector::DoDispose()
     m_snapshotEvents.clear();
     for (auto& entry : m_paths)
     {
+        entry.second.pollingEvent.Cancel();
         entry.second.phyListener.reset();
     }
     Object::DoDispose();
