@@ -534,6 +534,13 @@ PredictionTelemetryCollector::SetOutputFiles(const std::string& samplesFile,
 }
 
 void
+PredictionTelemetryCollector::SetSnapshotCallback(
+    Callback<void, const PredictionSample&> callback)
+{
+    m_snapshotCallback = std::move(callback);
+}
+
+void
 PredictionTelemetryCollector::WriteEventHeader()
 {
     m_eventsOutput
@@ -2008,6 +2015,10 @@ PredictionTelemetryCollector::CaptureSnapshot(PredictionFrameKey key, uint64_t o
                         *sample.latestFeatureEventTimeNs > sample.sampleTimeNs,
                     "Prediction snapshot contains a future path feature event");
     m_samples.push_back(std::move(sample));
+    if (!m_snapshotCallback.IsNull())
+    {
+        m_snapshotCallback(m_samples.back());
+    }
 }
 
 const std::vector<PredictionSample>&

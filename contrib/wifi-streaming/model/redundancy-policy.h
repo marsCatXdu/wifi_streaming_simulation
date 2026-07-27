@@ -98,6 +98,31 @@ class FullDuplicationPolicy : public RedundancyPolicy
     PathId m_secondary{1};
 };
 
+/**
+ * Select a fixed primary while allowing a separate causal controller to
+ * launch a secondary copy later.
+ */
+class SelectiveDuplicationPolicy : public RedundancyPolicy
+{
+  public:
+    static TypeId GetTypeId();
+    SelectiveDuplicationPolicy();
+
+    /**
+     * Set the primary path used for every frame.
+     *
+     * @param path Primary application path.
+     */
+    void SetPrimaryPath(PathId path);
+
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+    std::string GetName() const override;
+
+  private:
+    PathId m_primary{1}; ///< Primary path used before a causal rescue action.
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H

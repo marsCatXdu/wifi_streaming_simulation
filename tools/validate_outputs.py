@@ -39,6 +39,13 @@ DECISION_COLUMNS = {
     "run_id", "frame_id", "decision_time_us", "policy", "primary_link",
     "duplicated", "secondary_link", "reason", "primary_score", "secondary_score",
 }
+SELECTIVE_DECISION_COLUMNS = {
+    "run_id", "frame_id", "path_id", "copy_id", "sample_stage",
+    "sample_offset_us", "sample_time_ns", "deadline_time_ns", "actionable",
+    "calibrated_probability", "probability_threshold", "frame_budget",
+    "token_capacity", "tokens_before", "tokens_after", "decision",
+    "secondary_launched",
+}
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
     "application_bytes_received", "redundant_bytes", "successful_mpdus",
@@ -342,8 +349,9 @@ def _validate_prediction(
              "resolved_config.json: invalid predictionTelemetry")
     _require(config.get("topology") == "dual_interface",
              "prediction telemetry requires dual_interface")
-    _require(config.get("policy") in {"fixed_link_0", "fixed_link_1"},
-             "prediction telemetry requires a fixed-link policy")
+    _require(config.get("policy") in {
+        "fixed_link_0", "fixed_link_1", "selective_duplication",
+    }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
              "prediction telemetry requires 802.11be")
@@ -1258,10 +1266,88 @@ def validate_run(
     frames_by_id = {row["frame_id"]: row for row in frames}
     for decision in decisions:
         frame = frames_by_id[decision["frame_id"]]
+        duplication_matches = (
+            decision["duplicated"] == frame["duplicated"] or
+            (frame["policy"] == "selective_duplication" and
+             not _flag(decision, "duplicated", "policy_decisions.csv"))
+        )
         _require(decision["policy"] == frame["policy"] and
                  decision["primary_link"] == frame["primary_link"] and
-                 decision["duplicated"] == frame["duplicated"],
+                 duplication_matches,
                  "policy_decisions.csv: decision/frame mismatch")
+    if config["policy"] == "selective_duplication":
+        selective_config = config.get("selectiveDuplication")
+        _require(isinstance(selective_config, dict),
+                 "resolved_config.json: missing selectiveDuplication object")
+        _require(
+            selective_config.get("model_id") == "commodity_polling_1ms_v1" and
+            selective_config.get("source_model_sha256") ==
+            "f674699d6c10a34fbc7f08bd1f28e8a562e77bcfeadbbc1bdff127538588548c" and
+            selective_config.get("feature_set") == "F0+F1-degraded" and
+            selective_config.get("degradation_profile") == "polling_1ms" and
+            selective_config.get("calibration") == "platt" and
+            selective_config.get("stages") == ["T0", "T1", "T2", "T4"],
+            "resolved_config.json: invalid selective predictor provenance",
+        )
+        selective_path = run_dir / "selective_duplication_decisions.csv"
+        _require(selective_path.is_file(),
+                 "missing core file: selective_duplication_decisions.csv")
+        selective = _csv(selective_path, SELECTIVE_DECISION_COLUMNS)
+        offsets = [int(value) for value in selective_config["decision_offsets_us"]]
+        _require(len(selective) == total * len(offsets),
+                 "selective decisions: frame/stage cardinality mismatch")
+        _require(all(row["run_id"] == run_id for row in selective),
+                 "selective decisions: run_id mismatch")
+        allowed_decisions = {
+            "below_threshold", "action", "budget_suppressed",
+            "already_resolved", "not_actionable", "launch_rejected",
+        }
+        action_frames: set[int] = set()
+        seen_samples: set[tuple[int, int]] = set()
+        threshold = float(selective_config["probability_threshold"])
+        budget = float(selective_config["frame_budget"])
+        capacity = max(1.0, budget * int(selective_config["burst_horizon_frames"]))
+        for row in selective:
+            frame_id = _integer(row, "frame_id", "selective_duplication_decisions.csv")
+            offset = _integer(row, "sample_offset_us",
+                              "selective_duplication_decisions.csv")
+            _require(frame_id in seen and offset in offsets,
+                     "selective decisions: unknown frame or stage")
+            _require((frame_id, offset) not in seen_samples,
+                     "selective decisions: duplicate frame/stage")
+            seen_samples.add((frame_id, offset))
+            probability = float(row["calibrated_probability"])
+            before = float(row["tokens_before"])
+            after = float(row["tokens_after"])
+            _require(0 <= probability <= 1 and
+                     _close(float(row["probability_threshold"]), threshold) and
+                     _close(float(row["frame_budget"]), budget) and
+                     _close(float(row["token_capacity"]), capacity),
+                     "selective decisions: invalid probability or configuration")
+            _require(-1e-12 <= before <= capacity + 1e-12 and
+                     -1e-12 <= after <= capacity + 1e-12,
+                     "selective decisions: token balance out of bounds")
+            decision_name = row["decision"]
+            _require(decision_name in allowed_decisions,
+                     "selective decisions: unknown decision")
+            launched = _flag(row, "secondary_launched",
+                             "selective_duplication_decisions.csv")
+            _require(launched == (decision_name == "action"),
+                     "selective decisions: action/launch mismatch")
+            if launched:
+                _require(frame_id not in action_frames and
+                         _close(after, before - 1.0),
+                         "selective decisions: invalid or repeated token consumption")
+                action_frames.add(frame_id)
+        duplicated_frame_ids = {
+            int(row["frame_id"]) for row in frames
+            if _flag(row, "duplicated", "frames.csv")
+        }
+        _require(action_frames == duplicated_frame_ids,
+                 "selective decisions: launched actions do not match duplicated frames")
+    else:
+        _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
+                 "selective decision output exists for a non-selective policy")
     expected = {
         "frame_count": total, "complete_frame_count": complete,
         "incomplete_frame_count": incomplete, "deadline_miss_count": misses,

@@ -7,6 +7,7 @@
 
 #include "frame-packetizer.h"
 
+#include "ns3/callback.h"
 #include "ns3/event-id.h"
 #include "ns3/net-device.h"
 #include "ns3/object.h"
@@ -332,6 +333,16 @@ class PredictionTelemetryCollector : public Object
     void SetOutputFiles(const std::string& samplesFile, const std::string& eventsFile = "");
 
     /**
+     * Set a passive callback invoked after each immutable snapshot is captured.
+     *
+     * The callback may consume the snapshot for a causal control decision, but
+     * it must not mutate collector state.
+     *
+     * @param callback Snapshot callback, or a null callback to disable delivery.
+     */
+    void SetSnapshotCallback(Callback<void, const PredictionSample&> callback);
+
+    /**
      * Write deterministically sorted prediction samples.
      */
     void WriteOutputs();
@@ -563,6 +574,7 @@ class PredictionTelemetryCollector : public Object
     std::vector<EventId> m_snapshotEvents;
     std::string m_samplesFile;
     std::ofstream m_eventsOutput;
+    Callback<void, const PredictionSample&> m_snapshotCallback;
     uint64_t m_featureEventSequence{0};
     bool m_outputsWritten{false};
     bool m_oracleFeaturesEnabled{false};

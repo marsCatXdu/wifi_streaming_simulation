@@ -23,6 +23,7 @@ from run_experiments import (
 from benchmark_prediction_telemetry import _overhead_classification
 from build_prediction_dataset import build_dataset
 from plot_results import _approach_key, _approach_label, plot
+from plot_selective_duplication import summarize_selective_decisions
 from prediction_dataset import SourceRun, make_run_group_id, sha256_file
 from summarize_prediction_pilots import _candidate_id, _load_key, _target_band
 from summarize_runs import group_key, summarize
@@ -536,6 +537,10 @@ class MatrixTests(unittest.TestCase):
                 "prediction_history_windows_us": [1000, 5000, 20000],
                 "prediction_event_log_enabled": False,
                 "prediction_oracle_features_enabled": True,
+                "selective_duplication_threshold": 0.2,
+                "selective_duplication_frame_budget": 0.3,
+                "selective_duplication_burst_horizon_frames": 30,
+                "selective_duplication_decision_offsets_us": [0, 1000, 2000, 4000],
             },
         }, Path("."))
         self.assertIn("--predictionTelemetryEnabled=1", prediction_arguments)
@@ -545,6 +550,12 @@ class MatrixTests(unittest.TestCase):
                       prediction_arguments)
         self.assertIn("--predictionEventLogEnabled=0", prediction_arguments)
         self.assertIn("--predictionOracleFeaturesEnabled=1", prediction_arguments)
+        self.assertIn("--selectiveDuplicationThreshold=0.2", prediction_arguments)
+        self.assertIn("--selectiveDuplicationFrameBudget=0.3", prediction_arguments)
+        self.assertIn("--selectiveDuplicationBurstHorizonFrames=30",
+                      prediction_arguments)
+        self.assertIn("--selectiveDuplicationDecisionOffsetsUs=0,1000,2000,4000",
+                      prediction_arguments)
         with self.assertRaises(ValueError):
             cli_arguments({
                 "prediction": {"prediction_sample_offsets_us": [0, "1000"]},
@@ -564,6 +575,76 @@ class MatrixTests(unittest.TestCase):
                  item["config"]["wifi"]["mlo_sta_max_inflights"])
                 for item in expanded
             }), 5)
+
+    def test_closed_loop_matrices_have_paired_four_way_runs(self) -> None:
+        expected = {
+            ("dual_interface", "fixed_link_1"),
+            ("dual_interface", "selective_duplication"),
+            ("dual_interface", "full_duplication"),
+            ("mlo_str", "fixed_link_0"),
+        }
+        for name in ("closed_loop_selective_duplication_obss.yaml",
+                     "closed_loop_selective_duplication_combined.yaml"):
+            expanded = expand_config(
+                load_yaml(ROOT / "experiments" / "configs" / name)
+            )
+            self.assertEqual(len(expanded), 40)
+            self.assertEqual({
+                (item["config"]["topology"], item["config"]["policy"])
+                for item in expanded
+            }, expected)
+            for seed in range(1, 11):
+                self.assertEqual(sum(item["seed"] == seed for item in expanded), 4)
+            selective = [
+                item["config"] for item in expanded
+                if item["config"]["policy"] == "selective_duplication"
+            ]
+            self.assertTrue(all(
+                item["prediction"]["prediction_telemetry_enabled"] and
+                item["prediction"]["selective_duplication_frame_budget"] == 0.3
+                for item in selective
+            ))
+
+    def test_selective_control_summary_counts_actions_and_suppressions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run_dir = root / "selective-run"
+            run_dir.mkdir()
+            rows = []
+            for frame in range(2):
+                for stage, offset in zip(("T0", "T1", "T2", "T4"),
+                                         (0, 1000, 2000, 4000), strict=True):
+                    decision = "below_threshold"
+                    if frame == 0 and stage == "T1":
+                        decision = "action"
+                    elif frame == 1 and stage == "T2":
+                        decision = "budget_suppressed"
+                    rows.append({
+                        "sample_stage": stage,
+                        "decision": decision,
+                    })
+            with (run_dir / "selective_duplication_decisions.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as target:
+                writer = csv.DictWriter(target, fieldnames=["sample_stage", "decision"])
+                writer.writeheader()
+                writer.writerows(rows)
+            aggregate = {"runs": [{
+                "run_id": "selective-run",
+                "seed": 7,
+                "policy": "selective_duplication",
+                "config": {"selectiveDuplication": {
+                    "decision_offsets_us": [0, 1000, 2000, 4000],
+                }},
+                "deadline_miss_ratio": 0.1,
+                "redundant_byte_ratio": 0.2,
+            }]}
+            summary = summarize_selective_decisions(aggregate, root)
+            self.assertEqual(len(summary), 1)
+            self.assertEqual(summary[0]["actions"], 1)
+            self.assertEqual(summary[0]["budget_suppressions"], 1)
+            self.assertEqual(summary[0]["actions_t1"], 1)
+            self.assertEqual(summary[0]["action_rate"], 0.5)
 
     def test_mlo_inflight_variants_have_distinct_plot_labels(self) -> None:
         first = {

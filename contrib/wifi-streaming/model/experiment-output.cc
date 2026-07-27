@@ -3,6 +3,7 @@
  */
 
 #include "experiment-output.h"
+#include "prediction-model-evaluator.h"
 #include "prediction-telemetry-collector.h"
 
 #include "ns3/abort.h"
@@ -450,6 +451,34 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"event_schema_version\": " << PREDICTION_EVENT_SCHEMA_VERSION << ",\n"
                << "    \"feature_support_mask_version\": " << FEATURE_SUPPORT_MASK_VERSION
                << "\n"
+               << "  },\n";
+    }
+    if (config.policy == "selective_duplication")
+    {
+        output << "  \"selectiveDuplication\": {\n"
+               << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
+               << "    \"source_model_sha256\": \""
+               << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
+               << "    \"feature_set\": \"F0+F1-degraded\",\n"
+               << "    \"degradation_profile\": \"polling_1ms\",\n"
+               << "    \"calibration\": \"platt\",\n"
+               << "    \"stages\": [\"T0\", \"T1\", \"T2\", \"T4\"],\n"
+               << "    \"primary_path\": 1,\n"
+               << "    \"secondary_path\": 0,\n"
+               << "    \"probability_threshold\": "
+               << config.selectiveDuplicationThreshold << ",\n"
+               << "    \"frame_budget\": " << config.selectiveDuplicationFrameBudget << ",\n"
+               << "    \"burst_horizon_frames\": "
+               << config.selectiveDuplicationBurstHorizonFrames << ",\n"
+               << "    \"decision_offsets_us\": [";
+        for (std::size_t index = 0;
+             index < config.selectiveDuplicationDecisionOffsetsUs.size();
+             ++index)
+        {
+            output << (index == 0 ? "" : ", ")
+                   << config.selectiveDuplicationDecisionOffsetsUs[index];
+        }
+        output << "]\n"
                << "  },\n";
     }
     output << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"

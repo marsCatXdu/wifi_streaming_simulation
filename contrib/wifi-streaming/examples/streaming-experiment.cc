@@ -364,6 +364,11 @@ main(int argc, char* argv[])
     std::string predictionHistoryWindowsUs = "1000,5000,20000";
     bool predictionEventLogEnabled = false;
     bool predictionOracleFeaturesEnabled = false;
+    double selectiveDuplicationThreshold = 0.2;
+    double selectiveDuplicationFrameBudget = 0.3;
+    uint32_t selectiveDuplicationBurstHorizonFrames = 30;
+    std::string selectiveDuplicationDecisionOffsetsUs = "0,1000,2000,4000";
+    uint32_t fullDuplicationPrimaryPath = 0;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
     uint32_t maxAmpduSize = 65535;
@@ -463,7 +468,8 @@ main(int argc, char* argv[])
     command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
     command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
     command.AddValue("policy",
-                     "fixed_link_0, fixed_link_1, static_best, or full_duplication",
+                     "fixed_link_0, fixed_link_1, static_best, full_duplication, or "
+                     "selective_duplication",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -493,6 +499,21 @@ main(int argc, char* argv[])
     command.AddValue("predictionOracleFeaturesEnabled",
                      "Populate causal ns-3 F3 current-state fields",
                      predictionOracleFeaturesEnabled);
+    command.AddValue("selectiveDuplicationThreshold",
+                     "Calibrated miss-probability action threshold",
+                     selectiveDuplicationThreshold);
+    command.AddValue("selectiveDuplicationFrameBudget",
+                     "Frame tokens refilled per generated frame",
+                     selectiveDuplicationFrameBudget);
+    command.AddValue("selectiveDuplicationBurstHorizonFrames",
+                     "Frame horizon used to size the action token bucket",
+                     selectiveDuplicationBurstHorizonFrames);
+    command.AddValue("selectiveDuplicationDecisionOffsetsUs",
+                     "Strict comma-separated offsets eligible for selective action",
+                     selectiveDuplicationDecisionOffsetsUs);
+    command.AddValue("fullDuplicationPrimaryPath",
+                     "Primary path for unconditional application duplication",
+                     fullDuplicationPrimaryPath);
     command.AddValue("queueMaxPackets", "MAC queue maximum packets", queueMaxPackets);
     command.AddValue("queueMaxDelayMs", "MAC queue maximum delay", queueMaxDelayMs);
     command.AddValue("maxAmpduSize", "BE A-MPDU maximum bytes (0 disables)", maxAmpduSize);
@@ -634,6 +655,7 @@ main(int argc, char* argv[])
                     "Prediction event and oracle options require prediction telemetry");
     std::vector<uint64_t> resolvedPredictionSampleOffsetsUs;
     std::vector<uint64_t> resolvedPredictionHistoryWindowsUs;
+    std::vector<uint64_t> resolvedSelectiveDecisionOffsetsUs;
     if (predictionTelemetryEnabled)
     {
         resolvedPredictionSampleOffsetsUs =
@@ -649,11 +671,43 @@ main(int argc, char* argv[])
         NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs.back() >= deadlineUs,
                         "Every prediction sample offset must precede the frame deadline");
         NS_ABORT_MSG_IF(topology != "dual_interface" ||
-                            (policyName != "fixed_link_0" && policyName != "fixed_link_1") ||
+                            (policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
+                             policyName != "selective_duplication") ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
-                        "Increment-1 prediction telemetry requires dual_interface, a fixed-link "
+                        "Prediction telemetry requires dual_interface, a fixed-link or selective "
                         "policy, EHT, disabled UL OFDMA/A-MSDU, and disabled fragmentation");
+    }
+    if (policyName == "selective_duplication")
+    {
+        NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
+                        "Selective duplication requires prediction telemetry");
+        NS_ABORT_MSG_IF(emissionMode != "burst",
+                        "Selective duplication currently requires burst emission");
+        NS_ABORT_MSG_IF(!std::isfinite(selectiveDuplicationThreshold) ||
+                            selectiveDuplicationThreshold < 0 ||
+                            selectiveDuplicationThreshold > 1,
+                        "Selective duplication threshold must be in [0,1]");
+        NS_ABORT_MSG_IF(!std::isfinite(selectiveDuplicationFrameBudget) ||
+                            selectiveDuplicationFrameBudget <= 0 ||
+                            selectiveDuplicationFrameBudget > 1 ||
+                            selectiveDuplicationBurstHorizonFrames == 0,
+                        "Selective duplication requires budget in (0,1] and positive horizon");
+        resolvedSelectiveDecisionOffsetsUs =
+            ParseStrictUintList(selectiveDuplicationDecisionOffsetsUs,
+                                "selectiveDuplicationDecisionOffsetsUs",
+                                true);
+        NS_ABORT_MSG_IF(resolvedSelectiveDecisionOffsetsUs.front() != 0,
+                        "Selective duplication decision offsets must start with zero");
+        for (const auto offset : resolvedSelectiveDecisionOffsetsUs)
+        {
+            NS_ABORT_MSG_IF(std::find(resolvedPredictionSampleOffsetsUs.begin(),
+                                      resolvedPredictionSampleOffsetsUs.end(),
+                                      offset) == resolvedPredictionSampleOffsetsUs.end(),
+                            "Every selective decision offset must be a prediction sample offset");
+            NS_ABORT_MSG_IF(offset != 0 && offset != 1000 && offset != 2000 && offset != 4000,
+                            "Frozen selective predictor supports only T0, T1, T2, and T4");
+        }
     }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
@@ -745,8 +799,11 @@ main(int argc, char* argv[])
                         topology != "mlo_str",
                     "Unknown topology " << topology);
     NS_ABORT_MSG_IF(policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
-                        policyName != "static_best" && policyName != "full_duplication",
+                        policyName != "static_best" && policyName != "full_duplication" &&
+                        policyName != "selective_duplication",
                     "Unknown policy " << policyName);
+    NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
+                    "fullDuplicationPrimaryPath must be 0 or 1");
     NS_ABORT_MSG_IF(topology == "single_link" && policyName != "fixed_link_0",
                     "single_link supports only fixed_link_0");
     NS_ABORT_MSG_IF(topology == "mlo_str" && policyName != "fixed_link_0",
@@ -1567,6 +1624,12 @@ main(int argc, char* argv[])
     resolved.predictionHistoryWindowsUs = resolvedPredictionHistoryWindowsUs;
     resolved.predictionEventLogEnabled = predictionEventLogEnabled;
     resolved.predictionOracleFeaturesEnabled = predictionOracleFeaturesEnabled;
+    resolved.selectiveDuplicationThreshold = selectiveDuplicationThreshold;
+    resolved.selectiveDuplicationFrameBudget = selectiveDuplicationFrameBudget;
+    resolved.selectiveDuplicationBurstHorizonFrames =
+        selectiveDuplicationBurstHorizonFrames;
+    resolved.selectiveDuplicationDecisionOffsetsUs = resolvedSelectiveDecisionOffsetsUs;
+    resolved.fullDuplicationPrimaryPath = fullDuplicationPrimaryPath;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
     resolved.backgroundDirection = backgroundDirection;
@@ -1743,9 +1806,40 @@ main(int argc, char* argv[])
         policy->SetPathScores(staticLink0Score, staticLink1Score);
         sender->SetPolicy(policy);
     }
+    else if (policyName == "selective_duplication")
+    {
+        auto policy = CreateObject<SelectiveDuplicationPolicy>();
+        policy->SetPrimaryPath(1);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(0);
+    }
     else
     {
-        sender->SetPolicy(CreateObject<FullDuplicationPolicy>());
+        auto policy = CreateObject<FullDuplicationPolicy>();
+        policy->SetPaths(fullDuplicationPrimaryPath, 1 - fullDuplicationPrimaryPath);
+        sender->SetPolicy(policy);
+    }
+    Ptr<ClosedLoopRiskPredictor> closedLoopPredictor;
+    Ptr<SelectiveDuplicationController> selectiveController;
+    if (policyName == "selective_duplication")
+    {
+        closedLoopPredictor = CreateObject<ClosedLoopRiskPredictor>();
+        selectiveController = CreateObject<SelectiveDuplicationController>();
+        selectiveController->SetSender(PeekPointer(sender));
+        selectiveController->SetRiskScorer(
+            MakeCallback(&ClosedLoopRiskPredictor::Score, PeekPointer(closedLoopPredictor)));
+        selectiveController->SetPrimaryPath(1);
+        selectiveController->SetProbabilityThreshold(selectiveDuplicationThreshold);
+        selectiveController->SetFrameBudget(selectiveDuplicationFrameBudget);
+        selectiveController->SetBurstHorizonFrames(
+            selectiveDuplicationBurstHorizonFrames);
+        selectiveController->SetDecisionOffsetsUs(resolvedSelectiveDecisionOffsetsUs);
+        selectiveController->SetOutputFile(
+            runId,
+            (std::filesystem::path(outputDir) / "selective_duplication_decisions.csv").string());
+        predictionTelemetry->SetSnapshotCallback(
+            MakeCallback(&SelectiveDuplicationController::NotifySnapshot,
+                         PeekPointer(selectiveController)));
     }
     station.Get(0)->AddApplication(sender);
     sender->SetStartTime(warmup);

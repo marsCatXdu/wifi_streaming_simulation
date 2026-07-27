@@ -21,6 +21,7 @@ import yaml
 
 from plot_results import plot
 from plot_ofdma_comparison import plot_ofdma_comparison
+from plot_selective_duplication import plot_selective_control
 from summarize_runs import discover, summarize, write_outputs
 from validate_outputs import validate_run
 
@@ -103,6 +104,11 @@ CLI_KEYS = {
     "prediction_history_windows_us": "predictionHistoryWindowsUs",
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
+    "selective_duplication_threshold": "selectiveDuplicationThreshold",
+    "selective_duplication_frame_budget": "selectiveDuplicationFrameBudget",
+    "selective_duplication_burst_horizon_frames": "selectiveDuplicationBurstHorizonFrames",
+    "selective_duplication_decision_offsets_us": "selectiveDuplicationDecisionOffsetsUs",
+    "full_duplication_primary_path": "fullDuplicationPrimaryPath",
 }
 
 
@@ -305,7 +311,12 @@ def write_experiment_description(document: dict[str, Any],
         ofdma_obss_text = "The independent HE and EHT OBSS APs also use the scheduler."
     else:
         ofdma_obss_text = "The independent OBSS APs remain EDCA-only in this matrix."
-    prediction = base.get("prediction", {})
+    prediction_configs = [
+        spec["config"].get("prediction", {})
+        for spec in specs
+        if spec["config"].get("prediction", {}).get("prediction_telemetry_enabled", False)
+    ]
+    prediction = prediction_configs[0] if prediction_configs else {}
     approaches = sorted({
         (
             spec["config"]["topology"],
@@ -314,6 +325,7 @@ def write_experiment_description(document: dict[str, Any],
         )
         for spec in specs
     })
+    has_selective = any(policy == "selective_duplication" for _, policy, _ in approaches)
     approach_lines: list[str] = []
     for topology, policy, inflights in approaches:
         if topology == "dual_interface" and policy == "fixed_link_0":
@@ -330,7 +342,15 @@ def write_experiment_description(document: dict[str, Any],
         elif topology == "dual_interface" and policy == "full_duplication":
             approach_lines += [
                 "* ``Application full duplication``: each frame is sent over both",
-                "  independent non-MLO 802.11be interfaces.",
+                "  independent non-MLO 802.11be interfaces. The primary-copy path",
+                "  is recorded in each resolved run configuration.",
+            ]
+        elif topology == "dual_interface" and policy == "selective_duplication":
+            approach_lines += [
+                "* ``Closed-loop selective duplication``: each frame starts on",
+                "  the 5 GHz interface. The frozen calibrated four-stage predictor",
+                "  may causally launch a delayed 2.4 GHz copy, subject to the",
+                "  configured probability threshold and online frame-token budget.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -369,6 +389,12 @@ def write_experiment_description(document: dict[str, Any],
         "",
     ]
     if has_legacy:
+        action_text = (
+            "The selective arm feeds these snapshots to the frozen F0+F1-degraded "
+            "commodity predictor; receiver outcomes never enter the decision."
+            if has_selective else
+            "Adaptive actions are disabled in this telemetry matrix."
+        )
         lines += [
             "Same-BSS contention devices",
             "---------------------------",
@@ -419,13 +445,14 @@ def write_experiment_description(document: dict[str, Any],
             "Prediction telemetry",
             "--------------------",
             "",
-            "The fixed-link sender records passive, receiver-independent causal",
+            "The primary-link sender records passive, receiver-independent causal",
             f"snapshots at offsets {offsets} us. Rolling MAC/PHY windows are",
             f"{windows} us. Raw prediction events are "
             f"{'enabled' if prediction.get('prediction_event_log_enabled') else 'disabled'};",
             f"causal oracle fields are "
             f"{'enabled' if prediction.get('prediction_oracle_features_enabled') else 'disabled'}.",
-            "A-MSDU, fragmentation, UL OFDMA, MLO, and adaptive actions are disabled.",
+            "A-MSDU, fragmentation, and UL OFDMA are disabled for telemetry validity.",
+            action_text,
             "",
         ]
     target_sta_count = 1
@@ -632,6 +659,7 @@ def main() -> None:
         aggregate_csv = output_root / "aggregate.csv"
         write_outputs(aggregate, aggregate_json, aggregate_csv)
         plot(aggregate, output_root / "plots")
+        plot_selective_control(aggregate, output_root)
         ofdma_states = {
             bool(run.get("config", {}).get("wifi", {}).get("ul_ofdma_enabled", False))
             for run in aggregate["runs"]

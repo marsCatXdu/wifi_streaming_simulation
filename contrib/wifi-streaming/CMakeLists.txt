@@ -5,7 +5,11 @@ build_lib(
     model/streaming-frame-tag.cc
     model/frame-source.cc
     model/frame-packetizer.cc
+    model/prediction-model-data-v1.cc
+    model/prediction-model-evaluator.cc
+    model/closed-loop-risk-predictor.cc
     model/prediction-telemetry-collector.cc
+    model/selective-duplication-controller.cc
     model/metrics-collector.cc
     model/experiment-output.cc
     model/redundancy-policy.cc
@@ -19,7 +23,11 @@ build_lib(
     model/streaming-frame-tag.h
     model/frame-source.h
     model/frame-packetizer.h
+    model/prediction-model-data-v1.h
+    model/prediction-model-evaluator.h
+    model/closed-loop-risk-predictor.h
     model/prediction-telemetry-collector.h
+    model/selective-duplication-controller.h
     model/metrics-collector.h
     model/experiment-output.h
     model/redundancy-policy.h

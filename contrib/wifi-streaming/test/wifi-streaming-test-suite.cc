@@ -14,9 +14,11 @@
 #include "ns3/metrics-collector.h"
 #include "ns3/mobility-module.h"
 #include "ns3/multipath-sender.h"
+#include "ns3/prediction-model-evaluator.h"
 #include "ns3/prediction-telemetry-collector.h"
 #include "ns3/random-rate-on-off-application.h"
 #include "ns3/redundancy-policy.h"
+#include "ns3/selective-duplication-controller.h"
 #include "ns3/simulator.h"
 #include "ns3/string.h"
 #include "ns3/streaming-frame-tag.h"
@@ -25,12 +27,15 @@
 #include "ns3/udp-socket-factory.h"
 #include "ns3/wifi-module.h"
 
+#include "prediction-model-golden-v1.h"
+
 #include <array>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 
 namespace ns3
 {
@@ -285,7 +290,8 @@ MakeStreamingPacket(uint64_t frameId,
                     uint8_t copyId = 0,
                     uint8_t linkId = 0,
                     uint32_t deadlineUs = 10000,
-                    uint64_t generationTimeNs = 0)
+                    uint64_t generationTimeNs = 0,
+                    uint16_t flags = 0)
 {
     StreamingHeader header;
     header.frameId = frameId;
@@ -297,6 +303,7 @@ MakeStreamingPacket(uint64_t frameId,
     header.deadlineUs = deadlineUs;
     header.copyId = copyId;
     header.senderLinkId = linkId;
+    header.flags = flags;
     auto packet = Create<Packet>(100);
     packet->AddHeader(header);
     return packet;
@@ -1434,6 +1441,41 @@ class ReassemblyTestCase : public TestCase
                               "link_1_only",
                               "Recovery copy was not identified");
         Simulator::Destroy();
+
+        collector = CreateObject<MetricsCollector>();
+        receiver = CreateObject<FrameReceiver>();
+        receiver->SetMetricsCollector(collector);
+        receiver->ProcessPacket(MakeStreamingPacket(3, 0, 2, 0, 0));
+        receiver->ProcessPacket(MakeStreamingPacket(3,
+                                                    1,
+                                                    2,
+                                                    1,
+                                                    1,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().empty(),
+                              true,
+                              "Delayed duplicate union finalized before copy accounting");
+        receiver->ProcessPacket(MakeStreamingPacket(3,
+                                                    0,
+                                                    2,
+                                                    1,
+                                                    1,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        receiver->ProcessPacket(MakeStreamingPacket(3, 1, 2, 0, 0));
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                              1,
+                              "Delayed duplication frame did not finalize");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().front().copy0CompletionUs.has_value(),
+                              true,
+                              "Delayed duplication lost primary copy completion");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().front().copy1CompletionUs.has_value(),
+                              true,
+                              "Delayed duplication lost secondary copy completion");
+        Simulator::Destroy();
     }
 };
 
@@ -1583,6 +1625,115 @@ class IntegrationDeliveryTestCase : public TestCase
             NS_TEST_ASSERT_MSG_EQ(result.incomplete, false, "Delivered frame is incomplete");
             NS_TEST_ASSERT_MSG_EQ(result.deadlineMiss, false, "Generous deadline was missed");
         }
+        Simulator::Destroy();
+    }
+};
+
+class SelectiveDuplicationControllerTestCase : public TestCase
+{
+  public:
+    SelectiveDuplicationControllerTestCase()
+        : TestCase("Selective duplication enforces causal frame-token budget")
+    {
+    }
+
+  private:
+    double Score(const PredictionSample&)
+    {
+        return 1.0;
+    }
+
+    void DoRun() override
+    {
+        NodeContainer nodes;
+        nodes.Create(2);
+        InternetStackHelper internet;
+        internet.Install(nodes);
+        CsmaHelper csma;
+        csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
+        csma.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+        NetDeviceContainer devices = csma.Install(nodes);
+        Ipv4AddressHelper address;
+        address.SetBase("10.18.0.0", "255.255.255.0");
+        auto interfaces = address.Assign(devices);
+
+        auto metrics = CreateObject<MetricsCollector>();
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9020));
+        receiver->SetMetricsCollector(metrics);
+        nodes.Get(1)->AddApplication(receiver);
+        receiver->SetStartTime(Time());
+        receiver->SetStopTime(Seconds(1));
+
+        auto source = CreateObject<SyntheticFrameSource>();
+        source->SetFps(20);
+        source->SetDuration(MilliSeconds(100));
+        source->SetConstantFrameSize(2400);
+        source->SetDeadline(100000);
+
+        auto sender = CreateObject<MultipathSender>();
+        auto policy = CreateObject<SelectiveDuplicationPolicy>();
+        policy->SetPrimaryPath(0);
+        auto prediction = CreateObject<PredictionTelemetryCollector>();
+        prediction->SetSampleOffsetsUs({0});
+        auto controller = CreateObject<SelectiveDuplicationController>();
+        controller->SetSender(PeekPointer(sender));
+        controller->SetRiskScorer(
+            MakeCallback(&SelectiveDuplicationControllerTestCase::Score, this));
+        controller->SetPrimaryPath(0);
+        controller->SetProbabilityThreshold(0.2);
+        controller->SetFrameBudget(0.3);
+        controller->SetBurstHorizonFrames(1);
+        controller->SetDecisionOffsetsUs({0});
+        prediction->SetSnapshotCallback(
+            MakeCallback(&SelectiveDuplicationController::NotifySnapshot,
+                         PeekPointer(controller)));
+
+        sender->SetFrameSource(source);
+        sender->SetMetricsCollector(metrics);
+        sender->SetPredictionTelemetryCollector(prediction);
+        sender->SetPacketPayloadSize(1200);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(1);
+        for (uint8_t path = 0; path < 2; ++path)
+        {
+            auto socket =
+                Socket::CreateSocket(nodes.Get(0), UdpSocketFactory::GetTypeId());
+            NS_TEST_ASSERT_MSG_EQ(socket->Bind(InetSocketAddress(interfaces.GetAddress(0), 0)),
+                                  0,
+                                  "Selective sender bind failed");
+            NS_TEST_ASSERT_MSG_EQ(
+                socket->Connect(InetSocketAddress(interfaces.GetAddress(1), 9020)),
+                0,
+                "Selective sender connect failed");
+            sender->AddPath(path, socket, devices.Get(0));
+        }
+        nodes.Get(0)->AddApplication(sender);
+        sender->SetStartTime(MilliSeconds(10));
+        sender->SetStopTime(MilliSeconds(500));
+
+        Simulator::Stop(Seconds(1));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(controller->GetActionCount(),
+                              1,
+                              "Initial full token was not consumed exactly once");
+        NS_TEST_ASSERT_MSG_EQ(controller->GetBudgetSuppressionCount(),
+                              1,
+                              "Second threshold crossing was not budget-suppressed");
+        NS_TEST_ASSERT_MSG_EQ(sender->GetRedundantBytesSent(),
+                              2500,
+                              "Selective action sent the wrong redundant bytes");
+        NS_TEST_ASSERT_MSG_EQ(metrics->GetFrameResults().size(),
+                              2,
+                              "Selective test did not finalize every frame");
+        uint32_t duplicated = 0;
+        for (const auto& result : metrics->GetFrameResults())
+        {
+            duplicated += result.duplicated;
+        }
+        NS_TEST_ASSERT_MSG_EQ(duplicated,
+                              1,
+                              "Frame results do not identify the selective action");
         Simulator::Destroy();
     }
 };
@@ -1922,6 +2073,57 @@ class RandomRateOnOffApplicationTestCase : public TestCase
     }
 };
 
+/**
+ * Verify compiled predictor parity with sklearn-generated golden vectors.
+ */
+class PredictionModelParityTestCase : public TestCase
+{
+  public:
+    PredictionModelParityTestCase()
+        : TestCase("Compiled prediction models match sklearn")
+    {
+    }
+
+  private:
+    void
+    DoRun() override
+    {
+        const auto names = PredictionModelEvaluator::GetFeatureNames();
+        NS_TEST_ASSERT_MSG_EQ(names.size(), 86, "Unexpected compiled feature count");
+        NS_TEST_ASSERT_MSG_EQ(names.front(),
+                              "application_socket_packet_bytes_submitted",
+                              "Unexpected first compiled feature");
+        NS_TEST_ASSERT_MSG_EQ(names.back(),
+                              "ppdu_tx_count_total",
+                              "Unexpected last compiled feature");
+
+        for (const auto& golden : prediction_model_golden_v1::g_cases)
+        {
+            const auto result = PredictionModelEvaluator::Evaluate(golden.stage, golden.features);
+            NS_TEST_ASSERT_MSG_EQ_TOL(result.rankingScore,
+                                      golden.rankingScore,
+                                      1e-11,
+                                      "Histogram-gradient-boosting score differs from sklearn");
+            NS_TEST_ASSERT_MSG_EQ_TOL(result.calibratedProbability,
+                                      golden.calibratedProbability,
+                                      1e-12,
+                                      "Platt-calibrated probability differs from sklearn");
+        }
+
+        bool rejectedWrongWidth = false;
+        try
+        {
+            const std::array<double, 1> wrongWidth{0.0};
+            PredictionModelEvaluator::Evaluate(PredictionStage::T0, wrongWidth);
+        }
+        catch (const std::invalid_argument&)
+        {
+            rejectedWrongWidth = true;
+        }
+        NS_TEST_ASSERT_MSG_EQ(rejectedWrongWidth, true, "Wrong-width model input was accepted");
+    }
+};
+
 class WifiStreamingTestSuite : public TestSuite
 {
   public:
@@ -1942,9 +2144,11 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionWifiTelemetryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new RandomRateOnOffApplicationTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new PredictionModelParityTestCase, TestCase::Duration::QUICK);
     }
 };
 

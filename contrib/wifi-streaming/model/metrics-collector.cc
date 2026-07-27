@@ -150,6 +150,23 @@ MetricsCollector::RecordPolicyDecision(const PolicyDecisionRecord& decision)
 }
 
 void
+MetricsCollector::MarkPolicyDecisionDuplicated(uint64_t frameId,
+                                               uint64_t decisionTimeUs,
+                                               uint8_t secondaryLink,
+                                               const std::string& reason)
+{
+    auto decision = m_policyDecisions.find(frameId);
+    NS_ABORT_MSG_IF(decision == m_policyDecisions.end(),
+                    "Cannot update an unknown frame policy decision " << frameId);
+    NS_ABORT_MSG_IF(decision->second.duplicated,
+                    "Frame policy decision was already marked duplicated " << frameId);
+    decision->second.duplicated = true;
+    decision->second.decisionTimeUs = decisionTimeUs;
+    decision->second.secondaryLink = std::to_string(secondaryLink);
+    decision->second.reason = reason;
+}
+
+void
 MetricsCollector::FinalizeMissingFrames()
 {
     while (!m_expectedFrames.empty())

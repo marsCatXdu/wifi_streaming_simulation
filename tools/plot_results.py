@@ -60,6 +60,8 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
     topology, policy, inflights, ul_ofdma = _approach_key(item)
     if topology == "dual_interface" and policy == "full_duplication":
         label = "Application full duplication"
+    elif topology == "dual_interface" and policy == "selective_duplication":
+        label = "Closed-loop selective duplication"
     elif topology == "dual_interface" and policy == "fixed_link_0":
         label = "Single 2.4 GHz interface"
     elif topology == "dual_interface" and policy == "fixed_link_1":

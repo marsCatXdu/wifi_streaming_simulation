@@ -101,6 +101,11 @@ struct StreamingRunConfig
     std::vector<uint64_t> predictionHistoryWindowsUs;
     bool predictionEventLogEnabled{false};
     bool predictionOracleFeaturesEnabled{false};
+    double selectiveDuplicationThreshold{0};
+    double selectiveDuplicationFrameBudget{0};
+    uint32_t selectiveDuplicationBurstHorizonFrames{0};
+    std::vector<uint64_t> selectiveDuplicationDecisionOffsetsUs;
+    uint32_t fullDuplicationPrimaryPath{0};
     double staticLink0Score{0};
     double staticLink1Score{0};
     std::string backgroundTraffic{"none"};

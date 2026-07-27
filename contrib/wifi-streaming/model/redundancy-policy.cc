@@ -14,6 +14,7 @@ NS_OBJECT_ENSURE_REGISTERED(RedundancyPolicy);
 NS_OBJECT_ENSURE_REGISTERED(FixedLinkPolicy);
 NS_OBJECT_ENSURE_REGISTERED(StaticBestLinkPolicy);
 NS_OBJECT_ENSURE_REGISTERED(FullDuplicationPolicy);
+NS_OBJECT_ENSURE_REGISTERED(SelectiveDuplicationPolicy);
 
 TypeId
 RedundancyPolicy::GetTypeId()
@@ -166,6 +167,50 @@ std::string
 FullDuplicationPolicy::GetName() const
 {
     return "full_duplication";
+}
+
+TypeId
+SelectiveDuplicationPolicy::GetTypeId()
+{
+    static TypeId tid =
+        TypeId("ns3::SelectiveDuplicationPolicy")
+            .SetParent<RedundancyPolicy>()
+            .SetGroupName("WifiStreaming")
+            .AddConstructor<SelectiveDuplicationPolicy>()
+            .AddAttribute("PrimaryPath",
+                          "Path used before any causal duplication action.",
+                          UintegerValue(1),
+                          MakeUintegerAccessor(&SelectiveDuplicationPolicy::m_primary),
+                          MakeUintegerChecker<PathId>());
+    return tid;
+}
+
+SelectiveDuplicationPolicy::SelectiveDuplicationPolicy() = default;
+
+void
+SelectiveDuplicationPolicy::SetPrimaryPath(PathId path)
+{
+    m_primary = path;
+}
+
+PolicyDecision
+SelectiveDuplicationPolicy::Decide(const FrameDescriptor&,
+                                   const LinkTelemetrySnapshot& telemetry)
+{
+    PolicyDecision decision;
+    decision.primaryPath = m_primary;
+    decision.reason = "causal selective duplication primary";
+    if (auto score = telemetry.pathScores.find(m_primary); score != telemetry.pathScores.end())
+    {
+        decision.primaryScore = score->second;
+    }
+    return decision;
+}
+
+std::string
+SelectiveDuplicationPolicy::GetName() const
+{
+    return "selective_duplication";
 }
 
 } // namespace ns3

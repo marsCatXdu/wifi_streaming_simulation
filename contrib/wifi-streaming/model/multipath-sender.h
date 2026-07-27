@@ -56,6 +56,22 @@ class MultipathSender : public Application
     void SetPolicy(Ptr<RedundancyPolicy> policy);
     void AddPath(PathId pathId, Ptr<Socket> socket, Ptr<NetDevice> device = nullptr);
 
+    /**
+     * Configure a secondary path that a causal controller may launch later.
+     *
+     * @param pathId Secondary application path.
+     */
+    void SetDelayedSecondaryPath(PathId pathId);
+
+    /**
+     * Launch the preplanned secondary copy for one active frame.
+     *
+     * @param frameId Application frame identifier.
+     * @return True when the copy was launched; false when the request was
+     * rejected because it was unknown, repeated, or expired.
+     */
+    bool RequestSecondaryCopy(uint64_t frameId);
+
     uint64_t GetPacketsSent() const;
     uint64_t GetBytesSent() const;
     uint64_t GetRedundantBytesSent() const;
@@ -73,18 +89,29 @@ class MultipathSender : public Application
         Ptr<NetDevice> device;
     };
 
+    struct DelayedFrameState
+    {
+        PacketizationPlan secondaryPlan; ///< Candidate delayed copy.
+        bool launched{false};            ///< Whether the copy was launched.
+    };
+
     void GenerateFrame(FrameDescriptor frame);
-    void ScheduleCopy(const PacketizationPlan& plan, bool redundant);
+    void ScheduleCopy(const PacketizationPlan& plan,
+                      bool redundant,
+                      bool predictionTracked = true);
     void SendPacket(PathId pathId,
                     Ptr<Packet> packet,
                     StreamingFrameTag frameTag,
-                    bool redundant);
+                    bool redundant,
+                    bool predictionTracked);
 
     Ptr<FrameSource> m_source;
     Ptr<MetricsCollector> m_collector;
     Ptr<PredictionTelemetryCollector> m_predictionCollector;
     FramePacketizer m_packetizer;
     std::map<PathId, Path> m_paths;
+    std::map<uint64_t, DelayedFrameState> m_delayedFrames;
+    std::optional<PathId> m_delayedSecondaryPath;
     PathId m_primaryPath{0};
     Ptr<RedundancyPolicy> m_policy;
     LinkTelemetrySnapshot m_telemetry;

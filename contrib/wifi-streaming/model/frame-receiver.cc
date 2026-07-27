@@ -148,6 +148,12 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
         NS_LOG_WARN("Discarding inconsistent metadata for frame " << header.frameId);
         return;
     }
+    // Selective duplication can launch copy 1 after the primary has already
+    // produced packets. Recognize the actual delayed copy without requiring
+    // the first primary packet to predict that a secondary may follow.
+    state.duplicatedFrame =
+        state.duplicatedFrame ||
+        ((header.flags & StreamingHeader::FLAG_DUPLICATED_FRAME) != 0);
 
     auto& copyPackets = state.copyPackets[header.copyId];
     const bool newForCopy = copyPackets.insert(header.packetIndex).second;

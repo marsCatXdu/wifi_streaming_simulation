@@ -69,6 +69,22 @@ class MetricsCollector : public Object
     void RegisterExpectedFrame(const FrameDescriptor& frame);
     void RecordFrame(const FrameResult& result);
     void RecordPolicyDecision(const PolicyDecisionRecord& decision);
+
+    /**
+     * Mark a previously registered frame decision as causally duplicated.
+     *
+     * This updates the frame-result projection without appending a second row
+     * to the one-decision-per-frame policy CSV.
+     *
+     * @param frameId Application frame identifier.
+     * @param decisionTimeUs Delayed action time.
+     * @param secondaryLink Launched secondary path.
+     * @param reason Delayed action reason.
+     */
+    void MarkPolicyDecisionDuplicated(uint64_t frameId,
+                                      uint64_t decisionTimeUs,
+                                      uint8_t secondaryLink,
+                                      const std::string& reason);
     void FinalizeMissingFrames();
 
     const std::vector<FrameResult>& GetFrameResults() const;

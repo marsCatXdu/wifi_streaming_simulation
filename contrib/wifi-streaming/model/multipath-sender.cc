@@ -101,6 +101,40 @@ MultipathSender::AddPath(PathId pathId, Ptr<Socket> socket, Ptr<NetDevice> devic
 }
 
 void
+MultipathSender::SetDelayedSecondaryPath(PathId pathId)
+{
+    m_delayedSecondaryPath = pathId;
+}
+
+bool
+MultipathSender::RequestSecondaryCopy(uint64_t frameId)
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return false;
+    }
+    const auto& plan = frame->second.secondaryPlan;
+    const uint64_t deadlineNs =
+        plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
+    const int64_t nowNs = Simulator::Now().GetNanoSeconds();
+    if (nowNs < 0 || static_cast<uint64_t>(nowNs) >= deadlineNs)
+    {
+        return false;
+    }
+    frame->second.launched = true;
+    ScheduleCopy(plan, true, false);
+    if (m_collector)
+    {
+        m_collector->MarkPolicyDecisionDuplicated(frameId,
+                                                   Simulator::Now().GetMicroSeconds(),
+                                                   plan.pathId,
+                                                   "calibrated risk threshold crossed");
+    }
+    return true;
+}
+
+void
 MultipathSender::StartApplication()
 {
     NS_ABORT_MSG_IF(!m_source, "MultipathSender requires a FrameSource");
@@ -128,6 +162,7 @@ MultipathSender::StopApplication()
         event.Cancel();
     }
     m_events.clear();
+    m_delayedFrames.clear();
     for (auto& entry : m_paths)
     {
         entry.second.socket->Close();
@@ -155,17 +190,34 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
                         "Policy selected unconfigured secondary path "
                             << +*policyDecision.secondaryPath);
     }
+    NS_ABORT_MSG_IF(m_delayedSecondaryPath && policyDecision.duplicate,
+                    "Delayed duplication requires a non-duplicating initial policy");
+    if (m_delayedSecondaryPath)
+    {
+        NS_ABORT_MSG_IF(*m_delayedSecondaryPath == policyDecision.primaryPath,
+                        "Delayed secondary path must differ from the primary path");
+        NS_ABORT_MSG_IF(!m_paths.contains(*m_delayedSecondaryPath),
+                        "Delayed secondary path is not configured");
+    }
 
     const uint16_t flags =
         policyDecision.duplicate ? StreamingHeader::FLAG_DUPLICATED_FRAME : 0;
     const auto primaryPlan =
         m_packetizer.Plan(frame, m_runIdHash, 0, policyDecision.primaryPath, flags);
     frame = primaryPlan.frame;
-    if (m_predictionCollector)
+    if (m_delayedSecondaryPath)
     {
-        m_predictionCollector->RegisterFrame(primaryPlan);
+        auto delayedPlan = m_packetizer.Plan(frame,
+                                             m_runIdHash,
+                                             1,
+                                             *m_delayedSecondaryPath,
+                                             StreamingHeader::FLAG_DUPLICATED_FRAME);
+        const bool inserted =
+            m_delayedFrames.emplace(frame.frameId,
+                                    DelayedFrameState{std::move(delayedPlan), false})
+                .second;
+        NS_ABORT_MSG_IF(!inserted, "Duplicate delayed frame identifier " << frame.frameId);
     }
-
     if (m_collector)
     {
         m_collector->RegisterExpectedFrame(frame);
@@ -184,6 +236,10 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
         decision.primaryScore = policyDecision.primaryScore;
         decision.secondaryScore = policyDecision.secondaryScore;
         m_collector->RecordPolicyDecision(decision);
+    }
+    if (m_predictionCollector)
+    {
+        m_predictionCollector->RegisterFrame(primaryPlan);
     }
 
     std::optional<PacketizationPlan> secondaryPlan;
@@ -204,7 +260,9 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
 }
 
 void
-MultipathSender::ScheduleCopy(const PacketizationPlan& plan, bool redundant)
+MultipathSender::ScheduleCopy(const PacketizationPlan& plan,
+                              bool redundant,
+                              bool predictionTracked)
 {
     const auto emissions = m_packetizer.Materialize(plan);
     for (const auto& emission : emissions)
@@ -215,7 +273,8 @@ MultipathSender::ScheduleCopy(const PacketizationPlan& plan, bool redundant)
                                                plan.pathId,
                                                emission.packet,
                                                emission.frameTag,
-                                               redundant));
+                                               redundant,
+                                               predictionTracked));
     }
 }
 
@@ -223,7 +282,8 @@ void
 MultipathSender::SendPacket(PathId pathId,
                             Ptr<Packet> packet,
                             StreamingFrameTag frameTag,
-                            bool redundant)
+                            bool redundant,
+                            bool predictionTracked)
 {
     const auto iterator = m_paths.find(pathId);
     if (iterator == m_paths.end())
@@ -233,7 +293,7 @@ MultipathSender::SendPacket(PathId pathId,
 
     packet->AddPacketTag(frameTag);
     const uint32_t bytes = packet->GetSize();
-    if (m_predictionCollector)
+    if (m_predictionCollector && predictionTracked)
     {
         // Socket::Send can synchronously enqueue the packet at the MAC. Record
         // application submission first so every lower-layer trace has a
@@ -241,7 +301,7 @@ MultipathSender::SendPacket(PathId pathId,
         m_predictionCollector->RecordPacketSubmitted(frameTag, bytes);
     }
     const int sent = iterator->second.socket->Send(packet);
-    NS_ABORT_MSG_IF(sent < 0 && m_predictionCollector,
+    NS_ABORT_MSG_IF(sent < 0 && m_predictionCollector && predictionTracked,
                     "Prediction telemetry requires successful UDP socket submission");
     if (sent >= 0)
     {
