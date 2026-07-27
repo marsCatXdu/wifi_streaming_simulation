@@ -1,0 +1,22 @@
+{
+  "dataset_sha256": "80f44031660fcf2c0fda5cbcd5eebce25dc1527d18018019f021fd8ae6459e11",
+  "frame_and_byte_budgets_reconciled": true,
+  "metric_row_count": 27216,
+  "model_bundle_sha256": "f674699d6c10a34fbc7f08bd1f28e8a562e77bcfeadbbc1bdff127538588548c",
+  "run_count": 54,
+  "runs_by_scenario": {
+    "obss_only": 24,
+    "obss_plus_legacy_mixed8": 10,
+    "stage_a_common_bursts": 4,
+    "stage_a_independent": 7,
+    "stage_a_mixed_common_and_independent": 7,
+    "stage_a_none": 2
+  },
+  "runs_by_split_role": {
+    "in_distribution_test": 20,
+    "out_of_distribution_test": 34
+  },
+  "score_stream_outcome_free": true,
+  "source_outcomes_unchanged": true,
+  "status": "PASS"
+}

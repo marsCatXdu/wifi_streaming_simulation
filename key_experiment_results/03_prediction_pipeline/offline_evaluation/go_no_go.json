@@ -1,0 +1,535 @@
+{
+  "analysis_config_sha256": "76976507220f78a67311f03a1c18a27e129f0fa486ae95413acd28526b6cc097",
+  "analysis_output_schema_version": 1,
+  "criteria": [
+    {
+      "estimate": 0.6239737274220033,
+      "link": 0,
+      "name": "id_f2_absolute_recall",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 6.239737274220032,
+      "link": 0,
+      "name": "id_f2_random_multiple",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 0.11006714478481161,
+      "link": 0,
+      "name": "id_f2_heuristic_gain",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "confidence_lower": 0.42013621554339065,
+      "confidence_upper": 0.6858899370116892,
+      "estimate": 0.5239737274220033,
+      "link": 0,
+      "name": "unseen_seed_persistence",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": true,
+      "link": 0,
+      "name": "id_predictability_pass",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": {
+        "action_rate": 0.045083333333333336,
+        "recall": 0.421455938697318
+      },
+      "link": 0,
+      "name": "fixed_threshold_stable_id",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": {
+        "eligible_frames": 43200,
+        "eligible_misses": 545,
+        "run_group_count": 24
+      },
+      "link": 0,
+      "name": "required_ood_scenario_evidence",
+      "scenario_id": "obss_only",
+      "stage": "T1",
+      "status": "pass",
+      "threshold": 20
+    },
+    {
+      "estimate": {
+        "eligible_frames": 18000,
+        "eligible_misses": 2845,
+        "run_group_count": 10
+      },
+      "link": 0,
+      "name": "required_ood_scenario_evidence",
+      "scenario_id": "obss_plus_legacy_mixed8",
+      "stage": "T1",
+      "status": "insufficient_data",
+      "threshold": 20
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "required_ood_evidence_complete",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": null,
+      "link": 0,
+      "name": "required_ood_generalization_pass",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": null,
+      "link": 0,
+      "name": "fixed_threshold_stable_required_ood",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": 0.6239737274220033,
+      "link": 0,
+      "name": "f2_exportable_absolute_recall_id",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 6.239737274220032,
+      "link": 0,
+      "name": "f2_exportable_random_multiple_id",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 0.005473453749315849,
+      "link": 0,
+      "name": "f2_exportable_incremental_gain_id",
+      "stage": "T1",
+      "status": "fail",
+      "threshold": 0.1
+    },
+    {
+      "estimate": null,
+      "link": 0,
+      "name": "required_ood_exportable_evidence",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "t0_weak",
+      "stage": "T0",
+      "status": "fail"
+    },
+    {
+      "estimate": 0.0016420361247947437,
+      "link": 0,
+      "name": "later_stage_material_improvement",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "reactive_redirect_supported",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "oracle_ceiling_weak",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "f2_adds_little",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": null,
+      "link": 0,
+      "name": "gains_collapse_ood",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "useful_detection_too_late",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "oracle_only_signal",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 0,
+      "name": "secondary_generalization_warning",
+      "status": "fail"
+    },
+    {
+      "estimate": 0.484312859036677,
+      "link": 1,
+      "name": "id_f2_absolute_recall",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 4.84312859036677,
+      "link": 1,
+      "name": "id_f2_random_multiple",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 0.07998498634396178,
+      "link": 1,
+      "name": "id_f2_heuristic_gain",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "confidence_lower": 0.3178956547255038,
+      "confidence_upper": 0.4752429777489483,
+      "estimate": 0.384312859036677,
+      "link": 1,
+      "name": "unseen_seed_persistence",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": false,
+      "link": 1,
+      "name": "id_predictability_pass",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": {
+        "action_rate": 0.04636111111111111,
+        "recall": 0.29717189571365443
+      },
+      "link": 1,
+      "name": "fixed_threshold_stable_id",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": {
+        "eligible_frames": 43200,
+        "eligible_misses": 637,
+        "run_group_count": 24
+      },
+      "link": 1,
+      "name": "required_ood_scenario_evidence",
+      "scenario_id": "obss_only",
+      "stage": "T1",
+      "status": "pass",
+      "threshold": 20
+    },
+    {
+      "estimate": {
+        "eligible_frames": 18000,
+        "eligible_misses": 4477,
+        "run_group_count": 10
+      },
+      "link": 1,
+      "name": "required_ood_scenario_evidence",
+      "scenario_id": "obss_plus_legacy_mixed8",
+      "stage": "T1",
+      "status": "insufficient_data",
+      "threshold": 20
+    },
+    {
+      "estimate": false,
+      "link": 1,
+      "name": "required_ood_evidence_complete",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": null,
+      "link": 1,
+      "name": "required_ood_generalization_pass",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": null,
+      "link": 1,
+      "name": "fixed_threshold_stable_required_ood",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": 0.484312859036677,
+      "link": 1,
+      "name": "f2_exportable_absolute_recall_id",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 4.84312859036677,
+      "link": 1,
+      "name": "f2_exportable_random_multiple_id",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": 0.0028722934158197377,
+      "link": 1,
+      "name": "f2_exportable_incremental_gain_id",
+      "stage": "T1",
+      "status": "fail",
+      "threshold": 0.1
+    },
+    {
+      "estimate": null,
+      "link": 1,
+      "name": "required_ood_exportable_evidence",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": true,
+      "link": 1,
+      "name": "t0_weak",
+      "stage": "T0",
+      "status": "pass"
+    },
+    {
+      "estimate": 0.0028722934158197594,
+      "link": 1,
+      "name": "later_stage_material_improvement",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 1,
+      "name": "reactive_redirect_supported",
+      "stage": "T1",
+      "status": "fail"
+    },
+    {
+      "estimate": false,
+      "link": 1,
+      "name": "oracle_ceiling_weak",
+      "status": "fail"
+    },
+    {
+      "estimate": true,
+      "link": 1,
+      "name": "f2_adds_little",
+      "stage": "T1",
+      "status": "pass"
+    },
+    {
+      "estimate": null,
+      "link": 1,
+      "name": "gains_collapse_ood",
+      "stage": "T1",
+      "status": "insufficient_data"
+    },
+    {
+      "estimate": true,
+      "link": 1,
+      "name": "useful_detection_too_late",
+      "status": "pass"
+    },
+    {
+      "estimate": true,
+      "link": 1,
+      "name": "oracle_only_signal",
+      "status": "pass"
+    },
+    {
+      "estimate": false,
+      "link": 1,
+      "name": "secondary_generalization_warning",
+      "status": "fail"
+    }
+  ],
+  "modified_driver_supported": "fail",
+  "per_link": {
+    "0": {
+      "modified_driver_supported": "fail",
+      "prediction_recommendation": "insufficient_data",
+      "screening_stage": "T1"
+    },
+    "1": {
+      "modified_driver_supported": "fail",
+      "prediction_recommendation": "no_go",
+      "screening_stage": "T1"
+    }
+  },
+  "prediction_recommendation": "insufficient_data",
+  "resolved_analysis_configuration": {
+    "accepted_increment_1_commit": "c82c781cb0847ae337ed87eaf41c6a4053393b0b",
+    "analysis_schema_version": 1,
+    "analysis_seed": 20260725,
+    "bootstrap_replicates": 2000,
+    "bootstrap_seed": 20260726,
+    "calibration_bin_count": 10,
+    "calibration_method": "platt",
+    "combine_links_for_formal_decision": false,
+    "confidence_level": 0.95,
+    "f1_degradation_profiles": [
+      {
+        "counter_quantization": 1,
+        "disabled_feature_families": [],
+        "observation_delay_us": 1000,
+        "profile_id": "polling_1ms",
+        "rate_quantization": 1,
+        "report_interval_us": 1000,
+        "signal_quantization_db": 1
+      },
+      {
+        "counter_quantization": 4,
+        "disabled_feature_families": [],
+        "observation_delay_us": 2000,
+        "profile_id": "polling_5ms",
+        "rate_quantization": 1,
+        "report_interval_us": 5000,
+        "signal_quantization_db": 2
+      }
+    ],
+    "f2_exportable_allowlist": [
+      "frame_packets_mac_enqueued",
+      "frame_packets_mac_dequeued",
+      "frame_packets_tx_succeeded",
+      "frame_mpdu_attempt_failures",
+      "frame_packets_terminally_dropped",
+      "frame_packets_currently_queued",
+      "frame_mac_service_bytes_currently_queued",
+      "mac_queue_packets",
+      "mac_queue_service_bytes",
+      "mac_queue_oldest_enqueue_time_ns",
+      "packets_ahead_of_frame",
+      "mac_service_bytes_ahead_of_frame",
+      "frame_packets_pending_primary",
+      "frame_mac_service_bytes_not_acknowledged",
+      "frame_mac_service_bytes_pending_primary"
+    ],
+    "links": [
+      0,
+      1
+    ],
+    "maximum_fixed_threshold_action_rate_overshoot": 0.02,
+    "minimum_f2_incremental_gain": 0.1,
+    "minimum_f2_recall": 0.4,
+    "minimum_heuristic_gain": 0.1,
+    "minimum_later_stage_gain": 0.1,
+    "minimum_misses_per_major_test_subset": 500,
+    "minimum_ood_retention": 0.7,
+    "minimum_random_multiple": 3.0,
+    "minimum_rescue_time_us": 5000,
+    "minimum_run_groups_id_test": 20,
+    "minimum_run_groups_per_required_ood_scenario": 20,
+    "minimum_run_groups_validation_calibration": 10,
+    "minimum_run_groups_validation_selection": 10,
+    "minimum_training_misses": 2000,
+    "model_name_order": [
+      "logistic_regression",
+      "histogram_gradient_boosting"
+    ],
+    "ood_formal_aggregation": "per_scenario_worst_case",
+    "ood_scenarios": [
+      {
+        "run_filter": {
+          "background_profile": "none",
+          "background_rate_mbps_per_station": 2,
+          "background_traffic": "none",
+          "data_mode": "EhtMcs5",
+          "obss_dl_max_rate_mbps": 8,
+          "obss_dl_min_rate_mbps": 2,
+          "obss_off_mean_ms": 300,
+          "obss_on_mean_ms": 100,
+          "obss_profile": "mixed4x4",
+          "obss_station_manager": "minstrel_ht",
+          "obss_stations_per_bss": 4,
+          "obss_ul_max_rate_mbps": 3,
+          "obss_ul_min_rate_mbps": 0.5,
+          "policies": [
+            "fixed_link_0",
+            "fixed_link_1"
+          ],
+          "propagation_model": "log_distance_nakagami",
+          "scenario_id": "obss_only",
+          "topology": "dual_interface",
+          "ul_ofdma_enabled": false,
+          "wifi_standard": "802.11be"
+        },
+        "scenario_id": "obss_only",
+        "status": "required"
+      },
+      {
+        "run_filter": {
+          "background_profile": "legacy_mixed8",
+          "background_random_off_mean_ms": 100,
+          "background_random_on_mean_ms": 100,
+          "background_rate_mbps_per_station": 2,
+          "background_traffic": "udp_random_onoff",
+          "data_mode": "EhtMcs5",
+          "obss_dl_max_rate_mbps": 8,
+          "obss_dl_min_rate_mbps": 2,
+          "obss_off_mean_ms": 300,
+          "obss_on_mean_ms": 100,
+          "obss_profile": "mixed4x4",
+          "obss_station_manager": "minstrel_ht",
+          "obss_stations_per_bss": 4,
+          "obss_ul_max_rate_mbps": 3,
+          "obss_ul_min_rate_mbps": 0.5,
+          "policies": [
+            "fixed_link_0",
+            "fixed_link_1"
+          ],
+          "propagation_model": "log_distance_nakagami",
+          "scenario_id": "obss_plus_legacy_mixed8",
+          "topology": "dual_interface",
+          "ul_ofdma_enabled": false,
+          "wifi_standard": "802.11be"
+        },
+        "scenario_id": "obss_plus_legacy_mixed8",
+        "status": "required"
+      }
+    ],
+    "pooled_ood_decision_use": false,
+    "pr_auc_metric": "average_precision",
+    "ranking_budgets": [
+      0.05,
+      0.1,
+      0.2
+    ],
+    "required_ood_scenarios": [
+      "obss_only",
+      "obss_plus_legacy_mixed8"
+    ],
+    "screening_budget": 0.1,
+    "specification_revision": 8,
+    "split_seed": 20260725,
+    "stages": [
+      "T0",
+      "T1",
+      "T2",
+      "T4"
+    ]
+  }
+}
