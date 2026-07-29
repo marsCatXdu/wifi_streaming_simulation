@@ -1,14 +1,15 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-07-27. It intentionally excludes
+experimental evidence generated through 2026-07-29. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
 The prediction artifacts under `03_prediction_pipeline/` are legacy,
 one-frame-delayed evidence and are no longer formal claims. See
-`03_prediction_pipeline/LEGACY_FRAME_DELAYED_NOTICE.md`. Corrected evidence is
-produced separately by the `genuine_polling_v1` workstation pipeline.
+`03_prediction_pipeline/LEGACY_FRAME_DELAYED_NOTICE.md`. Corrected
+frame-independent 1 ms polling evidence is preserved under
+`04_genuine_polling_v1/`.
 
 ## Contents
 
@@ -24,6 +25,12 @@ produced separately by the `genuine_polling_v1` workstation pipeline.
 | `03_prediction_pipeline/offline_evaluation` | Legacy frame-delayed predictability evaluation | Retained, non-formal report and metrics |
 | `03_prediction_pipeline/online_replay_10pct` | Legacy frame-delayed online replay | Retained, non-formal 10% operating point |
 | `03_prediction_pipeline/online_replay_30pct` | Legacy frame-delayed online replay | Retained, non-formal 30% operating point |
+| `04_genuine_polling_v1/dataset` | Corrected frame-independent 1 ms polling dataset | Manifest, splits, and validation evidence |
+| `04_genuine_polling_v1/offline_evaluation` | Corrected prediction evaluation | Metrics, go/no-go record, report, calibration, recall, and importance figures |
+| `04_genuine_polling_v1/closed_loop_obss_threshold_020` | Closed-loop duplication under OBSS at threshold 0.20 | Ten paired groups, aggregate evidence, control summaries, and figures |
+| `04_genuine_polling_v1/closed_loop_obss_threshold_015` | Repaired closed-loop duplication under OBSS at threshold 0.15 | Ten paired groups, repair provenance, aggregate evidence, and figures |
+| `04_genuine_polling_v1/closed_loop_combined_threshold_020` | Closed-loop duplication under combined contention at threshold 0.20 | Seven paired groups, aggregate evidence, control summaries, and figures |
+| `04_genuine_polling_v1/predicted_risk_threshold_020` | Runtime calibrated-risk distributions | Conditional-action and unconditional PDF/CDF plots |
 
 ## Principal streaming results
 
@@ -122,6 +129,32 @@ The global offline Top-K values in the reports are optimistic references, not
 deployable online results: they rank a complete future population and can move
 budget between scenarios. At a 30% global budget they report 72.9% ID and
 88.9% aggregate OOD recall, versus approximately 36% and 35% in causal replay.
+
+## Corrected genuine-polling results
+
+The corrected dataset uses a frame-independent 1 ms polling clock with a 1 ms
+report delay. It contains 416 runs, 208 matched groups, 748,800 frames, and
+80,650 deadline misses. Both required OOD scenarios now have 24 matched groups,
+so the old ten-group insufficiency does not apply.
+
+At T1 on the deployed 5 GHz commodity-polling feature set, ID average precision
+is 0.5785 and ROC-AUC is 0.8919. The frozen per-link recommendations differ,
+leaving the aggregate recommendation `insufficient_data`; modified-driver
+support remains `fail`.
+
+Under OBSS-only contention, threshold 0.15 selective duplication reduces the
+mean miss ratio from 1.233% for single 5 GHz to 0.822%, with 1.779% redundant
+bytes. It launches 316 of 18,000 frames, incurs no budget suppressions, and uses
+5.85% of the configured 30% long-run frame budget. Full duplication reaches
+0.061% misses at 50% redundant bytes.
+
+Under combined contention at threshold 0.20, seven complete paired groups show
+11.429% misses for single 5 GHz, 6.270% for selective duplication, and 2.325%
+for full duplication. Selective duplication uses 13.619% redundant bytes and
+encounters 220 budget suppressions.
+
+See `04_genuine_polling_v1/README.md` for the complete compact table and
+interpretation limits.
 
 ## Figure guide
 

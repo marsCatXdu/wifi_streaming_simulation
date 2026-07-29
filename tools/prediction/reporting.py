@@ -156,7 +156,7 @@ def write_report(
             f"- Modified-driver support: `{decision['modified_driver_supported']}`.",
             "- Per-link outcomes remain separate in `go_no_go.json`.",
         ]
-    lines += ["", "## Evidence limitations", ""]
+    lines += ["", "## Evidence status and limitations", ""]
     lines.extend(f"- {item}" for item in insufficiencies)
     lines += [
         "",

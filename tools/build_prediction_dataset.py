@@ -406,8 +406,8 @@ def _joined_batches(
             if incomplete:
                 if completion_us or latency_us or deadline_miss != 1:
                     raise ValueError(f"{source.run_dir}: invalid incomplete-frame label")
-                completion_ns: int | str = ""
-                final_latency: int | str = ""
+                completion_ns: int | None = None
+                final_latency: int | None = None
             else:
                 if not completion_us or not latency_us:
                     raise ValueError(f"{source.run_dir}: complete frame lacks timing")

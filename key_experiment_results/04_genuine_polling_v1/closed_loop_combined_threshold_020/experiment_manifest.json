@@ -1,0 +1,287 @@
+{
+  "curated_at_utc": "2026-07-29T08:34:30.983118+00:00",
+  "experiment": "genuine-polling-v1-closed-loop-combined-curated",
+  "runs": [
+    {
+      "config": null,
+      "directory": "0dc1515f70a8669f5f79",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "0dc1515f70a8669f5f79",
+      "seed": 26,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "2638beb4d3fac7c5b1c6",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "2638beb4d3fac7c5b1c6",
+      "seed": 13,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "2cd35b43298937a12647",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "2cd35b43298937a12647",
+      "seed": 2,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "3a73b418f5a34b7809f8",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "3a73b418f5a34b7809f8",
+      "seed": 33,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "3d39cdff56e231f321c7",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "3d39cdff56e231f321c7",
+      "seed": 33,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "3f325e84142dd94e1889",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "3f325e84142dd94e1889",
+      "seed": 11,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "46869bbf8fc2c55c4d8d",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "46869bbf8fc2c55c4d8d",
+      "seed": 26,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "499ad7f415c2834cafc3",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "499ad7f415c2834cafc3",
+      "seed": 11,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "5c42c859585dec6ce109",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "5c42c859585dec6ce109",
+      "seed": 11,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "5d9f4cb3c109330c87b8",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "5d9f4cb3c109330c87b8",
+      "seed": 6,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "5eb5036360ee0ad166fb",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "5eb5036360ee0ad166fb",
+      "seed": 4,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "660c8498fae52459a1af",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "660c8498fae52459a1af",
+      "seed": 13,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "66d83145cf50ab26f726",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "66d83145cf50ab26f726",
+      "seed": 6,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "71219afa57e5b200c89c",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "71219afa57e5b200c89c",
+      "seed": 2,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "989f91aace347f3ad55c",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "989f91aace347f3ad55c",
+      "seed": 4,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "9957f146c2b77d2f082d",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "9957f146c2b77d2f082d",
+      "seed": 13,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "9d4dd34e116919bc3753",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "9d4dd34e116919bc3753",
+      "seed": 4,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "a00b6c01bc401d6214d8",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "a00b6c01bc401d6214d8",
+      "seed": 13,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "a4cadef7f833175232e3",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "a4cadef7f833175232e3",
+      "seed": 6,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "a96cd96001df3127b239",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "a96cd96001df3127b239",
+      "seed": 2,
+      "status": "complete",
+      "topology": "mlo_str"
+    },
+    {
+      "config": null,
+      "directory": "a9f4889dbd3639fbe6c6",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "a9f4889dbd3639fbe6c6",
+      "seed": 26,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "bbd5596405e0343a0fb2",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "bbd5596405e0343a0fb2",
+      "seed": 6,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "c026aaf27860350cc990",
+      "policy": "full_duplication",
+      "run": 1,
+      "run_id": "c026aaf27860350cc990",
+      "seed": 2,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "c04bc20661fa493fc509",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "c04bc20661fa493fc509",
+      "seed": 33,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "c5dad560c1f4f5619a00",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "c5dad560c1f4f5619a00",
+      "seed": 26,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "ec47b43e522b1678bb75",
+      "policy": "fixed_link_1",
+      "run": 1,
+      "run_id": "ec47b43e522b1678bb75",
+      "seed": 4,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "f456729f73a58682e2d6",
+      "policy": "selective_duplication",
+      "run": 1,
+      "run_id": "f456729f73a58682e2d6",
+      "seed": 33,
+      "status": "complete",
+      "topology": "dual_interface"
+    },
+    {
+      "config": null,
+      "directory": "ffd5f8df96717856e26e",
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "ffd5f8df96717856e26e",
+      "seed": 11,
+      "status": "complete",
+      "topology": "mlo_str"
+    }
+  ],
+  "selection": "7 complete four-treatment seed groups"
+}

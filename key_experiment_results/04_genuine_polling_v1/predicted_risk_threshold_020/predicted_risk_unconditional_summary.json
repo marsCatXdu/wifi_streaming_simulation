@@ -1,0 +1,100 @@
+{
+  "counterfactual_warning": "Scores after an earlier launched duplication are observed under the closed-loop action and are not no-action counterfactual predictions.",
+  "definition": "Every calibrated_probability logged at T0, T1, T2, or T4, without conditioning on action, actionability, threshold crossing, or token availability.",
+  "experiments": [
+    {
+      "decision_counts": {
+        "action": 213,
+        "already_resolved": 318,
+        "below_threshold": 49633,
+        "not_actionable": 21836
+      },
+      "label": "OBSS only",
+      "result_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/closed_loop_obss/runs",
+      "selective_runs": 10,
+      "stages": {
+        "T0": {
+          "count": 18000,
+          "maximum": 0.897981245943,
+          "mean": 0.018706029103611316,
+          "median": 0.01387707965565,
+          "minimum": 0.000835988091722,
+          "p95": 0.0428318730393
+        },
+        "T1": {
+          "count": 18000,
+          "maximum": 0.894837933712,
+          "mean": 0.01967124512584432,
+          "median": 0.015172764346449999,
+          "minimum": 0.000625291052594,
+          "p95": 0.0411862821693
+        },
+        "T2": {
+          "count": 18000,
+          "maximum": 0.897354079322,
+          "mean": 0.03776136459289319,
+          "median": 0.034911667868349996,
+          "minimum": 0.00757364613099,
+          "p95": 0.05755721761036999
+        },
+        "T4": {
+          "count": 18000,
+          "maximum": 0.90302782039,
+          "mean": 0.09051315807861512,
+          "median": 0.06011563571525,
+          "minimum": 0.00552989225662,
+          "p95": 0.24506498127804996
+        }
+      },
+      "threshold": 0.2
+    },
+    {
+      "decision_counts": {
+        "action": 1827,
+        "already_resolved": 5097,
+        "below_threshold": 34223,
+        "budget_suppressed": 220,
+        "not_actionable": 9033
+      },
+      "label": "OBSS plus legacy contention",
+      "result_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/closed_loop_combined/runs",
+      "selective_runs": 7,
+      "stages": {
+        "T0": {
+          "count": 12600,
+          "maximum": 0.97771215656,
+          "mean": 0.10405867818187076,
+          "median": 0.047847850314599996,
+          "minimum": 0.00282366295554,
+          "p95": 0.46416678760249974
+        },
+        "T1": {
+          "count": 12600,
+          "maximum": 0.977195082856,
+          "mean": 0.10369488049887758,
+          "median": 0.04420131675565,
+          "minimum": 0.0022173685915,
+          "p95": 0.4719649727493999
+        },
+        "T2": {
+          "count": 12600,
+          "maximum": 0.977600149116,
+          "mean": 0.11109275640739814,
+          "median": 0.0535298729222,
+          "minimum": 0.0116186182092,
+          "p95": 0.4647807140479493
+        },
+        "T4": {
+          "count": 12600,
+          "maximum": 0.986448573802,
+          "mean": 0.1290646324539749,
+          "median": 0.06992840822365,
+          "minimum": 0.0115894991,
+          "p95": 0.4697789301386497
+        }
+      },
+      "threshold": 0.2
+    }
+  ],
+  "schema_version": 1
+}

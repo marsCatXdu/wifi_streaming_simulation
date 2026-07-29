@@ -1,0 +1,1923 @@
+{
+  "analysis_config": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/experiments/configs/prediction_analysis.yaml",
+  "analysis_config_sha256": "22c88650969dfc5a223e5275d73a375f15ac00a94d429db9623e0066139d02ec",
+  "counts_by_ood_scenario": {
+    "obss_only": {
+      "frame_count": 86400,
+      "miss_count": 1182,
+      "run_count": 48,
+      "run_group_count": 24
+    },
+    "obss_plus_legacy_mixed8": {
+      "frame_count": 86400,
+      "miss_count": 16541,
+      "run_count": 48,
+      "run_group_count": 24
+    }
+  },
+  "counts_by_role": {
+    "in_distribution_test": {
+      "frame_count": 72000,
+      "miss_count": 5819,
+      "run_group_count": 20
+    },
+    "out_of_distribution_test": {
+      "frame_count": 172800,
+      "miss_count": 17723,
+      "run_group_count": 48
+    },
+    "training": {
+      "frame_count": 432000,
+      "miss_count": 47390,
+      "run_group_count": 120
+    },
+    "validation_calibration": {
+      "frame_count": 36000,
+      "miss_count": 5948,
+      "run_group_count": 10
+    },
+    "validation_selection": {
+      "frame_count": 36000,
+      "miss_count": 3770,
+      "run_group_count": 10
+    }
+  },
+  "groups": [
+    {
+      "run_group_id": "010e2915c107055fa48e",
+      "run_ids": [
+        "0fdad2c136645d287465",
+        "515d5cd84ff6be9ccffb"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "015c9bccb5f086d1bfa8",
+      "run_ids": [
+        "52358ce8cbeb032864b2",
+        "9b876ec209d263d00daf"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "01a47ac2ce4dec1612bd",
+      "run_ids": [
+        "02015705c625f95e2a68",
+        "2f919913d62f27faa41c"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "020db9889d117732729f",
+      "run_ids": [
+        "bbd5e74499c0e477c229",
+        "f46e41d45b846af6a3c8"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "02c49dfa6ef3babb5eab",
+      "run_ids": [
+        "5d0c1afaef02bab6d714",
+        "bf88a6e6d962fed336db"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "037a6c51bcadfdf38ab9",
+      "run_ids": [
+        "c20845006764d0fccc0a",
+        "e8dd572ba52fa41ba8f4"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "0399f42026842f7da8ae",
+      "run_ids": [
+        "33a52ebc753f33800a47",
+        "4707a94a31da093bde80"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "04634a20ede9bb5f4d4a",
+      "run_ids": [
+        "83cfbc31a21433c64ef7",
+        "aad13846f5dd3a0a2e27"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "046dc14edaa1da1fd1b4",
+      "run_ids": [
+        "93cdcacbab0f3e5a2eb3",
+        "da997df708d9cd0d37b2"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "04ab9126b975de8213ec",
+      "run_ids": [
+        "a76cae3f10d04110404c",
+        "d41c60c8b795eb3a206b"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "0533479433cb13317e87",
+      "run_ids": [
+        "7f38af973e76da65c20f",
+        "9ebf01d0e110ed54511a"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "05a7ac0928c8ab4b6b6d",
+      "run_ids": [
+        "45ff725280afcf2cc15f",
+        "969670d8f48ba771617c"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "087fab7ffea8fe91c088",
+      "run_ids": [
+        "a2243983cca9b6555458",
+        "b215df16120fff313d78"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "099d62be0e95c8dc6f92",
+      "run_ids": [
+        "2c703b03ebc4471a52a8",
+        "4a16091f4e86339e1d47"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "0a809c4391b3f5ab3d7e",
+      "run_ids": [
+        "a96ffe1acb2820cc59d8",
+        "b71e72acb68fd5828ed8"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "0cbf5dbeef550e80c402",
+      "run_ids": [
+        "14435d10bfa189c2caa1",
+        "7d6317720913ec3d95c2"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "0f3520f3b0b2b2e5c3b1",
+      "run_ids": [
+        "a96df5c692f419c41b43",
+        "e79974f66c431a156400"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "11ea3c4b697c35d3a07f",
+      "run_ids": [
+        "8a8888dddcf9be362c0a",
+        "9cfe10e9e58a68aa6ff9"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "12331ffb71ebd27ec889",
+      "run_ids": [
+        "088d0158e4bfe2f2b1dd",
+        "619669f59653bb6d040e"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "1297b3a17a972c05e33b",
+      "run_ids": [
+        "a9412cc1111b85700e3c",
+        "be396bad2a5875971768"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "13a5a9cff826c1829a4f",
+      "run_ids": [
+        "3df5529335d49d134bd8",
+        "713c8f60725d2fada75b"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "1405ea80656532d75c5f",
+      "run_ids": [
+        "2b00666f144a74e5a3ee",
+        "3aefea643bb0f2d89428"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "14137b7d7e5072d67e66",
+      "run_ids": [
+        "a007284f2218fabd6d57",
+        "e2a75d42f910972cb370"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "17fa6be185ec56d2cd00",
+      "run_ids": [
+        "5cc0ba5ec6c3d0aace1d",
+        "dabafc22a37be83aa6da"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "1803dd17b0a30442ef95",
+      "run_ids": [
+        "559968935c915a8029fc",
+        "629a7818638439e8dcea"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "198fd75df10e7236dd8f",
+      "run_ids": [
+        "97da512248901a9d5e57",
+        "9f8e3f19ca0fcd7636cc"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "1b2ebf67fabe9bb7f976",
+      "run_ids": [
+        "2f83b117f7c59494af59",
+        "e6acdb7e460d87ebcaa4"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "1b5177b1c625316ea77a",
+      "run_ids": [
+        "2a8dda0f2a8e0a1967cf",
+        "d0c65356af123e2ba782"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "1d323f2602ab9c166522",
+      "run_ids": [
+        "25e4bc6847a5c0a975fe",
+        "4b53452d5911810baaa2"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "1d61037a602cc851c22e",
+      "run_ids": [
+        "2a9c250507df9559cdd1",
+        "dcda6dbfa677e11b455f"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "1f577d7b14a14ca423c7",
+      "run_ids": [
+        "13dfe9a074b9ef7aaecd",
+        "d3d688f3d3f9e7b0b1a4"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "1f5787e5f007fb419eb3",
+      "run_ids": [
+        "45ed8e96b7b94d3961ff",
+        "bafeb693d7ffceff6f1c"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "1ff9c8384ab2ecf35ea4",
+      "run_ids": [
+        "b441cd367f888c252494",
+        "e0041fdd8ae378567388"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "211572b287591c8821eb",
+      "run_ids": [
+        "766e90ddac0f7ac1d1ed",
+        "aa0600e9763947b8e883"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "22a0932719427b9585ff",
+      "run_ids": [
+        "12d4f57ba0cdbe224113",
+        "be0251e47fe4be0f0949"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "22c80675495842c044c5",
+      "run_ids": [
+        "8a382f6f768983aa74e8",
+        "e2fecc72e1da84792dd0"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "24154c728d6e61d87045",
+      "run_ids": [
+        "5f590c9ea7407189720b",
+        "f17a9ca3e6058f26dff7"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "25fc0f6da1942fb1f8e0",
+      "run_ids": [
+        "8dd80c8204995674e341",
+        "dc7e988fb4cbe7e0cfa3"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "26959e52d5cdc4a6e2af",
+      "run_ids": [
+        "2e94896c5e4296a4e9b6",
+        "48836e2e8a15bf85d4e3"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "27e6e8c46cce1b5726ab",
+      "run_ids": [
+        "32598080812a43d60e68",
+        "9696f264a1ccc2d3f36a"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "298e244dc6e760b4645c",
+      "run_ids": [
+        "877939766ffd8a16d68c",
+        "bc453114cbd258bd142d"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "2af1a06d757fb279b3ce",
+      "run_ids": [
+        "a9e3a803e171609bd189",
+        "d21688c343c8609eb992"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "31bead819ad8f6cf0e69",
+      "run_ids": [
+        "0c9e7c1ab89bc7fd9a21",
+        "9b8f2bc02d1cb1759e56"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "32088a9c1fcc09470285",
+      "run_ids": [
+        "a81c37140538ba52147b",
+        "ecd4890afbac83d3b9fe"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "337877a971659bfcce69",
+      "run_ids": [
+        "d1c149cd17caf8a9ca93",
+        "e4c77aedd924a081a866"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "33ae8fad6c4ed2597e8c",
+      "run_ids": [
+        "50f83e6accc75f6667be",
+        "d499054ed8a3604b3381"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "34127204d3011658b8d2",
+      "run_ids": [
+        "586b9e8731b31d7d0cd8",
+        "69854e69290b52263219"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "357825f8bd1355b0c734",
+      "run_ids": [
+        "25945be5f6ead35f8b61",
+        "b789b827412ea9510990"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "35df843dc676b83751ca",
+      "run_ids": [
+        "faa184bb5e85a65ec712",
+        "fd61d2a965ccbe8c7cbe"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "383e53573a8c606a2a65",
+      "run_ids": [
+        "843cdeaedbd19ac6641a",
+        "b6f59570f5a773488524"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "3a380b4bd05938e14a36",
+      "run_ids": [
+        "0c278c57208ff4a9518f",
+        "45bb135dd07813bd38cd"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "3b3ec277ea33dbf83473",
+      "run_ids": [
+        "50da11d43d845eed3cc6",
+        "f1312b2c8d73ee6b8101"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "3d21e369bc514e229ffd",
+      "run_ids": [
+        "1365eedb4071a3e23981",
+        "e992e7839d9faaf24558"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "3db9e1303756a0465a31",
+      "run_ids": [
+        "241926a38e959d4d4bef",
+        "acde104f22a07e4f2e09"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "40de881151b3173bf96d",
+      "run_ids": [
+        "39e710cf07ed914206e0",
+        "5e51d5e93409b9dddf67"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "41501e454dc37b9e9382",
+      "run_ids": [
+        "90b065b4ae5d14eb7865",
+        "fd2b23c76c66ae22e4be"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "44a03fe97183bb986c22",
+      "run_ids": [
+        "853ec3db293d5bab6077",
+        "929a2a1fca565ba416bc"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "489701820a14246fc502",
+      "run_ids": [
+        "13978a4e56076a7e42de",
+        "a842aa58f323a0487f79"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "4b26e6833f43e8431ba2",
+      "run_ids": [
+        "2184442fb688cc69c887",
+        "7d8b57ff91e4021bbee2"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "4bb9d91329aaaf8a7cca",
+      "run_ids": [
+        "0aca3408e0395385690b",
+        "9fae71aabfef9690db76"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "4c41bc982cda19276996",
+      "run_ids": [
+        "8c9b24e17f460ae756ea",
+        "d22c5651ca8dbe9757d8"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "4c4bcdc5fb0279ba9a00",
+      "run_ids": [
+        "77cfa6dae67ca040ef06",
+        "87305ed28b54b902427f"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "4c714656080c240617bd",
+      "run_ids": [
+        "13c012c9fa9422da7ddb",
+        "750cbb977689f8de5007"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "4ce20bfcabdfab0e4c37",
+      "run_ids": [
+        "42d7e6352a9a9f7d7e17",
+        "8d8a18bf65fe6430a755"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "4d68fa8eb2c121511765",
+      "run_ids": [
+        "0a5049f0efb14c29447e",
+        "b1b9c6451fea76675df1"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "4fac03c864e33830e446",
+      "run_ids": [
+        "8e080581b2723406872f",
+        "f682decca59ae9a485e7"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "51d2964c99f231edf8fd",
+      "run_ids": [
+        "11ff70b4f10e045d7852",
+        "bc5ad3a0ac7cda6754cd"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "54f2f8178c92e4fd66b3",
+      "run_ids": [
+        "21ecad73839182ef4953",
+        "54de99b3f79c97d79597"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "583497b0c91831fc2e2d",
+      "run_ids": [
+        "3c0fc5be747eaa2ca9cf",
+        "aa9b20b1ad2083ebe0d3"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "5950fd1e5a43f76094b2",
+      "run_ids": [
+        "6355e185b1205deb681f",
+        "c2369a4062d818ac20d0"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "5b70fc7457cac83542f3",
+      "run_ids": [
+        "68af92848885d67ce103",
+        "9ee021984feec90c183a"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "5b8300b2327d5fabf576",
+      "run_ids": [
+        "59a547d8d0df2ef4cdcf",
+        "efd994da5a6b891b183b"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "5e0a49e1fbc7a2046c39",
+      "run_ids": [
+        "33e1690042336763f0cf",
+        "896752c4932cca01c581"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "5e67a94829df0503e948",
+      "run_ids": [
+        "1aede9c016a6c47a30a8",
+        "b7468bdc69d7dc3f547d"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "5ef2b921448d006e2a31",
+      "run_ids": [
+        "d43634444ec4d0c00916",
+        "df6ce30f8978be7d7448"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "5ff88ed9d4f119d802a1",
+      "run_ids": [
+        "66dad90371293eab1ed8",
+        "cb3c791fd4baccab61e3"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "604188a28a4ce7a7fb4b",
+      "run_ids": [
+        "5fa9115051a71fa00777",
+        "6c29aed6a4c32590890a"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "614ed55278e3bfb5b034",
+      "run_ids": [
+        "e0fb8c5ac50b4c3f38a6",
+        "f7777e8aca6a91619e97"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "63e3cd3740d2697243dd",
+      "run_ids": [
+        "11af0cdbff34b508c176",
+        "8bf2e22fe199d8a54b6d"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "65215d713a89bd0bd641",
+      "run_ids": [
+        "475c9c56d4211f295294",
+        "af1a0b72cf39dc6bb88d"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "65ff67c7c9d23794784b",
+      "run_ids": [
+        "7e770c4f0c80e75c8f83",
+        "fcdc62af7e7aad141ccb"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "67136008e211cccae3ff",
+      "run_ids": [
+        "32842e075ef8092a8a8e",
+        "e873503cc02ea0b090b8"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "67a7fafa9df21ca8a82e",
+      "run_ids": [
+        "4a21b1906d4bdb6a578b",
+        "c6fbadde7e1ff6db5dd3"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "6a1bf0aa9994528171ec",
+      "run_ids": [
+        "a0d702453d197e9de66f",
+        "f52e5500c09bc7493e9e"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6c82256e2e0298c875e6",
+      "run_ids": [
+        "3289c1c58406ad725dff",
+        "89e028530adcccdfc9cc"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6ccc787aebf6b2c82536",
+      "run_ids": [
+        "56ea271bf6a250a22a73",
+        "86d020cca0f6c2d280bc"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6cd3103a771af83466ef",
+      "run_ids": [
+        "37d4c0ab049605c9e66b",
+        "ccddc095a16380f7f631"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "6d0d2f4e6476a5320788",
+      "run_ids": [
+        "939f1ffb2bdbbb71f118",
+        "95206e4506382ab2ff3a"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "6dd66126141434754f53",
+      "run_ids": [
+        "07e1899859cbd14cf9f8",
+        "5c4005410a85d6949b93"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6e1f29693e373777a487",
+      "run_ids": [
+        "36f9c2ef32b0e0a52dcb",
+        "d2ffb2618c9c4eea2f3c"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6f46e7018d1385cbf560",
+      "run_ids": [
+        "02ed576729a7303ba19a",
+        "2809905b1ca1e6f5bfad"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "6fd3febd193bfe77353f",
+      "run_ids": [
+        "0125ea2d9b00612ea9ee",
+        "4e91e76d9a359c5915f4"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7062bda02abc3864a25c",
+      "run_ids": [
+        "2f36106fca622b5b4f0c",
+        "599122399df3defa543f"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "709862036d3f9accccad",
+      "run_ids": [
+        "4884d519035abcf14e47",
+        "e8fc1e5f1f5da7ce37a7"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "720707c9929d7a0e2173",
+      "run_ids": [
+        "192b4457e536ceabcf0a",
+        "9b8a0003f6e72bef32f6"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "7321bbdb69271e0d76af",
+      "run_ids": [
+        "3dfff0f02d283ba88837",
+        "43606e094b69635f8e81"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "73d84201e807b044f9d1",
+      "run_ids": [
+        "0659e9fe8fbf713677cf",
+        "06ba2b29bbca0aad1188"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "74939564ff5bcc5659d7",
+      "run_ids": [
+        "4e5df721ec776c9c8ec8",
+        "c7e3a5cf5b38db6daeb4"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "756433de59f3d833987d",
+      "run_ids": [
+        "be510d5988336acc36c0",
+        "fb8757eb78b54c96ddcd"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "78e8676f35e2c04b4778",
+      "run_ids": [
+        "2c1f0608063c24cf6c7c",
+        "4dde45315a1055a70111"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "795a61d0ab3c08231ddc",
+      "run_ids": [
+        "d98db0f66c001d8045a3",
+        "f0fb012ed82eb8fafa2d"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "79f78b15ef41dd174f71",
+      "run_ids": [
+        "98581e5d08441fb8c683",
+        "d7e6f1bf7710c72fc3a9"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "7a38200e83703a5b5378",
+      "run_ids": [
+        "1300ec40f7b75f05fe96",
+        "16fd56f210ae20695493"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7abf1a453eba7d5ffbbc",
+      "run_ids": [
+        "183a7f38c0a36909e5a2",
+        "fb964be910793036a725"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "7b0f7eb26f42abf431e7",
+      "run_ids": [
+        "6145ac87eb23d789a78a",
+        "730a2fc5188fc28bac6b"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7b296fa4b8b440b0a920",
+      "run_ids": [
+        "490f98d9a72b6fe5fca5",
+        "bceaa0993e15fc89cc60"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7b4e93d9a4ee897c1c3f",
+      "run_ids": [
+        "a6ba294d51efd2528ea4",
+        "f9232acc60a0a845ad34"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "7c4ffa719a475aa34154",
+      "run_ids": [
+        "3653f9f5ee02807c9364",
+        "58d896d255960eb41044"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7c916a9a22ee9a8e023e",
+      "run_ids": [
+        "6b1e88bde0d96f4c83f3",
+        "f472b52d704a29428533"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "7e843609d9f91b591624",
+      "run_ids": [
+        "16d79e8d48eb4e450f4e",
+        "ac9576355974c262c955"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7f42e33e1ab43fdadf02",
+      "run_ids": [
+        "200883b8098405aedc86",
+        "590aabb712dc8637b0e0"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "7fdafb94ace547efc666",
+      "run_ids": [
+        "48d4127c97908f2227b6",
+        "dc594a319a20198fd8f8"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "80a7e643b891601ff450",
+      "run_ids": [
+        "a7c59451202e19f3aad4",
+        "c0bedcb03ec349bcc11a"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "82374aed8db612d5d92f",
+      "run_ids": [
+        "647f7b48d6479544cb5e",
+        "c455856b06730f7e12fc"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "830cbb028bdc32688efe",
+      "run_ids": [
+        "8d6d4c4331f7ddb8b058",
+        "caf54393568746bda5f0"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "83f09f895232fc99c293",
+      "run_ids": [
+        "66b4b01f253b1d7945ee",
+        "b5e0ca36462066a3d678"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "850217beef01592a70e0",
+      "run_ids": [
+        "a7d0428e56c534cd3938",
+        "ff4286ccb29f07617400"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "857fc00c263fd05244c3",
+      "run_ids": [
+        "980feb9e5ac0d062cc59",
+        "9d523aa7039dcba9f2b7"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "8a3384960c57ffcb7e18",
+      "run_ids": [
+        "2bb7826d01a6218fb4ea",
+        "7bdf4b311aee5dbf64bc"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "8ae5f1148116157bfdd7",
+      "run_ids": [
+        "5c8dc30388e1a2668ff1",
+        "f7f0a30815abd7a67267"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "8c78439a988b6c4408f9",
+      "run_ids": [
+        "9384e5e9f049dacc9c38",
+        "da05637a9d6cfd71c53c"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "8e7a1350bc6c332feeff",
+      "run_ids": [
+        "56fd6456b2aaeec7607f",
+        "a833ad0555f9b4467de4"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "915504e408a8932fd81e",
+      "run_ids": [
+        "84a8527da994adebd373",
+        "e7d9421989f7a70d6564"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "9165ab00b88906abc837",
+      "run_ids": [
+        "1ad4909cbec28221d780",
+        "3e78969ddc64690b9c66"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "91ba8390bbe73479b716",
+      "run_ids": [
+        "bf247ada1bb25a7e4a41",
+        "ff4d59349447a69696dd"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "91cf7c8f5f2c8383584a",
+      "run_ids": [
+        "15b7b98a1b26527bf917",
+        "50d350a6ceef41ed3d53"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "91f64785de55e5bdfb7e",
+      "run_ids": [
+        "64af3758ba4876fbe76d",
+        "eca3aa1ee9e0344192fe"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "9289b625741276b23d15",
+      "run_ids": [
+        "2c2c73a7e8e01376fcde",
+        "568b1d15fe6b825f88c4"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "93f30c4b1289a0601a59",
+      "run_ids": [
+        "4c3190cf3e0bcfa39514",
+        "89e136550247c90ef25d"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "941d5e2eb819cdd6a93b",
+      "run_ids": [
+        "5bfb051ecc07d0577dd0",
+        "762a3a984f29ef40ad92"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "97899b04a6fb6d466373",
+      "run_ids": [
+        "3c503c97cef1abb330ef",
+        "fe3c50487e636816caad"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "9986e6f027ceac0ad3a9",
+      "run_ids": [
+        "48a592a17f84970459fb",
+        "4e17558f17cf002065fc"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "9a2d7996d3fe1926ce25",
+      "run_ids": [
+        "9589b261af8b912f08a1",
+        "9ea241c0276b57ae3e5a"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "9bcfb89fb6a85ccd7655",
+      "run_ids": [
+        "4b4d65c8fddb48790267",
+        "9b48d7ddbdc99a1eb712"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "9cfdae88d318ade43ab0",
+      "run_ids": [
+        "31d362cb8fb6afa1c298",
+        "8eb6a1bb153be3db3bf6"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "9dc3457ad4419ddf00e2",
+      "run_ids": [
+        "a7d88e9ee56a60f6d6cc",
+        "bacf92b8bccffdc7b9be"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "a0c494ae2811d831068e",
+      "run_ids": [
+        "56162640c207aa876ead",
+        "61dd426493f6e6ebe614"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "a2a2f4867bc7ee2da3db",
+      "run_ids": [
+        "7b95ffc5d478318bb48e",
+        "a4e2a3103308f4f4c01e"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "a45aca6915b4eb29dabe",
+      "run_ids": [
+        "4b39da8994284e6f0034",
+        "8bc463ae168bb73010fc"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "a4e7c38fa222b7f13aa8",
+      "run_ids": [
+        "117746f09f926ab95a41",
+        "12c56a9dc37432520aaf"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "a51aee60e87027459664",
+      "run_ids": [
+        "a7626ad509ec6aa7a689",
+        "ca67e366c81690e48351"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "a81a0226c921d6d1b506",
+      "run_ids": [
+        "2333759ddfedb9f94b64",
+        "ad40ea72e460a585d84d"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "a9bc8c197dac0dd7f400",
+      "run_ids": [
+        "c7480c70ea7df13bb7d8",
+        "f513a7b4f470668d0cf6"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "aed4e8fda4941356fd76",
+      "run_ids": [
+        "2b48f382af9185e751d0",
+        "d65987ebd8b4b3c461d0"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "af57f359389af1f9c270",
+      "run_ids": [
+        "283912fbcf102741377c",
+        "5ae12c50d0a5c8f1e271"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b0b3d69cea65ce1a9393",
+      "run_ids": [
+        "c8e101d6b4918ff84a77",
+        "dc6c35ab701dccaf41b5"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b1543e14a1b03a75e1b5",
+      "run_ids": [
+        "38a94287cc10f8402b7b",
+        "d4e7b8ec0efbb5a3c293"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "b228cb55a7acea81c6f2",
+      "run_ids": [
+        "b08f4e5f36d6fba96145",
+        "fdbc440b98539631f234"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b3cb66a2358d463e6750",
+      "run_ids": [
+        "84c69c35ea5888eb8e07",
+        "c6f17d200b19f875b1b3"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b4c54c3a87fa9c0591d1",
+      "run_ids": [
+        "003922b10a8aadb56ce5",
+        "a38abcf0a17b728c1f53"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b53701ffdd8cc92c28ca",
+      "run_ids": [
+        "a6b46e6b8af1408e3f63",
+        "ed0e23695b676e1dbfbc"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b698fdf622023627385c",
+      "run_ids": [
+        "761c6d6c6aff18cc0df6",
+        "8c50fa3913b9d41acb27"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b7016641d9f01dfa48f0",
+      "run_ids": [
+        "978c7a0094ee3a869b16",
+        "9df0b446d127de046515"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b70d4c50598d775c6deb",
+      "run_ids": [
+        "6a6a7cfe7e54e68a5910",
+        "9795722a9d2c6aa073f9"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b7730f942b2d94f4634b",
+      "run_ids": [
+        "3e616940be1f25d8bc7c",
+        "e7385e0f15390434be18"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b88b9bdccd640db09ed1",
+      "run_ids": [
+        "2b802d203018f2e1e484",
+        "d18549c8941510d8cfd9"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "b98987391a6f3ac938be",
+      "run_ids": [
+        "01a3a279739a5c1423c1",
+        "1fc913a938679638fc11"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "bb39f876875699c688ed",
+      "run_ids": [
+        "9e18d56ec21c2ceb3639",
+        "f9391b680be10cd94c46"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "bbaeb239a6fb14b8a4a6",
+      "run_ids": [
+        "a75c1e7beaca99c81995",
+        "bea17bd8c59e3114d3a3"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "validation_selection"
+    },
+    {
+      "run_group_id": "bc748b39096f88a37c5a",
+      "run_ids": [
+        "46c8d3dfed7fe9197226",
+        "70b5a7e74e61df7ec86f"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "bca7e8b1695a077b9a31",
+      "run_ids": [
+        "cf867181e20e6deb38e2",
+        "d9aecb0122e62811e49d"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "bd7e1dce72e05a894a6a",
+      "run_ids": [
+        "dfa472efad5dd23ab63f",
+        "ef28e8355290da664875"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "bf02a07e1da33daa8a08",
+      "run_ids": [
+        "014787e17610d52b8f5c",
+        "dfa5725a355935a85dc0"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "bf22c781171ebb5f838c",
+      "run_ids": [
+        "01d20b560f0816d3348e",
+        "e212699b19a8b03d1619"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "bfc639e707815d2e5901",
+      "run_ids": [
+        "8fcedfa380dd5aeccc84",
+        "c9bf6a9cad1b1bb36a14"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "c06b53e3355b4404d906",
+      "run_ids": [
+        "8473da8b04d20217d275",
+        "b51bf4e50c35db2c877c"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "c0b65b5959960cb6a357",
+      "run_ids": [
+        "79b5a2b9b5b6e8a13099",
+        "ea54bc10ad84488ebbc2"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "c0cb23cfc4c18b9423df",
+      "run_ids": [
+        "4c081fc2f35a3751f6e6",
+        "5633625370e4955a1d1a"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c160550fa647a943de9e",
+      "run_ids": [
+        "5f9b9b8b86f40374620b",
+        "7036c4f7338a3fed1bd6"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c322601b645e0ba3bd58",
+      "run_ids": [
+        "309a08afd6073aaa488f",
+        "6346e1cdc37ef8e59edc"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c37f6f1d8d6314102212",
+      "run_ids": [
+        "219e03bb921bc9a0d4a2",
+        "9e2e5638ad465d61d96b"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c4f00dfe512c8d7fee5c",
+      "run_ids": [
+        "17808c7f5df2a0ecb584",
+        "4e322b3577f2dcf8240d"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "c5276e2a2993a7437bab",
+      "run_ids": [
+        "ccc03f51f1ddfac25a09",
+        "dcbe8077eb28b53a8270"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c7a94bf82320f47a0f35",
+      "run_ids": [
+        "48a49baf176aae525a51",
+        "75bea632fffba80ffd9c"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c7f4ffd40c9a2dc631f1",
+      "run_ids": [
+        "ab9614c2488802b54ae4",
+        "e8dff2c7e0d68064bc3c"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "c8550fd8fba74bd819be",
+      "run_ids": [
+        "3f799dd6a8ede39da712",
+        "976d4767d9a909a1aa4f"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "ca846082253cb816ff4c",
+      "run_ids": [
+        "3051823d0a799aeb95c5",
+        "fb85adef4d3aac4d9792"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "cb311e022044d2898801",
+      "run_ids": [
+        "00a8f1cef110772f4c3f",
+        "ab0955a339137a981113"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "cbb70edd7b1c147af21d",
+      "run_ids": [
+        "66671b56c78611abf55f",
+        "a020654ea46e5c169b47"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "cbff046a03f95397251f",
+      "run_ids": [
+        "17a45a10406770ac23de",
+        "e9f8a6b9e71e0f093a15"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "ccfff1eb22f3de8be12a",
+      "run_ids": [
+        "56a2a5a16321b3028841",
+        "ab07cac8e2df9840ad4b"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d02151bddfc01fcf79ff",
+      "run_ids": [
+        "265ccd7d9e138c406c50",
+        "fe9151e7a4ecd670b453"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "d10d088b67d81ebfc790",
+      "run_ids": [
+        "1260d3be6e2908da4e45",
+        "af5aa424d438cbe185f1"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "d1239d30ef9c2949c790",
+      "run_ids": [
+        "1a515320d6fb0446d562",
+        "278d04c2c56a23d1cde0"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d2a710d939a8da8c2eb6",
+      "run_ids": [
+        "bd9a841650a2ca7ca2ee",
+        "e9591ed9b3a5db175319"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d2e166cc6f6defdf4ce5",
+      "run_ids": [
+        "151f39a6972ec6c85c22",
+        "9899ca4f8d9aeca95355"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d390b962436c98c10095",
+      "run_ids": [
+        "9f663fe1e3a7f77fca4a",
+        "cf26c8027b10d5c59d51"
+      ],
+      "scenario_name": "stage_a_none",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d52f67f09f0117785ed6",
+      "run_ids": [
+        "0d33c6b5a8a6ba74f4a0",
+        "423b96449cba30a16379"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "d5382cbdd7df3e3c5673",
+      "run_ids": [
+        "74ee4b37c72b3ac762f8",
+        "ff190b97e888f8ee8273"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "d7e321a3175048573543",
+      "run_ids": [
+        "4da9959af1b9d101ce0a",
+        "e0d60d564d79b3d1baee"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "db1b5b67acadfd96b55f",
+      "run_ids": [
+        "9443a514580cae3939b2",
+        "a0603a05ec915c31e4df"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "e260919410586efd1e60",
+      "run_ids": [
+        "17c37b21cca1394e91bb",
+        "280979d1b83ec53ceb5d"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "e9587e17cf70b29c775a",
+      "run_ids": [
+        "62f5b02a425258dc6320",
+        "9d17372ae469e4187756"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "eb2eb208a3e633d6d9dc",
+      "run_ids": [
+        "8b569682776ba7c814d4",
+        "8c0012c8a4e9142ae7d0"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "ec5edf25c5c2ca487f4b",
+      "run_ids": [
+        "b8fdce762fe645d4194a",
+        "d46252581d88f4b858a8"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "ed7266770a8d07795eed",
+      "run_ids": [
+        "0a6504cf3bd06ec16c1a",
+        "21eacb82b6bedd6917cf"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "ee4a96834ca8cf52c5ed",
+      "run_ids": [
+        "3510ecee253db7623ae6",
+        "a7a8e8a2fef15beabd4f"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "f2547b5f8b293bbc8fd9",
+      "run_ids": [
+        "2ed2a55d988bf1de2b76",
+        "b1602e62c6ddc514dcfa"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "f40b4b6f228e4eb9b8fb",
+      "run_ids": [
+        "52f5eee772769212bf50",
+        "f399499a9accf7d0615e"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "f533535060fd9523cdc3",
+      "run_ids": [
+        "386a847c288d2b170cb7",
+        "fda2919bd2847be725ab"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "in_distribution_test"
+    },
+    {
+      "run_group_id": "f627632762ebdd207f0d",
+      "run_ids": [
+        "077547e5c875320df3a8",
+        "b4ba50dc57e16bdefeba"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "f7347530a0401bd28f00",
+      "run_ids": [
+        "c5503d53f6b455933a9f",
+        "dc15a622ee8a19bfabe0"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "validation_calibration"
+    },
+    {
+      "run_group_id": "f76be6f9d814dda2b359",
+      "run_ids": [
+        "153dcae1cc01f9169f9f",
+        "929fba93d172cfb8ca6e"
+      ],
+      "scenario_name": "stage_a_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "f9a67f510579747c5c3a",
+      "run_ids": [
+        "1ecd3ec640ba68b1481b",
+        "3c887c50641cb07ad056"
+      ],
+      "scenario_name": "obss_only",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "fb9d3c972cf16b1e46c6",
+      "run_ids": [
+        "47de95d6d6364312f53e",
+        "9a0aafe326cf534c0cfb"
+      ],
+      "scenario_name": "obss_plus_legacy_mixed8",
+      "split_role": "out_of_distribution_test"
+    },
+    {
+      "run_group_id": "fba4c4b329dabb769782",
+      "run_ids": [
+        "a6ee1bb5fb45df6e6191",
+        "efe5085863c4b833bfb8"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "ff57c32f3be39a2b573f",
+      "run_ids": [
+        "0d6a83af5cb6f9f8c615",
+        "d894fdb9cc2418664f03"
+      ],
+      "scenario_name": "stage_a_mixed_common_and_independent",
+      "split_role": "training"
+    },
+    {
+      "run_group_id": "ff89b020006586ab472a",
+      "run_ids": [
+        "4cf0b9c0e60615a52ccf",
+        "af644e399afcf9a9e773"
+      ],
+      "scenario_name": "stage_a_common_bursts",
+      "split_role": "training"
+    }
+  ],
+  "split_schema_version": 1,
+  "split_seed": 20260725,
+  "sufficiency_reasons": [],
+  "sufficiency_status": "pass"
+}

@@ -15,6 +15,12 @@ following ignored result roots:
 | `03_prediction_pipeline/offline_evaluation` | `results/prediction_evaluation_provisional` |
 | `03_prediction_pipeline/online_replay_10pct` | `results/prediction_online_replay_v1` |
 | `03_prediction_pipeline/online_replay_30pct` | `results/prediction_online_replay_frame30_v1` |
+| `04_genuine_polling_v1/dataset` | `results/genuine_polling_v1/dataset` |
+| `04_genuine_polling_v1/offline_evaluation` | `results/genuine_polling_v1/evaluation` |
+| `04_genuine_polling_v1/closed_loop_obss_threshold_020` | `results/genuine_polling_v1/closed_loop_obss/runs` |
+| `04_genuine_polling_v1/closed_loop_obss_threshold_015` | `results/genuine_polling_v1/closed_loop_obss_threshold_015/runs` plus repair provenance from its `extras/` directory |
+| `04_genuine_polling_v1/closed_loop_combined_threshold_020` | `results/genuine_polling_v1/closed_loop_combined/runs` |
+| `04_genuine_polling_v1/predicted_risk_threshold_020` | `results/genuine_polling_v1/predicted_risk_duplication_threshold_020` and `results/genuine_polling_v1/predicted_risk_unconditional_threshold_020` |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%

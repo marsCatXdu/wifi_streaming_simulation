@@ -15,9 +15,10 @@ import shutil
 import sys
 import tempfile
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import numpy as np
 import yaml
@@ -176,8 +177,35 @@ def _bool(value: str) -> bool:
     raise ValueError(f"invalid Boolean: {value!r}")
 
 
+@contextmanager
+def _open_dataset_rows(path: Path) -> Iterator[Iterator[list[str]]]:
+    """Yield CSV-compatible rows from a CSV or Parquet dataset."""
+    if path.suffix == ".parquet":
+        import pyarrow.parquet as pq  # type: ignore[import-not-found]
+
+        parquet = pq.ParquetFile(path)
+        columns = parquet.schema_arrow.names
+
+        def rows() -> Iterator[list[str]]:
+            yield columns
+            for batch in parquet.iter_batches(batch_size=65536):
+                values = batch.to_pydict()
+                for index in range(batch.num_rows):
+                    yield [
+                        "" if values[name][index] is None else str(values[name][index])
+                        for name in columns
+                    ]
+
+        yield rows()
+        return
+    if path.suffix != ".csv":
+        raise ValueError(f"unsupported dataset format: {path.suffix}")
+    with path.open(newline="", encoding="utf-8", buffering=8 * 1024 * 1024) as source:
+        yield csv.reader(source)
+
+
 def load_stage(
-    csv_path: Path,
+    dataset_path: Path,
     stage: str,
     capacity: int,
     feature_names: tuple[str, ...],
@@ -205,8 +233,7 @@ def load_stage(
     count = 0
     rows_scanned = 0
     offset = deadline = None
-    with csv_path.open(newline="", encoding="utf-8", buffering=8 * 1024 * 1024) as source:
-        reader = csv.reader(source)
+    with _open_dataset_rows(dataset_path) as reader:
         header = next(reader)
         if len(header) != len(set(header)):
             raise ValueError("duplicate CSV columns")
@@ -1614,13 +1641,23 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "selected_models": selected_rows,
     }
     write_json(output / "analysis_manifest.json", summary)
-    insufficiencies = [
-        (
-            "Required OOD scenario `obss_plus_legacy_mixed8` has 10 matched run "
-            "groups; the frozen minimum is 20. Its formal evidence and all "
-            "dependent decisions are `insufficient_data`, never pass or fail."
+    insufficiencies = []
+    for criterion in criteria:
+        if (
+            criterion["name"] == "required_ood_scenario_evidence"
+            and criterion["status"] == "insufficient_data"
+        ):
+            estimate = criterion["estimate"]
+            insufficiencies.append(
+                f"Required OOD scenario `{criterion['scenario_id']}` has "
+                f"{estimate['run_group_count']} matched run groups; the frozen "
+                f"minimum is {criterion['threshold']}. Its formal evidence and "
+                "dependent decisions remain `insufficient_data`."
+            )
+    if not insufficiencies:
+        insufficiencies.append(
+            "No required OOD scenario is below its frozen matched-run-group minimum."
         )
-    ]
     write_report(
         output / "prediction_report.md",
         summary,

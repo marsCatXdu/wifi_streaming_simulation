@@ -8,3 +8,4 @@ These artifacts, including every `polling_5ms` result, are retained only for
 traceability. They are not formal prediction, model-selection, or closed-loop
 evidence. Formal evidence must come from the `genuine_polling_v1` pipeline,
 which records frame-independent reports and enforces staleness in `[1 ms, 2 ms)`.
+Its compact evidence snapshot is under `../04_genuine_polling_v1/`.

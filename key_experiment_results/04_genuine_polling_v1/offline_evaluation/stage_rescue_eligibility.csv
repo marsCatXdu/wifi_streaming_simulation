@@ -1,0 +1,5 @@
+configured_deadline_us,minimum_rescue_time_us,nominal_rescue_slack_us,rescue_eligible,sample_offset_us,stage
+33333,5000,33333,True,0,T0
+33333,5000,32333,True,1000,T1
+33333,5000,31333,True,2000,T2
+33333,5000,29333,True,4000,T4

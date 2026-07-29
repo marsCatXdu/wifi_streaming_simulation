@@ -1,0 +1,36 @@
+{
+  "definition": "One calibrated_probability value from each decision row whose decision is action; each value represents a successfully launched secondary frame copy.",
+  "experiments": [
+    {
+      "action_count": 213,
+      "action_rate": 0.011833333333333333,
+      "budget_suppressions": 0,
+      "generated_frames": 18000,
+      "label": "OBSS only",
+      "maximum": 0.897981245943,
+      "mean": 0.3241585943221549,
+      "median": 0.281153534046,
+      "minimum": 0.200677471312,
+      "p95": 0.6261031507785997,
+      "result_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/closed_loop_obss/runs",
+      "selective_runs": 10,
+      "threshold": 0.2
+    },
+    {
+      "action_count": 1827,
+      "action_rate": 0.145,
+      "budget_suppressions": 220,
+      "generated_frames": 12600,
+      "label": "OBSS plus legacy contention",
+      "maximum": 0.964860693692,
+      "mean": 0.38328032018665353,
+      "median": 0.294125657343,
+      "minimum": 0.200011098864,
+      "p95": 0.8144304785376999,
+      "result_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/closed_loop_combined/runs",
+      "selective_runs": 7,
+      "threshold": 0.2
+    }
+  ],
+  "schema_version": 1
+}

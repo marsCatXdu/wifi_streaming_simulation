@@ -1,0 +1,607 @@
+{
+  "analysis_config_sha256": "22c88650969dfc5a223e5275d73a375f15ac00a94d429db9623e0066139d02ec",
+  "analysis_schema_version": 1,
+  "command": [
+    "tools/evaluate_prediction.py",
+    "--dataset-dir",
+    "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/dataset",
+    "--output-dir",
+    "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/evaluation",
+    "--analysis-config",
+    "/home/lijingwei/Desktop/work/wifi_streaming_simulation/experiments/configs/prediction_analysis.yaml",
+    "--seed",
+    "20260725"
+  ],
+  "dataset": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/genuine_polling_v1/dataset/labelled_samples.parquet",
+  "dataset_sha256": "18c231a29e6045902ffca0d84d4c5881321d19cc7b5358bd8f665775570bc4eb",
+  "dependencies": {
+    "PyYAML": "6.0.1",
+    "matplotlib": "3.6.3",
+    "numpy": "1.26.4",
+    "pandas": "3.0.5",
+    "pyarrow": "25.0.0",
+    "scikit-learn": "1.4.1.post1",
+    "scipy": "1.11.4"
+  },
+  "peak_rss_mib": 4378.8,
+  "rows_scanned": 23961600,
+  "runtime_seconds": 5381.496786193995,
+  "selected_models": [
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "logistic_regression",
+      "selection_recall": 0.1236420832904582,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5923677363399826,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.598438855160451,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.598438855160451,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5888985255854293,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5967042497831744,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.6001734605377277,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.6001734605377277,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "logistic_regression",
+      "selection_recall": 0.10957688645946,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4635078333970195,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.46771111960259837,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.46771111960259837,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.47879251050821553,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4596866641192205,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4631257164692396,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4631257164692396,
+      "selection_run_groups": 120,
+      "stage": "T0"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "logistic_regression",
+      "selection_recall": 0.1236420832904582,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.6053772766695577,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.601040763226366,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.601040763226366,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.6071118820468343,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5967042497831744,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5949696444058976,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.5949696444058976,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "logistic_regression",
+      "selection_recall": 0.10957688645946,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.469239587313718,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4753534581581964,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4753534581581964,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.48337791364157434,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.46197936568589987,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4696217042414979,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4696217042414979,
+      "selection_run_groups": 120,
+      "stage": "T1"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "logistic_regression",
+      "selection_recall": 0.11020735939210806,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4640069384215091,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4735472679965308,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4735472679965308,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4770164787510841,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4492627927146574,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4570685169124024,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.4570685169124024,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "logistic_regression",
+      "selection_recall": 0.10109368851894941,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3526939243408483,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3523118074130684,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3523118074130684,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3679786014520443,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3511654566297287,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3530760412686282,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3530760412686282,
+      "selection_run_groups": 120,
+      "stage": "T2"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "logistic_regression",
+      "selection_recall": 0.10049998119514539,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3720728534258456,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3746747614917606,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3746747614917606,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.383347788378144,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3642671292281006,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3668690372940156,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 0,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3668690372940156,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "logistic_regression",
+      "selection_recall": 0.10043769360398144,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3158699808795411,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3170172084130019,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3170172084130019,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-ideal+F2+F3",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.33193116634799236,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.31434034416826,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3166347992351816,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    },
+    {
+      "feature_set": "F0+F1-polling-1ms+F2-exportable",
+      "final_refit_run_groups": 130,
+      "link": 1,
+      "model": "histogram_gradient_boosting",
+      "selection_recall": 0.3166347992351816,
+      "selection_run_groups": 120,
+      "stage": "T4"
+    }
+  ]
+}
