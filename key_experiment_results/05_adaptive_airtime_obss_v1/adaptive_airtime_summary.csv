@@ -1,0 +1,151 @@
+run_id,seed,topology,policy,label,deadline_miss_ratio,redundant_byte_ratio,max_miss_burst,p95_miss_burst,secondary_airtime_fraction,adaptive_actions,actions_t0,actions_t1,actions_t2,actions_t4
+01e1f7e89377a7990ed5,16,mlo_str,fixed_link_0,MLO,0.00666666666667,0,2,1.5,0.0,0,0,0,0,0
+037c2efd0bc848f4dd5f,7,dual_interface,selective_duplication,Selective 0.20,0.00777777777778,0.0115062761506,2,2.0,0.000953226666667,0,0,0,0,0
+04122e07a50b6e6b1bff,6,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.158129175947,0,0.0,0.01937718,352,64,69,142,77
+0689eded5f1f4b148221,30,mlo_str,fixed_link_0,MLO,0.005,0,1,1.0,0.0,0,0,0,0,0
+09e973c7a700100e2b01,22,mlo_str,fixed_link_0,MLO,0,0,0,0.0,0.0,0,0,0,0,0
+0d5cc2817a641907a496,23,dual_interface,fixed_link_1,Single 5 GHz,0.0222222222222,0,2,2.0,0.0,0,0,0,0,0
+0f0d9238769ca3354c9d,21,mlo_str,fixed_link_0,MLO,0.00333333333333,0,1,1.0,0.0,0,0,0,0,0
+152b668c1afa7f18728a,12,dual_interface,fixed_link_1,Single 5 GHz,0.03,0,4,3.299999999999997,0.0,0,0,0,0,0
+17f54eb0c835794f4f7c,20,mlo_str,fixed_link_0,MLO,0.00666666666667,0,2,1.5,0.0,0,0,0,0,0
+1bf5f6b4b2b5e3637a24,5,mlo_str,fixed_link_0,MLO,0.0172222222222,0,4,2.0,0.0,0,0,0,0,0
+1dfc9746c91afc097a9e,28,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.07663772,0,0,0,0,0
+1eff1aa4d199909839a6,7,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00333333333333,0.210196406185,1,1.0,0.01935504,500,62,42,228,168
+1fce14bd3121f4bbfbdf,13,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.191616766467,0,0.0,0.0194855,448,201,157,78,12
+2065b684c156ef9ee765,27,dual_interface,selective_duplication,Selective 0.20,0.0416666666667,0.0440060698027,3,2.0,0.00556549333333,0,0,0,0,0
+20f213ee1ea3df693796,15,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.252373417722,0,0.0,0.0193973733333,635,171,170,237,57
+21591fc74ac3e5c905e5,8,dual_interface,selective_duplication,Selective 0.20,0.00166666666667,0.00473933649289,1,1.0,0.00040832,0,0,0,0,0
+22df38bd7d0af5b80499,8,dual_interface,full_duplication,Full duplication,0.000555555555556,0.5,1,1.0,0.0740908,0,0,0,0,0
+251b4d654879b7974832,7,mlo_str,fixed_link_0,MLO,0.005,0,2,1.6499999999999995,0.0,0,0,0,0,0
+266d6e5a7d8bb7f16649,20,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.005,0.201858108108,1,1.0,0.0194295666667,475,51,31,253,140
+2695489a1aaa71e00594,27,mlo_str,fixed_link_0,MLO,0.0311111111111,0,4,3.0,0.0,0,0,0,0,0
+26c29ae6e3858fabccb1,23,mlo_str,fixed_link_0,MLO,0.00555555555556,0,1,1.0,0.0,0,0,0,0,0
+27480644b9e6adf56c21,11,dual_interface,fixed_link_1,Single 5 GHz,0.00166666666667,0,2,1.95,0.0,0,0,0,0,0
+2aba3397667578f63904,25,dual_interface,full_duplication,Full duplication,0.00111111111111,0.5,1,1.0,0.0820881533333,0,0,0,0,0
+2be6bc49e58d78e87db0,17,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.000555555555556,0.196770080748,1,1.0,0.01942536,460,95,94,193,78
+2e044bc7e529395d92ee,28,mlo_str,fixed_link_0,MLO,0.00111111111111,0,1,1.0,0.0,0,0,0,0,0
+2eee4f6e13411e06d10f,22,dual_interface,selective_duplication,Selective 0.20,0,0.00526315789474,0,0.0,0.000334473333333,0,0,0,0,0
+34f1de96fac7c55e477b,24,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0884086866667,0,0,0,0,0
+36663d3a4842c19a94c5,3,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0127777777778,0.141689373297,1,1.0,0.0195020866667,309,61,17,129,102
+37330b323e11bb56075f,27,dual_interface,fixed_link_1,Single 5 GHz,0.0577777777778,0,7,4.099999999999994,0.0,0,0,0,0,0
+37a346f3558bcc254d1a,15,dual_interface,selective_duplication,Selective 0.20,0,0.00421496311907,0,0.0,0.000254693333333,0,0,0,0,0
+38717ed63f2d4cf326b2,2,mlo_str,fixed_link_0,MLO,0.005,0,1,1.0,0.0,0,0,0,0,0
+38b93a18cdfb014a5b22,14,mlo_str,fixed_link_0,MLO,0.00888888888889,0,2,2.0,0.0,0,0,0,0,0
+3d64d444e4f6dde6a979,2,dual_interface,selective_duplication,Selective 0.20,0,0.00316455696203,0,0.0,0.000299066666667,0,0,0,0,0
+43a6634a59848aae2da6,24,mlo_str,fixed_link_0,MLO,0.00277777777778,0,1,1.0,0.0,0,0,0,0,0
+4559b694ce6d3b6aa7fe,19,dual_interface,fixed_link_1,Single 5 GHz,0.00277777777778,0,1,1.0,0.0,0,0,0,0,0
+45bb58d10b4bc904caef,13,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0812552,0,0,0,0,0
+46e1d3d84fc5fefb8a84,18,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0532178066667,0,0,0,0,0
+47e8fd2485cb8f0321ba,19,dual_interface,selective_duplication,Selective 0.20,0.00222222222222,0.00473933649289,1,1.0,0.000302506666667,0,0,0,0,0
+4b547dac729005ceade4,9,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0222222222222,0.203204047218,2,1.0,0.01950932,479,109,24,172,174
+4f3c662f7672228f025c,3,dual_interface,fixed_link_1,Single 5 GHz,0.0183333333333,0,3,2.0,0.0,0,0,0,0,0
+4ff052840604f0e5d860,16,dual_interface,full_duplication,Full duplication,0.00222222222222,0.5,1,1.0,0.0648477933333,0,0,0,0,0
+515b144ecfd14016c1ae,17,dual_interface,fixed_link_1,Single 5 GHz,0.00111111111111,0,1,1.0,0.0,0,0,0,0,0
+519d0f2d799073c2610b,24,dual_interface,selective_duplication,Selective 0.20,0,0.00158478605388,0,0.0,0.00015498,0,0,0,0,0
+51e91a27b6d1d22a29a3,16,dual_interface,selective_duplication,Selective 0.20,0.0222222222222,0.0257731958763,3,2.349999999999998,0.00182072,0,0,0,0,0
+52e11d4f7438253a333c,26,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0845859866667,0,0,0,0,0
+531971851b8e66e319c9,14,dual_interface,selective_duplication,Selective 0.20,0.0177777777778,0.0212325220093,3,2.0,0.00114279333333,0,0,0,0,0
+532c0e5bd2a5db551942,9,dual_interface,fixed_link_1,Single 5 GHz,0.0505555555556,0,7,4.0,0.0,0,0,0,0,0
+582b29325153492311a1,21,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00222222222222,0.266589057043,1,1.0,0.0194260266667,681,113,64,325,179
+589b7313f489914e3893,5,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0116666666667,0.193686006826,3,1.1999999999999957,0.0194674333333,451,68,16,183,184
+59d6618b71d28a9e7ddb,3,dual_interface,full_duplication,Full duplication,0.00166666666667,0.5,1,1.0,0.11443258,0,0,0,0,0
+5b2662b22fc8ca508571,13,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+5e99125cc1d57ab017c7,26,mlo_str,fixed_link_0,MLO,0.00722222222222,0,3,2.549999999999999,0.0,0,0,0,0,0
+5f90128c16da39398473,24,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.183585313175,0,0.0,0.0194282466667,422,162,103,113,44
+609f5df53c48f992e2c0,24,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+60b860883e3363d8e5ae,12,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0122222222222,0.247311827957,1,1.0,0.01950402,615,110,21,253,231
+6152c4d9b8e7e9d3a8ef,18,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0116666666667,0.265448892344,1,1.0,0.0194950933333,680,106,32,360,182
+630448b56e6a3b953099,9,dual_interface,selective_duplication,Selective 0.20,0.0338888888889,0.034236075626,3,2.0,0.00294802,0,0,0,0,0
+634e67a774a53d582d54,2,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+655d61cd031ee4ebde27,18,dual_interface,selective_duplication,Selective 0.20,0.0205555555556,0.0140845070423,4,2.549999999999997,0.00071586,0,0,0,0,0
+66a2d10edcb1dbc92c63,6,dual_interface,selective_duplication,Selective 0.20,0,0.00421496311907,0,0.0,0.000544406666667,0,0,0,0,0
+6a42128aaf5b069c3330,8,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00111111111111,0.213483146067,1,1.0,0.0194128666667,513,119,92,208,94
+6c12eefa8f084166419f,27,dual_interface,full_duplication,Full duplication,0.00222222222222,0.5,2,1.9,0.112652726667,0,0,0,0,0
+6e284339dda0acdf02c8,28,dual_interface,fixed_link_1,Single 5 GHz,0.00166666666667,0,2,1.95,0.0,0,0,0,0,0
+76404598a7d55cfb4e50,8,dual_interface,fixed_link_1,Single 5 GHz,0.00222222222222,0,2,1.9,0.0,0,0,0,0,0
+76c90d4edc4c12c789eb,30,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00666666666667,0.186046511628,1,1.0,0.0193769333333,429,84,38,151,156
+786cbd8322c4a7606e1a,11,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0613628133333,0,0,0,0,0
+78c27c0735555ad4e77a,1,dual_interface,full_duplication,Full duplication,0.00166666666667,0.5,2,1.95,0.08775916,0,0,0,0,0
+797084a243eb88fcc500,28,dual_interface,selective_duplication,Selective 0.20,0.00111111111111,0.00421496311907,1,1.0,0.00024586,0,0,0,0,0
+7a0fa968b07ad8d560d2,29,dual_interface,fixed_link_1,Single 5 GHz,0.00944444444444,0,3,2.3999999999999986,0.0,0,0,0,0,0
+7aa47aeed1bc8c4f8243,19,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0571673266667,0,0,0,0,0
+7aec6b2686fcae4bb179,7,dual_interface,fixed_link_1,Single 5 GHz,0.00944444444444,0,2,2.0,0.0,0,0,0,0,0
+7c637601e7fd7c3f0b81,25,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0116666666667,0.187795444779,1,1.0,0.0194827866667,431,66,26,181,158
+7d6f15b2119c92a96b1a,5,dual_interface,full_duplication,Full duplication,0.000555555555556,0.5,1,1.0,0.0851366666667,0,0,0,0,0
+7df539b4905272e9ae66,23,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0621201333333,0,0,0,0,0
+7f6267ef56836cd18a56,26,dual_interface,selective_duplication,Selective 0.20,0.00111111111111,0.00473933649289,1,1.0,0.00050092,0,0,0,0,0
+8178f81237caa784e834,26,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.000555555555556,0.183937823834,1,1.0,0.0193886066667,420,75,40,170,135
+81b768946ac229167bc6,3,mlo_str,fixed_link_0,MLO,0.0255555555556,0,5,3.0,0.0,0,0,0,0,0
+83476eca2cbf3432aa4c,9,dual_interface,full_duplication,Full duplication,0.000555555555556,0.5,1,1.0,0.07675334,0,0,0,0,0
+869de693b61835e7fda7,20,dual_interface,selective_duplication,Selective 0.20,0.0105555555556,0.012539184953,2,2.0,0.00106925333333,0,0,0,0,0
+89c1a73c252a39242e6c,16,dual_interface,fixed_link_1,Single 5 GHz,0.0294444444444,0,3,3.0,0.0,0,0,0,0,0
+8a183bde6cdc2470d07e,10,dual_interface,selective_duplication,Selective 0.20,0.00388888888889,0.00787401574803,4,3.549999999999999,0.00093936,0,0,0,0,0
+8a1e5ca7c536bdef214b,19,mlo_str,fixed_link_0,MLO,0.000555555555556,0,1,1.0,0.0,0,0,0,0,0
+8a1e94be4fe4687616e8,18,dual_interface,fixed_link_1,Single 5 GHz,0.0238888888889,0,4,3.0,0.0,0,0,0,0,0
+8b45de574f526d1144b7,22,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+8d34814bde1da86dc117,4,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.200507614213,0,0.0,0.0194209266667,471,209,138,92,32
+8eb6717809c644993fa6,12,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0612296466667,0,0,0,0,0
+964d8953478e8dedea6e,4,dual_interface,selective_duplication,Selective 0.20,0.000555555555556,0.00473933649289,1,1.0,0.000358233333333,0,0,0,0,0
+9823a7ca0dac56827a07,13,dual_interface,selective_duplication,Selective 0.20,0,0.00158478605388,0,0.0,9.336e-05,0,0,0,0,0
+9b12f3da6d7287f086c8,12,mlo_str,fixed_link_0,MLO,0.015,0,6,1.0,0.0,0,0,0,0,0
+a3827abaff98da9581a9,30,dual_interface,fixed_link_1,Single 5 GHz,0.0105555555556,0,4,3.3499999999999996,0.0,0,0,0,0,0
+a415af50009b4a97f99f,22,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.265734265734,0,0.0,0.0193951733333,672,305,234,125,8
+a42dad423a97b0fdf2fa,2,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.09041246,0,0,0,0,0
+a7c95eb5ffe6c54f7c68,25,dual_interface,selective_duplication,Selective 0.20,0.0233333333333,0.0262751159196,4,3.0,0.00219151333333,0,0,0,0,0
+a89a7db1934f045d9ee6,14,dual_interface,fixed_link_1,Single 5 GHz,0.0277777777778,0,9,4.649999999999999,0.0,0,0,0,0,0
+aaa00efca726a7596d2b,21,dual_interface,selective_duplication,Selective 0.20,0.00777777777778,0.015625,2,1.3999999999999986,0.0007918,0,0,0,0,0
+aafa14d2679e424d8d01,28,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00111111111111,0.205548549811,1,1.0,0.01941032,486,131,145,145,65
+ab4a4cb6de90be91d78c,4,dual_interface,fixed_link_1,Single 5 GHz,0.00111111111111,0,2,2.0,0.0,0,0,0,0,0
+ab79d38facf9cf959cdd,6,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.101259966667,0,0,0,0,0
+ae0662adab21e78c000d,27,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0327777777778,0.148648648649,4,2.0,0.01945954,324,94,22,88,120
+b37310e01c68a4528e53,11,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.000555555555556,0.237903225806,1,1.0,0.0194290333333,590,227,206,135,22
+b5fb6d13e95331ce0df6,8,mlo_str,fixed_link_0,MLO,0.00388888888889,0,2,1.75,0.0,0,0,0,0,0
+b73775f0a734023be98c,17,dual_interface,selective_duplication,Selective 0.20,0.00111111111111,0.00316455696203,1,1.0,0.000380646666667,0,0,0,0,0
+b76b650d414bab80a01d,1,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00111111111111,0.184290030211,1,1.0,0.0194733466667,415,57,26,161,171
+ba61bfaf03312bd67f5f,25,mlo_str,fixed_link_0,MLO,0.0122222222222,0,2,2.0,0.0,0,0,0,0,0
+ba89e14ca3942267a650,10,mlo_str,fixed_link_0,MLO,0.0105555555556,0,2,2.0,0.0,0,0,0,0,0
+bb7ba9f5a27cde25689b,12,dual_interface,selective_duplication,Selective 0.20,0.0244444444444,0.0252707581227,3,2.0,0.00141719333333,0,0,0,0,0
+bbb94aec83001edb5d94,10,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00388888888889,0.156626506024,4,3.549999999999999,0.0194932533333,351,70,42,116,123
+bbf65ecea023d0af28a2,16,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0122222222222,0.234817813765,2,1.0,0.0195334,574,84,22,246,222
+bc2baaaeb861d5f69cb5,29,dual_interface,selective_duplication,Selective 0.20,0.00777777777778,0.00891452543262,3,1.8999999999999986,0.000723673333333,0,0,0,0,0
+bc63559e7242b7681aa9,4,mlo_str,fixed_link_0,MLO,0.00166666666667,0,1,1.0,0.0,0,0,0,0,0
+bcc52e736af2c4627277,23,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0138888888889,0.239436619718,1,1.0,0.01947648,592,76,20,207,289
+bee71e1d9bb1afe257ee,15,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+c1871e7c7362e85de80a,21,dual_interface,fixed_link_1,Single 5 GHz,0.0116666666667,0,6,4.899999999999999,0.0,0,0,0,0,0
+c4f3b3a409a0302d2376,29,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00333333333333,0.211843202669,1,1.0,0.01939016,505,63,29,241,172
+c74ad794d91a79ff2020,1,dual_interface,selective_duplication,Selective 0.20,0.00277777777778,0.00943396226415,1,1.0,0.00083398,0,0,0,0,0
+c77648edea1922a32186,11,dual_interface,selective_duplication,Selective 0.20,0.00111111111111,0.00578642819569,1,1.0,0.000384073333333,0,0,0,0,0
+c97055ebd0be0a8f7df0,22,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0536506,0,0,0,0,0
+c99b9bcfe5106eb49b12,7,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0737181,0,0,0,0,0
+cf88727855161431115f,15,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0574017733333,0,0,0,0,0
+d1428ee19870dd28d726,30,dual_interface,full_duplication,Full duplication,0.000555555555556,0.5,1,1.0,0.0877992,0,0,0,0,0
+d2a6c60bfebc9aecc818,26,dual_interface,fixed_link_1,Single 5 GHz,0.00111111111111,0,1,1.0,0.0,0,0,0,0,0
+d327a5dcac003ba57ffe,19,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.00111111111111,0.253259581193,1,1.0,0.0194654866667,638,189,189,207,53
+d3a9e0e6fa5c72c95b03,25,dual_interface,fixed_link_1,Single 5 GHz,0.0322222222222,0,5,4.549999999999997,0.0,0,0,0,0,0
+d472750e5806edee0623,10,dual_interface,full_duplication,Full duplication,0.00166666666667,0.5,2,1.95,0.105358953333,0,0,0,0,0
+d509c46a6c1d5f260418,6,dual_interface,fixed_link_1,Single 5 GHz,0,0,0,0.0,0.0,0,0,0,0,0
+d657253bafc19afd24a4,14,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.056494,0,0,0,0,0
+d66a2b15aa7463c070e4,23,dual_interface,selective_duplication,Selective 0.20,0.0194444444444,0.0242643262777,2,1.3999999999999986,0.00156779333333,0,0,0,0,0
+d7205fb4f2dbb6ff7737,5,dual_interface,selective_duplication,Selective 0.20,0.0166666666667,0.0176715176715,3,2.0,0.00150662,0,0,0,0,0
+da60105bb096428c6853,30,dual_interface,selective_duplication,Selective 0.20,0.00777777777778,0.0120230005227,1,1.0,0.00108936,0,0,0,0,0
+de70d87bcf71a89411cc,29,mlo_str,fixed_link_0,MLO,0.00333333333333,0,1,1.0,0.0,0,0,0,0,0
+df6fe50be649791c00fa,18,mlo_str,fixed_link_0,MLO,0.0111111111111,0,2,2.0,0.0,0,0,0,0,0
+e031e00d48c516e83dc8,1,dual_interface,fixed_link_1,Single 5 GHz,0.00555555555556,0,3,2.6999999999999993,0.0,0,0,0,0,0
+e2125f5d734055ee2e36,14,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0.0116666666667,0.255319148936,1,1.0,0.0194630933333,642,103,37,328,174
+ea81243f2bd27f485129,21,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.05369078,0,0,0,0,0
+eaab66777a2d9287a5a7,20,dual_interface,fixed_link_1,Single 5 GHz,0.0138888888889,0,4,4.0,0.0,0,0,0,0,0
+eb5ab31240d7e769fbe3,4,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0782855866667,0,0,0,0,0
+ee2a2215122b8624cf54,2,dual_interface,adaptive_airtime_duplication,Adaptive airtime,0,0.173228346457,0,0.0,0.0193538933333,393,137,117,105,34
+eecbe4d982fb4084e0b1,15,mlo_str,fixed_link_0,MLO,0,0,0,0.0,0.0,0,0,0,0,0
+efae25241c99d6ceb56a,5,dual_interface,fixed_link_1,Single 5 GHz,0.0233333333333,0,5,3.299999999999997,0.0,0,0,0,0,0
+f289d948b0961ece62cb,10,dual_interface,fixed_link_1,Single 5 GHz,0.00444444444444,0,4,3.6999999999999993,0.0,0,0,0,0,0
+f2ccfa89d0c356adad44,29,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.07151394,0,0,0,0,0
+f56550dfd0cb1d7fd4ef,17,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0848627866667,0,0,0,0,0
+f7fff506db685bb3b281,9,mlo_str,fixed_link_0,MLO,0.00888888888889,0,2,1.299999999999999,0.0,0,0,0,0,0
+f89a7a34a0a77fe66a85,6,mlo_str,fixed_link_0,MLO,0.00388888888889,0,1,1.0,0.0,0,0,0,0,0
+f8f2ec500fcfec3a295a,13,mlo_str,fixed_link_0,MLO,0.000555555555556,0,1,1.0,0.0,0,0,0,0,0
+f9ec02193b9cf349f2ac,1,mlo_str,fixed_link_0,MLO,0.00611111111111,0,1,1.0,0.0,0,0,0,0,0
+fb09730e8bb606ecab83,20,dual_interface,full_duplication,Full duplication,0,0.5,0,0.0,0.0771883733333,0,0,0,0,0
+fc8f5eca0e3fe44b0b9f,11,mlo_str,fixed_link_0,MLO,0.00111111111111,0,1,1.0,0.0,0,0,0,0,0
+fe197bdedfc9b8a9de3a,3,dual_interface,selective_duplication,Selective 0.20,0.0155555555556,0.0161374284227,1,1.0,0.00184639333333,0,0,0,0,0
+fe73fbd1722c75162fe1,17,mlo_str,fixed_link_0,MLO,0.00444444444444,0,3,2.8,0.0,0,0,0,0,0

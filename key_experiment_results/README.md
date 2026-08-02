@@ -1,7 +1,7 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-07-29. It intentionally excludes
+experimental evidence generated through 2026-08-02. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
@@ -9,7 +9,8 @@ The prediction artifacts under `03_prediction_pipeline/` are legacy,
 one-frame-delayed evidence and are no longer formal claims. See
 `03_prediction_pipeline/LEGACY_FRAME_DELAYED_NOTICE.md`. Corrected
 frame-independent 1 ms polling evidence is preserved under
-`04_genuine_polling_v1/`.
+`04_genuine_polling_v1/`. Adaptive airtime duplication under OBSS is preserved
+under `05_adaptive_airtime_obss_v1/`.
 
 ## Contents
 
@@ -31,6 +32,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `04_genuine_polling_v1/closed_loop_obss_threshold_015` | Repaired closed-loop duplication under OBSS at threshold 0.15 | Ten paired groups, repair provenance, aggregate evidence, and figures |
 | `04_genuine_polling_v1/closed_loop_combined_threshold_020` | Closed-loop duplication under combined contention at threshold 0.20 | Seven paired groups, aggregate evidence, control summaries, and figures |
 | `04_genuine_polling_v1/predicted_risk_threshold_020` | Runtime calibrated-risk distributions | Conditional-action and unconditional PDF/CDF plots |
+| `05_adaptive_airtime_obss_v1` | Adaptive airtime duplication under OBSS | Thirty paired groups, aggregate evidence, adaptive/selective summaries, and figures |
 
 ## Principal streaming results
 
@@ -155,6 +157,26 @@ encounters 220 budget suppressions.
 
 See `04_genuine_polling_v1/README.md` for the complete compact table and
 interpretation limits.
+
+## Adaptive airtime duplication under OBSS
+
+Thirty paired seeds compare single 5 GHz, selective duplication (threshold
+0.20), adaptive airtime duplication (`rho=0.02`), full duplication, and MLO
+`NMaxInflights=1` under the same OBSS topology used by the genuine-polling
+closed-loop matrix. See `05_adaptive_airtime_obss_v1/README.md`.
+
+| Approach | Miss ratio | P99 latency | Redundant bytes | Tagged secondary airtime |
+|---|---:|---:|---:|---:|
+| Single 5 GHz | 1.307% | 19.51 ms | 0% | 0% |
+| Selective duplication (0.20) | 0.976% | 18.82 ms | 1.263% | 0.105% |
+| Adaptive airtime duplication | 0.611% | 16.33 ms | 20.836% | 1.944% |
+| Full duplication | 0.043% | 9.92 ms | 50% | 7.718% |
+| MLO `NMaxInflights=1` | 0.715% | 19.02 ms | 0% | 0% |
+
+Adaptive airtime tracks its 2% secondary PHY TX budget (1.944% measured) and
+reduces misses relative to selective duplication, but uses much more secondary
+airtime than the selective arm. Treat the first matrix as a budget-utilization
+study rather than a cost-matched policy comparison.
 
 ## Figure guide
 
