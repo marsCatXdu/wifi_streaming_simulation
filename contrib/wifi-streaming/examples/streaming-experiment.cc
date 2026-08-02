@@ -370,6 +370,14 @@ main(int argc, char* argv[])
     double selectiveDuplicationFrameBudget = 0.3;
     uint32_t selectiveDuplicationBurstHorizonFrames = 30;
     std::string selectiveDuplicationDecisionOffsetsUs = "0,1000,2000,4000";
+    bool secondaryAirtimeMeterEnabled = false;
+    double adaptiveAirtimeBudgetFraction = 0.02;
+    uint64_t adaptiveAirtimeBucketHorizonUs = 1000000;
+    double adaptiveAirtimeInitialShadowPrice = 0.20;
+    double adaptiveAirtimeDualStep = 0.01;
+    double adaptiveAirtimeCostSafetyFactor = 1.25;
+    double adaptiveAirtimeCostEwmaAlpha = 0.10;
+    std::string adaptiveAirtimeDecisionOffsetsUs = "0,1000,2000,4000";
     uint32_t fullDuplicationPrimaryPath = 0;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
@@ -470,8 +478,8 @@ main(int argc, char* argv[])
     command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
     command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
     command.AddValue("policy",
-                     "fixed_link_0, fixed_link_1, static_best, full_duplication, or "
-                     "selective_duplication",
+                     "fixed_link_0, fixed_link_1, static_best, full_duplication, "
+                     "selective_duplication, or adaptive_airtime_duplication",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -519,6 +527,30 @@ main(int argc, char* argv[])
     command.AddValue("selectiveDuplicationDecisionOffsetsUs",
                      "Strict comma-separated offsets eligible for selective action",
                      selectiveDuplicationDecisionOffsetsUs);
+    command.AddValue("secondaryAirtimeMeterEnabled",
+                     "Enable passive tagged secondary PHY TX airtime metering",
+                     secondaryAirtimeMeterEnabled);
+    command.AddValue("adaptiveAirtimeBudgetFraction",
+                     "Long-run secondary PHY TX airtime budget fraction",
+                     adaptiveAirtimeBudgetFraction);
+    command.AddValue("adaptiveAirtimeBucketHorizonUs",
+                     "Adaptive airtime token-bucket horizon in microseconds",
+                     adaptiveAirtimeBucketHorizonUs);
+    command.AddValue("adaptiveAirtimeInitialShadowPrice",
+                     "Initial adaptive airtime shadow price",
+                     adaptiveAirtimeInitialShadowPrice);
+    command.AddValue("adaptiveAirtimeDualStep",
+                     "Adaptive airtime dual-update step size",
+                     adaptiveAirtimeDualStep);
+    command.AddValue("adaptiveAirtimeCostSafetyFactor",
+                     "Pre-launch secondary airtime cost safety factor",
+                     adaptiveAirtimeCostSafetyFactor);
+    command.AddValue("adaptiveAirtimeCostEwmaAlpha",
+                     "EWMA alpha for secondary airtime retry inflation",
+                     adaptiveAirtimeCostEwmaAlpha);
+    command.AddValue("adaptiveAirtimeDecisionOffsetsUs",
+                     "Strict comma-separated offsets eligible for adaptive action",
+                     adaptiveAirtimeDecisionOffsetsUs);
     command.AddValue("fullDuplicationPrimaryPath",
                      "Primary path for unconditional application duplication",
                      fullDuplicationPrimaryPath);
@@ -664,6 +696,7 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedPredictionSampleOffsetsUs;
     std::vector<uint64_t> resolvedPredictionHistoryWindowsUs;
     std::vector<uint64_t> resolvedSelectiveDecisionOffsetsUs;
+    std::vector<uint64_t> resolvedAdaptiveDecisionOffsetsUs;
     if (predictionTelemetryEnabled)
     {
         NS_ABORT_MSG_IF(predictionPollingIntervalUs == 0,
@@ -682,11 +715,13 @@ main(int argc, char* argv[])
                         "Every prediction sample offset must precede the frame deadline");
         NS_ABORT_MSG_IF(topology != "dual_interface" ||
                             (policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
-                             policyName != "selective_duplication") ||
+                             policyName != "selective_duplication" &&
+                             policyName != "adaptive_airtime_duplication") ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
-                        "Prediction telemetry requires dual_interface, a fixed-link or selective "
-                        "policy, EHT, disabled UL OFDMA/A-MSDU, and disabled fragmentation");
+                        "Prediction telemetry requires dual_interface, a fixed-link or "
+                        "selective/adaptive policy, EHT, disabled UL OFDMA/A-MSDU, and "
+                        "disabled fragmentation");
     }
     if (policyName == "selective_duplication")
     {
@@ -717,6 +752,50 @@ main(int argc, char* argv[])
                             "Every selective decision offset must be a prediction sample offset");
             NS_ABORT_MSG_IF(offset != 0 && offset != 1000 && offset != 2000 && offset != 4000,
                             "Frozen selective predictor supports only T0, T1, T2, and T4");
+        }
+    }
+    if (policyName == "adaptive_airtime_duplication")
+    {
+        NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
+                        "Adaptive airtime duplication requires prediction telemetry");
+        NS_ABORT_MSG_IF(emissionMode != "burst",
+                        "Adaptive airtime duplication currently requires burst emission");
+        NS_ABORT_MSG_IF(!secondaryAirtimeMeterEnabled,
+                        "Adaptive airtime duplication requires the secondary airtime meter");
+        NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeBudgetFraction) ||
+                            adaptiveAirtimeBudgetFraction <= 0 ||
+                            adaptiveAirtimeBudgetFraction > 1,
+                        "Adaptive airtime budget fraction must be in (0,1]");
+        NS_ABORT_MSG_IF(adaptiveAirtimeBucketHorizonUs == 0,
+                        "Adaptive airtime bucket horizon must be positive");
+        NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeInitialShadowPrice) ||
+                            adaptiveAirtimeInitialShadowPrice < 0 ||
+                            adaptiveAirtimeInitialShadowPrice > 1,
+                        "Adaptive airtime initial shadow price must be in [0,1]");
+        NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeDualStep) ||
+                            adaptiveAirtimeDualStep <= 0,
+                        "Adaptive airtime dual step must be positive");
+        NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeCostSafetyFactor) ||
+                            adaptiveAirtimeCostSafetyFactor < 1,
+                        "Adaptive airtime cost safety factor must be >= 1");
+        NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeCostEwmaAlpha) ||
+                            adaptiveAirtimeCostEwmaAlpha <= 0 ||
+                            adaptiveAirtimeCostEwmaAlpha > 1,
+                        "Adaptive airtime EWMA alpha must be in (0,1]");
+        resolvedAdaptiveDecisionOffsetsUs =
+            ParseStrictUintList(adaptiveAirtimeDecisionOffsetsUs,
+                                "adaptiveAirtimeDecisionOffsetsUs",
+                                true);
+        NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.front() != 0,
+                        "Adaptive airtime decision offsets must start with zero");
+        for (const auto offset : resolvedAdaptiveDecisionOffsetsUs)
+        {
+            NS_ABORT_MSG_IF(std::find(resolvedPredictionSampleOffsetsUs.begin(),
+                                      resolvedPredictionSampleOffsetsUs.end(),
+                                      offset) == resolvedPredictionSampleOffsetsUs.end(),
+                            "Every adaptive decision offset must be a prediction sample offset");
+            NS_ABORT_MSG_IF(offset != 0 && offset != 1000 && offset != 2000 && offset != 4000,
+                            "Frozen adaptive predictor supports only T0, T1, T2, and T4");
         }
     }
     RngSeedManager::SetSeed(seed);
@@ -810,7 +889,8 @@ main(int argc, char* argv[])
                     "Unknown topology " << topology);
     NS_ABORT_MSG_IF(policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                         policyName != "static_best" && policyName != "full_duplication" &&
-                        policyName != "selective_duplication",
+                        policyName != "selective_duplication" &&
+                        policyName != "adaptive_airtime_duplication",
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
                     "fullDuplicationPrimaryPath must be 0 or 1");
@@ -1641,6 +1721,14 @@ main(int argc, char* argv[])
     resolved.selectiveDuplicationBurstHorizonFrames =
         selectiveDuplicationBurstHorizonFrames;
     resolved.selectiveDuplicationDecisionOffsetsUs = resolvedSelectiveDecisionOffsetsUs;
+    resolved.secondaryAirtimeMeterEnabled = secondaryAirtimeMeterEnabled;
+    resolved.adaptiveAirtimeBudgetFraction = adaptiveAirtimeBudgetFraction;
+    resolved.adaptiveAirtimeBucketHorizonUs = adaptiveAirtimeBucketHorizonUs;
+    resolved.adaptiveAirtimeInitialShadowPrice = adaptiveAirtimeInitialShadowPrice;
+    resolved.adaptiveAirtimeDualStep = adaptiveAirtimeDualStep;
+    resolved.adaptiveAirtimeCostSafetyFactor = adaptiveAirtimeCostSafetyFactor;
+    resolved.adaptiveAirtimeCostEwmaAlpha = adaptiveAirtimeCostEwmaAlpha;
+    resolved.adaptiveAirtimeDecisionOffsetsUs = resolvedAdaptiveDecisionOffsetsUs;
     resolved.fullDuplicationPrimaryPath = fullDuplicationPrimaryPath;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
@@ -1828,6 +1916,13 @@ main(int argc, char* argv[])
         sender->SetPolicy(policy);
         sender->SetDelayedSecondaryPath(0);
     }
+    else if (policyName == "adaptive_airtime_duplication")
+    {
+        auto policy = CreateObject<AdaptiveAirtimeDuplicationPolicy>();
+        policy->SetPrimaryPath(1);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(0);
+    }
     else
     {
         auto policy = CreateObject<FullDuplicationPolicy>();
@@ -1836,6 +1931,25 @@ main(int argc, char* argv[])
     }
     Ptr<ClosedLoopRiskPredictor> closedLoopPredictor;
     Ptr<SelectiveDuplicationController> selectiveController;
+    Ptr<AdaptiveAirtimeDuplicationController> adaptiveController;
+    Ptr<SecondaryAirtimeMeter> secondaryAirtimeMeter;
+    const bool meterWanted =
+        secondaryAirtimeMeterEnabled &&
+        (policyName == "selective_duplication" ||
+         policyName == "adaptive_airtime_duplication" ||
+         policyName == "full_duplication");
+    if (meterWanted)
+    {
+        NS_ABORT_MSG_IF(stationDevices.GetN() < 1,
+                        "Secondary airtime meter requires a secondary path device");
+        secondaryAirtimeMeter = CreateObject<SecondaryAirtimeMeter>();
+        secondaryAirtimeMeter->SetQueueMaxDelayMs(queueMaxDelayMs);
+        secondaryAirtimeMeter->BindPath(0, stationDevices.Get(0));
+        secondaryAirtimeMeter->SetOutputFiles(
+            runId,
+            (std::filesystem::path(outputDir) / "secondary_airtime_events.csv").string(),
+            (std::filesystem::path(outputDir) / "secondary_airtime_summary.json").string());
+    }
     if (policyName == "selective_duplication")
     {
         closedLoopPredictor = CreateObject<ClosedLoopRiskPredictor>();
@@ -1855,6 +1969,29 @@ main(int argc, char* argv[])
         predictionTelemetry->SetSnapshotCallback(
             MakeCallback(&SelectiveDuplicationController::NotifySnapshot,
                          PeekPointer(selectiveController)));
+    }
+    if (policyName == "adaptive_airtime_duplication")
+    {
+        closedLoopPredictor = CreateObject<ClosedLoopRiskPredictor>();
+        adaptiveController = CreateObject<AdaptiveAirtimeDuplicationController>();
+        adaptiveController->SetSender(PeekPointer(sender));
+        adaptiveController->SetRiskScorer(
+            MakeCallback(&ClosedLoopRiskPredictor::Score, PeekPointer(closedLoopPredictor)));
+        adaptiveController->SetAirtimeMeter(secondaryAirtimeMeter);
+        adaptiveController->SetPrimaryPath(1);
+        adaptiveController->SetBudgetFraction(adaptiveAirtimeBudgetFraction);
+        adaptiveController->SetBucketHorizonUs(adaptiveAirtimeBucketHorizonUs);
+        adaptiveController->SetInitialShadowPrice(adaptiveAirtimeInitialShadowPrice);
+        adaptiveController->SetDualStep(adaptiveAirtimeDualStep);
+        adaptiveController->SetCostSafetyFactor(adaptiveAirtimeCostSafetyFactor);
+        adaptiveController->SetCostEwmaAlpha(adaptiveAirtimeCostEwmaAlpha);
+        adaptiveController->SetDecisionOffsetsUs(resolvedAdaptiveDecisionOffsetsUs);
+        adaptiveController->SetOutputFile(
+            runId,
+            (std::filesystem::path(outputDir) / "adaptive_airtime_decisions.csv").string());
+        predictionTelemetry->SetSnapshotCallback(
+            MakeCallback(&AdaptiveAirtimeDuplicationController::NotifySnapshot,
+                         PeekPointer(adaptiveController)));
     }
     station.Get(0)->AddApplication(sender);
     sender->SetStartTime(warmup);
@@ -2093,6 +2230,12 @@ main(int argc, char* argv[])
         // Prediction rows are sender-side artifacts and must be finalized
         // independently of receiver outcome bookkeeping.
         predictionTelemetry->WriteOutputs();
+    }
+    if (secondaryAirtimeMeter)
+    {
+        const uint64_t measurementDurationUs =
+            static_cast<uint64_t>(std::llround(durationSeconds * 1e6));
+        secondaryAirtimeMeter->WriteSummary(measurementDurationUs);
     }
     metrics->FinalizeMissingFrames();
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)

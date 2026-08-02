@@ -10,6 +10,8 @@ build_lib(
     model/closed-loop-risk-predictor.cc
     model/prediction-telemetry-collector.cc
     model/selective-duplication-controller.cc
+    model/adaptive-airtime-duplication-controller.cc
+    model/secondary-airtime-meter.cc
     model/metrics-collector.cc
     model/experiment-output.cc
     model/redundancy-policy.cc
@@ -28,6 +30,8 @@ build_lib(
     model/closed-loop-risk-predictor.h
     model/prediction-telemetry-collector.h
     model/selective-duplication-controller.h
+    model/adaptive-airtime-duplication-controller.h
+    model/secondary-airtime-meter.h
     model/metrics-collector.h
     model/experiment-output.h
     model/redundancy-policy.h

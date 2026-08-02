@@ -109,6 +109,37 @@ MultipathSender::SetDelayedSecondaryPath(PathId pathId)
 bool
 MultipathSender::RequestSecondaryCopy(uint64_t frameId)
 {
+    return RequestSecondaryCopy(frameId, "calibrated risk threshold crossed");
+}
+
+std::optional<DelayedCopyDescriptor>
+MultipathSender::GetDelayedSecondaryCopyDescriptor(uint64_t frameId) const
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return std::nullopt;
+    }
+    const auto& plan = frame->second.secondaryPlan;
+    DelayedCopyDescriptor descriptor;
+    descriptor.frameId = frameId;
+    descriptor.packetCount = static_cast<uint32_t>(plan.packets.size());
+    uint64_t expectedBytes = 0;
+    for (const auto& packet : plan.packets)
+    {
+        NS_ABORT_MSG_IF(!packet.expectedMacServiceBytes,
+                        "Delayed secondary packet lacks expected MAC service bytes");
+        expectedBytes += *packet.expectedMacServiceBytes;
+    }
+    descriptor.expectedMacServiceBytes = expectedBytes;
+    descriptor.deadlineTimeNs =
+        plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
+    return descriptor;
+}
+
+bool
+MultipathSender::RequestSecondaryCopy(uint64_t frameId, const std::string& reason)
+{
     auto frame = m_delayedFrames.find(frameId);
     if (frame == m_delayedFrames.end() || frame->second.launched)
     {
@@ -129,7 +160,7 @@ MultipathSender::RequestSecondaryCopy(uint64_t frameId)
         m_collector->MarkPolicyDecisionDuplicated(frameId,
                                                    Simulator::Now().GetMicroSeconds(),
                                                    plan.pathId,
-                                                   "calibrated risk threshold crossed");
+                                                   reason);
     }
     return true;
 }

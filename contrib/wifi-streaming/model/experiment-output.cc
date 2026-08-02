@@ -486,6 +486,47 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
         output << "]\n"
                << "  },\n";
     }
+    if (config.policy == "adaptive_airtime_duplication")
+    {
+        output << "  \"adaptiveAirtimeDuplication\": {\n"
+               << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
+               << "    \"source_model_sha256\": \""
+               << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
+               << "    \"feature_set\": \"F0+F1-degraded\",\n"
+               << "    \"degradation_profile\": \"polling_1ms\",\n"
+               << "    \"calibration\": \"platt\",\n"
+               << "    \"stages\": [\"T0\", \"T1\", \"T2\", \"T4\"],\n"
+               << "    \"primary_path\": 1,\n"
+               << "    \"secondary_path\": 0,\n"
+               << "    \"budget_definition\": \"secondary_sender_phy_tx_airtime\",\n"
+               << "    \"budget_fraction\": " << config.adaptiveAirtimeBudgetFraction << ",\n"
+               << "    \"bucket_horizon_us\": " << config.adaptiveAirtimeBucketHorizonUs
+               << ",\n"
+               << "    \"initial_shadow_price\": "
+               << config.adaptiveAirtimeInitialShadowPrice << ",\n"
+               << "    \"dual_step\": " << config.adaptiveAirtimeDualStep << ",\n"
+               << "    \"cost_safety_factor\": " << config.adaptiveAirtimeCostSafetyFactor
+               << ",\n"
+               << "    \"cost_ewma_alpha\": " << config.adaptiveAirtimeCostEwmaAlpha << ",\n"
+               << "    \"decision_offsets_us\": [";
+        for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
+             ++index)
+        {
+            output << (index == 0 ? "" : ", ")
+                   << config.adaptiveAirtimeDecisionOffsetsUs[index];
+        }
+        output << "]\n"
+               << "  },\n";
+    }
+    if (config.secondaryAirtimeMeterEnabled)
+    {
+        output << "  \"secondaryAirtimeMeter\": {\n"
+               << "    \"enabled\": true,\n"
+               << "    \"path_id\": 0,\n"
+               << "    \"copy_id\": 1,\n"
+               << "    \"definition\": \"secondary_sender_phy_tx_airtime\"\n"
+               << "  },\n";
+    }
     output << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"
            << "}\n";
 }

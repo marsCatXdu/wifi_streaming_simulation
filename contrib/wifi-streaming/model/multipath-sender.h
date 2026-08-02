@@ -17,10 +17,23 @@
 #include "ns3/socket.h"
 
 #include <map>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace ns3
 {
+
+/**
+ * Causal descriptor for a delayed secondary copy that has not yet launched.
+ */
+struct DelayedCopyDescriptor
+{
+    uint64_t frameId{0};                 ///< Application frame identifier.
+    uint32_t packetCount{0};             ///< Planned secondary packet count.
+    uint64_t expectedMacServiceBytes{0}; ///< Sum of expected MAC service bytes.
+    uint64_t deadlineTimeNs{0};          ///< Absolute frame deadline.
+};
 
 /**
  * Frame-oriented sender making exactly one redundancy-policy decision per
@@ -64,6 +77,15 @@ class MultipathSender : public Application
     void SetDelayedSecondaryPath(PathId pathId);
 
     /**
+     * Return the delayed secondary descriptor for one active frame.
+     *
+     * @param frameId Application frame identifier.
+     * @return Descriptor when the frame is pending; empty otherwise.
+     */
+    std::optional<DelayedCopyDescriptor> GetDelayedSecondaryCopyDescriptor(
+        uint64_t frameId) const;
+
+    /**
      * Launch the preplanned secondary copy for one active frame.
      *
      * @param frameId Application frame identifier.
@@ -71,6 +93,15 @@ class MultipathSender : public Application
      * rejected because it was unknown, repeated, or expired.
      */
     bool RequestSecondaryCopy(uint64_t frameId);
+
+    /**
+     * Launch the preplanned secondary copy with an explicit policy reason.
+     *
+     * @param frameId Application frame identifier.
+     * @param reason Policy decision reason recorded in metrics.
+     * @return True when the copy was launched.
+     */
+    bool RequestSecondaryCopy(uint64_t frameId, const std::string& reason);
 
     uint64_t GetPacketsSent() const;
     uint64_t GetBytesSent() const;

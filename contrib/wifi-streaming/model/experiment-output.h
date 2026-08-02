@@ -107,6 +107,14 @@ struct StreamingRunConfig
     double selectiveDuplicationFrameBudget{0};
     uint32_t selectiveDuplicationBurstHorizonFrames{0};
     std::vector<uint64_t> selectiveDuplicationDecisionOffsetsUs;
+    bool secondaryAirtimeMeterEnabled{false};
+    double adaptiveAirtimeBudgetFraction{0};
+    uint64_t adaptiveAirtimeBucketHorizonUs{0};
+    double adaptiveAirtimeInitialShadowPrice{0};
+    double adaptiveAirtimeDualStep{0};
+    double adaptiveAirtimeCostSafetyFactor{0};
+    double adaptiveAirtimeCostEwmaAlpha{0};
+    std::vector<uint64_t> adaptiveAirtimeDecisionOffsetsUs;
     uint32_t fullDuplicationPrimaryPath{0};
     double staticLink0Score{0};
     double staticLink1Score{0};

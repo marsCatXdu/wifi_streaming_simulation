@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include "ns3/adaptive-airtime-duplication-controller.h"
 #include "ns3/csma-module.h"
 #include "ns3/correlated-load-controller.h"
 #include "ns3/experiment-output.h"
@@ -18,6 +19,7 @@
 #include "ns3/prediction-telemetry-collector.h"
 #include "ns3/random-rate-on-off-application.h"
 #include "ns3/redundancy-policy.h"
+#include "ns3/secondary-airtime-meter.h"
 #include "ns3/selective-duplication-controller.h"
 #include "ns3/simulator.h"
 #include "ns3/string.h"
@@ -1884,6 +1886,299 @@ class SelectiveDuplicationControllerTestCase : public TestCase
     }
 };
 
+class SecondaryAirtimeMeterTestCase : public TestCase
+{
+  public:
+    SecondaryAirtimeMeterTestCase()
+        : TestCase("Secondary airtime meter allocates, detects mixed PPDUs, and ignores untagged")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto meter = CreateObject<SecondaryAirtimeMeter>();
+        SecondaryAirtimeReservation first;
+        first.frameId = 1;
+        first.packetCount = 2;
+        first.reservedAirtimeUs = 100;
+        first.estimatedAirtimeUs = 100;
+        first.nominalAirtimeUs = 80;
+        first.deadlineTimeNs = 1'000'000;
+        SecondaryAirtimeReservation second = first;
+        second.frameId = 2;
+        meter->RegisterLaunchedCopy(std::move(first));
+        meter->RegisterLaunchedCopy(std::move(second));
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  200.0,
+                                  1e-9,
+                                  "Reservations were not accumulated");
+
+        // Untagged / empty map must be ignored.
+        meter->ApplyTestPpdu({}, 40.0, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetMeasuredAirtimeTotalUs(),
+                                  0.0,
+                                  1e-9,
+                                  "Untagged PPDU was counted");
+
+        // Multi-frame A-MPDU counted once and split by bytes.
+        meter->ApplyTestPpdu({{1, 300}, {2, 100}}, 40.0, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetMeasuredAirtimeTotalUs(),
+                                  40.0,
+                                  1e-9,
+                                  "Multi-frame PPDU duration was not counted once");
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  160.0,
+                                  1e-9,
+                                  "Reservation was not reduced by measured airtime");
+
+        // Retransmission of the same frames counts again.
+        meter->ApplyTestPpdu({{1, 300}, {2, 100}}, 40.0, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetMeasuredAirtimeTotalUs(),
+                                  80.0,
+                                  1e-9,
+                                  "Retransmitted PPDU was not counted again");
+
+        // Mixed tagged/untagged detection.
+        meter->ApplyTestPpdu({{1, 100}}, 10.0, 50);
+        NS_TEST_ASSERT_MSG_EQ(meter->GetMixedPpduCount(), 1, "Mixed PPDU was not detected");
+
+        // Debt observation tracks the deepest negative balance.
+        meter->ObserveBudgetDebt(12.5);
+        meter->ObserveBudgetDebt(7.5);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetMaximumBudgetDebtUs(),
+                                  12.5,
+                                  1e-9,
+                                  "Maximum budget debt was not retained");
+        Simulator::Destroy();
+    }
+};
+
+class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
+{
+  public:
+    AdaptiveAirtimeDuplicationControllerTestCase()
+        : TestCase("Adaptive airtime controller prices, defers, and launches at most once")
+    {
+    }
+
+  private:
+    double Score(const PredictionSample& sample)
+    {
+        // Reject at T0, then become strongly actionable so a later stage may launch.
+        return sample.sampleOffsetUs == 0 ? 0.01 : 0.95;
+    }
+
+    void DoRun() override
+    {
+        NodeContainer nodes;
+        nodes.Create(2);
+        InternetStackHelper internet;
+        internet.Install(nodes);
+        CsmaHelper csma;
+        csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
+        csma.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+        NetDeviceContainer devices = csma.Install(nodes);
+        Ipv4AddressHelper address;
+        address.SetBase("10.19.0.0", "255.255.255.0");
+        auto interfaces = address.Assign(devices);
+
+        auto metrics = CreateObject<MetricsCollector>();
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9021));
+        receiver->SetMetricsCollector(metrics);
+        nodes.Get(1)->AddApplication(receiver);
+        receiver->SetStartTime(Time());
+        receiver->SetStopTime(Seconds(2));
+
+        auto source = CreateObject<SyntheticFrameSource>();
+        source->SetFps(20);
+        source->SetDuration(MilliSeconds(150));
+        source->SetConstantFrameSize(2400);
+        source->SetDeadline(100000);
+
+        auto sender = CreateObject<MultipathSender>();
+        auto policy = CreateObject<AdaptiveAirtimeDuplicationPolicy>();
+        policy->SetPrimaryPath(1);
+        NS_TEST_ASSERT_MSG_EQ(policy->GetName(),
+                              "adaptive_airtime_duplication",
+                              "Adaptive policy name is wrong");
+
+        auto prediction = CreateObject<PredictionTelemetryCollector>();
+        prediction->SetSampleOffsetsUs({0, 1000, 2000, 4000});
+        auto meter = CreateObject<SecondaryAirtimeMeter>();
+        auto controller = CreateObject<AdaptiveAirtimeDuplicationController>();
+        controller->SetSender(PeekPointer(sender));
+        controller->SetRiskScorer(
+            MakeCallback(&AdaptiveAirtimeDuplicationControllerTestCase::Score, this));
+        controller->SetAirtimeMeter(meter);
+        controller->SetPrimaryPath(1);
+        controller->SetBudgetFraction(0.02);
+        controller->SetBucketHorizonUs(1000000);
+        controller->SetInitialShadowPrice(0.20);
+        controller->SetDualStep(0.01);
+        controller->SetCostSafetyFactor(1.25);
+        controller->SetCostEwmaAlpha(0.10);
+        controller->SetDecisionOffsetsUs({0, 1000, 2000, 4000});
+        const std::string directory = "/tmp/ns3-wifi-streaming-adaptive-airtime-test";
+        std::filesystem::remove_all(directory);
+        std::filesystem::create_directories(directory);
+        controller->SetOutputFile("adaptive-test",
+                                  directory + "/adaptive_airtime_decisions.csv");
+        prediction->SetSnapshotCallback(
+            MakeCallback(&AdaptiveAirtimeDuplicationController::NotifySnapshot,
+                         PeekPointer(controller)));
+
+        sender->SetFrameSource(source);
+        sender->SetMetricsCollector(metrics);
+        sender->SetPredictionTelemetryCollector(prediction);
+        sender->SetPacketPayloadSize(1200);
+        sender->SetExpectedMacServiceOverhead(36);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(0);
+        for (uint8_t path = 0; path < 2; ++path)
+        {
+            auto socket =
+                Socket::CreateSocket(nodes.Get(0), UdpSocketFactory::GetTypeId());
+            NS_TEST_ASSERT_MSG_EQ(socket->Bind(InetSocketAddress(interfaces.GetAddress(0), 0)),
+                                  0,
+                                  "Adaptive sender bind failed");
+            NS_TEST_ASSERT_MSG_EQ(
+                socket->Connect(InetSocketAddress(interfaces.GetAddress(1), 9021)),
+                0,
+                "Adaptive sender connect failed");
+            sender->AddPath(path, socket, devices.Get(0));
+        }
+        nodes.Get(0)->AddApplication(sender);
+        sender->SetStartTime(MilliSeconds(10));
+        sender->SetStopTime(MilliSeconds(500));
+
+        // Force an overspend between early T0 samples so lambda rises.
+        Simulator::Schedule(MilliSeconds(40),
+                            &SecondaryAirtimeMeter::ApplyTestPpdu,
+                            PeekPointer(meter),
+                            std::map<uint64_t, uint64_t>{{999, 1000}},
+                            20000.0,
+                            static_cast<uint64_t>(0));
+
+        Simulator::Stop(Seconds(1));
+        Simulator::Run();
+
+        NS_TEST_ASSERT_MSG_EQ(controller->GetActionCount() > 0,
+                              true,
+                              "Adaptive controller never launched a secondary copy");
+        NS_TEST_ASSERT_MSG_EQ(controller->GetShadowPrice() > 0.20,
+                              true,
+                              "Shadow price did not rise after overspending");
+
+        std::ifstream decisions(directory + "/adaptive_airtime_decisions.csv");
+        NS_TEST_ASSERT_MSG_EQ(static_cast<bool>(decisions),
+                              true,
+                              "Adaptive decision CSV is missing");
+        std::string header;
+        std::getline(decisions, header);
+        NS_TEST_ASSERT_MSG_EQ(header.find("shadow_price") != std::string::npos,
+                              true,
+                              "Adaptive decision schema is missing shadow_price");
+        std::map<uint64_t, uint32_t> actionsByFrame;
+        std::map<uint64_t, bool> rejectedThenActed;
+        std::string line;
+        while (std::getline(decisions, line))
+        {
+            if (line.empty())
+            {
+                continue;
+            }
+            std::stringstream row(line);
+            std::string field;
+            std::vector<std::string> fields;
+            while (std::getline(row, field, ','))
+            {
+                fields.push_back(field);
+            }
+            NS_TEST_ASSERT_MSG_EQ(fields.size() >= 20,
+                                  true,
+                                  "Adaptive decision row is truncated");
+            const uint64_t frameId = std::stoull(fields[1]);
+            const std::string decision = fields[18];
+            const bool launched = fields[19] == "1";
+            if (decision == "price_rejected")
+            {
+                rejectedThenActed[frameId] = false;
+            }
+            if (decision == "action")
+            {
+                ++actionsByFrame[frameId];
+                if (rejectedThenActed.contains(frameId))
+                {
+                    rejectedThenActed[frameId] = true;
+                }
+            }
+            NS_TEST_ASSERT_MSG_EQ(launched == (decision == "action"),
+                                  true,
+                                  "Adaptive launch flag mismatches decision");
+            if (decision == "airtime_deferred")
+            {
+                NS_TEST_ASSERT_MSG_EQ(launched,
+                                      false,
+                                      "airtime_deferred must not launch");
+            }
+        }
+        for (const auto& [frameId, count] : actionsByFrame)
+        {
+            NS_TEST_ASSERT_MSG_EQ(count,
+                                  1,
+                                  "Frame launched more than one secondary copy: " << frameId);
+        }
+        bool sawRejectedThenActed = false;
+        for (const auto& [frameId, acted] : rejectedThenActed)
+        {
+            (void)frameId;
+            if (acted)
+            {
+                sawRejectedThenActed = true;
+                break;
+            }
+        }
+        NS_TEST_ASSERT_MSG_EQ(sawRejectedThenActed,
+                              true,
+                              "price_rejected never became an action at a later stage");
+
+        // Larger frames must expose more secondary packets / MAC service bytes.
+        FramePacketizer packetizer;
+        packetizer.SetPayloadSize(1200);
+        packetizer.SetExpectedMacServiceOverhead(36);
+        FrameDescriptor smallFrame;
+        smallFrame.frameId = 100;
+        smallFrame.frameSizeBytes = 2400;
+        smallFrame.deadlineUs = 100000;
+        FrameDescriptor largeFrame = smallFrame;
+        largeFrame.frameId = 101;
+        largeFrame.frameSizeBytes = 12000;
+        const auto smallPlan = packetizer.Plan(smallFrame, 0, 1, 0, StreamingHeader::FLAG_DUPLICATED_FRAME);
+        const auto largePlan = packetizer.Plan(largeFrame, 0, 1, 0, StreamingHeader::FLAG_DUPLICATED_FRAME);
+        uint64_t smallBytes = 0;
+        uint64_t largeBytes = 0;
+        for (const auto& packet : smallPlan.packets)
+        {
+            smallBytes += *packet.expectedMacServiceBytes;
+        }
+        for (const auto& packet : largePlan.packets)
+        {
+            largeBytes += *packet.expectedMacServiceBytes;
+        }
+        NS_TEST_ASSERT_MSG_EQ(largePlan.packets.size() > smallPlan.packets.size(),
+                              true,
+                              "Larger frame did not increase packet count");
+        NS_TEST_ASSERT_MSG_EQ(largeBytes > smallBytes,
+                              true,
+                              "Larger frame did not increase expected MAC service bytes");
+
+        Simulator::Destroy();
+        std::filesystem::remove_all(directory);
+    }
+};
+
 class PredictionWifiTelemetryTestCase : public TestCase
 {
   public:
@@ -2300,6 +2595,8 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new SecondaryAirtimeMeterTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new AdaptiveAirtimeDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionWifiTelemetryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new RandomRateOnOffApplicationTestCase, TestCase::Duration::QUICK);

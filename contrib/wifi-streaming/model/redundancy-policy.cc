@@ -15,6 +15,7 @@ NS_OBJECT_ENSURE_REGISTERED(FixedLinkPolicy);
 NS_OBJECT_ENSURE_REGISTERED(StaticBestLinkPolicy);
 NS_OBJECT_ENSURE_REGISTERED(FullDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(SelectiveDuplicationPolicy);
+NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationPolicy);
 
 TypeId
 RedundancyPolicy::GetTypeId()
@@ -211,6 +212,50 @@ std::string
 SelectiveDuplicationPolicy::GetName() const
 {
     return "selective_duplication";
+}
+
+TypeId
+AdaptiveAirtimeDuplicationPolicy::GetTypeId()
+{
+    static TypeId tid =
+        TypeId("ns3::AdaptiveAirtimeDuplicationPolicy")
+            .SetParent<RedundancyPolicy>()
+            .SetGroupName("WifiStreaming")
+            .AddConstructor<AdaptiveAirtimeDuplicationPolicy>()
+            .AddAttribute("PrimaryPath",
+                          "Path used before any causal duplication action.",
+                          UintegerValue(1),
+                          MakeUintegerAccessor(&AdaptiveAirtimeDuplicationPolicy::m_primary),
+                          MakeUintegerChecker<PathId>());
+    return tid;
+}
+
+AdaptiveAirtimeDuplicationPolicy::AdaptiveAirtimeDuplicationPolicy() = default;
+
+void
+AdaptiveAirtimeDuplicationPolicy::SetPrimaryPath(PathId path)
+{
+    m_primary = path;
+}
+
+PolicyDecision
+AdaptiveAirtimeDuplicationPolicy::Decide(const FrameDescriptor&,
+                                         const LinkTelemetrySnapshot& telemetry)
+{
+    PolicyDecision decision;
+    decision.primaryPath = m_primary;
+    decision.reason = "causal adaptive airtime duplication primary";
+    if (auto score = telemetry.pathScores.find(m_primary); score != telemetry.pathScores.end())
+    {
+        decision.primaryScore = score->second;
+    }
+    return decision;
+}
+
+std::string
+AdaptiveAirtimeDuplicationPolicy::GetName() const
+{
+    return "adaptive_airtime_duplication";
 }
 
 } // namespace ns3

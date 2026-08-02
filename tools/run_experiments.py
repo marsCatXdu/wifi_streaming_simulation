@@ -22,6 +22,7 @@ import yaml
 from plot_results import plot
 from plot_ofdma_comparison import plot_ofdma_comparison
 from plot_selective_duplication import plot_selective_control
+from plot_adaptive_airtime_duplication import plot_adaptive_airtime
 from summarize_runs import discover, summarize, write_outputs
 from validate_outputs import validate_run
 
@@ -111,6 +112,14 @@ CLI_KEYS = {
     "selective_duplication_frame_budget": "selectiveDuplicationFrameBudget",
     "selective_duplication_burst_horizon_frames": "selectiveDuplicationBurstHorizonFrames",
     "selective_duplication_decision_offsets_us": "selectiveDuplicationDecisionOffsetsUs",
+    "secondary_airtime_meter_enabled": "secondaryAirtimeMeterEnabled",
+    "adaptive_airtime_budget_fraction": "adaptiveAirtimeBudgetFraction",
+    "adaptive_airtime_bucket_horizon_us": "adaptiveAirtimeBucketHorizonUs",
+    "adaptive_airtime_initial_shadow_price": "adaptiveAirtimeInitialShadowPrice",
+    "adaptive_airtime_dual_step": "adaptiveAirtimeDualStep",
+    "adaptive_airtime_cost_safety_factor": "adaptiveAirtimeCostSafetyFactor",
+    "adaptive_airtime_cost_ewma_alpha": "adaptiveAirtimeCostEwmaAlpha",
+    "adaptive_airtime_decision_offsets_us": "adaptiveAirtimeDecisionOffsetsUs",
     "full_duplication_primary_path": "fullDuplicationPrimaryPath",
 }
 
@@ -354,6 +363,13 @@ def write_experiment_description(document: dict[str, Any],
                 "  the 5 GHz interface. The frozen calibrated four-stage predictor",
                 "  may causally launch a delayed 2.4 GHz copy, subject to the",
                 "  configured probability threshold and online frame-token budget.",
+            ]
+        elif topology == "dual_interface" and policy == "adaptive_airtime_duplication":
+            approach_lines += [
+                "* ``Closed-loop adaptive airtime duplication``: each frame starts",
+                "  on the 5 GHz interface. The frozen predictor may launch a delayed",
+                "  2.4 GHz copy using a shadow-price utility and secondary PHY TX",
+                "  airtime token budget.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -666,6 +682,7 @@ def main() -> None:
         write_outputs(aggregate, aggregate_json, aggregate_csv)
         plot(aggregate, output_root / "plots")
         plot_selective_control(aggregate, output_root)
+        plot_adaptive_airtime(aggregate, output_root)
         ofdma_states = {
             bool(run.get("config", {}).get("wifi", {}).get("ul_ofdma_enabled", False))
             for run in aggregate["runs"]

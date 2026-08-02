@@ -123,6 +123,31 @@ class SelectiveDuplicationPolicy : public RedundancyPolicy
     PathId m_primary{1}; ///< Primary path used before a causal rescue action.
 };
 
+/**
+ * Select a fixed primary while allowing the adaptive-airtime controller to
+ * launch a secondary copy later.
+ */
+class AdaptiveAirtimeDuplicationPolicy : public RedundancyPolicy
+{
+  public:
+    static TypeId GetTypeId();
+    AdaptiveAirtimeDuplicationPolicy();
+
+    /**
+     * Set the primary path used for every frame.
+     *
+     * @param path Primary application path.
+     */
+    void SetPrimaryPath(PathId path);
+
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+    std::string GetName() const override;
+
+  private:
+    PathId m_primary{1}; ///< Primary path used before a causal rescue action.
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H
