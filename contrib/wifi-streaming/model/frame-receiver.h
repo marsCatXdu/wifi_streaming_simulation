@@ -31,6 +31,17 @@ class FrameReceiver : public Application
     void SetMetricsCollector(Ptr<MetricsCollector> collector);
     void SetCleanupTimeout(Time timeout);
 
+    /**
+     * Hold primary-only frames open until a delayed secondary arrives or the
+     * deadline/cleanup timer expires.
+     *
+     * Required for selective/adaptive delayed duplication so a late secondary
+     * launch is not discarded after the primary alone has already completed.
+     *
+     * @param enable Whether to wait for a possible delayed secondary copy.
+     */
+    void SetHoldForDelayedSecondary(bool enable);
+
     void ProcessPacket(Ptr<Packet> packet);
     uint32_t GetPendingFrameCount() const;
     uint32_t GetFinalizedFrameCount() const;
@@ -66,6 +77,7 @@ class FrameReceiver : public Application
     Ptr<Socket> m_socket;
     Ptr<MetricsCollector> m_collector;
     Time m_cleanupTimeout{Seconds(1)};
+    bool m_holdForDelayedSecondary{false}; ///< Wait for delayed copy 1 / deadline.
     std::map<uint64_t, ReassemblyState> m_frames;
     std::set<uint64_t> m_finalizedFrameIds;
     std::map<uint8_t, uint64_t> m_pathBytesReceived;

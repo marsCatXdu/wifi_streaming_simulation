@@ -1627,6 +1627,90 @@ class ReassemblyTestCase : public TestCase
     }
 };
 
+class DelayedSecondaryHoldTestCase : public TestCase
+{
+  public:
+    DelayedSecondaryHoldTestCase()
+        : TestCase("Delayed secondary hold keeps primary-only frames open")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        // Without the hold, primary-only completion finalizes immediately and a
+        // later secondary is ignored.
+        {
+            auto collector = CreateObject<MetricsCollector>();
+            auto receiver = CreateObject<FrameReceiver>();
+            receiver->SetMetricsCollector(collector);
+            receiver->ProcessPacket(MakeStreamingPacket(1, 0, 1, 0, 0, 10000, 0, 0));
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  1,
+                                  "Primary-only frame did not finalize without hold");
+            receiver->ProcessPacket(
+                MakeStreamingPacket(1, 0, 1, 1, 1, 10000, 0, StreamingHeader::FLAG_DUPLICATED_FRAME));
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  1,
+                                  "Late secondary created a second frame result");
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().front().copy1CompletionUs.has_value(),
+                                  false,
+                                  "Late secondary was accepted after early finalize");
+            Simulator::Destroy();
+        }
+
+        // With the hold, primary-only completion waits for the secondary.
+        {
+            auto collector = CreateObject<MetricsCollector>();
+            auto receiver = CreateObject<FrameReceiver>();
+            receiver->SetMetricsCollector(collector);
+            receiver->SetHoldForDelayedSecondary(true);
+            receiver->ProcessPacket(MakeStreamingPacket(2, 0, 1, 0, 0, 10000, 0, 0));
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  0,
+                                  "Primary-only frame finalized despite delayed-secondary hold");
+            NS_TEST_ASSERT_MSG_EQ(receiver->GetPendingFrameCount(),
+                                  1,
+                                  "Held frame is not pending");
+            receiver->ProcessPacket(
+                MakeStreamingPacket(2, 0, 1, 1, 1, 10000, 0, StreamingHeader::FLAG_DUPLICATED_FRAME));
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  1,
+                                  "Held frame did not finalize after secondary arrival");
+            const auto& result = collector->GetFrameResults().front();
+            NS_TEST_ASSERT_MSG_EQ(result.copy0CompletionUs.has_value(),
+                                  true,
+                                  "Primary copy completion missing");
+            NS_TEST_ASSERT_MSG_EQ(result.copy1CompletionUs.has_value(),
+                                  true,
+                                  "Secondary copy completion missing");
+            Simulator::Destroy();
+        }
+
+        // With the hold and no secondary, the deadline finalizes the frame.
+        {
+            auto collector = CreateObject<MetricsCollector>();
+            auto receiver = CreateObject<FrameReceiver>();
+            receiver->SetMetricsCollector(collector);
+            receiver->SetHoldForDelayedSecondary(true);
+            receiver->ProcessPacket(MakeStreamingPacket(3, 0, 1, 0, 0, 1000, 0, 0));
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  0,
+                                  "Held frame finalized before the deadline");
+            Simulator::Stop(MicroSeconds(1000));
+            Simulator::Run();
+            NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                                  1,
+                                  "Held frame did not finalize at the deadline");
+            NS_TEST_ASSERT_MSG_EQ(
+                collector->GetFrameResults().front().copy1CompletionUs.has_value(),
+                false,
+                "Deadline finalize invented a secondary copy");
+            Simulator::Destroy();
+        }
+    }
+};
+
 class FinalizationTestCase : public TestCase
 {
   public:
@@ -1809,6 +1893,7 @@ class SelectiveDuplicationControllerTestCase : public TestCase
         auto receiver = CreateObject<FrameReceiver>();
         receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9020));
         receiver->SetMetricsCollector(metrics);
+        receiver->SetHoldForDelayedSecondary(true);
         nodes.Get(1)->AddApplication(receiver);
         receiver->SetStartTime(Time());
         receiver->SetStopTime(Seconds(1));
@@ -1987,6 +2072,7 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         auto receiver = CreateObject<FrameReceiver>();
         receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9021));
         receiver->SetMetricsCollector(metrics);
+        receiver->SetHoldForDelayedSecondary(true);
         nodes.Get(1)->AddApplication(receiver);
         receiver->SetStartTime(Time());
         receiver->SetStopTime(Seconds(2));
@@ -2592,6 +2678,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new OutputStatisticsTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new DelayedSecondaryHoldTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);

@@ -1845,6 +1845,13 @@ main(int argc, char* argv[])
     receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), port));
     receiver->SetMetricsCollector(metrics);
     receiver->SetCleanupTimeout(Seconds(1));
+    if (policyName == "selective_duplication" ||
+        policyName == "adaptive_airtime_duplication")
+    {
+        // Keep primary-only frames open so a causal delayed secondary launch
+        // can still be accepted before the deadline.
+        receiver->SetHoldForDelayedSecondary(true);
+    }
     edge.Get(0)->AddApplication(receiver);
     receiver->SetStartTime(Seconds(0.5));
     receiver->SetStopTime(Seconds(durationSeconds + 2.9));

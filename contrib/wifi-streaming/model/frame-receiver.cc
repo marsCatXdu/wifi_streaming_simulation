@@ -52,6 +52,12 @@ FrameReceiver::SetCleanupTimeout(Time timeout)
 }
 
 void
+FrameReceiver::SetHoldForDelayedSecondary(bool enable)
+{
+    m_holdForDelayedSecondary = enable;
+}
+
+void
 FrameReceiver::StartApplication()
 {
     if (!m_socket)
@@ -179,7 +185,13 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
     const bool allCopiesComplete =
         state.copyPackets[0].size() == state.frame.packetCount &&
         state.copyPackets[1].size() == state.frame.packetCount;
-    if (state.completionUs && (!state.duplicatedFrame || allCopiesComplete))
+    // Selective/adaptive duplication may launch copy 1 after the primary has
+    // already delivered every packet. Hold those frames open until both copies
+    // complete or the deadline/cleanup timer expires; otherwise the secondary
+    // is discarded after an early finalize and metrics disagree with the
+    // controller action log.
+    const bool holdForSecondary = m_holdForDelayedSecondary || state.duplicatedFrame;
+    if (state.completionUs && (!holdForSecondary || allCopiesComplete))
     {
         Finalize(header.frameId, false);
     }
