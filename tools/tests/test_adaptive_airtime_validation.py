@@ -91,6 +91,26 @@ def adaptive_rows() -> list[dict[str, str]]:
     ]
 
 
+def prediction_samples(
+    generation_time_ns: int = 1_000_000,
+) -> dict[tuple[int, int], dict[str, str]]:
+    return {
+        (7, offset): {
+            "run_id": "run",
+            "frame_id": "7",
+            "path_id": "1",
+            "copy_id": "0",
+            "sample_stage": f"T{offset // 1000}",
+            "sample_offset_us": str(offset),
+            "sample_time_ns": str(generation_time_ns + offset * 1000),
+            "generation_time_ns": str(generation_time_ns),
+            "deadline_time_ns": str(generation_time_ns + 33_333_000),
+            "actionable": "1",
+        }
+        for offset in (0, 1000)
+    }
+
+
 def meter_fixture() -> tuple[
     list[dict[str, str]],
     list[dict[str, str]],
@@ -151,9 +171,38 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         config = adaptive_config()
         self.assertEqual(_validate_adaptive_config(config), [0, 1000])
         estimates = _validate_adaptive_decisions(
-            adaptive_rows(), config, [{"frame_id": "7", "generation_time_us": "1000"}], "run"
+            adaptive_rows(),
+            config,
+            [{"frame_id": "7", "generation_time_us": "1000"}],
+            prediction_samples(),
+            "run",
         )
         self.assertEqual(estimates, {7: 100.0})
+
+    def test_accepts_submicrosecond_generation_precision_from_telemetry(self) -> None:
+        rows = adaptive_rows()
+        for row in rows:
+            row["sample_time_ns"] = str(int(row["sample_time_ns"]) + 667)
+        estimates = _validate_adaptive_decisions(
+            rows,
+            adaptive_config(),
+            [{"frame_id": "7", "generation_time_us": "1000"}],
+            prediction_samples(1_000_667),
+            "run",
+        )
+        self.assertEqual(estimates, {7: 100.0})
+
+    def test_rejects_decision_timestamp_different_from_telemetry(self) -> None:
+        rows = adaptive_rows()
+        rows[1]["sample_time_ns"] = "2000001"
+        with self.assertRaisesRegex(ValidationError, "time/telemetry"):
+            _validate_adaptive_decisions(
+                rows,
+                adaptive_config(),
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
+                "run",
+            )
 
     def test_rejects_non_hex_model_hash(self) -> None:
         config = adaptive_config()
@@ -176,6 +225,7 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
                 rows,
                 adaptive_config(),
                 [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
                 "run",
             )
 
@@ -188,6 +238,7 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
                 rows,
                 adaptive_config(),
                 [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
                 "run",
             )
 

@@ -133,6 +133,11 @@ PREDICTION_BASE_COLUMNS = {
     "channel_access_status", "medium_busy_now",
     "expected_access_reason_within_slack", "feature_support_mask",
 }
+PREDICTION_DECISION_COLUMNS = {
+    "run_id", "frame_id", "path_id", "copy_id", "sample_stage",
+    "sample_offset_us", "sample_time_ns", "generation_time_ns",
+    "deadline_time_ns", "actionable",
+}
 PREDICTION_POLLING_BASE_COLUMNS = {
     "polling_schema_version", "run_id", "frame_id", "path_id", "copy_id",
     "sample_stage", "sample_offset_us", "report_available", "capture_time_ns",
@@ -440,10 +445,38 @@ def _adaptive_utility(row: dict[str, str]) -> float:
     return value
 
 
+def _prediction_decision_samples(
+    run_dir: Path,
+    run_id: str,
+    expected_path: int,
+) -> dict[tuple[int, int], dict[str, str]]:
+    """Index the exact predictor samples consumed by closed-loop controllers."""
+    path = run_dir / "prediction_samples.csv"
+    _require(path.is_file(), "missing core file: prediction_samples.csv")
+    rows = _csv(path, PREDICTION_DECISION_COLUMNS)
+    result: dict[tuple[int, int], dict[str, str]] = {}
+    for row in rows:
+        file_name = "prediction_samples.csv"
+        _require(row.get("run_id") == run_id,
+                 f"{file_name}: run_id mismatch")
+        frame_id = _integer(row, "frame_id", file_name)
+        path_id = _integer(row, "path_id", file_name)
+        copy_id = _integer(row, "copy_id", file_name)
+        offset = _integer(row, "sample_offset_us", file_name)
+        _require(path_id == expected_path and copy_id == 0,
+                 f"{file_name}: controller sample path/copy mismatch")
+        key = (frame_id, offset)
+        _require(key not in result,
+                 f"{file_name}: duplicate controller sample")
+        result[key] = row
+    return result
+
+
 def _validate_adaptive_decisions(
     rows: list[dict[str, str]],
     config: dict[str, Any],
     frames: list[dict[str, str]],
+    prediction_samples: dict[tuple[int, int], dict[str, str]],
     run_id: str,
 ) -> dict[int, float]:
     """Validate controller arithmetic and decision semantics.
@@ -453,9 +486,9 @@ def _validate_adaptive_decisions(
     """
     offsets = _validate_adaptive_config(config)
     file_name = "adaptive_airtime_decisions.csv"
-    frame_generation_ns = {
+    frame_generation_us = {
         _integer(frame, "frame_id", "frames.csv"):
-        _integer(frame, "generation_time_us", "frames.csv") * 1000
+        _integer(frame, "generation_time_us", "frames.csv")
         for frame in frames
     }
     _require(len(rows) == len(frames) * len(offsets),
@@ -486,21 +519,34 @@ def _validate_adaptive_decisions(
     for row in rows:
         frame_id = _integer(row, "frame_id", file_name)
         offset = _integer(row, "sample_offset_us", file_name)
-        _require(frame_id in frame_generation_ns and offset in offsets,
+        _require(frame_id in frame_generation_us and offset in offsets,
                  "adaptive decisions: unknown frame or stage")
         _require((frame_id, offset) not in seen_samples,
                  "adaptive decisions: duplicate frame/stage")
         seen_samples.add((frame_id, offset))
-        _require(row.get("sample_stage") == _stage_name(offset),
+        prediction = prediction_samples.get((frame_id, offset))
+        _require(prediction is not None,
+                 "adaptive decisions: predictor sample is absent")
+        generation_time = _integer(
+            prediction, "generation_time_ns", "prediction_samples.csv"
+        )
+        _require(generation_time // 1000 == frame_generation_us[frame_id],
+                 "adaptive decisions: frame/predictor generation mismatch")
+        _require(row.get("sample_stage") == prediction.get("sample_stage") ==
+                 _stage_name(offset),
                  "adaptive decisions: sample stage/offset mismatch")
         sample_time = _integer(row, "sample_time_ns", file_name)
-        _require(sample_time == frame_generation_ns[frame_id] + offset * 1000,
-                 "adaptive decisions: sample time mismatch")
+        _require(sample_time == _integer(
+            prediction, "sample_time_ns", "prediction_samples.csv"
+        ), "adaptive decisions: sample time/telemetry mismatch")
         _require(sample_time >= previous_sample_time,
                  "adaptive decisions: rows are not chronological")
         previous_sample_time = sample_time
 
         actionable = _flag(row, "actionable", file_name)
+        _require(actionable == _flag(
+            prediction, "actionable", "prediction_samples.csv"
+        ), "adaptive decisions: actionability/telemetry mismatch")
         probability = _number(row, "calibrated_probability", file_name)
         estimated = _number(row, "estimated_airtime_us", file_name)
         reference = _number(row, "reference_airtime_us", file_name)
@@ -1820,6 +1866,13 @@ def validate_run(
     adaptive_config: dict[str, Any] | None = None
     action_estimates: dict[int, float] = {}
     observed_budget_debt_us = 0.0
+    decision_samples: dict[tuple[int, int], dict[str, str]] = {}
+    if config["policy"] in {
+        "selective_duplication", "adaptive_airtime_duplication",
+    }:
+        decision_samples = _prediction_decision_samples(
+            run_dir, run_id, expected_path=1
+        )
     if config["policy"] == "selective_duplication":
         selective_config = config.get("selectiveDuplication")
         _require(isinstance(selective_config, dict),
@@ -1871,6 +1924,19 @@ def validate_run(
             _require((frame_id, offset) not in seen_samples,
                      "selective decisions: duplicate frame/stage")
             seen_samples.add((frame_id, offset))
+            prediction = decision_samples.get((frame_id, offset))
+            _require(prediction is not None,
+                     "selective decisions: predictor sample is absent")
+            _require(
+                row["path_id"] == prediction["path_id"] and
+                row["copy_id"] == prediction["copy_id"] and
+                row["sample_stage"] == prediction["sample_stage"] ==
+                _stage_name(offset) and
+                row["sample_time_ns"] == prediction["sample_time_ns"] and
+                row["deadline_time_ns"] == prediction["deadline_time_ns"] and
+                row["actionable"] == prediction["actionable"],
+                "selective decisions: predictor telemetry mismatch",
+            )
             probability = float(row["calibrated_probability"])
             before = float(row["tokens_before"])
             after = float(row["tokens_after"])
@@ -1906,7 +1972,7 @@ def validate_run(
                  "missing core file: adaptive_airtime_decisions.csv")
         adaptive = _csv(adaptive_path, ADAPTIVE_DECISION_COLUMNS)
         action_estimates = _validate_adaptive_decisions(
-            adaptive, adaptive_config, frames, run_id
+            adaptive, adaptive_config, frames, decision_samples, run_id
         )
         observed_budget_debt_us = max(
             (max(0.0, -_signed_number(
