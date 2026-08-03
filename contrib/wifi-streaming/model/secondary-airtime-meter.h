@@ -39,6 +39,7 @@ struct SecondaryAirtimeReservation
     double measuredAirtimeUs{0};      ///< Measured tagged PHY TX airtime.
     double nominalAirtimeUs{0};       ///< Estimate without retry inflation.
     uint64_t deadlineTimeNs{0};       ///< Absolute frame deadline.
+    std::set<uint32_t> expectedPacketIndices; ///< Original packet indexes expected to finish.
     std::set<uint32_t> terminalPacketIndices; ///< Distinct terminal packets.
     bool settled{false};              ///< Whether reservation was released.
     bool fallbackSettled{false};      ///< Whether settlement used the fallback timer.

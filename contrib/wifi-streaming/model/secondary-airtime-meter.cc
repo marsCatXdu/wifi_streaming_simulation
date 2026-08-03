@@ -179,6 +179,17 @@ SecondaryAirtimeMeter::RegisterLaunchedCopy(SecondaryAirtimeReservation reservat
     NS_ABORT_MSG_IF(m_reservations.contains(reservation.frameId),
                     "Duplicate secondary airtime reservation for frame "
                         << reservation.frameId);
+    NS_ABORT_MSG_IF(!reservation.terminalPacketIndices.empty(),
+                    "New secondary airtime reservation is already terminal");
+    if (reservation.expectedPacketIndices.empty())
+    {
+        for (uint32_t index = 0; index < reservation.packetCount; ++index)
+        {
+            reservation.expectedPacketIndices.insert(index);
+        }
+    }
+    NS_ABORT_MSG_IF(reservation.expectedPacketIndices.size() != reservation.packetCount,
+                    "Secondary airtime expected packet set has the wrong size");
     m_reservedAirtimeUs += reservation.reservedAirtimeUs;
     m_estimatedActionAirtimeUs += reservation.estimatedAirtimeUs;
     const uint64_t fallbackDelayNs =
@@ -420,8 +431,8 @@ SecondaryAirtimeMeter::MarkPacketTerminal(uint64_t frameId, uint32_t packetIndex
         return;
     }
     auto& reservation = iterator->second;
-    NS_ABORT_MSG_IF(packetIndex >= reservation.packetCount,
-                    "Secondary airtime terminal packet index is out of range");
+    NS_ABORT_MSG_IF(!reservation.expectedPacketIndices.contains(packetIndex),
+                    "Secondary airtime terminal packet was not part of the launch");
     const bool inserted = reservation.terminalPacketIndices.insert(packetIndex).second;
     if (!inserted)
     {

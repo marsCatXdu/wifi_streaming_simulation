@@ -120,16 +120,37 @@ MultipathSender::GetDelayedSecondaryCopyDescriptor(uint64_t frameId) const
     {
         return std::nullopt;
     }
-    const auto& plan = frame->second.secondaryPlan;
+    return DescribeDelayedPlan(frame->second.secondaryPlan);
+}
+
+std::optional<DelayedCopyDescriptor>
+MultipathSender::GetDelayedSecondaryReverseTailDescriptor(uint64_t frameId,
+                                                          uint32_t packetCount) const
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return std::nullopt;
+    }
+    return DescribeDelayedPlan(
+        FramePacketizer::SelectReverseTail(frame->second.secondaryPlan, packetCount));
+}
+
+DelayedCopyDescriptor
+MultipathSender::DescribeDelayedPlan(const PacketizationPlan& plan)
+{
     DelayedCopyDescriptor descriptor;
-    descriptor.frameId = frameId;
+    descriptor.frameId = plan.frame.frameId;
+    descriptor.framePacketCount = plan.frame.packetCount;
     descriptor.packetCount = static_cast<uint32_t>(plan.packets.size());
+    descriptor.packetIndices.reserve(plan.packets.size());
     uint64_t expectedBytes = 0;
     for (const auto& packet : plan.packets)
     {
         NS_ABORT_MSG_IF(!packet.expectedMacServiceBytes,
                         "Delayed secondary packet lacks expected MAC service bytes");
         expectedBytes += *packet.expectedMacServiceBytes;
+        descriptor.packetIndices.push_back(packet.packetIndex);
     }
     descriptor.expectedMacServiceBytes = expectedBytes;
     descriptor.deadlineTimeNs =
@@ -140,26 +161,48 @@ MultipathSender::GetDelayedSecondaryCopyDescriptor(uint64_t frameId) const
 bool
 MultipathSender::RequestSecondaryCopy(uint64_t frameId, const std::string& reason)
 {
+    return RequestSecondaryCopyInternal(frameId, std::nullopt, reason);
+}
+
+bool
+MultipathSender::RequestSecondaryReverseTail(uint64_t frameId,
+                                             uint32_t packetCount,
+                                             const std::string& reason)
+{
+    return RequestSecondaryCopyInternal(frameId, packetCount, reason);
+}
+
+bool
+MultipathSender::RequestSecondaryCopyInternal(
+    uint64_t frameId,
+    std::optional<uint32_t> reverseTailPacketCount,
+    const std::string& reason)
+{
     auto frame = m_delayedFrames.find(frameId);
     if (frame == m_delayedFrames.end() || frame->second.launched)
     {
         return false;
     }
-    const auto& plan = frame->second.secondaryPlan;
+    const auto& canonicalPlan = frame->second.secondaryPlan;
     const uint64_t deadlineNs =
-        plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
+        canonicalPlan.frame.generationTimeNs +
+        static_cast<uint64_t>(canonicalPlan.frame.deadlineUs) * 1000;
     const int64_t nowNs = Simulator::Now().GetNanoSeconds();
     if (nowNs < 0 || static_cast<uint64_t>(nowNs) >= deadlineNs)
     {
         return false;
     }
+    const auto launchPlan = reverseTailPacketCount
+                                ? FramePacketizer::SelectReverseTail(canonicalPlan,
+                                                                   *reverseTailPacketCount)
+                                : canonicalPlan;
     frame->second.launched = true;
-    ScheduleCopy(plan, true, false);
+    ScheduleCopy(launchPlan, true, false);
     if (m_collector)
     {
         m_collector->MarkPolicyDecisionDuplicated(frameId,
                                                    Simulator::Now().GetMicroSeconds(),
-                                                   plan.pathId,
+                                                   launchPlan.pathId,
                                                    reason);
     }
     return true;

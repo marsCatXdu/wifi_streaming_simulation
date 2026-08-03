@@ -84,6 +84,32 @@ FramePacketizer::Materialize(const PacketizationPlan& plan) const
 }
 
 PacketizationPlan
+FramePacketizer::SelectReverseTail(const PacketizationPlan& plan, uint32_t packetCount)
+{
+    NS_ABORT_MSG_IF(plan.frame.packetCount == 0 ||
+                        plan.frame.packetCount != plan.packets.size(),
+                    "Reverse-tail selection requires a canonical full-copy plan");
+    NS_ABORT_MSG_IF(packetCount == 0 || packetCount > plan.packets.size(),
+                    "Reverse-tail packet count must be within the full-copy plan");
+    for (std::size_t index = 0; index < plan.packets.size(); ++index)
+    {
+        NS_ABORT_MSG_IF(plan.packets[index].packetIndex != index,
+                        "Reverse-tail selection requires contiguous packet indexes");
+    }
+
+    PacketizationPlan selected = plan;
+    selected.packets.clear();
+    selected.packets.reserve(packetCount);
+    for (uint32_t launchIndex = 0; launchIndex < packetCount; ++launchIndex)
+    {
+        auto packet = plan.packets[plan.packets.size() - 1 - launchIndex];
+        packet.offset = plan.packets[launchIndex].offset;
+        selected.packets.push_back(packet);
+    }
+    return selected;
+}
+
+PacketizationPlan
 FramePacketizer::Plan(const FrameDescriptor& frame,
                       uint64_t runIdHash,
                       uint8_t copyId,

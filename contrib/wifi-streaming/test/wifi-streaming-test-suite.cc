@@ -614,6 +614,35 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(emissions[2].frameTag.IsValid(),
                               true,
                               "Materialized frame tag is invalid");
+
+        const auto reverseTail = FramePacketizer::SelectReverseTail(plan, 2);
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.frame.packetCount,
+                              3,
+                              "Reverse tail changed total frame packet count");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets.size(),
+                              2,
+                              "Reverse tail selected the wrong packet count");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets[0].packetIndex,
+                              2,
+                              "Reverse tail did not start at the final packet");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets[1].packetIndex,
+                              1,
+                              "Reverse tail did not descend by packet index");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets[0].offset,
+                              Time(),
+                              "Reverse tail did not rebase its first emission");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets[1].offset,
+                              MilliSeconds(1),
+                              "Reverse tail did not preserve packet pacing");
+        const auto tailEmissions = packetizer.Materialize(reverseTail);
+        NS_TEST_ASSERT_MSG_EQ(tailEmissions[0].frameTag.packetIndex,
+                              2,
+                              "Materialization renumbered a projected packet");
+        StreamingHeader tailHeader;
+        tailEmissions[0].packet->PeekHeader(tailHeader);
+        NS_TEST_ASSERT_MSG_EQ(tailHeader.packetCount,
+                              3,
+                              "Projected packet lost total frame cardinality");
     }
 };
 
@@ -1674,6 +1703,64 @@ class ReassemblyTestCase : public TestCase
                               true,
                               "Delayed duplication lost secondary copy completion");
         Simulator::Destroy();
+
+        collector = CreateObject<MetricsCollector>();
+        receiver = CreateObject<FrameReceiver>();
+        receiver->SetMetricsCollector(collector);
+        receiver->ProcessPacket(MakeStreamingPacket(4,
+                                                    0,
+                                                    4,
+                                                    0,
+                                                    0,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        receiver->ProcessPacket(MakeStreamingPacket(4,
+                                                    1,
+                                                    4,
+                                                    0,
+                                                    0,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        receiver->ProcessPacket(MakeStreamingPacket(4,
+                                                    3,
+                                                    4,
+                                                    1,
+                                                    1,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        receiver->ProcessPacket(MakeStreamingPacket(4,
+                                                    2,
+                                                    4,
+                                                    1,
+                                                    1,
+                                                    10000,
+                                                    0,
+                                                    StreamingHeader::FLAG_DUPLICATED_FRAME));
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().empty(),
+                              true,
+                              "Partial-copy union finalized before its accounting hold");
+        Simulator::Stop(MilliSeconds(11));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                              1,
+                              "Complementary partial copies did not finalize");
+        const auto& partialResult = collector->GetFrameResults().front();
+        NS_TEST_ASSERT_MSG_EQ(partialResult.incomplete,
+                              false,
+                              "Complementary packet union was marked incomplete");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.copy0CompletionUs.has_value(),
+                              false,
+                              "Partial primary was marked as a complete copy");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.copy1CompletionUs.has_value(),
+                              false,
+                              "Partial secondary was marked as a complete copy");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.completionMode,
+                              "mixed",
+                              "Complementary union did not retain both links");
+        Simulator::Destroy();
     }
 };
 
@@ -2107,6 +2194,27 @@ class SecondaryAirtimeMeterTestCase : public TestCase
                                   beforeTerminal - 100.0,
                                   1e-9,
                                   "Distinct terminal packets did not settle the frame");
+
+        SecondaryAirtimeReservation suffix;
+        suffix.frameId = 30;
+        suffix.packetCount = 2;
+        suffix.expectedPacketIndices = {8, 9};
+        suffix.reservedAirtimeUs = 100;
+        suffix.estimatedAirtimeUs = 100;
+        suffix.nominalAirtimeUs = 80;
+        suffix.deadlineTimeNs = 1'000'000;
+        meter->RegisterLaunchedCopy(std::move(suffix));
+        const double beforeSuffix = meter->GetReservedAirtimeUs();
+        SecondaryAirtimeMeterTestAccess::Terminal(meter, 30, 9);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  beforeSuffix,
+                                  1e-9,
+                                  "First suffix terminal released the reservation");
+        SecondaryAirtimeMeterTestAccess::Terminal(meter, 30, 8);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  beforeSuffix - 100.0,
+                                  1e-9,
+                                  "Original suffix indexes did not settle the reservation");
 
         // Only events in the configured half-open interval are measured.
         auto windowMeter = CreateObject<SecondaryAirtimeMeter>();

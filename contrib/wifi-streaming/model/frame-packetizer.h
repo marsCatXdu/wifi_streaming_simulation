@@ -45,7 +45,14 @@ struct PacketizationPlan
     uint8_t copyId{0};                   ///< Application copy identifier.
     uint8_t pathId{0};                   ///< Application path identifier.
     uint16_t flags{0};                   ///< Streaming header flags.
-    std::vector<PlannedPacket> packets;  ///< Ordered immutable packet descriptions.
+    /**
+     * Ordered packet descriptions scheduled by this copy.
+     *
+     * A canonical plan contains every frame packet. A launch-time projection
+     * may retain only a subset while preserving the original packet indexes
+     * and total frame packet count.
+     */
+    std::vector<PlannedPacket> packets;
 };
 
 /**
@@ -99,6 +106,20 @@ class FramePacketizer
      * @return Ordered packet emissions.
      */
     std::vector<PacketEmission> Materialize(const PacketizationPlan& plan) const;
+
+    /**
+     * Project a canonical full-copy plan to a reverse-ordered packet tail.
+     *
+     * Packet indexes and frame metadata remain unchanged. Emission offsets
+     * are reassigned from the beginning of the canonical schedule so the
+     * selected tail starts immediately and retains the configured pacing.
+     *
+     * @param plan Canonical full-copy packetization plan.
+     * @param packetCount Number of tail packets to retain.
+     * @return Reverse-ordered partial-copy plan.
+     */
+    static PacketizationPlan SelectReverseTail(const PacketizationPlan& plan,
+                                               uint32_t packetCount);
 
     /**
      * Plan and materialize a frame in one compatibility operation.

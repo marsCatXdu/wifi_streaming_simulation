@@ -30,14 +30,17 @@ namespace ns3
 struct DelayedCopyDescriptor
 {
     uint64_t frameId{0};                 ///< Application frame identifier.
-    uint32_t packetCount{0};             ///< Planned secondary packet count.
+    uint32_t framePacketCount{0};        ///< Total packet count required by the frame.
+    uint32_t packetCount{0};             ///< Selected secondary packet count.
+    std::vector<uint32_t> packetIndices; ///< Original packet indexes in launch order.
     uint64_t expectedMacServiceBytes{0}; ///< Sum of expected MAC service bytes.
     uint64_t deadlineTimeNs{0};          ///< Absolute frame deadline.
 };
 
 /**
  * Frame-oriented sender making exactly one redundancy-policy decision per
- * frame. Each selected path carries a complete frame copy.
+ * frame. Initial policy paths carry complete copies; a delayed controller may
+ * project the secondary copy to a packet subset at launch.
  */
 class MultipathSender : public Application
 {
@@ -86,6 +89,17 @@ class MultipathSender : public Application
         uint64_t frameId) const;
 
     /**
+     * Return a descriptor for a reverse-ordered tail of a delayed copy.
+     *
+     * @param frameId Application frame identifier.
+     * @param packetCount Number of original tail packets to select.
+     * @return Projected descriptor when the frame is pending; empty otherwise.
+     */
+    std::optional<DelayedCopyDescriptor> GetDelayedSecondaryReverseTailDescriptor(
+        uint64_t frameId,
+        uint32_t packetCount) const;
+
+    /**
      * Launch the preplanned secondary copy for one active frame.
      *
      * @param frameId Application frame identifier.
@@ -102,6 +116,18 @@ class MultipathSender : public Application
      * @return True when the copy was launched.
      */
     bool RequestSecondaryCopy(uint64_t frameId, const std::string& reason);
+
+    /**
+     * Launch a reverse-ordered tail of the preplanned secondary copy.
+     *
+     * @param frameId Application frame identifier.
+     * @param packetCount Number of original tail packets to launch.
+     * @param reason Policy decision reason recorded in metrics.
+     * @return True when the partial copy was launched.
+     */
+    bool RequestSecondaryReverseTail(uint64_t frameId,
+                                     uint32_t packetCount,
+                                     const std::string& reason);
 
     uint64_t GetPacketsSent() const;
     uint64_t GetBytesSent() const;
@@ -127,6 +153,25 @@ class MultipathSender : public Application
     };
 
     void GenerateFrame(FrameDescriptor frame);
+    /**
+     * Describe one full or projected secondary plan.
+     *
+     * @param plan Secondary plan to describe.
+     * @return Causal descriptor used for admission and accounting.
+     */
+    static DelayedCopyDescriptor DescribeDelayedPlan(const PacketizationPlan& plan);
+
+    /**
+     * Launch one resolved delayed plan.
+     *
+     * @param frameId Application frame identifier.
+     * @param reverseTailPacketCount Tail size when projecting; empty for full copy.
+     * @param reason Policy reason recorded in metrics.
+     * @return True when the copy was launched.
+     */
+    bool RequestSecondaryCopyInternal(uint64_t frameId,
+                                      std::optional<uint32_t> reverseTailPacketCount,
+                                      const std::string& reason);
     void ScheduleCopy(const PacketizationPlan& plan,
                       bool redundant,
                       bool predictionTracked = true);
