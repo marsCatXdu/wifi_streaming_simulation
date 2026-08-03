@@ -468,15 +468,24 @@ def make_analysis_run(
 ) -> dict[str, object]:
     directory = root / run_id
     directory.mkdir()
+    adaptive = policy in {
+        "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+    }
     write_rows(
         directory / "frames.csv",
-        [{"generation_time_us": "0", "deadline_miss": "0"}],
+        ([{
+            "frame_id": "7",
+            "generation_time_us": "0",
+            "deadline_us": "100",
+            "copy_0_completion_us": "",
+            "deadline_miss": "0",
+        }] if adaptive else [{"generation_time_us": "0", "deadline_miss": "0"}]),
     )
     write_rows(
         directory / "link_intervals.csv",
         [{"link_id": "0", "phy_tx_time_us": str(link0_tx_us)}],
     )
-    if policy in {"adaptive_airtime_duplication", "adaptive_deficit_duplication"}:
+    if adaptive:
         meter = {
             "tagged_secondary_tx_airtime_us": 100.0,
             "tagged_secondary_tx_airtime_fraction": 0.1,
@@ -568,6 +577,93 @@ class AdaptiveAirtimePlotTest(unittest.TestCase):
             [summary] = summarize_adaptive_runs({"runs": [run]}, root)
 
             self.assertEqual(Path(summary["run_dir"]), root / "fixed")
+
+    def test_classifies_primary_rescues_and_action_airtime(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = make_analysis_run(
+                root,
+                "adaptive",
+                1,
+                1,
+                "dual_interface",
+                "adaptive_airtime_duplication",
+                100,
+            )
+            directory = root / "adaptive"
+            write_rows(
+                directory / "frames.csv",
+                [
+                    {
+                        "frame_id": "7", "generation_time_us": "0",
+                        "deadline_us": "50", "copy_0_completion_us": "",
+                        "deadline_miss": "0",
+                    },
+                    {
+                        "frame_id": "8", "generation_time_us": "100",
+                        "deadline_us": "50", "copy_0_completion_us": "",
+                        "deadline_miss": "1",
+                    },
+                    {
+                        "frame_id": "9", "generation_time_us": "200",
+                        "deadline_us": "50", "copy_0_completion_us": "240",
+                        "deadline_miss": "0",
+                    },
+                    {
+                        "frame_id": "10", "generation_time_us": "300",
+                        "deadline_us": "50", "copy_0_completion_us": "",
+                        "deadline_miss": "1",
+                    },
+                ],
+            )
+            write_rows(
+                directory / "adaptive_airtime_decisions.csv",
+                [
+                    {
+                        "frame_id": str(frame_id), "decision": decision,
+                        "estimated_airtime_us": "20", "sample_stage": "T0",
+                        "sample_time_ns": str(frame_id), "shadow_price": "0.2",
+                        "bucket_balance_us": "50",
+                    }
+                    for frame_id, decision in (
+                        (7, "action"), (8, "action"), (9, "action"),
+                        (10, "price_rejected"),
+                    )
+                ],
+            )
+            write_rows(
+                directory / "secondary_airtime_settlements.csv",
+                [
+                    {"frame_id": "7", "measured_airtime_us": "10"},
+                    {"frame_id": "8", "measured_airtime_us": "20"},
+                    {"frame_id": "9", "measured_airtime_us": "30"},
+                ],
+            )
+            meter_path = directory / "secondary_airtime_summary.json"
+            meter = json.loads(meter_path.read_text(encoding="utf-8"))
+            meter["tagged_secondary_tx_airtime_us"] = 60.0
+            meter["tagged_secondary_tx_airtime_fraction"] = 0.06
+            meter_path.write_text(json.dumps(meter), encoding="utf-8")
+
+            [summary] = summarize_adaptive_runs({"runs": [run]}, root)
+
+            self.assertEqual(summary["primary_deadline_misses"], 3)
+            self.assertEqual(summary["acted_primary_deadline_misses"], 2)
+            self.assertEqual(summary["rescued_primary_deadline_misses"], 1)
+            self.assertEqual(summary["failed_rescue_primary_deadline_misses"], 1)
+            self.assertEqual(summary["unacted_primary_deadline_misses"], 1)
+            self.assertEqual(summary["primary_hit_actions"], 1)
+            self.assertAlmostEqual(summary["primary_miss_action_precision"], 2 / 3)
+            self.assertAlmostEqual(summary["primary_miss_action_recall"], 2 / 3)
+            self.assertAlmostEqual(summary["deadline_rescue_per_action"], 1 / 3)
+            self.assertAlmostEqual(
+                summary["deadline_rescue_given_acted_primary_miss"],
+                1 / 2,
+            )
+            self.assertEqual(summary["rescued_primary_miss_airtime_us"], 10)
+            self.assertEqual(summary["failed_rescue_airtime_us"], 20)
+            self.assertEqual(summary["primary_hit_action_airtime_us"], 30)
+            self.assertAlmostEqual(summary["primary_hit_action_airtime_share"], 0.5)
 
     def test_pairs_by_seed_and_run_and_plots_complete_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

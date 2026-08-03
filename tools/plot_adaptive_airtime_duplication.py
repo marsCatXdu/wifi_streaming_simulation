@@ -102,6 +102,15 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(source))
 
 
+def _primary_deadline_miss(frame: dict[str, str]) -> bool:
+    """Return the pre-intervention primary-copy deadline outcome."""
+    completion = frame["copy_0_completion_us"]
+    if not completion:
+        return True
+    latency_us = int(completion) - int(frame["generation_time_us"])
+    return latency_us > int(frame["deadline_us"])
+
+
 def _link_phy_tx_us(run_dir: Path) -> dict[int, float]:
     rows = _read_csv(run_dir / "link_intervals.csv")
     result: dict[int, float] = {}
@@ -138,6 +147,22 @@ def summarize_adaptive_runs(
         budget_excess_us: float | None = None
         actions = 0
         stage_counts: dict[str, int] = {}
+        primary_diagnostics: dict[str, int | float | None] = {
+            "primary_deadline_misses": None,
+            "acted_primary_deadline_misses": None,
+            "rescued_primary_deadline_misses": None,
+            "failed_rescue_primary_deadline_misses": None,
+            "unacted_primary_deadline_misses": None,
+            "primary_hit_actions": None,
+            "primary_miss_action_precision": None,
+            "primary_miss_action_recall": None,
+            "deadline_rescue_per_action": None,
+            "deadline_rescue_given_acted_primary_miss": None,
+            "rescued_primary_miss_airtime_us": None,
+            "failed_rescue_airtime_us": None,
+            "primary_hit_action_airtime_us": None,
+            "primary_hit_action_airtime_share": None,
+        }
         duration_us = float(run["config"]["duration_s"]) * 1_000_000
         link_phy_tx_us = _link_phy_tx_us(run_dir)
         link0_phy_tx_us = link_phy_tx_us[0]
@@ -196,6 +221,80 @@ def summarize_adaptive_runs(
             for row in action_rows:
                 stage = row["sample_stage"]
                 stage_counts[stage] = stage_counts.get(stage, 0) + 1
+            action_ids = {int(row["frame_id"]) for row in action_rows}
+            if len(action_ids) != actions:
+                raise ValueError(f"{run_dir}: duplicate adaptive action frame")
+            settlement_rows = _read_csv(
+                run_dir / "secondary_airtime_settlements.csv"
+            )
+            settlements = {
+                int(row["frame_id"]): float(row["measured_airtime_us"])
+                for row in settlement_rows
+            }
+            if len(settlements) != len(settlement_rows):
+                raise ValueError(f"{run_dir}: duplicate adaptive settlement frame")
+            if set(settlements) != action_ids:
+                raise ValueError(
+                    f"{run_dir}: adaptive actions and settlements do not match"
+                )
+            frame_by_id = {int(row["frame_id"]): row for row in frames}
+            if len(frame_by_id) != len(frames):
+                raise ValueError(f"{run_dir}: duplicate frame in adaptive analysis")
+            if not action_ids <= set(frame_by_id):
+                raise ValueError(f"{run_dir}: adaptive action refers to an unknown frame")
+
+            primary_miss_ids = {
+                frame_id for frame_id, frame in frame_by_id.items()
+                if _primary_deadline_miss(frame)
+            }
+            union_miss_ids = {
+                frame_id for frame_id, frame in frame_by_id.items()
+                if frame["deadline_miss"] in {"1", "true", "True"}
+            }
+            acted_primary_ids = action_ids & primary_miss_ids
+            rescued_ids = acted_primary_ids - union_miss_ids
+            failed_ids = acted_primary_ids & union_miss_ids
+            unacted_primary_ids = primary_miss_ids - action_ids
+            primary_hit_ids = action_ids - primary_miss_ids
+
+            primary_count = len(primary_miss_ids)
+            acted_primary_count = len(acted_primary_ids)
+            rescued_count = len(rescued_ids)
+            primary_hit_airtime_us = sum(
+                settlements[frame_id] for frame_id in primary_hit_ids
+            )
+            primary_diagnostics = {
+                "primary_deadline_misses": primary_count,
+                "acted_primary_deadline_misses": acted_primary_count,
+                "rescued_primary_deadline_misses": rescued_count,
+                "failed_rescue_primary_deadline_misses": len(failed_ids),
+                "unacted_primary_deadline_misses": len(unacted_primary_ids),
+                "primary_hit_actions": len(primary_hit_ids),
+                "primary_miss_action_precision": (
+                    acted_primary_count / actions if actions else None
+                ),
+                "primary_miss_action_recall": (
+                    acted_primary_count / primary_count if primary_count else None
+                ),
+                "deadline_rescue_per_action": (
+                    rescued_count / actions if actions else None
+                ),
+                "deadline_rescue_given_acted_primary_miss": (
+                    rescued_count / acted_primary_count
+                    if acted_primary_count else None
+                ),
+                "rescued_primary_miss_airtime_us": sum(
+                    settlements[frame_id] for frame_id in rescued_ids
+                ),
+                "failed_rescue_airtime_us": sum(
+                    settlements[frame_id] for frame_id in failed_ids
+                ),
+                "primary_hit_action_airtime_us": primary_hit_airtime_us,
+                "primary_hit_action_airtime_share": (
+                    primary_hit_airtime_us / tagged_airtime_us
+                    if tagged_airtime_us else None
+                ),
+            }
         rows.append({
             "run_id": run["run_id"],
             "run_dir": str(run_dir),
@@ -223,6 +322,7 @@ def summarize_adaptive_runs(
             "target_phy_tx_time_us": target_phy_tx_us,
             "target_phy_tx_fraction": target_phy_tx_us / duration_us,
             "adaptive_actions": actions,
+            **primary_diagnostics,
             "_stage_counts": stage_counts,
         })
 
