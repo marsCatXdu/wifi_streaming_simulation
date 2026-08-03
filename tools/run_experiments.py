@@ -116,8 +116,12 @@ CLI_KEYS = {
     "secondary_airtime_meter_enabled": "secondaryAirtimeMeterEnabled",
     "adaptive_airtime_budget_fraction": "adaptiveAirtimeBudgetFraction",
     "adaptive_airtime_bucket_horizon_us": "adaptiveAirtimeBucketHorizonUs",
+    "adaptive_airtime_initial_bucket_horizon_us": "adaptiveAirtimeInitialBucketHorizonUs",
     "adaptive_airtime_initial_shadow_price": "adaptiveAirtimeInitialShadowPrice",
     "adaptive_airtime_dual_step": "adaptiveAirtimeDualStep",
+    "adaptive_airtime_admission_uses_retry_inflation": (
+        "adaptiveAirtimeAdmissionUsesRetryInflation"
+    ),
     "adaptive_airtime_cost_safety_factor": "adaptiveAirtimeCostSafetyFactor",
     "adaptive_airtime_cost_ewma_alpha": "adaptiveAirtimeCostEwmaAlpha",
     "adaptive_airtime_decision_offsets_us": "adaptiveAirtimeDecisionOffsetsUs",

@@ -149,9 +149,15 @@ AdaptiveAirtimeDuplicationController::SetInitialShadowPrice(double price)
 void
 AdaptiveAirtimeDuplicationController::SetDualStep(double step)
 {
-    NS_ABORT_MSG_IF(!std::isfinite(step) || step <= 0,
-                    "Adaptive airtime dual step must be positive");
+    NS_ABORT_MSG_IF(!std::isfinite(step) || step < 0,
+                    "Adaptive airtime dual step must be nonnegative");
     m_dualStep = step;
+}
+
+void
+AdaptiveAirtimeDuplicationController::SetAdmissionUsesRetryInflation(bool enabled)
+{
+    m_admissionUsesRetryInflation = enabled;
 }
 
 void
@@ -402,15 +408,21 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                                                                     *selectedPacketIndices);
     }
     const double referenceUs = GetReferenceAirtimeUs();
+    double nominalUs = 0;
+    double admissionUs = 0;
     double estimatedUs = 0;
     double normalizedCost = 0;
     double utility = std::numeric_limits<double>::quiet_NaN();
     if (descriptor)
     {
+        nominalUs = EstimateSecondaryAirtimeUs(descriptor->packetCount,
+                                               descriptor->expectedMacServiceBytes,
+                                               1.0);
         estimatedUs = EstimateSecondaryAirtimeUs(descriptor->packetCount,
                                                  descriptor->expectedMacServiceBytes,
                                                  m_retryInflation);
-        normalizedCost = estimatedUs / referenceUs;
+        admissionUs = m_admissionUsesRetryInflation ? estimatedUs : nominalUs;
+        normalizedCost = admissionUs / referenceUs;
         utility = probability - m_shadowPrice * normalizedCost;
     }
 
@@ -422,6 +434,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     {
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -439,6 +452,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     {
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -456,6 +470,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     {
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -475,6 +490,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     {
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -496,6 +512,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
         }
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -515,10 +532,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     reservation.packetCount = descriptor->packetCount;
     reservation.reservedAirtimeUs = estimatedUs;
     reservation.estimatedAirtimeUs = estimatedUs;
-    reservation.nominalAirtimeUs =
-        EstimateSecondaryAirtimeUs(descriptor->packetCount,
-                                    descriptor->expectedMacServiceBytes,
-                                    1.0);
+    reservation.nominalAirtimeUs = nominalUs;
     reservation.deadlineTimeNs = descriptor->deadlineTimeNs;
     reservation.expectedPacketIndices.insert(descriptor->packetIndices.begin(),
                                              descriptor->packetIndices.end());
@@ -535,6 +549,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     {
         WriteDecision(sample,
                       probability,
+                      admissionUs,
                       estimatedUs,
                       referenceUs,
                       normalizedCost,
@@ -555,6 +570,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     ++m_actions;
     WriteDecision(sample,
                   probability,
+                  admissionUs,
                   estimatedUs,
                   referenceUs,
                   normalizedCost,
@@ -630,7 +646,8 @@ void
 AdaptiveAirtimeDuplicationController::WriteHeader()
 {
     m_output << "run_id,frame_id,sample_stage,sample_offset_us,sample_time_ns,"
-                "actionable,calibrated_probability,estimated_airtime_us,"
+                "actionable,calibrated_probability,admission_airtime_us,"
+                "estimated_airtime_us,"
                 "reference_airtime_us,shadow_price,normalized_cost,net_utility,"
                 "airtime_budget_fraction,bucket_capacity_us,bucket_balance_us,"
                 "initial_bucket_capacity_us,"
@@ -649,6 +666,7 @@ AdaptiveAirtimeDuplicationController::WriteHeader()
 void
 AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& sample,
                                                     double probability,
+                                                    double admissionUs,
                                                     double estimatedUs,
                                                     double referenceUs,
                                                     double normalizedCost,
@@ -670,11 +688,12 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
         m_meter ? m_meter->GetMeasuredAirtimeTotalUs() : 0.0;
     m_output << m_runId << ',' << sample.key.frameId << ',' << sample.sampleStage << ','
              << sample.sampleOffsetUs << ',' << sample.sampleTimeNs << ','
-             << sample.actionable << ',' << probability << ',' << estimatedUs << ','
-             << referenceUs << ',' << m_shadowPrice << ',' << normalizedCost << ','
-             << utility << ',' << m_budgetFraction << ',' << m_bucketCapacityUs << ','
-             << balanceUs << ',' << m_initialCapacityUs << ',' << reservedUs << ','
-             << availableUs << ',' << measuredTotal << ',' << decision << ',' << launched;
+             << sample.actionable << ',' << probability << ',' << admissionUs << ','
+             << estimatedUs << ',' << referenceUs << ',' << m_shadowPrice << ','
+             << normalizedCost << ',' << utility << ',' << m_budgetFraction << ','
+             << m_bucketCapacityUs << ',' << balanceUs << ',' << m_initialCapacityUs << ','
+             << reservedUs << ',' << availableUs << ',' << measuredTotal << ',' << decision
+             << ',' << launched;
     if (m_secondaryPacketSelection ==
         AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED)
     {

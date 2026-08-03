@@ -74,6 +74,12 @@ SECONDARY_AIRTIME_SUMMARY_KEYS = {
     "forced_reservation_settlements", "budget_fraction",
     "initial_bucket_capacity_us", "finite_run_budget_us", "budget_excess_us",
 }
+ADAPTIVE_RETRY_INFLATED_COST_DEFINITION = (
+    "retry_inflated_estimated_secondary_sender_phy_tx_airtime"
+)
+ADAPTIVE_NOMINAL_COST_DEFINITION = (
+    "nominal_estimated_secondary_sender_phy_tx_airtime"
+)
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
     "application_bytes_received", "redundant_bytes", "successful_mpdus",
@@ -421,6 +427,38 @@ def _prediction_model_offsets_valid(
     return config.get("model_id") != PRIMARY_T0_MODEL_ID or offsets == [0]
 
 
+def _adaptive_admission_cost_metadata(
+    config: dict[str, Any], object_name: str
+) -> tuple[bool, bool]:
+    """Return retry-inflation use and whether the explicit schema is present."""
+    keys = {
+        "admission_uses_retry_inflation",
+        "admission_cost_definition",
+        "reservation_cost_definition",
+    }
+    present = keys & config.keys()
+    if not present:
+        # Historical outputs priced and reserved the same retry-inflated
+        # estimate, before this distinction was recorded explicitly.
+        return True, False
+    _require(present == keys,
+             f"resolved_config.json: incomplete {object_name} cost metadata")
+    uses_retry_inflation = config.get("admission_uses_retry_inflation")
+    _require(isinstance(uses_retry_inflation, bool),
+             f"resolved_config.json: invalid {object_name}."
+             "admission_uses_retry_inflation")
+    expected_admission = (
+        ADAPTIVE_RETRY_INFLATED_COST_DEFINITION
+        if uses_retry_inflation
+        else ADAPTIVE_NOMINAL_COST_DEFINITION
+    )
+    _require(config.get("admission_cost_definition") == expected_admission and
+             config.get("reservation_cost_definition") ==
+                 ADAPTIVE_RETRY_INFLATED_COST_DEFINITION,
+             f"resolved_config.json: invalid {object_name} cost definition")
+    return uses_retry_inflation, True
+
+
 def _validate_adaptive_config(
     config: dict[str, Any],
     expected_selection: str = "full_forward",
@@ -478,14 +516,20 @@ def _validate_adaptive_config(
     horizon = config.get("bucket_horizon_us")
     _require(isinstance(horizon, int) and not isinstance(horizon, bool) and horizon > 0,
              "resolved_config.json: invalid adaptive bucket horizon")
-    _require(0 < fraction <= 1 and 0 <= initial_price <= 1 and dual_step > 0 and
+    initial_horizon = config.get("initial_bucket_horizon_us", horizon)
+    _require(isinstance(initial_horizon, int) and
+             not isinstance(initial_horizon, bool) and
+             0 < initial_horizon <= horizon,
+             "resolved_config.json: invalid adaptive initial bucket horizon")
+    _require(0 < fraction <= 1 and 0 <= initial_price <= 1 and dual_step >= 0 and
              safety >= 1 and 0 < alpha <= 1,
              "resolved_config.json: adaptive parameter outside its domain")
     initial_capacity = _config_number(
         config, "initial_bucket_capacity_us", object_name
     )
-    _require(_close(initial_capacity, fraction * horizon),
+    _require(_close(initial_capacity, fraction * initial_horizon),
              "resolved_config.json: adaptive initial capacity mismatch")
+    _adaptive_admission_cost_metadata(config, object_name)
     return offsets
 
 
@@ -561,10 +605,25 @@ def _validate_adaptive_decisions(
     fraction = _config_number(config, "budget_fraction", object_name)
     horizon = int(config["bucket_horizon_us"])
     capacity = fraction * horizon
+    initial_capacity_config = _config_number(
+        config, "initial_bucket_capacity_us", object_name
+    )
     initial_price = _config_number(
         config, "initial_shadow_price", object_name
     )
     dual_step = _config_number(config, "dual_step", object_name)
+    uses_retry_inflation, has_cost_metadata = _adaptive_admission_cost_metadata(
+        config, object_name
+    )
+    has_admission_airtime = bool(rows) and "admission_airtime_us" in rows[0]
+    if rows:
+        _require(all(("admission_airtime_us" in row) == has_admission_airtime
+                     for row in rows),
+                 "adaptive decisions: inconsistent admission-airtime schema")
+        _require(not has_cost_metadata or has_admission_airtime,
+                 "adaptive decisions: explicit cost metadata requires admission airtime")
+        _require(uses_retry_inflation or has_admission_airtime,
+                 "adaptive decisions: nominal admission airtime is absent")
     allowed_decisions = {
         "price_rejected", "airtime_deferred", "action", "already_resolved",
         "not_actionable", "launch_rejected", "no_primary_deficit",
@@ -611,6 +670,11 @@ def _validate_adaptive_decisions(
         ), "adaptive decisions: actionability/telemetry mismatch")
         probability = _number(row, "calibrated_probability", file_name)
         estimated = _number(row, "estimated_airtime_us", file_name)
+        admission = (
+            _number(row, "admission_airtime_us", file_name)
+            if has_admission_airtime
+            else estimated
+        )
         reference = _number(row, "reference_airtime_us", file_name)
         shadow = _number(row, "shadow_price", file_name)
         normalized = _number(row, "normalized_cost", file_name)
@@ -625,7 +689,7 @@ def _validate_adaptive_decisions(
         _require(0 <= probability <= 1 and 0 <= shadow <= 1 and reference > 0,
                  "adaptive decisions: probability, price, or reference out of bounds")
         _require(_close(row_fraction, fraction) and _close(row_capacity, capacity) and
-                 _close(initial_capacity, capacity),
+                 _close(initial_capacity, initial_capacity_config),
                  "adaptive decisions: logged configuration mismatch")
         _require(balance <= capacity + 1e-9 and _close(available, balance - reserved),
                  "adaptive decisions: invalid bucket or reservation accounting")
@@ -694,12 +758,15 @@ def _validate_adaptive_decisions(
                          "adaptive deficit decisions: selected packet set is inconsistent")
 
         if estimated > 0:
-            _require(_close(normalized, estimated / reference) and
+            _require(admission > 0 and admission <= estimated + 1e-9 and
+                     (not uses_retry_inflation or _close(admission, estimated)) and
+                     _close(normalized, admission / reference) and
                      math.isfinite(utility) and
                      _close(utility, probability - shadow * normalized),
                      "adaptive decisions: cost or utility arithmetic mismatch")
         else:
-            _require(_close(normalized, 0) and math.isnan(utility),
+            _require(_close(admission, 0) and _close(normalized, 0) and
+                     math.isnan(utility),
                      "adaptive decisions: absent descriptor must have zero cost and NaN utility")
 
         if decision == "action":

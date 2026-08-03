@@ -382,8 +382,10 @@ main(int argc, char* argv[])
     bool secondaryAirtimeMeterEnabled = false;
     double adaptiveAirtimeBudgetFraction = 0.02;
     uint64_t adaptiveAirtimeBucketHorizonUs = 1000000;
+    uint64_t adaptiveAirtimeInitialBucketHorizonUs = 0;
     double adaptiveAirtimeInitialShadowPrice = 0.20;
     double adaptiveAirtimeDualStep = 0.01;
+    bool adaptiveAirtimeAdmissionUsesRetryInflation = true;
     double adaptiveAirtimeCostSafetyFactor = 1.25;
     double adaptiveAirtimeCostEwmaAlpha = 0.10;
     std::string adaptiveAirtimeDecisionOffsetsUs = "0,1000,2000,4000";
@@ -549,12 +551,18 @@ main(int argc, char* argv[])
     command.AddValue("adaptiveAirtimeBucketHorizonUs",
                      "Adaptive airtime token-bucket horizon in microseconds",
                      adaptiveAirtimeBucketHorizonUs);
+    command.AddValue("adaptiveAirtimeInitialBucketHorizonUs",
+                     "Initial credit horizon in microseconds; zero uses the bucket horizon",
+                     adaptiveAirtimeInitialBucketHorizonUs);
     command.AddValue("adaptiveAirtimeInitialShadowPrice",
                      "Initial adaptive airtime shadow price",
                      adaptiveAirtimeInitialShadowPrice);
     command.AddValue("adaptiveAirtimeDualStep",
                      "Adaptive airtime dual-update step size",
                      adaptiveAirtimeDualStep);
+    command.AddValue("adaptiveAirtimeAdmissionUsesRetryInflation",
+                     "Use retry-inflated airtime for admission pricing",
+                     adaptiveAirtimeAdmissionUsesRetryInflation);
     command.AddValue("adaptiveAirtimeCostSafetyFactor",
                      "Pre-launch secondary airtime cost safety factor",
                      adaptiveAirtimeCostSafetyFactor);
@@ -710,6 +718,10 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedPredictionHistoryWindowsUs;
     std::vector<uint64_t> resolvedSelectiveDecisionOffsetsUs;
     std::vector<uint64_t> resolvedAdaptiveDecisionOffsetsUs;
+    const uint64_t resolvedAdaptiveAirtimeInitialBucketHorizonUs =
+        adaptiveAirtimeInitialBucketHorizonUs == 0
+            ? adaptiveAirtimeBucketHorizonUs
+            : adaptiveAirtimeInitialBucketHorizonUs;
     if (predictionTelemetryEnabled)
     {
         NS_ABORT_MSG_IF(predictionPollingIntervalUs == 0,
@@ -786,13 +798,18 @@ main(int argc, char* argv[])
                         "Adaptive airtime budget fraction must be in (0,1]");
         NS_ABORT_MSG_IF(adaptiveAirtimeBucketHorizonUs == 0,
                         "Adaptive airtime bucket horizon must be positive");
+        NS_ABORT_MSG_IF(resolvedAdaptiveAirtimeInitialBucketHorizonUs == 0 ||
+                            resolvedAdaptiveAirtimeInitialBucketHorizonUs >
+                                adaptiveAirtimeBucketHorizonUs,
+                        "Adaptive airtime initial bucket horizon must be positive and no "
+                        "larger than the bucket horizon");
         NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeInitialShadowPrice) ||
                             adaptiveAirtimeInitialShadowPrice < 0 ||
                             adaptiveAirtimeInitialShadowPrice > 1,
                         "Adaptive airtime initial shadow price must be in [0,1]");
         NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeDualStep) ||
-                            adaptiveAirtimeDualStep <= 0,
-                        "Adaptive airtime dual step must be positive");
+                            adaptiveAirtimeDualStep < 0,
+                        "Adaptive airtime dual step must be nonnegative");
         NS_ABORT_MSG_IF(!std::isfinite(adaptiveAirtimeCostSafetyFactor) ||
                             adaptiveAirtimeCostSafetyFactor < 1,
                         "Adaptive airtime cost safety factor must be >= 1");
@@ -2223,8 +2240,12 @@ main(int argc, char* argv[])
     resolved.secondaryAirtimeMeterEnabled = secondaryAirtimeMeterEnabled;
     resolved.adaptiveAirtimeBudgetFraction = adaptiveAirtimeBudgetFraction;
     resolved.adaptiveAirtimeBucketHorizonUs = adaptiveAirtimeBucketHorizonUs;
+    resolved.adaptiveAirtimeInitialBucketHorizonUs =
+        resolvedAdaptiveAirtimeInitialBucketHorizonUs;
     resolved.adaptiveAirtimeInitialShadowPrice = adaptiveAirtimeInitialShadowPrice;
     resolved.adaptiveAirtimeDualStep = adaptiveAirtimeDualStep;
+    resolved.adaptiveAirtimeAdmissionUsesRetryInflation =
+        adaptiveAirtimeAdmissionUsesRetryInflation;
     resolved.adaptiveAirtimeCostSafetyFactor = adaptiveAirtimeCostSafetyFactor;
     resolved.adaptiveAirtimeCostEwmaAlpha = adaptiveAirtimeCostEwmaAlpha;
     resolved.adaptiveAirtimeDecisionOffsetsUs = resolvedAdaptiveDecisionOffsetsUs;
@@ -2505,8 +2526,12 @@ main(int argc, char* argv[])
         }
         adaptiveController->SetBudgetFraction(adaptiveAirtimeBudgetFraction);
         adaptiveController->SetBucketHorizonUs(adaptiveAirtimeBucketHorizonUs);
+        adaptiveController->SetInitialBucketHorizonUs(
+            resolvedAdaptiveAirtimeInitialBucketHorizonUs);
         adaptiveController->SetInitialShadowPrice(adaptiveAirtimeInitialShadowPrice);
         adaptiveController->SetDualStep(adaptiveAirtimeDualStep);
+        adaptiveController->SetAdmissionUsesRetryInflation(
+            adaptiveAirtimeAdmissionUsesRetryInflation);
         adaptiveController->SetCostSafetyFactor(adaptiveAirtimeCostSafetyFactor);
         adaptiveController->SetCostEwmaAlpha(adaptiveAirtimeCostEwmaAlpha);
         adaptiveController->SetDecisionOffsetsUs(resolvedAdaptiveDecisionOffsetsUs);

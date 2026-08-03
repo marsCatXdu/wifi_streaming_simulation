@@ -30,6 +30,7 @@ from plot_adaptive_airtime_duplication import (
     plot_adaptive_airtime,
     summarize_adaptive_runs,
 )
+from run_experiments import CLI_KEYS
 
 
 def adaptive_config() -> dict[str, object]:
@@ -93,6 +94,32 @@ def adaptive_rows() -> list[dict[str, str]]:
             "secondary_launched": "1",
         },
     ]
+
+
+def explicit_cost_config(uses_retry_inflation: bool) -> dict[str, object]:
+    config = adaptive_config()
+    config.update({
+        "admission_uses_retry_inflation": uses_retry_inflation,
+        "admission_cost_definition": (
+            "retry_inflated_estimated_secondary_sender_phy_tx_airtime"
+            if uses_retry_inflation
+            else "nominal_estimated_secondary_sender_phy_tx_airtime"
+        ),
+        "reservation_cost_definition": (
+            "retry_inflated_estimated_secondary_sender_phy_tx_airtime"
+        ),
+    })
+    return config
+
+
+def nominal_admission_rows() -> list[dict[str, str]]:
+    rows = adaptive_rows()
+    for row in rows:
+        row["admission_airtime_us"] = "50"
+        row["normalized_cost"] = "0.5"
+    rows[0]["net_utility"] = "0"
+    rows[1]["net_utility"] = "0.4"
+    return rows
 
 
 def prediction_samples(
@@ -171,6 +198,16 @@ def meter_fixture() -> tuple[
 
 
 class AdaptiveDecisionValidationTest(unittest.TestCase):
+    def test_runner_maps_new_controller_options(self) -> None:
+        self.assertEqual(
+            CLI_KEYS["adaptive_airtime_initial_bucket_horizon_us"],
+            "adaptiveAirtimeInitialBucketHorizonUs",
+        )
+        self.assertEqual(
+            CLI_KEYS["adaptive_airtime_admission_uses_retry_inflation"],
+            "adaptiveAirtimeAdmissionUsesRetryInflation",
+        )
+
     def test_accepts_valid_nondefault_controller_parameters(self) -> None:
         config = adaptive_config()
         self.assertEqual(_validate_adaptive_config(config), [0, 1000])
@@ -182,6 +219,110 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             "run",
         )
         self.assertEqual(estimates, {7: 100.0})
+
+    def test_accepts_limited_initial_credit_horizon(self) -> None:
+        config = adaptive_config()
+        config["initial_bucket_horizon_us"] = 100_000
+        config["initial_bucket_capacity_us"] = 5_000.0
+        self.assertEqual(_validate_adaptive_config(config), [0, 1000])
+
+        rows = adaptive_rows()
+        for row in rows:
+            row["initial_bucket_capacity_us"] = "5000"
+            row["bucket_balance_us"] = "5000"
+            row["available_airtime_us"] = "5000"
+        self.assertEqual(
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
+                "run",
+            ),
+            {7: 100.0},
+        )
+
+    def test_rejects_invalid_initial_credit_horizon_or_capacity(self) -> None:
+        config = adaptive_config()
+        config["initial_bucket_horizon_us"] = 200_001
+        with self.assertRaisesRegex(ValidationError, "initial bucket horizon"):
+            _validate_adaptive_config(config)
+
+        config["initial_bucket_horizon_us"] = 100_000
+        with self.assertRaisesRegex(ValidationError, "initial capacity mismatch"):
+            _validate_adaptive_config(config)
+
+    def test_zero_dual_step_freezes_shadow_price_recurrence(self) -> None:
+        config = adaptive_config()
+        config.update({"stages": ["T0"], "decision_offsets_us": [0], "dual_step": 0.0})
+        first = adaptive_rows()[0]
+        second = copy.deepcopy(first)
+        second.update({
+            "frame_id": "8",
+            "sample_time_ns": "2000000",
+            "measured_airtime_total_us": "100",
+        })
+        samples = {
+            (7, 0): prediction_samples()[(7, 0)],
+            (8, 0): {
+                **prediction_samples()[(7, 0)],
+                "frame_id": "8",
+                "sample_time_ns": "2000000",
+                "generation_time_ns": "2000000",
+                "deadline_time_ns": "35333000",
+            },
+        }
+        self.assertEqual(
+            _validate_adaptive_decisions(
+                [first, second],
+                config,
+                [
+                    {"frame_id": "7", "generation_time_us": "1000"},
+                    {"frame_id": "8", "generation_time_us": "2000"},
+                ],
+                samples,
+                "run",
+            ),
+            {},
+        )
+
+    def test_rejects_negative_dual_step(self) -> None:
+        config = adaptive_config()
+        config["dual_step"] = -0.01
+        with self.assertRaisesRegex(ValidationError, "outside its domain"):
+            _validate_adaptive_config(config)
+
+    def test_accepts_nominal_admission_with_inflated_reservation(self) -> None:
+        estimates = _validate_adaptive_decisions(
+            nominal_admission_rows(),
+            explicit_cost_config(False),
+            [{"frame_id": "7", "generation_time_us": "1000"}],
+            prediction_samples(),
+            "run",
+        )
+        self.assertEqual(estimates, {7: 100.0})
+
+    def test_rejects_nominal_admission_without_explicit_airtime(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "requires admission airtime"):
+            _validate_adaptive_decisions(
+                adaptive_rows(),
+                explicit_cost_config(False),
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
+                "run",
+            )
+
+    def test_rejects_admission_airtime_above_reservation(self) -> None:
+        rows = nominal_admission_rows()
+        rows[1]["estimated_airtime_us"] = "40"
+        with self.assertRaisesRegex(ValidationError, "arithmetic"):
+            _validate_adaptive_decisions(
+                rows,
+                explicit_cost_config(False),
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                prediction_samples(),
+                "run",
+            )
 
     def test_accepts_submicrosecond_generation_precision_from_telemetry(self) -> None:
         rows = adaptive_rows()

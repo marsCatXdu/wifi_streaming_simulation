@@ -377,6 +377,43 @@ class AdaptiveAirtimeDuplicationControllerTestAccess
     }
 
     /**
+     * Apply a shadow-price update at a deterministic timestamp.
+     *
+     * @param controller Controller under test.
+     * @param nowNs Update time in nanoseconds.
+     */
+    static void UpdateShadowPrice(Ptr<AdaptiveAirtimeDuplicationController> controller,
+                                  uint64_t nowNs)
+    {
+        controller->UpdateShadowPrice(nowNs);
+    }
+
+    /**
+     * Set measured airtime pending the next shadow-price update.
+     *
+     * @param controller Controller under test.
+     * @param measuredUs Pending measured airtime in microseconds.
+     */
+    static void SetMeasuredSinceLastT0Us(
+        Ptr<AdaptiveAirtimeDuplicationController> controller,
+        double measuredUs)
+    {
+        controller->m_measuredSinceLastT0Us = measuredUs;
+    }
+
+    /**
+     * Set retry inflation for deterministic admission-versus-reservation checks.
+     *
+     * @param controller Controller under test.
+     * @param inflation Retry inflation multiplier.
+     */
+    static void SetRetryInflation(Ptr<AdaptiveAirtimeDuplicationController> controller,
+                                  double inflation)
+    {
+        controller->m_retryInflation = inflation;
+    }
+
+    /**
      * Return the maximum token balance.
      *
      * @param controller Controller under test.
@@ -1683,6 +1720,10 @@ class OutputStatisticsTestCase : public TestCase
         StreamingRunConfig adaptiveConfig;
         adaptiveConfig.runId = "adaptive-stages";
         adaptiveConfig.policy = "adaptive_airtime_duplication";
+        adaptiveConfig.adaptiveAirtimeBudgetFraction = 0.05;
+        adaptiveConfig.adaptiveAirtimeBucketHorizonUs = 200000;
+        adaptiveConfig.adaptiveAirtimeInitialBucketHorizonUs = 100000;
+        adaptiveConfig.adaptiveAirtimeAdmissionUsesRetryInflation = false;
         adaptiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 1500};
         ExperimentOutput::WriteResolvedConfig(adaptiveDirectory, adaptiveConfig);
         std::ifstream adaptiveResolved(adaptiveDirectory + "/resolved_config.json");
@@ -1692,6 +1733,30 @@ class OutputStatisticsTestCase : public TestCase
                                   "\"stages\": [\"T0\", \"offset_1500us\"]"),
                               std::string::npos,
                               "Adaptive resolved stages do not follow configured offsets");
+        NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
+                                  "\"initial_bucket_horizon_us\": 100000"),
+                              std::string::npos,
+                              "Adaptive resolved initial horizon is missing");
+        NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
+                                  "\"initial_bucket_capacity_us\": 5000"),
+                              std::string::npos,
+                              "Adaptive initial capacity does not use its own horizon");
+        NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
+                                  "\"admission_uses_retry_inflation\": false"),
+                              std::string::npos,
+                              "Adaptive admission inflation mode is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"admission_cost_definition\": "
+                "\"nominal_estimated_secondary_sender_phy_tx_airtime\""),
+            std::string::npos,
+            "Adaptive nominal admission cost definition is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"reservation_cost_definition\": "
+                "\"retry_inflated_estimated_secondary_sender_phy_tx_airtime\""),
+            std::string::npos,
+            "Adaptive inflated reservation cost definition is missing");
 
         const std::string deficitDirectory = directory + "/deficit";
         ExperimentOutput::PrepareRunDirectory(deficitDirectory);
@@ -2904,6 +2969,22 @@ class AdaptiveAirtimeBucketCreditTestCase : public TestCase
                                   1e-9,
                                   "Legacy bucket did not start full");
 
+        auto fixedGate = CreateObject<AdaptiveAirtimeDuplicationController>();
+        fixedGate->SetInitialShadowPrice(0.37);
+        fixedGate->SetDualStep(0.0);
+        AdaptiveAirtimeDuplicationControllerTestAccess::Initialize(fixedGate,
+                                                                   initializeTimeNs);
+        AdaptiveAirtimeDuplicationControllerTestAccess::SetMeasuredSinceLastT0Us(
+            fixedGate,
+            10000.0);
+        AdaptiveAirtimeDuplicationControllerTestAccess::UpdateShadowPrice(
+            fixedGate,
+            initializeTimeNs + 1000000);
+        NS_TEST_ASSERT_MSG_EQ_TOL(fixedGate->GetShadowPrice(),
+                                  0.37,
+                                  1e-12,
+                                  "Zero dual step did not freeze the shadow price");
+
         NS_TEST_ASSERT_MSG_EQ(
             AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(
                 bucketHorizonUs,
@@ -2991,6 +3072,8 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         controller->SetBucketHorizonUs(1000000);
         controller->SetInitialShadowPrice(0.20);
         controller->SetDualStep(0.01);
+        controller->SetAdmissionUsesRetryInflation(false);
+        AdaptiveAirtimeDuplicationControllerTestAccess::SetRetryInflation(controller, 2.0);
         controller->SetCostSafetyFactor(1.25);
         controller->SetCostEwmaAlpha(0.10);
         controller->SetDecisionOffsetsUs({0, 1000, 2000, 4000});
@@ -3062,16 +3145,29 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
                               "Adaptive decision CSV is missing");
         std::string header;
         std::getline(decisions, header);
-        NS_TEST_ASSERT_MSG_EQ(header.find("shadow_price") != std::string::npos,
+        std::stringstream headerStream(header);
+        std::string columnName;
+        std::vector<std::string> columnNames;
+        std::map<std::string, std::size_t> columns;
+        while (std::getline(headerStream, columnName, ','))
+        {
+            columns.emplace(columnName, columnNames.size());
+            columnNames.push_back(columnName);
+        }
+        NS_TEST_ASSERT_MSG_EQ(columns.contains("shadow_price"),
                               true,
                               "Adaptive decision schema is missing shadow_price");
-        NS_TEST_ASSERT_MSG_EQ(header.find("primary_acked_packet_indices"),
-                              std::string::npos,
+        NS_TEST_ASSERT_MSG_EQ(columns.contains("admission_airtime_us"),
+                              true,
+                              "Adaptive decision schema is missing admission airtime");
+        NS_TEST_ASSERT_MSG_EQ(columns.contains("primary_acked_packet_indices"),
+                              false,
                               "Whole-copy adaptive decision schema changed unexpectedly");
         std::map<uint64_t, uint32_t> actionsByFrame;
         std::map<uint64_t, bool> rejectedThenActed;
         std::vector<double> t0Prices;
         bool sawAirtimeDeferred = false;
+        bool sawInflatedReservation = false;
         std::string line;
         while (std::getline(decisions, line))
         {
@@ -3086,16 +3182,35 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
             {
                 fields.push_back(field);
             }
-            NS_TEST_ASSERT_MSG_EQ(fields.size() >= 21,
-                                  true,
+            NS_TEST_ASSERT_MSG_EQ(fields.size(),
+                                  columnNames.size(),
                                   "Adaptive decision row is truncated");
-            const uint64_t frameId = std::stoull(fields[1]);
-            if (fields[2] == "T0")
+            const auto get = [&fields, &columns](const std::string& name) -> const std::string& {
+                return fields.at(columns.at(name));
+            };
+            const uint64_t frameId = std::stoull(get("frame_id"));
+            if (get("sample_stage") == "T0")
             {
-                t0Prices.push_back(std::stod(fields[9]));
+                t0Prices.push_back(std::stod(get("shadow_price")));
             }
-            const std::string decision = fields[19];
-            const bool launched = fields[20] == "1";
+            const std::string decision = get("decision");
+            const bool launched = get("secondary_launched") == "1";
+            const double admissionUs = std::stod(get("admission_airtime_us"));
+            const double estimatedUs = std::stod(get("estimated_airtime_us"));
+            if (estimatedUs > 0)
+            {
+                const double referenceUs = std::stod(get("reference_airtime_us"));
+                const double normalizedCost = std::stod(get("normalized_cost"));
+                NS_TEST_ASSERT_MSG_EQ_TOL(normalizedCost,
+                                          admissionUs / referenceUs,
+                                          1e-9,
+                                          "Normalized cost did not use nominal admission airtime");
+                NS_TEST_ASSERT_MSG_EQ(estimatedUs + 1e-9 >= admissionUs,
+                                      true,
+                                      "Retry-inflated reservation fell below nominal admission");
+                sawInflatedReservation =
+                    sawInflatedReservation || estimatedUs > admissionUs + 1e-9;
+            }
             if (decision == "price_rejected")
             {
                 rejectedThenActed[frameId] = false;
@@ -3141,6 +3256,10 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(sawAirtimeDeferred,
                               true,
                               "Controller test never exercised airtime deferral");
+        NS_TEST_ASSERT_MSG_EQ(sawInflatedReservation,
+                              true,
+                              "Controller test did not separate nominal admission from an "
+                              "inflated reservation");
         bool sawPriceRise = false;
         bool sawPriceFall = false;
         for (std::size_t index = 1; index < t0Prices.size(); ++index)

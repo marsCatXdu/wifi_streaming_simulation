@@ -272,6 +272,22 @@ of secondary sender PHY TX airtime. A token bucket limits measured airtime;
 outstanding estimates are reservations and do not reduce the earned balance
 until a tagged PPDU actually transmits.
 
+The bucket horizon sets the maximum balance. The independently configurable
+initial horizon sets only startup credit and defaults to the maximum horizon,
+preserving historical full-bucket startup behavior. The initial horizon must
+be positive and no larger than the maximum. A zero dual-update step freezes the
+initial shadow price, making it an explicit fixed risk-density gate while the
+measured-airtime token bucket remains the hard admission authority.
+
+By default, both utility and reservation accounting use the retry-inflated
+airtime estimate. `adaptive_airtime_admission_uses_retry_inflation = false`
+instead prices utility with nominal candidate airtime. Token availability,
+reservation, settlement, and measured-airtime debt remain retry-inflated or
+measured, so this option does not weaken the airtime safety boundary.
+`adaptive_airtime_decisions.csv` records `admission_airtime_us` separately from
+the retry-inflated `estimated_airtime_us`; resolved configuration records both
+cost definitions and the selected admission mode.
+
 `SecondaryAirtimeMeter` observes path-0 sender `PhyTxPsduBegin` events in the
 half-open measurement interval. It counts a tagged data PPDU once, allocates a
 multi-frame PPDU in proportion to tagged MPDU bytes, and counts retransmissions

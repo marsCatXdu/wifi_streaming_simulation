@@ -618,13 +618,24 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"budget_fraction\": " << config.adaptiveAirtimeBudgetFraction << ",\n"
                << "    \"bucket_horizon_us\": " << config.adaptiveAirtimeBucketHorizonUs
                << ",\n"
+               << "    \"initial_bucket_horizon_us\": "
+               << config.adaptiveAirtimeInitialBucketHorizonUs << ",\n"
                << "    \"initial_bucket_capacity_us\": "
                << config.adaptiveAirtimeBudgetFraction *
-                      static_cast<double>(config.adaptiveAirtimeBucketHorizonUs)
+                      static_cast<double>(config.adaptiveAirtimeInitialBucketHorizonUs)
                << ",\n"
                << "    \"initial_shadow_price\": "
                << config.adaptiveAirtimeInitialShadowPrice << ",\n"
                << "    \"dual_step\": " << config.adaptiveAirtimeDualStep << ",\n"
+               << "    \"admission_uses_retry_inflation\": "
+               << config.adaptiveAirtimeAdmissionUsesRetryInflation << ",\n"
+               << "    \"admission_cost_definition\": \""
+               << (config.adaptiveAirtimeAdmissionUsesRetryInflation
+                       ? "retry_inflated_estimated_secondary_sender_phy_tx_airtime"
+                       : "nominal_estimated_secondary_sender_phy_tx_airtime")
+               << "\",\n"
+               << "    \"reservation_cost_definition\": "
+                  "\"retry_inflated_estimated_secondary_sender_phy_tx_airtime\",\n"
                << "    \"cost_safety_factor\": " << config.adaptiveAirtimeCostSafetyFactor
                << ",\n"
                << "    \"cost_ewma_alpha\": " << config.adaptiveAirtimeCostEwmaAlpha << ",\n"

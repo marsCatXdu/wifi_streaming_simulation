@@ -151,8 +151,10 @@ struct StreamingRunConfig
     bool secondaryAirtimeMeterEnabled{false};
     double adaptiveAirtimeBudgetFraction{0};
     uint64_t adaptiveAirtimeBucketHorizonUs{0};
+    uint64_t adaptiveAirtimeInitialBucketHorizonUs{0}; ///< Startup-credit horizon.
     double adaptiveAirtimeInitialShadowPrice{0};
     double adaptiveAirtimeDualStep{0};
+    bool adaptiveAirtimeAdmissionUsesRetryInflation{true}; ///< Admission cost mode.
     double adaptiveAirtimeCostSafetyFactor{0};
     double adaptiveAirtimeCostEwmaAlpha{0};
     std::vector<uint64_t> adaptiveAirtimeDecisionOffsetsUs;

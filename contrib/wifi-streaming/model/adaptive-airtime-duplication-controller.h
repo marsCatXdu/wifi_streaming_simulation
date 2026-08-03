@@ -125,9 +125,23 @@ class AdaptiveAirtimeDuplicationController : public Object
     /**
      * Set the dual-update step size.
      *
-     * @param step Positive step.
+     * A zero step freezes the shadow price at its initial value, yielding a
+     * fixed risk-density gate while retaining token-bucket enforcement.
+     *
+     * @param step Nonnegative step.
      */
     void SetDualStep(double step);
+
+    /**
+     * Select whether admission pricing includes retry inflation.
+     *
+     * Reservation and token-availability accounting always use the
+     * retry-inflated estimate. Disabling this option uses nominal airtime only
+     * for normalized admission cost and utility.
+     *
+     * @param enabled True to use retry-inflated admission cost.
+     */
+    void SetAdmissionUsesRetryInflation(bool enabled);
 
     /**
      * Set the pre-launch cost safety factor.
@@ -312,7 +326,8 @@ class AdaptiveAirtimeDuplicationController : public Object
      *
      * @param sample Causal prediction sample.
      * @param probability Calibrated miss probability.
-     * @param estimatedUs Estimated secondary airtime in microseconds.
+     * @param admissionUs Airtime used to price admission in microseconds.
+     * @param estimatedUs Retry-inflated reservation airtime in microseconds.
      * @param referenceUs Reference airtime in microseconds.
      * @param normalizedCost Estimated cost divided by reference cost.
      * @param utility Net admission utility.
@@ -326,6 +341,7 @@ class AdaptiveAirtimeDuplicationController : public Object
      */
     void WriteDecision(const PredictionSample& sample,
                        double probability,
+                       double admissionUs,
                        double estimatedUs,
                        double referenceUs,
                        double normalizedCost,
@@ -349,6 +365,7 @@ class AdaptiveAirtimeDuplicationController : public Object
     std::optional<uint64_t> m_initialBucketHorizonUs; ///< Explicit startup-credit horizon.
     double m_initialShadowPrice{0.20}; ///< Initial dual variable.
     double m_dualStep{0.01}; ///< Dual update step.
+    bool m_admissionUsesRetryInflation{true}; ///< Whether admission includes retry inflation.
     double m_costSafetyFactor{1.25}; ///< Pre-launch safety factor.
     double m_costEwmaAlpha{0.10}; ///< Retry-inflation EWMA alpha.
     double m_retryInflation{1.0}; ///< Current k_t.
