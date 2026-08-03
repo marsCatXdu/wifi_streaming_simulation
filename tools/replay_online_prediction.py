@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import gc
+import hashlib
 import json
 import os
 import resource
@@ -59,6 +60,17 @@ def _json(path: Path) -> dict[str, Any]:
 def _csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as source:
         return list(csv.DictReader(source))
+
+
+def _canonical_sha256(value: Any) -> str:
+    """Hash a JSON value using the model-export canonical encoding."""
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def _atomic_directory(destination: Path, operation: Any) -> Any:
@@ -181,8 +193,20 @@ def train_bundle(args: argparse.Namespace) -> dict[str, Any]:
     def publish(staging: Path) -> dict[str, Any]:
         model_path = staging / "model_bundle.pkl"
         write_model_bundle(model_path, bundle)
+        target_provenance = {
+            "target_id": "primary_copy_deadline_miss",
+            "source_column": "deadline_miss",
+            "source_equivalence": "fixed_link_copy_0_equals_union",
+            "treatment_free": True,
+            "selected_policy": f"fixed_link_{bundle.primary_link}",
+            "path_id": bundle.primary_link,
+            "copy_id": 0,
+            "prediction_stages": list(replay["stages"]),
+            "dataset_sha256": bundle.dataset_sha256,
+        }
         bundle_manifest = {
             "model_bundle_schema_version": MODEL_BUNDLE_SCHEMA_VERSION,
+            "model_id": "commodity_polling_1ms_genuine_v1",
             "model_file": model_path.name,
             "model_sha256": sha256_file(model_path),
             "dataset_schema_version": manifest["dataset_schema_version"],
@@ -195,6 +219,8 @@ def train_bundle(args: argparse.Namespace) -> dict[str, Any]:
             "replay_config_sha256": bundle.replay_config_sha256,
             "primary_link": bundle.primary_link,
             "primary_band": replay["primary_band"],
+            "target_provenance": target_provenance,
+            "target_provenance_sha256": _canonical_sha256(target_provenance),
             "median_frame_size_bytes": bundle.median_frame_size_bytes,
             "p99_frame_size_bytes": bundle.p99_frame_size_bytes,
             "predictors": [

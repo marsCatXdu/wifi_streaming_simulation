@@ -505,6 +505,9 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
     {
         output << "  \"selectiveDuplication\": {\n"
                << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
+               << "    \"target_id\": \"" << PredictionModelEvaluator::GetTargetId() << "\",\n"
+               << "    \"target_provenance_sha256\": \""
+               << PredictionModelEvaluator::GetTargetProvenanceSha256() << "\",\n"
                << "    \"source_model_sha256\": \""
                << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
                << "    \"feature_set\": \"F0+F1-degraded\",\n"
@@ -546,6 +549,9 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                                   : "adaptiveAirtimeDuplication")
                << "\": {\n"
                << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
+               << "    \"target_id\": \"" << PredictionModelEvaluator::GetTargetId() << "\",\n"
+               << "    \"target_provenance_sha256\": \""
+               << PredictionModelEvaluator::GetTargetProvenanceSha256() << "\",\n"
                << "    \"source_model_sha256\": \""
                << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
                << "    \"feature_set\": \"F0+F1-degraded\",\n"

@@ -3558,6 +3558,16 @@ class PredictionModelParityTestCase : public TestCase
     void
     DoRun() override
     {
+        NS_TEST_ASSERT_MSG_EQ(PredictionModelEvaluator::GetModelId(),
+                              prediction_model_golden_v1::g_modelId,
+                              "Compiled model identity differs from its golden artifact");
+        NS_TEST_ASSERT_MSG_EQ(PredictionModelEvaluator::GetTargetId(),
+                              prediction_model_golden_v1::g_targetId,
+                              "Compiled target identity differs from its golden artifact");
+        NS_TEST_ASSERT_MSG_EQ(
+            PredictionModelEvaluator::GetTargetProvenanceSha256(),
+            prediction_model_golden_v1::g_targetProvenanceSha256,
+            "Compiled target provenance differs from its golden artifact");
         const auto names = PredictionModelEvaluator::GetFeatureNames();
         NS_TEST_ASSERT_MSG_EQ(names.size(), 86, "Unexpected compiled feature count");
         NS_TEST_ASSERT_MSG_EQ(names.front(),

@@ -16,6 +16,9 @@ TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from validate_outputs import (
+    PRIMARY_T0_MODEL_ID,
+    PRIMARY_TARGET_ID,
+    PRIMARY_TARGET_PROVENANCE_SHA256,
     ValidationError,
     _validate_adaptive_config,
     _validate_adaptive_decisions,
@@ -353,6 +356,21 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
     def test_rejects_non_hex_model_hash(self) -> None:
         config = adaptive_config()
         config["source_model_sha256"] = "z" * 64
+        with self.assertRaisesRegex(ValidationError, "provenance"):
+            _validate_adaptive_config(config)
+
+    def test_accepts_primary_t0_target_provenance(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "model_id": PRIMARY_T0_MODEL_ID,
+            "target_id": PRIMARY_TARGET_ID,
+            "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+        })
+        self.assertEqual(_validate_adaptive_config(config), [0, 1000])
+
+    def test_rejects_primary_t0_without_target_provenance(self) -> None:
+        config = adaptive_config()
+        config["model_id"] = PRIMARY_T0_MODEL_ID
         with self.assertRaisesRegex(ValidationError, "provenance"):
             _validate_adaptive_config(config)
 

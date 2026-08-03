@@ -91,6 +91,20 @@ std::span<const std::string_view> GetFeatureNames();
 std::string_view GetModelId();
 
 /**
+ * Get the predicted target identifier.
+ *
+ * @return Target identifier.
+ */
+std::string_view GetTargetId();
+
+/**
+ * Get the SHA-256 of the canonical target-provenance object.
+ *
+ * @return Lowercase hexadecimal SHA-256.
+ */
+std::string_view GetTargetProvenanceSha256();
+
+/**
  * Get the SHA-256 of the exported Python model bundle.
  *
  * @return Lowercase hexadecimal SHA-256.

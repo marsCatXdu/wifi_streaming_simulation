@@ -78,6 +78,18 @@ PredictionModelEvaluator::GetModelId()
 }
 
 std::string_view
+PredictionModelEvaluator::GetTargetId()
+{
+    return prediction_model_v1::GetTargetId();
+}
+
+std::string_view
+PredictionModelEvaluator::GetTargetProvenanceSha256()
+{
+    return prediction_model_v1::GetTargetProvenanceSha256();
+}
+
+std::string_view
 PredictionModelEvaluator::GetSourceModelSha256()
 {
     return prediction_model_v1::GetSourceModelSha256();

@@ -168,7 +168,10 @@ def run_closed_matrix(phase: str, config: Path, result_root: Path, workers: int)
             continue
         selective_count += 1
         model_id = value.get("selectiveDuplication", {}).get("model_id")
-        if model_id != "commodity_polling_1ms_genuine_v1":
+        if model_id not in {
+            "commodity_polling_1ms_genuine_v1",
+            "commodity_polling_1ms_obss_primary_t0_v1",
+        }:
             raise ValueError(f"{config_path}: closed loop used legacy predictor {model_id}")
     if selective_count == 0:
         raise ValueError(f"{result_root}: no selective-duplication runs")

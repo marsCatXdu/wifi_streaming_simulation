@@ -53,6 +53,20 @@ class PredictionModelEvaluator
     static std::string_view GetModelId();
 
     /**
+     * Get the identifier of the outcome predicted by the compiled model.
+     *
+     * @return Target identifier.
+     */
+    static std::string_view GetTargetId();
+
+    /**
+     * Get the SHA-256 digest of the canonical target-provenance object.
+     *
+     * @return Lowercase hexadecimal SHA-256 digest.
+     */
+    static std::string_view GetTargetProvenanceSha256();
+
+    /**
      * Get the SHA-256 digest of the source Python model bundle.
      *
      * @return Lowercase hexadecimal SHA-256 digest.

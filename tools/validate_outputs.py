@@ -110,6 +110,11 @@ PREDICTION_SCHEMA_VERSION = 3
 PREDICTION_POLLING_SCHEMA_VERSION = 1
 PREDICTION_EVENT_SCHEMA_VERSION = 2
 PREDICTION_SUPPORT_MASK_VERSION = 2
+PRIMARY_T0_MODEL_ID = "commodity_polling_1ms_obss_primary_t0_v1"
+PRIMARY_TARGET_ID = "primary_copy_deadline_miss"
+PRIMARY_TARGET_PROVENANCE_SHA256 = (
+    "b9d214c16b56af93042b228b09098ccbe3eec26c786e82ea47caf2161e48a1dc"
+)
 PREDICTION_BASE_COLUMNS = {
     "telemetry_schema_version", "run_id", "frame_id", "path_id", "copy_id",
     "sample_stage", "sample_offset_us", "sample_time_ns",
@@ -391,6 +396,24 @@ def _summary_integer(summary: dict[str, Any], key: str) -> int:
     return value
 
 
+def _prediction_target_provenance_valid(config: dict[str, Any]) -> bool:
+    """Check target identity while preserving validation of historical outputs."""
+    target_id = config.get("target_id")
+    target_sha = config.get("target_provenance_sha256")
+    if config.get("model_id") == PRIMARY_T0_MODEL_ID:
+        return (
+            target_id == PRIMARY_TARGET_ID
+            and target_sha == PRIMARY_TARGET_PROVENANCE_SHA256
+        )
+    if target_id is None and target_sha is None:
+        return True
+    return (
+        target_id == PRIMARY_TARGET_ID
+        and isinstance(target_sha, str)
+        and re.fullmatch(r"[0-9a-f]{64}", target_sha) is not None
+    )
+
+
 def _validate_adaptive_config(
     config: dict[str, Any],
     expected_selection: str = "full_forward",
@@ -405,7 +428,10 @@ def _validate_adaptive_config(
         else "adaptiveAirtimeDuplication"
     )
     _require(
-        config.get("model_id") == "commodity_polling_1ms_genuine_v1" and
+        config.get("model_id") in {
+            "commodity_polling_1ms_genuine_v1", PRIMARY_T0_MODEL_ID,
+        } and
+        _prediction_target_provenance_valid(config) and
         isinstance(source_sha, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha) is not None and
         config.get("feature_set") == "F0+F1-degraded" and
         config.get("degradation_profile") == "polling_1ms" and
@@ -2051,7 +2077,9 @@ def validate_run(
             selective_config.get("model_id") in {
                 "commodity_polling_1ms_genuine_v1",
                 "commodity_polling_1ms_legacy_frame_delayed_v1",
+                PRIMARY_T0_MODEL_ID,
             } and
+            _prediction_target_provenance_valid(selective_config) and
             isinstance(selective_config.get("source_model_sha256"), str) and
             re.fullmatch(r"[0-9a-f]{64}", selective_config["source_model_sha256"])
             is not None and

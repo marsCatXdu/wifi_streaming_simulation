@@ -54,6 +54,20 @@ class GenuinePollingPipelineTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "legacy predictor"):
                     pipeline.run_closed_matrix("phase", Path("config"), root, 1)
 
+    def test_closed_matrix_accepts_primary_t0_predictor(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = root / "run"
+            run.mkdir()
+            (run / "resolved_config.json").write_text(json.dumps({
+                "policy": "selective_duplication",
+                "selectiveDuplication": {
+                    "model_id": "commodity_polling_1ms_obss_primary_t0_v1"
+                },
+            }))
+            with patch.object(pipeline, "run_matrix"):
+                pipeline.run_closed_matrix("phase", Path("config"), root, 1)
+
     def test_evaluation_preserves_incomplete_output_and_uses_frozen_seed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
