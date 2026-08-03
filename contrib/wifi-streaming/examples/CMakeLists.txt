@@ -21,7 +21,9 @@ execute_process(
 if(NOT wifi_streaming_project_commit)
   set(wifi_streaming_project_commit "unknown")
 endif()
-target_compile_definitions(
-  streaming-experiment
-  PRIVATE WIFI_STREAMING_PROJECT_COMMIT="${wifi_streaming_project_commit}"
-)
+if(TARGET streaming-experiment)
+  target_compile_definitions(
+    streaming-experiment
+    PRIVATE WIFI_STREAMING_PROJECT_COMMIT="${wifi_streaming_project_commit}"
+  )
+endif()
