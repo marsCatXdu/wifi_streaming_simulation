@@ -76,6 +76,16 @@ OpenOutput(const std::string& outputDir, const std::string& fileName)
     return output;
 }
 
+std::string
+DecisionStageName(uint64_t offsetUs)
+{
+    if (offsetUs % 1000 == 0)
+    {
+        return "T" + std::to_string(offsetUs / 1000);
+    }
+    return "offset_" + std::to_string(offsetUs) + "us";
+}
+
 template <typename T>
 void
 WriteCsvOptional(std::ostream& output, const std::optional<T>& value)
@@ -468,11 +478,12 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"degradation_profile\": \"polling_1ms\",\n"
                << "    \"calibration\": \"platt\",\n"
                << "    \"stages\": [";
-        for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
+        for (std::size_t index = 0; index < config.selectiveDuplicationDecisionOffsetsUs.size();
              ++index)
         {
-            output << (index == 0 ? "" : ", ") << "\"T"
-                   << config.adaptiveAirtimeDecisionOffsetsUs[index] / 1000 << "\"";
+            output << (index == 0 ? "" : ", ") << '"'
+                   << DecisionStageName(config.selectiveDuplicationDecisionOffsetsUs[index])
+                   << '"';
         }
         output << "],\n"
                << "    \"primary_path\": 1,\n"
@@ -502,7 +513,14 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"feature_set\": \"F0+F1-degraded\",\n"
                << "    \"degradation_profile\": \"polling_1ms\",\n"
                << "    \"calibration\": \"platt\",\n"
-               << "    \"stages\": [\"T0\", \"T1\", \"T2\", \"T4\"],\n"
+               << "    \"stages\": [";
+        for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
+             ++index)
+        {
+            output << (index == 0 ? "" : ", ") << '"'
+                   << DecisionStageName(config.adaptiveAirtimeDecisionOffsetsUs[index]) << '"';
+        }
+        output << "],\n"
                << "    \"primary_path\": 1,\n"
                << "    \"secondary_path\": 0,\n"
                << "    \"budget_definition\": \"secondary_sender_phy_tx_airtime\",\n"

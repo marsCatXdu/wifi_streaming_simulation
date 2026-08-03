@@ -1509,6 +1509,37 @@ class OutputStatisticsTestCase : public TestCase
         StreamingRunConfig config;
         config.runId = "schema-test";
         ExperimentOutput::WriteResolvedConfig(directory, config);
+
+        const std::string adaptiveDirectory = directory + "/adaptive";
+        ExperimentOutput::PrepareRunDirectory(adaptiveDirectory);
+        StreamingRunConfig adaptiveConfig;
+        adaptiveConfig.runId = "adaptive-stages";
+        adaptiveConfig.policy = "adaptive_airtime_duplication";
+        adaptiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 1500};
+        ExperimentOutput::WriteResolvedConfig(adaptiveDirectory, adaptiveConfig);
+        std::ifstream adaptiveResolved(adaptiveDirectory + "/resolved_config.json");
+        std::ostringstream adaptiveText;
+        adaptiveText << adaptiveResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
+                                  "\"stages\": [\"T0\", \"offset_1500us\"]"),
+                              std::string::npos,
+                              "Adaptive resolved stages do not follow configured offsets");
+
+        const std::string selectiveDirectory = directory + "/selective";
+        ExperimentOutput::PrepareRunDirectory(selectiveDirectory);
+        StreamingRunConfig selectiveConfig;
+        selectiveConfig.runId = "selective-stages";
+        selectiveConfig.policy = "selective_duplication";
+        selectiveConfig.selectiveDuplicationDecisionOffsetsUs = {0, 2500};
+        selectiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 1000, 2000, 4000};
+        ExperimentOutput::WriteResolvedConfig(selectiveDirectory, selectiveConfig);
+        std::ifstream selectiveResolved(selectiveDirectory + "/resolved_config.json");
+        std::ostringstream selectiveText;
+        selectiveText << selectiveResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(selectiveText.str().find(
+                                  "\"stages\": [\"T0\", \"offset_2500us\"]"),
+                              std::string::npos,
+                              "Selective resolved stages use the wrong offset list");
         StreamingBuildInfo build;
         build.ns3Version = "ns-3.48";
         build.ns3UpstreamCommit = ExperimentOutput::NS3_UPSTREAM_COMMIT;
