@@ -251,6 +251,7 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
         summary: dict[str, object],
         meter: dict[str, object],
         links: list[dict[str, str]],
+        action_estimate: float = 100.0,
     ) -> None:
         _validate_secondary_airtime(
             events,
@@ -261,7 +262,7 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
             "adaptive_airtime_duplication",
             "run",
             adaptive_config(),
-            {7: 100.0},
+            {7: action_estimate},
             {7},
             0.0,
         )
@@ -282,6 +283,25 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
         fixture[1][0]["released_airtime_us"] = "19"
         with self.assertRaisesRegex(ValidationError, "released reservation"):
             self.validate_fixture(*fixture)
+
+    def test_accepts_precision_rounded_released_reservation(self) -> None:
+        fixture = list(meter_fixture())
+        estimate = 2025.22118035
+        measured = 2025.2
+        fixture[0] = copy.deepcopy(fixture[0])
+        fixture[0][0]["ppdu_duration_us"] = str(measured)
+        fixture[0][0]["cumulative_tagged_airtime_us"] = str(measured)
+        fixture[1] = copy.deepcopy(fixture[1])
+        fixture[1][0]["released_airtime_us"] = "0.0211803524214"
+        fixture[1][0]["measured_airtime_us"] = str(measured)
+        fixture[2] = copy.deepcopy(fixture[2])
+        fixture[2]["tagged_secondary_tx_airtime_us"] = measured
+        fixture[2]["tagged_secondary_tx_airtime_fraction"] = measured / 10_000.0
+        fixture[2]["estimated_action_airtime_us"] = estimate
+        fixture[2]["actual_to_estimated_airtime_ratio"] = measured / estimate
+        fixture[4] = copy.deepcopy(fixture[4])
+        fixture[4][0]["phy_tx_time_us"] = "2100"
+        self.validate_fixture(*fixture, action_estimate=estimate)
 
 
 def write_rows(path: Path, rows: list[dict[str, object]]) -> None:

@@ -784,8 +784,22 @@ def _validate_secondary_airtime(
                  "secondary airtime settlements: measured airtime does not sum")
         for frame_id, estimate in action_estimates.items():
             settlement = settlement_by_frame[frame_id]
-            expected_release = max(0.0, estimate - float(settlement["measured"]))
-            _require(_close(float(settlement["released"]), expected_release),
+            measured = float(settlement["measured"])
+            released = float(settlement["released"])
+            expected_release = max(0.0, estimate - measured)
+            # These three values are written independently with setprecision(12).
+            # Scale the absolute tolerance to the operands so cancellation near
+            # zero does not turn harmless decimal serialization into a failure.
+            serialization_tolerance = max(
+                1e-9,
+                1e-11 * max(abs(estimate), abs(measured), 1.0),
+            )
+            _require(math.isclose(
+                released,
+                expected_release,
+                rel_tol=1e-9,
+                abs_tol=serialization_tolerance,
+            ),
                      "secondary airtime settlements: released reservation mismatch")
         expected_ratio = tagged_total / estimate_total if estimate_total else 0.0
         _require(_close(ratio, expected_ratio),
