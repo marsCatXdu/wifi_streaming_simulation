@@ -80,6 +80,15 @@ ADAPTIVE_RETRY_INFLATED_COST_DEFINITION = (
 ADAPTIVE_NOMINAL_COST_DEFINITION = (
     "nominal_estimated_secondary_sender_phy_tx_airtime"
 )
+# Exact V1 whole-copy estimator shared by the controller and the frozen
+# primary-risk calibration. The MAC-service term is the 50-byte streaming
+# header plus IPv4, UDP, and LLC/SNAP (20 + 8 + 8 bytes); the final 38 bytes
+# per packet are the controller's additional airtime allowance.
+ADAPTIVE_ESTIMATOR_PHY_PREAMBLE_US = 48.0
+ADAPTIVE_ESTIMATOR_PHY_DATA_RATE_BPS = 68_823_530
+ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES = 50
+ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES = 36
+ADAPTIVE_ESTIMATOR_ADDITIONAL_BYTES_PER_PACKET = 38
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
     "application_bytes_received", "redundant_bytes", "successful_mpdus",
@@ -121,6 +130,10 @@ PRIMARY_TARGET_ID = "primary_copy_deadline_miss"
 PRIMARY_TARGET_PROVENANCE_SHA256 = (
     "e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84"
 )
+PRIMARY_T0_ESTIMATOR_COST_SAFETY_FACTOR = 1.25
+PRIMARY_T0_ESTIMATOR_REFERENCE_FRAME_BYTES = 12_000
+PRIMARY_T0_ESTIMATOR_PAYLOAD_BYTES = 1_200
+PRIMARY_T0_ESTIMATOR_REFERENCE_AIRTIME_US = 1983.760667318285
 PREDICTION_BASE_COLUMNS = {
     "telemetry_schema_version", "run_id", "frame_id", "path_id", "copy_id",
     "sample_stage", "sample_offset_us", "sample_time_ns",
@@ -459,6 +472,99 @@ def _adaptive_admission_cost_metadata(
     return uses_retry_inflation, True
 
 
+def _requires_exact_adaptive_estimator(
+    config: dict[str, Any], has_cost_metadata: bool
+) -> bool:
+    """Return whether output provenance identifies the corrected V1 estimator.
+
+    Generic historical outputs predate the explicit admission/reservation cost
+    schema and include both the original and corrected estimators. They remain
+    readable through the older arithmetic checks. The primary T0 model was
+    calibrated only against the corrected estimator, including for builds just
+    before the explicit cost schema was added.
+    """
+    return has_cost_metadata or config.get("model_id") == PRIMARY_T0_MODEL_ID
+
+
+def _adaptive_nominal_airtime_us(
+    application_bytes: int,
+    packet_count: int,
+    cost_safety_factor: float,
+) -> float:
+    """Reproduce the controller's corrected nominal airtime estimate."""
+    _require(application_bytes > 0 and packet_count > 0,
+             "adaptive estimator: frame descriptor must be positive")
+    expected_mac_service_bytes = application_bytes + packet_count * (
+        ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES
+        + ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
+    )
+    mac_bytes = (
+        expected_mac_service_bytes
+        + packet_count * ADAPTIVE_ESTIMATOR_ADDITIONAL_BYTES_PER_PACKET
+    )
+    payload_us = (
+        8.0 * mac_bytes / ADAPTIVE_ESTIMATOR_PHY_DATA_RATE_BPS * 1e6
+    )
+    return cost_safety_factor * (
+        ADAPTIVE_ESTIMATOR_PHY_PREAMBLE_US + payload_us
+    )
+
+
+def _adaptive_whole_copy_costs(
+    frames: list[dict[str, str]],
+    stream_config: dict[str, Any],
+    cost_safety_factor: float,
+) -> tuple[float, dict[int, float]]:
+    """Return the exact reference and per-frame nominal whole-copy costs."""
+    payload_size = stream_config.get("payload_size_bytes")
+    reference_size = stream_config.get("frame_size_bytes")
+    _require(isinstance(payload_size, int) and not isinstance(payload_size, bool) and
+             payload_size > 0,
+             "resolved_config.json: invalid adaptive estimator payload size")
+    _require(isinstance(reference_size, int) and not isinstance(reference_size, bool) and
+             reference_size > 0,
+             "resolved_config.json: invalid adaptive estimator reference frame size")
+    reference_packets = 1 + (reference_size - 1) // payload_size
+    reference = _adaptive_nominal_airtime_us(
+        reference_size, reference_packets, cost_safety_factor
+    )
+    costs: dict[int, float] = {}
+    for frame in frames:
+        frame_id = _integer(frame, "frame_id", "frames.csv")
+        frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+        packet_count = _integer(frame, "packet_count", "frames.csv")
+        expected_packet_count = 1 + (frame_size - 1) // payload_size
+        _require(packet_count == expected_packet_count,
+                 "frames.csv: adaptive estimator packet count mismatch")
+        costs[frame_id] = _adaptive_nominal_airtime_us(
+            frame_size, packet_count, cost_safety_factor
+        )
+    return reference, costs
+
+
+def _validate_primary_t0_estimator_contract(
+    config: dict[str, Any],
+    stream_config: dict[str, Any],
+    reference_airtime_us: float,
+) -> None:
+    """Pin the estimator inputs used to calibrate the primary T0 gate."""
+    if config.get("model_id") != PRIMARY_T0_MODEL_ID:
+        return
+    safety = _config_number(
+        config, "cost_safety_factor", "adaptiveAirtimeDuplication"
+    )
+    _require(
+        _close(safety, PRIMARY_T0_ESTIMATOR_COST_SAFETY_FACTOR)
+        and stream_config.get("frame_size_bytes") == PRIMARY_T0_ESTIMATOR_REFERENCE_FRAME_BYTES
+        and stream_config.get("payload_size_bytes") == PRIMARY_T0_ESTIMATOR_PAYLOAD_BYTES
+        and _close(
+            reference_airtime_us,
+            PRIMARY_T0_ESTIMATOR_REFERENCE_AIRTIME_US,
+        ),
+        "resolved_config.json: primary T0 estimator differs from calibration",
+    )
+
+
 def _validate_adaptive_config(
     config: dict[str, Any],
     expected_selection: str = "full_forward",
@@ -578,6 +684,7 @@ def _validate_adaptive_decisions(
     frames: list[dict[str, str]],
     prediction_samples: dict[tuple[int, int], dict[str, str]],
     run_id: str,
+    stream_config: dict[str, Any] | None = None,
 ) -> dict[int, float]:
     """Validate controller arithmetic and decision semantics.
 
@@ -592,10 +699,13 @@ def _validate_adaptive_decisions(
         else "adaptiveAirtimeDuplication"
     )
     file_name = "adaptive_airtime_decisions.csv"
-    frame_generation_us = {
-        _integer(frame, "frame_id", "frames.csv"):
-        _integer(frame, "generation_time_us", "frames.csv")
+    frames_by_id = {
+        _integer(frame, "frame_id", "frames.csv"): frame
         for frame in frames
+    }
+    frame_generation_us = {
+        frame_id: _integer(frame, "generation_time_us", "frames.csv")
+        for frame_id, frame in frames_by_id.items()
     }
     _require(len(rows) == len(frames) * len(offsets),
              "adaptive decisions: frame/stage cardinality mismatch")
@@ -612,6 +722,7 @@ def _validate_adaptive_decisions(
         config, "initial_shadow_price", object_name
     )
     dual_step = _config_number(config, "dual_step", object_name)
+    safety = _config_number(config, "cost_safety_factor", object_name)
     uses_retry_inflation, has_cost_metadata = _adaptive_admission_cost_metadata(
         config, object_name
     )
@@ -624,6 +735,23 @@ def _validate_adaptive_decisions(
                  "adaptive decisions: explicit cost metadata requires admission airtime")
         _require(uses_retry_inflation or has_admission_airtime,
                  "adaptive decisions: nominal admission airtime is absent")
+    exact_estimator = (
+        not primary_deficit
+        and _requires_exact_adaptive_estimator(config, has_cost_metadata)
+    )
+    expected_reference: float | None = None
+    expected_whole_copy_costs: dict[int, float] = {}
+    if exact_estimator:
+        _require(isinstance(stream_config, dict),
+                 "resolved_config.json: adaptive estimator stream metadata is absent")
+        expected_reference, expected_whole_copy_costs = _adaptive_whole_copy_costs(
+            frames,
+            stream_config,
+            safety,
+        )
+        _validate_primary_t0_estimator_contract(
+            config, stream_config, expected_reference
+        )
     allowed_decisions = {
         "price_rejected", "airtime_deferred", "action", "already_resolved",
         "not_actionable", "launch_rejected", "no_primary_deficit",
@@ -633,6 +761,7 @@ def _validate_adaptive_decisions(
     previous_sample_time = -1
     previous_measured = 0.0
     reference_airtime: float | None = None
+    saw_retry_inflated_descriptor = False
     last_t0_time: int | None = None
     last_t0_measured = 0.0
     last_t0_shadow = initial_price
@@ -701,6 +830,9 @@ def _validate_adaptive_decisions(
         else:
             _require(_close(reference, reference_airtime),
                      "adaptive decisions: reference airtime changed")
+        if expected_reference is not None:
+            _require(_close(reference, expected_reference),
+                     "adaptive decisions: reference airtime estimator mismatch")
 
         decision = row.get("decision")
         _require(decision in allowed_decisions,
@@ -756,6 +888,19 @@ def _validate_adaptive_decisions(
                          selected_indices == expected_indices and
                          order == "primary_unacknowledged_reverse",
                          "adaptive deficit decisions: selected packet set is inconsistent")
+
+        if exact_estimator and estimated > 0:
+            expected_nominal = expected_whole_copy_costs[frame_id]
+            _require(estimated >= expected_nominal or _close(estimated, expected_nominal),
+                     "adaptive decisions: reservation below nominal estimator")
+            if uses_retry_inflation:
+                if not saw_retry_inflated_descriptor:
+                    _require(_close(estimated, expected_nominal),
+                             "adaptive decisions: initial retry estimate mismatch")
+                saw_retry_inflated_descriptor = True
+            else:
+                _require(_close(admission, expected_nominal),
+                         "adaptive decisions: nominal admission estimator mismatch")
 
         if estimated > 0:
             _require(admission > 0 and admission <= estimated + 1e-9 and
@@ -834,6 +979,8 @@ def _validate_secondary_airtime(
     action_estimates: dict[int, float],
     duplicated_frame_ids: set[int],
     observed_budget_debt_us: float,
+    frames: list[dict[str, str]] | None = None,
+    stream_config: dict[str, Any] | None = None,
 ) -> None:
     """Reconcile secondary PHY events, reservations, and the run budget."""
     _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
@@ -842,6 +989,25 @@ def _validate_secondary_airtime(
         "selective_duplication", "adaptive_airtime_duplication",
         "adaptive_deficit_duplication", "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
+    expected_settlement_nominals: dict[int, float] = {}
+    if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
+        _, has_cost_metadata = _adaptive_admission_cost_metadata(
+            adaptive_config, "adaptiveAirtimeDuplication"
+        )
+        if _requires_exact_adaptive_estimator(
+            adaptive_config, has_cost_metadata
+        ):
+            _require(frames is not None and isinstance(stream_config, dict),
+                     "adaptive estimator: frame or stream metadata is absent")
+            _, expected_settlement_nominals = _adaptive_whole_copy_costs(
+                frames,
+                stream_config,
+                _config_number(
+                    adaptive_config,
+                    "cost_safety_factor",
+                    "adaptiveAirtimeDuplication",
+                ),
+            )
     _require(meter_config.get("definition") == "secondary_sender_phy_tx_airtime" and
              meter_config.get("path_id") == 0 and meter_config.get("copy_id") == 1,
              "resolved_config.json: invalid secondary airtime meter definition")
@@ -939,6 +1105,10 @@ def _validate_secondary_airtime(
         fallback_count += fallback
         _require(nominal > 0,
                  "secondary airtime settlements: nonpositive nominal airtime")
+        if expected_settlement_nominals:
+            _require(frame_id in expected_settlement_nominals and _close(
+                nominal, expected_settlement_nominals[frame_id]
+            ), "secondary airtime settlements: nominal estimator mismatch")
         settlement_by_frame[frame_id] = {
             "released": released, "measured": measured, "fallback": fallback,
         }
@@ -2303,7 +2473,12 @@ def validate_run(
         )
         adaptive = _csv(adaptive_path, required_columns)
         action_estimates = _validate_adaptive_decisions(
-            adaptive, adaptive_config, frames, decision_samples, run_id
+            adaptive,
+            adaptive_config,
+            frames,
+            decision_samples,
+            run_id,
+            config["stream"],
         )
         observed_budget_debt_us = max(
             (max(0.0, -_signed_number(
@@ -2350,6 +2525,8 @@ def validate_run(
             action_estimates,
             duplicated_frame_ids,
             observed_budget_debt_us,
+            frames,
+            config["stream"],
         )
     else:
         _require(not (run_dir / "secondary_airtime_events.csv").exists(),

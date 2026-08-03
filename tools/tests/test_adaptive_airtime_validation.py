@@ -20,6 +20,8 @@ from validate_outputs import (
     PRIMARY_TARGET_ID,
     PRIMARY_TARGET_PROVENANCE_SHA256,
     ValidationError,
+    _adaptive_nominal_airtime_us,
+    _adaptive_whole_copy_costs,
     _prediction_model_offsets_valid,
     _validate_adaptive_config,
     _validate_adaptive_decisions,
@@ -114,12 +116,28 @@ def explicit_cost_config(uses_retry_inflation: bool) -> dict[str, object]:
 
 def nominal_admission_rows() -> list[dict[str, str]]:
     rows = adaptive_rows()
+    nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
     for row in rows:
-        row["admission_airtime_us"] = "50"
-        row["normalized_cost"] = "0.5"
-    rows[0]["net_utility"] = "0"
-    rows[1]["net_utility"] = "0.4"
+        row["admission_airtime_us"] = str(nominal)
+        row["estimated_airtime_us"] = str(2 * nominal)
+        row["reference_airtime_us"] = str(nominal)
+        row["normalized_cost"] = "1"
+    rows[0]["net_utility"] = "-0.1"
+    rows[1]["net_utility"] = "0.3"
     return rows
+
+
+def estimator_stream_config() -> dict[str, object]:
+    return {"frame_size_bytes": 12_000, "payload_size_bytes": 1_200}
+
+
+def estimator_frames() -> list[dict[str, str]]:
+    return [{
+        "frame_id": "7",
+        "generation_time_us": "1000",
+        "frame_size_bytes": "12000",
+        "packet_count": "10",
+    }]
 
 
 def prediction_samples(
@@ -198,6 +216,20 @@ def meter_fixture() -> tuple[
 
 
 class AdaptiveDecisionValidationTest(unittest.TestCase):
+    def test_reconstructs_frozen_p_and_i_frame_costs(self) -> None:
+        frames = estimator_frames() + [{
+            "frame_id": "8",
+            "generation_time_us": "2000",
+            "frame_size_bytes": "48000",
+            "packet_count": "40",
+        }]
+        reference, costs = _adaptive_whole_copy_costs(
+            frames, estimator_stream_config(), 1.25
+        )
+        self.assertAlmostEqual(reference, 1983.760667318285)
+        self.assertAlmostEqual(costs[7], 1983.760667318285)
+        self.assertAlmostEqual(costs[8], 7755.04266927314)
+
     def test_runner_maps_new_controller_options(self) -> None:
         self.assertEqual(
             CLI_KEYS["adaptive_airtime_initial_bucket_horizon_us"],
@@ -296,11 +328,151 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         estimates = _validate_adaptive_decisions(
             nominal_admission_rows(),
             explicit_cost_config(False),
-            [{"frame_id": "7", "generation_time_us": "1000"}],
+            estimator_frames(),
             prediction_samples(),
             "run",
+            estimator_stream_config(),
         )
-        self.assertEqual(estimates, {7: 100.0})
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
+        self.assertEqual(estimates, {7: 2 * nominal})
+
+    def test_accepts_retry_inflated_admission_cost_mode(self) -> None:
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
+        first = nominal_admission_rows()[0]
+        first.update({
+            "calibrated_probability": "0.5",
+            "admission_airtime_us": str(nominal),
+            "estimated_airtime_us": str(nominal),
+            "net_utility": "0.3",
+            "decision": "action",
+            "secondary_launched": "1",
+        })
+        second = copy.deepcopy(first)
+        second.update({
+            "frame_id": "8",
+            "sample_time_ns": "100000000",
+            "calibrated_probability": "0.1",
+            "admission_airtime_us": str(1.2 * nominal),
+            "estimated_airtime_us": str(1.2 * nominal),
+            "normalized_cost": "1.2",
+            "net_utility": "-0.14",
+            "bucket_balance_us": "10000",
+            "available_airtime_us": "10000",
+            "measured_airtime_total_us": "80",
+            "decision": "price_rejected",
+            "secondary_launched": "0",
+        })
+        config = explicit_cost_config(True)
+        config.update({"decision_offsets_us": [0], "stages": ["T0"], "dual_step": 0.0})
+        frames = estimator_frames() + [{
+            "frame_id": "8",
+            "generation_time_us": "100000",
+            "frame_size_bytes": "12000",
+            "packet_count": "10",
+        }]
+        samples = {
+            (7, 0): prediction_samples()[(7, 0)],
+            (8, 0): {
+                **prediction_samples()[(7, 0)],
+                "frame_id": "8",
+                "sample_time_ns": "100000000",
+                "generation_time_ns": "100000000",
+                "deadline_time_ns": "133333000",
+            },
+        }
+        estimates = _validate_adaptive_decisions(
+            [first, second],
+            config,
+            frames,
+            samples,
+            "run",
+            estimator_stream_config(),
+        )
+        self.assertEqual(estimates, {7: nominal})
+
+    def test_accepts_primary_t0_calibrated_estimator_contract(self) -> None:
+        config = explicit_cost_config(False)
+        config.update({
+            "model_id": PRIMARY_T0_MODEL_ID,
+            "target_id": PRIMARY_TARGET_ID,
+            "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+            "decision_offsets_us": [0],
+            "stages": ["T0"],
+            "cost_safety_factor": 1.25,
+        })
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.25)
+        row = nominal_admission_rows()[0]
+        row.update({
+            "admission_airtime_us": str(nominal),
+            "estimated_airtime_us": str(nominal),
+            "reference_airtime_us": str(nominal),
+        })
+        estimates = _validate_adaptive_decisions(
+            [row],
+            config,
+            estimator_frames(),
+            {(7, 0): prediction_samples()[(7, 0)]},
+            "run",
+            estimator_stream_config(),
+        )
+        self.assertEqual(estimates, {})
+
+    def test_rejects_coordinated_primary_t0_config_drift(self) -> None:
+        config = explicit_cost_config(False)
+        config.update({
+            "model_id": PRIMARY_T0_MODEL_ID,
+            "target_id": PRIMARY_TARGET_ID,
+            "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+            "decision_offsets_us": [0],
+            "stages": ["T0"],
+        })
+        with self.assertRaisesRegex(ValidationError, "differs from calibration"):
+            _validate_adaptive_decisions(
+                [nominal_admission_rows()[0]],
+                config,
+                estimator_frames(),
+                {(7, 0): prediction_samples()[(7, 0)]},
+                "run",
+                estimator_stream_config(),
+            )
+
+    def test_rejects_coordinated_estimator_drift(self) -> None:
+        rows = nominal_admission_rows()
+        for row in rows:
+            for field in (
+                "admission_airtime_us",
+                "estimated_airtime_us",
+                "reference_airtime_us",
+            ):
+                row[field] = str(1.1 * float(row[field]))
+        with self.assertRaisesRegex(ValidationError, "reference airtime estimator"):
+            _validate_adaptive_decisions(
+                rows,
+                explicit_cost_config(False),
+                estimator_frames(),
+                prediction_samples(),
+                "run",
+                estimator_stream_config(),
+            )
+
+    def test_rejects_nominal_admission_estimator_drift(self) -> None:
+        rows = nominal_admission_rows()
+        for row in rows:
+            row["admission_airtime_us"] = str(
+                1.1 * float(row["admission_airtime_us"])
+            )
+            row["normalized_cost"] = "1.1"
+        rows[0]["net_utility"] = "-0.12"
+        rows[1]["net_utility"] = "0.28"
+        with self.assertRaisesRegex(ValidationError, "nominal admission estimator"):
+            _validate_adaptive_decisions(
+                rows,
+                explicit_cost_config(False),
+                estimator_frames(),
+                prediction_samples(),
+                "run",
+                estimator_stream_config(),
+            )
 
     def test_rejects_nominal_admission_without_explicit_airtime(self) -> None:
         with self.assertRaisesRegex(ValidationError, "requires admission airtime"):
@@ -315,13 +487,14 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
     def test_rejects_admission_airtime_above_reservation(self) -> None:
         rows = nominal_admission_rows()
         rows[1]["estimated_airtime_us"] = "40"
-        with self.assertRaisesRegex(ValidationError, "arithmetic"):
+        with self.assertRaisesRegex(ValidationError, "below nominal"):
             _validate_adaptive_decisions(
                 rows,
                 explicit_cost_config(False),
-                [{"frame_id": "7", "generation_time_us": "1000"}],
+                estimator_frames(),
                 prediction_samples(),
                 "run",
+                estimator_stream_config(),
             )
 
     def test_accepts_submicrosecond_generation_precision_from_telemetry(self) -> None:
@@ -589,6 +762,45 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
             {7},
             0.0,
         )
+
+    def validate_exact_estimator_fixture(
+        self,
+        settlements: list[dict[str, str]],
+    ) -> None:
+        events, _, summary, meter, links = meter_fixture()
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
+        summary["estimated_action_airtime_us"] = nominal
+        summary["actual_to_estimated_airtime_ratio"] = 80.0 / nominal
+        _validate_secondary_airtime(
+            events,
+            settlements,
+            summary,
+            meter,
+            links,
+            "adaptive_airtime_duplication",
+            "run",
+            explicit_cost_config(True),
+            {7: nominal},
+            {7},
+            0.0,
+            estimator_frames(),
+            estimator_stream_config(),
+        )
+
+    def test_accepts_exact_nominal_settlement_in_retry_cost_mode(self) -> None:
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
+        settlements = meter_fixture()[1]
+        settlements[0]["released_airtime_us"] = str(nominal - 80.0)
+        settlements[0]["nominal_airtime_us"] = str(nominal)
+        self.validate_exact_estimator_fixture(settlements)
+
+    def test_rejects_nominal_settlement_estimator_drift(self) -> None:
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.4)
+        settlements = meter_fixture()[1]
+        settlements[0]["released_airtime_us"] = str(nominal - 80.0)
+        settlements[0]["nominal_airtime_us"] = str(1.1 * nominal)
+        with self.assertRaisesRegex(ValidationError, "nominal estimator"):
+            self.validate_exact_estimator_fixture(settlements)
 
     def test_reconciles_valid_event_and_settlement_ledgers(self) -> None:
         self.validate_fixture(*meter_fixture())
