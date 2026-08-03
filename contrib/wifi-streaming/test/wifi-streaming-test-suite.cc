@@ -348,6 +348,60 @@ class SecondaryAirtimeMeterTestAccess
     }
 };
 
+/** Test-only access to adaptive-airtime bucket initialization. */
+class AdaptiveAirtimeDuplicationControllerTestAccess
+{
+  public:
+    /**
+     * Initialize a controller bucket at a deterministic timestamp.
+     *
+     * @param controller Controller under test.
+     * @param nowNs Initialization time in nanoseconds.
+     */
+    static void Initialize(Ptr<AdaptiveAirtimeDuplicationController> controller,
+                           uint64_t nowNs)
+    {
+        controller->InitializeBucket(nowNs);
+    }
+
+    /**
+     * Refill a controller bucket at a deterministic timestamp.
+     *
+     * @param controller Controller under test.
+     * @param nowNs Refill time in nanoseconds.
+     */
+    static void Refill(Ptr<AdaptiveAirtimeDuplicationController> controller,
+                       uint64_t nowNs)
+    {
+        controller->RefillBucket(nowNs);
+    }
+
+    /**
+     * Return the maximum token balance.
+     *
+     * @param controller Controller under test.
+     * @return Bucket capacity in microseconds.
+     */
+    static double GetCapacityUs(Ptr<AdaptiveAirtimeDuplicationController> controller)
+    {
+        return controller->m_bucketCapacityUs;
+    }
+
+    /**
+     * Check one maximum/initial horizon pair using the production guard.
+     *
+     * @param bucketHorizonUs Maximum-balance horizon in microseconds.
+     * @param initialHorizonUs Initial-credit horizon in microseconds.
+     * @return True when the pair is valid.
+     */
+    static bool AreHorizonsValid(uint64_t bucketHorizonUs, uint64_t initialHorizonUs)
+    {
+        return AdaptiveAirtimeDuplicationController::AreBucketHorizonsValid(
+            bucketHorizonUs,
+            initialHorizonUs);
+    }
+};
+
 } // namespace ns3
 
 using namespace ns3;
@@ -2778,6 +2832,92 @@ class SecondaryAirtimeMeterWifiTraceTestCase : public TestCase
     }
 };
 
+class AdaptiveAirtimeBucketCreditTestCase : public TestCase
+{
+  public:
+    AdaptiveAirtimeBucketCreditTestCase()
+        : TestCase("Adaptive airtime separates burst capacity from initial credit")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        constexpr double budgetFraction = 0.01;
+        constexpr uint64_t bucketHorizonUs = 2000000;
+        constexpr uint64_t initialHorizonUs = 100000;
+        constexpr uint64_t initializeTimeNs = 1000000000;
+
+        auto controller = CreateObject<AdaptiveAirtimeDuplicationController>();
+        controller->SetBudgetFraction(budgetFraction);
+        // Resolve the maximum first so the limited initial horizon is checked
+        // against the intended burst horizon rather than the default.
+        controller->SetBucketHorizonUs(bucketHorizonUs);
+        controller->SetInitialBucketHorizonUs(initialHorizonUs);
+        AdaptiveAirtimeDuplicationControllerTestAccess::Initialize(controller,
+                                                                   initializeTimeNs);
+
+        constexpr double expectedCapacityUs = budgetFraction * bucketHorizonUs;
+        constexpr double expectedInitialCapacityUs = budgetFraction * initialHorizonUs;
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            AdaptiveAirtimeDuplicationControllerTestAccess::GetCapacityUs(controller),
+            expectedCapacityUs,
+            1e-9,
+            "Maximum balance did not use the burst horizon");
+        NS_TEST_ASSERT_MSG_EQ_TOL(controller->GetInitialCapacityUs(),
+                                  expectedInitialCapacityUs,
+                                  1e-9,
+                                  "Startup credit did not use the initial horizon");
+        NS_TEST_ASSERT_MSG_EQ_TOL(controller->GetBucketBalanceUs(),
+                                  expectedInitialCapacityUs,
+                                  1e-9,
+                                  "Bucket did not start at the limited initial credit");
+
+        const uint64_t refillTimeNs =
+            initializeTimeNs + bucketHorizonUs * 1000;
+        AdaptiveAirtimeDuplicationControllerTestAccess::Refill(controller, refillTimeNs);
+        NS_TEST_ASSERT_MSG_EQ_TOL(controller->GetBucketBalanceUs(),
+                                  expectedCapacityUs,
+                                  1e-9,
+                                  "Limited startup credit prevented later burst accumulation");
+
+        auto legacy = CreateObject<AdaptiveAirtimeDuplicationController>();
+        legacy->SetBudgetFraction(budgetFraction);
+        legacy->SetBucketHorizonUs(bucketHorizonUs);
+        AdaptiveAirtimeDuplicationControllerTestAccess::Initialize(legacy,
+                                                                   initializeTimeNs);
+        NS_TEST_ASSERT_MSG_EQ_TOL(legacy->GetInitialCapacityUs(),
+                                  expectedCapacityUs,
+                                  1e-9,
+                                  "Unset initial horizon no longer defaults to a full bucket");
+        NS_TEST_ASSERT_MSG_EQ_TOL(legacy->GetBucketBalanceUs(),
+                                  expectedCapacityUs,
+                                  1e-9,
+                                  "Legacy bucket did not start full");
+
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(
+                bucketHorizonUs,
+                initialHorizonUs),
+            true,
+            "Valid bucket horizon ordering was rejected");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(0,
+                                                                             initialHorizonUs),
+            false,
+            "Zero burst horizon was accepted");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(bucketHorizonUs, 0),
+            false,
+            "Zero initial horizon was accepted");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(initialHorizonUs,
+                                                                             bucketHorizonUs),
+            false,
+            "Initial credit larger than burst capacity was accepted");
+    }
+};
+
 class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
 {
   public:
@@ -3477,6 +3617,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new ExplicitSecondaryPacketSelectionTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterWifiTraceTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new AdaptiveAirtimeBucketCreditTestCase, TestCase::Duration::QUICK);
         AddTestCase(new AdaptiveAirtimeDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionWifiTelemetryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);

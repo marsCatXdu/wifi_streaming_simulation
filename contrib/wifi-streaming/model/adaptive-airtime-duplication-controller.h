@@ -25,6 +25,12 @@ namespace ns3
 class MultipathSender;
 struct DelayedCopyDescriptor;
 
+/**
+ * @internal Test-only access to deterministic bucket state.
+ * @endinternal
+ */
+class AdaptiveAirtimeDuplicationControllerTestAccess;
+
 /** Secondary packet set used after adaptive admission. */
 enum class AdaptiveSecondaryPacketSelection
 {
@@ -96,6 +102,18 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param horizonUs Positive horizon.
      */
     void SetBucketHorizonUs(uint64_t horizonUs);
+
+    /**
+     * Set the initial token-credit horizon in microseconds.
+     *
+     * The initial horizon must be positive and no larger than the bucket
+     * horizon. If it is not set explicitly, the bucket horizon is used so
+     * existing configurations retain a full initial bucket. Configure the
+     * maximum bucket horizon first when changing both values.
+     *
+     * @param horizonUs Initial token-credit horizon.
+     */
+    void SetInitialBucketHorizonUs(uint64_t horizonUs);
 
     /**
      * Set the initial shadow price.
@@ -207,6 +225,12 @@ class AdaptiveAirtimeDuplicationController : public Object
     void DoDispose() override;
 
   private:
+    /**
+     * @internal Unit-test access to deterministic bucket state.
+     * @endinternal
+     */
+    friend class AdaptiveAirtimeDuplicationControllerTestAccess;
+
     /** Per-frame launch state retained across decision stages. */
     struct FrameState
     {
@@ -219,6 +243,16 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param nowNs Current simulation time in nanoseconds.
      */
     void InitializeBucket(uint64_t nowNs);
+
+    /**
+     * Return whether a maximum and initial bucket horizon form a valid pair.
+     *
+     * @param bucketHorizonUs Maximum-balance horizon in microseconds.
+     * @param initialHorizonUs Initial-credit horizon in microseconds.
+     * @return True when both are positive and the initial horizon is no larger.
+     */
+    static bool AreBucketHorizonsValid(uint64_t bucketHorizonUs,
+                                       uint64_t initialHorizonUs);
 
     /**
      * Refill the token bucket through a causal event timestamp.
@@ -311,7 +345,8 @@ class AdaptiveAirtimeDuplicationController : public Object
     AdaptiveSecondaryPacketSelection m_secondaryPacketSelection{
         AdaptiveSecondaryPacketSelection::FULL_COPY}; ///< Admitted packet projection.
     double m_budgetFraction{0.02}; ///< Long-run airtime fraction.
-    uint64_t m_bucketHorizonUs{1000000}; ///< Bucket horizon.
+    uint64_t m_bucketHorizonUs{1000000}; ///< Maximum-balance horizon.
+    std::optional<uint64_t> m_initialBucketHorizonUs; ///< Explicit startup-credit horizon.
     double m_initialShadowPrice{0.20}; ///< Initial dual variable.
     double m_dualStep{0.01}; ///< Dual update step.
     double m_costSafetyFactor{1.25}; ///< Pre-launch safety factor.

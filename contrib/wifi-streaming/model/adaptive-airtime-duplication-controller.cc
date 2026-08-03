@@ -118,7 +118,22 @@ AdaptiveAirtimeDuplicationController::SetBucketHorizonUs(uint64_t horizonUs)
 {
     NS_ABORT_MSG_IF(horizonUs == 0, "Adaptive airtime bucket horizon must be positive");
     NS_ABORT_MSG_IF(m_bucketInitialized, "Cannot change horizon after control starts");
+    NS_ABORT_MSG_IF(m_initialBucketHorizonUs &&
+                        !AreBucketHorizonsValid(horizonUs, *m_initialBucketHorizonUs),
+                    "Adaptive airtime bucket horizon cannot be shorter than the initial "
+                    "credit horizon");
     m_bucketHorizonUs = horizonUs;
+}
+
+void
+AdaptiveAirtimeDuplicationController::SetInitialBucketHorizonUs(uint64_t horizonUs)
+{
+    NS_ABORT_MSG_IF(m_bucketInitialized,
+                    "Cannot change initial bucket horizon after control starts");
+    NS_ABORT_MSG_IF(!AreBucketHorizonsValid(m_bucketHorizonUs, horizonUs),
+                    "Adaptive airtime initial bucket horizon must be positive and no larger "
+                    "than the bucket horizon");
+    m_initialBucketHorizonUs = horizonUs;
 }
 
 void
@@ -198,9 +213,13 @@ AdaptiveAirtimeDuplicationController::SetOutputFile(const std::string& runId,
 void
 AdaptiveAirtimeDuplicationController::InitializeBucket(uint64_t nowNs)
 {
+    const uint64_t initialHorizonUs =
+        m_initialBucketHorizonUs.value_or(m_bucketHorizonUs);
+    NS_ABORT_MSG_IF(!AreBucketHorizonsValid(m_bucketHorizonUs, initialHorizonUs),
+                    "Adaptive airtime bucket horizons are inconsistent");
     m_bucketCapacityUs = m_budgetFraction * static_cast<double>(m_bucketHorizonUs);
-    m_bucketBalanceUs = m_bucketCapacityUs;
-    m_initialCapacityUs = m_bucketCapacityUs;
+    m_initialCapacityUs = m_budgetFraction * static_cast<double>(initialHorizonUs);
+    m_bucketBalanceUs = m_initialCapacityUs;
     if (m_meter)
     {
         m_meter->SetBudgetMetadata(m_budgetFraction, m_initialCapacityUs);
@@ -209,6 +228,14 @@ AdaptiveAirtimeDuplicationController::InitializeBucket(uint64_t nowNs)
     m_lastRefillTimeNs = nowNs;
     m_lastPriceUpdateNs = nowNs;
     m_bucketInitialized = true;
+}
+
+bool
+AdaptiveAirtimeDuplicationController::AreBucketHorizonsValid(uint64_t bucketHorizonUs,
+                                                             uint64_t initialHorizonUs)
+{
+    return bucketHorizonUs > 0 && initialHorizonUs > 0 &&
+           initialHorizonUs <= bucketHorizonUs;
 }
 
 void
