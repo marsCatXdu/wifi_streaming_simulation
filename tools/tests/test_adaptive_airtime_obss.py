@@ -20,6 +20,40 @@ from run_adaptive_airtime_obss import main as run_matrix
 
 
 class AdaptiveAirtimeObssConfigTest(unittest.TestCase):
+    def test_early_risk_pilot_uses_fresh_seeds_and_only_mlo_comparison(self) -> None:
+        path = ROOT / "experiments/configs/closed_loop_early_risk_obss_pilot.yaml"
+        document = load_yaml(path)
+        specs = expand_config(document)
+
+        self.assertEqual(document["name"], "closed-loop-early-risk-obss-pilot-v1")
+        self.assertEqual(document["workers"], 24)
+        self.assertEqual(len(specs), 24)
+        self.assertEqual({item["seed"] for item in specs}, set(range(31, 43)))
+        self.assertEqual({
+            (item["config"]["topology"], item["config"]["policy"])
+            for item in specs
+        }, {
+            ("dual_interface", "adaptive_airtime_duplication"),
+            ("mlo_str", "fixed_link_0"),
+        })
+
+        adaptive = [
+            item for item in specs
+            if item["config"]["policy"] == "adaptive_airtime_duplication"
+        ]
+        self.assertEqual(len(adaptive), 12)
+        for item in adaptive:
+            prediction = item["config"]["prediction"]
+            self.assertEqual(prediction["prediction_sample_offsets_us"], [0])
+            self.assertEqual(
+                prediction["adaptive_airtime_decision_offsets_us"],
+                [0],
+            )
+            self.assertEqual(prediction["adaptive_airtime_budget_fraction"], 0.0095)
+            self.assertEqual(prediction["adaptive_airtime_bucket_horizon_us"], 1500000)
+            self.assertEqual(prediction["adaptive_airtime_initial_shadow_price"], 0.0225)
+            self.assertEqual(prediction["adaptive_airtime_dual_step"], 1e-9)
+
     def test_deficit_matrix_has_paired_five_way_runs(self) -> None:
         path = ROOT / "experiments/configs/closed_loop_adaptive_deficit_obss.yaml"
         document = load_yaml(path)
