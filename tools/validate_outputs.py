@@ -51,12 +51,24 @@ ADAPTIVE_DECISION_COLUMNS = {
     "actionable", "calibrated_probability", "estimated_airtime_us",
     "reference_airtime_us", "shadow_price", "normalized_cost", "net_utility",
     "airtime_budget_fraction", "bucket_capacity_us", "bucket_balance_us",
-    "reserved_airtime_us", "available_airtime_us", "measured_airtime_total_us",
-    "decision", "secondary_launched",
+    "initial_bucket_capacity_us", "reserved_airtime_us", "available_airtime_us",
+    "measured_airtime_total_us", "decision", "secondary_launched",
 }
 SECONDARY_AIRTIME_EVENT_COLUMNS = {
     "run_id", "time_ns", "path_id", "ppdu_duration_us", "tagged_mpdu_bytes",
     "frame_ids", "mixed_ppdu", "cumulative_tagged_airtime_us",
+}
+SECONDARY_AIRTIME_SETTLEMENT_COLUMNS = {
+    "run_id", "frame_id", "settlement_time_ns", "released_airtime_us",
+    "measured_airtime_us", "nominal_airtime_us", "fallback",
+}
+SECONDARY_AIRTIME_SUMMARY_KEYS = {
+    "tagged_ppdu_count", "mixed_ppdu_count", "tagged_secondary_tx_airtime_us",
+    "measurement_start_ns", "measurement_stop_ns", "measurement_duration_us",
+    "tagged_secondary_tx_airtime_fraction", "maximum_budget_debt_us",
+    "estimated_action_airtime_us", "actual_to_estimated_airtime_ratio",
+    "forced_reservation_settlements", "budget_fraction",
+    "initial_bucket_capacity_us", "finite_run_budget_us", "budget_excess_us",
 }
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
@@ -293,6 +305,15 @@ def _number(row: dict[str, str], key: str, file_name: str) -> float:
     return value
 
 
+def _signed_number(row: dict[str, str], key: str, file_name: str) -> float:
+    try:
+        value = float(row[key])
+    except (KeyError, ValueError) as error:
+        raise ValidationError(f"{file_name}: invalid number {key}") from error
+    _require(math.isfinite(value), f"{file_name}: non-finite {key}")
+    return value
+
+
 def _optional_number(row: dict[str, str], key: str, file_name: str) -> float | None:
     if row.get(key, "") == "":
         return None
@@ -332,6 +353,418 @@ def _stage_name(offset_us: int) -> str:
 
 def _close(actual: float, expected: float) -> bool:
     return math.isclose(actual, expected, rel_tol=1e-9, abs_tol=1e-9)
+
+
+def _config_number(config: dict[str, Any], key: str, object_name: str) -> float:
+    value = config.get(key)
+    _require(isinstance(value, (int, float)) and not isinstance(value, bool),
+             f"resolved_config.json: invalid {object_name}.{key}")
+    resolved = float(value)
+    _require(math.isfinite(resolved),
+             f"resolved_config.json: non-finite {object_name}.{key}")
+    return resolved
+
+
+def _summary_number(summary: dict[str, Any], key: str) -> float:
+    value = summary.get(key)
+    _require(isinstance(value, (int, float)) and not isinstance(value, bool),
+             f"secondary_airtime_summary.json: invalid {key}")
+    resolved = float(value)
+    _require(math.isfinite(resolved) and resolved >= 0,
+             f"secondary_airtime_summary.json: invalid {key}")
+    return resolved
+
+
+def _summary_integer(summary: dict[str, Any], key: str) -> int:
+    value = summary.get(key)
+    _require(isinstance(value, int) and not isinstance(value, bool) and value >= 0,
+             f"secondary_airtime_summary.json: invalid {key}")
+    return value
+
+
+def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
+    """Validate adaptive controller provenance and return decision offsets."""
+    source_sha = config.get("source_model_sha256")
+    _require(
+        config.get("model_id") == "commodity_polling_1ms_genuine_v1" and
+        isinstance(source_sha, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha) is not None and
+        config.get("feature_set") == "F0+F1-degraded" and
+        config.get("degradation_profile") == "polling_1ms" and
+        config.get("calibration") == "platt" and
+        config.get("budget_definition") == "secondary_sender_phy_tx_airtime" and
+        config.get("primary_path") == 1 and config.get("secondary_path") == 0,
+        "resolved_config.json: invalid adaptive airtime provenance",
+    )
+    offsets = _strict_integer_list(
+        config.get("decision_offsets_us"),
+        "adaptiveAirtimeDuplication.decision_offsets_us",
+        positive=False,
+    )
+    _require(offsets[0] == 0,
+             "resolved_config.json: adaptive decision offsets must include T0")
+    _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
+             "resolved_config.json: adaptive stages do not match decision offsets")
+
+    fraction = _config_number(config, "budget_fraction", "adaptiveAirtimeDuplication")
+    initial_price = _config_number(
+        config, "initial_shadow_price", "adaptiveAirtimeDuplication"
+    )
+    dual_step = _config_number(config, "dual_step", "adaptiveAirtimeDuplication")
+    safety = _config_number(config, "cost_safety_factor", "adaptiveAirtimeDuplication")
+    alpha = _config_number(config, "cost_ewma_alpha", "adaptiveAirtimeDuplication")
+    horizon = config.get("bucket_horizon_us")
+    _require(isinstance(horizon, int) and not isinstance(horizon, bool) and horizon > 0,
+             "resolved_config.json: invalid adaptive bucket horizon")
+    _require(0 < fraction <= 1 and 0 <= initial_price <= 1 and dual_step > 0 and
+             safety >= 1 and 0 < alpha <= 1,
+             "resolved_config.json: adaptive parameter outside its domain")
+    initial_capacity = _config_number(
+        config, "initial_bucket_capacity_us", "adaptiveAirtimeDuplication"
+    )
+    _require(_close(initial_capacity, fraction * horizon),
+             "resolved_config.json: adaptive initial capacity mismatch")
+    return offsets
+
+
+def _adaptive_utility(row: dict[str, str]) -> float:
+    try:
+        value = float(row["net_utility"])
+    except (KeyError, ValueError) as error:
+        raise ValidationError(
+            "adaptive_airtime_decisions.csv: invalid number net_utility"
+        ) from error
+    _require(math.isfinite(value) or math.isnan(value),
+             "adaptive_airtime_decisions.csv: invalid net_utility")
+    return value
+
+
+def _validate_adaptive_decisions(
+    rows: list[dict[str, str]],
+    config: dict[str, Any],
+    frames: list[dict[str, str]],
+    run_id: str,
+) -> dict[int, float]:
+    """Validate controller arithmetic and decision semantics.
+
+    The returned mapping contains the reservation estimate for every launched
+    frame and is used to reconcile the independent PHY-airtime ledger.
+    """
+    offsets = _validate_adaptive_config(config)
+    file_name = "adaptive_airtime_decisions.csv"
+    frame_generation_ns = {
+        _integer(frame, "frame_id", "frames.csv"):
+        _integer(frame, "generation_time_us", "frames.csv") * 1000
+        for frame in frames
+    }
+    _require(len(rows) == len(frames) * len(offsets),
+             "adaptive decisions: frame/stage cardinality mismatch")
+    _require(all(row.get("run_id") == run_id for row in rows),
+             "adaptive decisions: run_id mismatch")
+
+    fraction = _config_number(config, "budget_fraction", "adaptiveAirtimeDuplication")
+    horizon = int(config["bucket_horizon_us"])
+    capacity = fraction * horizon
+    initial_price = _config_number(
+        config, "initial_shadow_price", "adaptiveAirtimeDuplication"
+    )
+    dual_step = _config_number(config, "dual_step", "adaptiveAirtimeDuplication")
+    allowed_decisions = {
+        "price_rejected", "airtime_deferred", "action", "already_resolved",
+        "not_actionable", "launch_rejected",
+    }
+    seen_samples: set[tuple[int, int]] = set()
+    action_estimates: dict[int, float] = {}
+    previous_sample_time = -1
+    previous_measured = 0.0
+    reference_airtime: float | None = None
+    last_t0_time: int | None = None
+    last_t0_measured = 0.0
+    last_t0_shadow = initial_price
+
+    for row in rows:
+        frame_id = _integer(row, "frame_id", file_name)
+        offset = _integer(row, "sample_offset_us", file_name)
+        _require(frame_id in frame_generation_ns and offset in offsets,
+                 "adaptive decisions: unknown frame or stage")
+        _require((frame_id, offset) not in seen_samples,
+                 "adaptive decisions: duplicate frame/stage")
+        seen_samples.add((frame_id, offset))
+        _require(row.get("sample_stage") == _stage_name(offset),
+                 "adaptive decisions: sample stage/offset mismatch")
+        sample_time = _integer(row, "sample_time_ns", file_name)
+        _require(sample_time == frame_generation_ns[frame_id] + offset * 1000,
+                 "adaptive decisions: sample time mismatch")
+        _require(sample_time >= previous_sample_time,
+                 "adaptive decisions: rows are not chronological")
+        previous_sample_time = sample_time
+
+        actionable = _flag(row, "actionable", file_name)
+        probability = _number(row, "calibrated_probability", file_name)
+        estimated = _number(row, "estimated_airtime_us", file_name)
+        reference = _number(row, "reference_airtime_us", file_name)
+        shadow = _number(row, "shadow_price", file_name)
+        normalized = _number(row, "normalized_cost", file_name)
+        utility = _adaptive_utility(row)
+        row_fraction = _number(row, "airtime_budget_fraction", file_name)
+        row_capacity = _number(row, "bucket_capacity_us", file_name)
+        balance = _signed_number(row, "bucket_balance_us", file_name)
+        initial_capacity = _number(row, "initial_bucket_capacity_us", file_name)
+        reserved = _number(row, "reserved_airtime_us", file_name)
+        available = _signed_number(row, "available_airtime_us", file_name)
+        measured = _number(row, "measured_airtime_total_us", file_name)
+        _require(0 <= probability <= 1 and 0 <= shadow <= 1 and reference > 0,
+                 "adaptive decisions: probability, price, or reference out of bounds")
+        _require(_close(row_fraction, fraction) and _close(row_capacity, capacity) and
+                 _close(initial_capacity, capacity),
+                 "adaptive decisions: logged configuration mismatch")
+        _require(balance <= capacity + 1e-9 and _close(available, balance - reserved),
+                 "adaptive decisions: invalid bucket or reservation accounting")
+        _require(measured + 1e-9 >= previous_measured,
+                 "adaptive decisions: measured airtime decreased")
+        previous_measured = measured
+        if reference_airtime is None:
+            reference_airtime = reference
+        else:
+            _require(_close(reference, reference_airtime),
+                     "adaptive decisions: reference airtime changed")
+
+        decision = row.get("decision")
+        _require(decision in allowed_decisions,
+                 "adaptive decisions: unknown decision")
+        launched = _flag(row, "secondary_launched", file_name)
+        _require(launched == (decision == "action"),
+                 "adaptive decisions: action/launch mismatch")
+
+        if estimated > 0:
+            _require(_close(normalized, estimated / reference) and
+                     math.isfinite(utility) and
+                     _close(utility, probability - shadow * normalized),
+                     "adaptive decisions: cost or utility arithmetic mismatch")
+        else:
+            _require(_close(normalized, 0) and math.isnan(utility),
+                     "adaptive decisions: absent descriptor must have zero cost and NaN utility")
+
+        if decision == "action":
+            _require(actionable and utility > 0 and available + 1e-9 >= estimated and
+                     estimated > 0 and frame_id not in action_estimates,
+                     "adaptive decisions: invalid action predicate")
+            action_estimates[frame_id] = estimated
+        elif decision == "price_rejected":
+            _require(actionable and estimated > 0 and utility <= 0,
+                     "adaptive decisions: invalid price rejection predicate")
+        elif decision == "airtime_deferred":
+            _require(actionable and estimated > 0 and utility > 0 and
+                     available + 1e-9 < estimated,
+                     "adaptive decisions: invalid airtime deferral predicate")
+        elif decision == "not_actionable":
+            _require(not actionable and estimated > 0,
+                     "adaptive decisions: invalid not-actionable predicate")
+        elif decision == "already_resolved":
+            _require(frame_id in action_estimates and estimated == 0,
+                     "adaptive decisions: invalid already-resolved predicate")
+        else:
+            _require(actionable and estimated > 0 and utility > 0 and
+                     available + 1e-9 >= estimated,
+                     "adaptive decisions: invalid launch-rejected predicate")
+
+        if offset == 0:
+            if last_t0_time is None:
+                _require(_close(shadow, initial_price),
+                         "adaptive decisions: initial shadow price mismatch")
+            else:
+                elapsed_us = (sample_time - last_t0_time) / 1000.0
+                measured_delta = measured - last_t0_measured
+                expected_shadow = min(
+                    1.0,
+                    max(
+                        0.0,
+                        last_t0_shadow +
+                        dual_step * (measured_delta - fraction * elapsed_us) / reference,
+                    ),
+                )
+                _require(_close(shadow, expected_shadow),
+                         "adaptive decisions: shadow-price recurrence mismatch")
+            last_t0_time = sample_time
+            last_t0_measured = measured
+            last_t0_shadow = shadow
+        else:
+            _require(last_t0_time is not None and _close(shadow, last_t0_shadow),
+                     "adaptive decisions: shadow price changed outside T0")
+
+    return action_estimates
+
+
+def _validate_secondary_airtime(
+    events: list[dict[str, str]],
+    settlements: list[dict[str, str]],
+    summary: dict[str, Any],
+    meter_config: dict[str, Any],
+    links: list[dict[str, str]],
+    policy: str,
+    run_id: str,
+    adaptive_config: dict[str, Any] | None,
+    action_estimates: dict[int, float],
+    duplicated_frame_ids: set[int],
+    observed_budget_debt_us: float,
+) -> None:
+    """Reconcile secondary PHY events, reservations, and the run budget."""
+    _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
+             "secondary_airtime_summary.json: missing fields")
+    _require(policy in {
+        "selective_duplication", "adaptive_airtime_duplication", "full_duplication",
+    }, "secondary airtime meter enabled for an unsupported policy")
+    _require(meter_config.get("definition") == "secondary_sender_phy_tx_airtime" and
+             meter_config.get("path_id") == 0 and meter_config.get("copy_id") == 1,
+             "resolved_config.json: invalid secondary airtime meter definition")
+    start_ns = meter_config.get("measurement_start_ns")
+    stop_ns = meter_config.get("measurement_stop_ns")
+    _require(isinstance(start_ns, int) and not isinstance(start_ns, bool) and start_ns >= 0 and
+             isinstance(stop_ns, int) and not isinstance(stop_ns, bool) and stop_ns > start_ns,
+             "resolved_config.json: invalid secondary airtime measurement window")
+    _require(_summary_integer(summary, "measurement_start_ns") == start_ns and
+             _summary_integer(summary, "measurement_stop_ns") == stop_ns,
+             "secondary airtime summary: measurement window mismatch")
+    duration_us = (stop_ns - start_ns) / 1000.0
+    _require(_close(_summary_number(summary, "measurement_duration_us"), duration_us),
+             "secondary airtime summary: measurement duration mismatch")
+
+    running_total = 0.0
+    previous_time = -1
+    observed_event_frames: set[int] = set()
+    mixed_count = 0
+    for row in events:
+        _require(row.get("run_id") == run_id,
+                 "secondary airtime events: run_id mismatch")
+        time_ns = _integer(row, "time_ns", "secondary_airtime_events.csv")
+        _require(start_ns <= time_ns < stop_ns,
+                 "secondary airtime events: event outside half-open measurement window")
+        _require(time_ns >= previous_time,
+                 "secondary airtime events: rows are not chronological")
+        previous_time = time_ns
+        _require(_integer(row, "path_id", "secondary_airtime_events.csv") == 0,
+                 "secondary airtime events: unexpected path")
+        duration = _number(row, "ppdu_duration_us", "secondary_airtime_events.csv")
+        tagged_bytes = _integer(row, "tagged_mpdu_bytes", "secondary_airtime_events.csv")
+        _require(duration > 0 and tagged_bytes > 0,
+                 "secondary airtime events: empty tagged PPDU")
+        frame_tokens = row.get("frame_ids", "").split(";")
+        _require(frame_tokens and all(re.fullmatch(r"[0-9]+", token) for token in frame_tokens),
+                 "secondary airtime events: invalid frame_ids")
+        frame_ids = [int(token) for token in frame_tokens]
+        _require(len(frame_ids) == len(set(frame_ids)),
+                 "secondary airtime events: repeated frame ID in PPDU")
+        observed_event_frames.update(frame_ids)
+        mixed = _flag(row, "mixed_ppdu", "secondary_airtime_events.csv")
+        mixed_count += mixed
+        _require(not mixed, "secondary airtime meter observed mixed PPDUs")
+        running_total += duration
+        cumulative = _number(
+            row, "cumulative_tagged_airtime_us", "secondary_airtime_events.csv"
+        )
+        _require(_close(cumulative, running_total),
+                 "secondary airtime events: cumulative airtime mismatch")
+
+    tagged_total = _summary_number(summary, "tagged_secondary_tx_airtime_us")
+    _require(_summary_integer(summary, "tagged_ppdu_count") == len(events) and
+             _summary_integer(summary, "mixed_ppdu_count") == mixed_count and
+             _close(tagged_total, running_total),
+             "secondary airtime events do not reconcile with summary")
+    _require(_close(
+        _summary_number(summary, "tagged_secondary_tx_airtime_fraction"),
+        tagged_total / duration_us,
+    ), "secondary airtime summary: fraction mismatch")
+    _require(observed_event_frames <= duplicated_frame_ids,
+             "secondary airtime events: unlaunched frame observed")
+
+    link0 = [row for row in links if _integer(row, "link_id", "link_intervals.csv") == 0]
+    _require(len(link0) == 1, "link_intervals.csv: missing unique secondary link")
+    link0_tx_us = _integer(link0[0], "phy_tx_time_us", "link_intervals.csv")
+    _require(tagged_total <= link0_tx_us + 1.0,
+             "secondary tagged airtime exceeds total secondary PHY TX airtime")
+
+    settlement_by_frame: dict[int, dict[str, float | bool]] = {}
+    previous_settlement_time = -1
+    fallback_count = 0
+    for row in settlements:
+        _require(row.get("run_id") == run_id,
+                 "secondary airtime settlements: run_id mismatch")
+        frame_id = _integer(row, "frame_id", "secondary_airtime_settlements.csv")
+        _require(frame_id not in settlement_by_frame,
+                 "secondary airtime settlements: duplicate frame")
+        settlement_time = _integer(
+            row, "settlement_time_ns", "secondary_airtime_settlements.csv"
+        )
+        _require(settlement_time >= previous_settlement_time,
+                 "secondary airtime settlements: rows are not chronological")
+        previous_settlement_time = settlement_time
+        released = _number(
+            row, "released_airtime_us", "secondary_airtime_settlements.csv"
+        )
+        measured = _number(
+            row, "measured_airtime_us", "secondary_airtime_settlements.csv"
+        )
+        nominal = _number(
+            row, "nominal_airtime_us", "secondary_airtime_settlements.csv"
+        )
+        fallback = _flag(row, "fallback", "secondary_airtime_settlements.csv")
+        fallback_count += fallback
+        _require(nominal > 0,
+                 "secondary airtime settlements: nonpositive nominal airtime")
+        settlement_by_frame[frame_id] = {
+            "released": released, "measured": measured, "fallback": fallback,
+        }
+
+    _require(_summary_integer(summary, "forced_reservation_settlements") == fallback_count,
+             "secondary airtime summary: fallback settlement count mismatch")
+    estimate_total = _summary_number(summary, "estimated_action_airtime_us")
+    ratio = _summary_number(summary, "actual_to_estimated_airtime_ratio")
+    maximum_debt = _summary_number(summary, "maximum_budget_debt_us")
+    _require(maximum_debt + 1e-9 >= observed_budget_debt_us,
+             "secondary airtime summary: maximum debt misses an observed deficit")
+
+    if policy == "adaptive_airtime_duplication":
+        _require(adaptive_config is not None,
+                 "adaptive secondary airtime validation lacks controller config")
+        _require(set(settlement_by_frame) == set(action_estimates),
+                 "secondary airtime settlements do not match adaptive actions")
+        _require(observed_event_frames <= set(action_estimates),
+                 "secondary airtime events do not match adaptive actions")
+        _require(_close(estimate_total, sum(action_estimates.values())),
+                 "secondary airtime summary: action estimates do not sum")
+        measured_total = sum(float(item["measured"]) for item in settlement_by_frame.values())
+        _require(_close(measured_total, tagged_total),
+                 "secondary airtime settlements: measured airtime does not sum")
+        for frame_id, estimate in action_estimates.items():
+            settlement = settlement_by_frame[frame_id]
+            expected_release = max(0.0, estimate - float(settlement["measured"]))
+            _require(_close(float(settlement["released"]), expected_release),
+                     "secondary airtime settlements: released reservation mismatch")
+        expected_ratio = tagged_total / estimate_total if estimate_total else 0.0
+        _require(_close(ratio, expected_ratio),
+                 "secondary airtime summary: estimate ratio mismatch")
+        fraction = _config_number(
+            adaptive_config, "budget_fraction", "adaptiveAirtimeDuplication"
+        )
+        capacity = _config_number(
+            adaptive_config, "initial_bucket_capacity_us", "adaptiveAirtimeDuplication"
+        )
+        finite_budget = fraction * duration_us + capacity
+        _require(_close(_summary_number(summary, "budget_fraction"), fraction) and
+                 _close(_summary_number(summary, "initial_bucket_capacity_us"), capacity) and
+                 _close(_summary_number(summary, "finite_run_budget_us"), finite_budget) and
+                 _close(_summary_number(summary, "budget_excess_us"),
+                        max(0.0, tagged_total - finite_budget)),
+                 "secondary airtime summary: finite-run budget mismatch")
+    else:
+        _require(not settlements and not action_estimates and estimate_total == 0 and ratio == 0 and
+                 fallback_count == 0,
+                 "secondary airtime meter has adaptive reservations for a static policy")
+        for key in (
+            "budget_fraction", "initial_bucket_capacity_us", "finite_run_budget_us",
+            "budget_excess_us",
+        ):
+            _require(summary.get(key) is None,
+                     f"secondary_airtime_summary.json: {key} must be null")
 
 
 def _type7_percentile(values: list[float], probability: float) -> float:
@@ -1362,17 +1795,29 @@ def validate_run(
     frames_by_id = {row["frame_id"]: row for row in frames}
     for decision in decisions:
         frame = frames_by_id[decision["frame_id"]]
-        duplication_matches = (
-            decision["duplicated"] == frame["duplicated"] or
-            (frame["policy"] in {
-                "selective_duplication",
-                "adaptive_airtime_duplication",
-            } and not _flag(decision, "duplicated", "policy_decisions.csv"))
-        )
-        _require(decision["policy"] == frame["policy"] and
+        _require(decision["run_id"] == run_id and
+                 decision["policy"] == frame["policy"] and
                  decision["primary_link"] == frame["primary_link"] and
-                 duplication_matches,
+                 decision["duplicated"] == frame["duplicated"] and
+                 decision["decision_time_us"] == frame["decision_time_us"],
                  "policy_decisions.csv: decision/frame mismatch")
+        duplicated = _flag(decision, "duplicated", "policy_decisions.csv")
+        _require(bool(decision["reason"]), "policy_decisions.csv: empty reason")
+        if duplicated:
+            secondary = _integer(decision, "secondary_link", "policy_decisions.csv")
+            _require(secondary != _integer(decision, "primary_link",
+                                           "policy_decisions.csv"),
+                     "policy_decisions.csv: primary and secondary links match")
+        else:
+            _require(decision["secondary_link"] == "",
+                     "policy_decisions.csv: nonduplicated decision has secondary link")
+    duplicated_frame_ids = {
+        int(row["frame_id"]) for row in frames
+        if _flag(row, "duplicated", "frames.csv")
+    }
+    adaptive_config: dict[str, Any] | None = None
+    action_estimates: dict[int, float] = {}
+    observed_budget_debt_us = 0.0
     if config["policy"] == "selective_duplication":
         selective_config = config.get("selectiveDuplication")
         _require(isinstance(selective_config, dict),
@@ -1442,76 +1887,27 @@ def validate_run(
                          _close(after, before - 1.0),
                          "selective decisions: invalid or repeated token consumption")
                 action_frames.add(frame_id)
-        duplicated_frame_ids = {
-            int(row["frame_id"]) for row in frames
-            if _flag(row, "duplicated", "frames.csv")
-        }
         _require(action_frames == duplicated_frame_ids,
                  "selective decisions: launched actions do not match duplicated frames")
     elif config["policy"] == "adaptive_airtime_duplication":
         adaptive_config = config.get("adaptiveAirtimeDuplication")
         _require(isinstance(adaptive_config, dict),
                  "resolved_config.json: missing adaptiveAirtimeDuplication object")
-        _require(
-            adaptive_config.get("model_id") == "commodity_polling_1ms_genuine_v1" and
-            isinstance(adaptive_config.get("source_model_sha256"), str) and
-            len(adaptive_config["source_model_sha256"]) == 64 and
-            adaptive_config.get("feature_set") == "F0+F1-degraded" and
-            adaptive_config.get("degradation_profile") == "polling_1ms" and
-            adaptive_config.get("calibration") == "platt" and
-            adaptive_config.get("stages") == ["T0", "T1", "T2", "T4"] and
-            adaptive_config.get("budget_definition") ==
-            "secondary_sender_phy_tx_airtime" and
-            _close(float(adaptive_config["budget_fraction"]), 0.02) and
-            int(adaptive_config["bucket_horizon_us"]) == 1000000 and
-            _close(float(adaptive_config["initial_shadow_price"]), 0.20) and
-            _close(float(adaptive_config["dual_step"]), 0.01) and
-            _close(float(adaptive_config["cost_safety_factor"]), 1.25) and
-            _close(float(adaptive_config["cost_ewma_alpha"]), 0.10),
-            "resolved_config.json: invalid adaptive airtime configuration",
-        )
+        _validate_adaptive_config(adaptive_config)
         adaptive_path = run_dir / "adaptive_airtime_decisions.csv"
         _require(adaptive_path.is_file(),
                  "missing core file: adaptive_airtime_decisions.csv")
         adaptive = _csv(adaptive_path, ADAPTIVE_DECISION_COLUMNS)
-        offsets = [int(value) for value in adaptive_config["decision_offsets_us"]]
-        _require(len(adaptive) == total * len(offsets),
-                 "adaptive decisions: frame/stage cardinality mismatch")
-        _require(all(row["run_id"] == run_id for row in adaptive),
-                 "adaptive decisions: run_id mismatch")
-        allowed_decisions = {
-            "price_rejected", "airtime_deferred", "action",
-            "already_resolved", "not_actionable", "launch_rejected",
-        }
-        action_frames: set[int] = set()
-        seen_samples: set[tuple[int, int]] = set()
-        for row in adaptive:
-            frame_id = _integer(row, "frame_id", "adaptive_airtime_decisions.csv")
-            offset = _integer(row, "sample_offset_us", "adaptive_airtime_decisions.csv")
-            _require(frame_id in seen and offset in offsets,
-                     "adaptive decisions: unknown frame or stage")
-            _require((frame_id, offset) not in seen_samples,
-                     "adaptive decisions: duplicate frame/stage")
-            seen_samples.add((frame_id, offset))
-            probability = float(row["calibrated_probability"])
-            shadow = float(row["shadow_price"])
-            _require(0 <= probability <= 1 and 0 <= shadow <= 1,
-                     "adaptive decisions: probability or shadow price out of bounds")
-            decision_name = row["decision"]
-            _require(decision_name in allowed_decisions,
-                     "adaptive decisions: unknown decision")
-            launched = _flag(row, "secondary_launched", "adaptive_airtime_decisions.csv")
-            _require(launched == (decision_name == "action"),
-                     "adaptive decisions: action/launch mismatch")
-            if launched:
-                _require(frame_id not in action_frames,
-                         "adaptive decisions: repeated secondary launch")
-                action_frames.add(frame_id)
-        duplicated_frame_ids = {
-            int(row["frame_id"]) for row in frames
-            if _flag(row, "duplicated", "frames.csv")
-        }
-        _require(action_frames == duplicated_frame_ids,
+        action_estimates = _validate_adaptive_decisions(
+            adaptive, adaptive_config, frames, run_id
+        )
+        observed_budget_debt_us = max(
+            (max(0.0, -_signed_number(
+                row, "available_airtime_us", "adaptive_airtime_decisions.csv"
+            )) for row in adaptive),
+            default=0.0,
+        )
+        _require(set(action_estimates) == duplicated_frame_ids,
                  "adaptive decisions: launched actions do not match duplicated frames")
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for adaptive policy")
@@ -1524,28 +1920,34 @@ def validate_run(
     meter = config.get("secondaryAirtimeMeter")
     if isinstance(meter, dict) and meter.get("enabled") is True:
         events_path = run_dir / "secondary_airtime_events.csv"
+        settlements_path = run_dir / "secondary_airtime_settlements.csv"
         summary_path = run_dir / "secondary_airtime_summary.json"
         _require(events_path.is_file(), "missing core file: secondary_airtime_events.csv")
+        _require(settlements_path.is_file(),
+                 "missing core file: secondary_airtime_settlements.csv")
         _require(summary_path.is_file(),
                  "missing core file: secondary_airtime_summary.json")
         events = _csv(events_path, SECONDARY_AIRTIME_EVENT_COLUMNS)
-        meter_summary = json.loads(summary_path.read_text(encoding="utf-8"))
-        duration_sum = sum(float(row["ppdu_duration_us"]) for row in events)
-        _require(_close(duration_sum, float(meter_summary["tagged_secondary_tx_airtime_us"])),
-                 "secondary airtime events do not sum to summary total")
-        _require(int(meter_summary["mixed_ppdu_count"]) == 0,
-                 "secondary airtime meter observed mixed PPDUs")
-        _require(all(row["run_id"] == run_id for row in events),
-                 "secondary airtime events: run_id mismatch")
-        if events:
-            _require(
-                _close(float(events[-1]["cumulative_tagged_airtime_us"]),
-                       float(meter_summary["tagged_secondary_tx_airtime_us"])),
-                "secondary airtime cumulative mismatch",
-            )
+        settlements = _csv(settlements_path, SECONDARY_AIRTIME_SETTLEMENT_COLUMNS)
+        meter_summary = _json(summary_path)
+        _validate_secondary_airtime(
+            events,
+            settlements,
+            meter_summary,
+            meter,
+            links,
+            config["policy"],
+            run_id,
+            adaptive_config,
+            action_estimates,
+            duplicated_frame_ids,
+            observed_budget_debt_us,
+        )
     else:
         _require(not (run_dir / "secondary_airtime_events.csv").exists(),
                  "secondary airtime events exist while meter is disabled")
+        _require(not (run_dir / "secondary_airtime_settlements.csv").exists(),
+                 "secondary airtime settlements exist while meter is disabled")
         _require(not (run_dir / "secondary_airtime_summary.json").exists(),
                  "secondary airtime summary exists while meter is disabled")
 
