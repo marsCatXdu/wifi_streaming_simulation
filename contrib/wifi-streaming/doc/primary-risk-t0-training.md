@@ -42,9 +42,14 @@ simulation is the independent test of the deployed controller.
 
 The output bundle replaces only `(commodity_polling_1ms, T0)`. The base
 bundle's T1, T2, and T4 predictors, along with its other sensitivity pipelines,
-are preserved byte-for-byte as Python objects. The generated split, metrics,
-and bundle manifests retain the dataset, source-frame, configuration, base
-bundle, and output checksums.
+are retained without refitting or mutation. Canonical per-predictor SHA-256
+fingerprints verify their fitted state after bundle serialization. The generated
+split, metrics, and bundle manifests retain the dataset manifest, dataset,
+source-frame, configuration, base-bundle, predictor, and output checksums.
+Because the preserved later-stage models do not share this target-domain fit,
+the new model identity is valid for controller decision offset 0 only. Both
+the experiment executable and output validator reject later decision offsets
+under this identity.
 
 Run the training step with the repository virtual environment:
 
@@ -68,10 +73,14 @@ probability / normalized_cost > threshold
 ```
 
 Each threshold is selected from calibration features, probabilities, and
-estimated costs only. Calibration labels are consulted afterward to report
-action rate, primary-miss recall and precision, and separate I/P-frame
-strata. Test outcomes do not select either a threshold or the smallest budget
-that plausibly reaches the frozen 52 percent rescue-recall target.
+estimated costs only. For the honest evaluation model, the selected threshold
+is applied unchanged to the held-out six-group test partition; that report is
+the controller-free operating-point evidence. Separately, deployment gates are
+selected with probabilities from the ranker refit on all non-calibration
+groups. Calibration labels are consulted afterward to report action rate,
+primary-miss recall and precision, and separate I/P-frame strata. Held-out
+outcomes never select a threshold or budget. Fresh-seed closed-loop simulation
+is the independent test of the refit deployment artifact.
 
 The estimator reproduces the controller's nominal EHT MCS5, 20 MHz, 800 ns
 guard-interval whole-copy cost with the 1.25 safety factor. Retry inflation at

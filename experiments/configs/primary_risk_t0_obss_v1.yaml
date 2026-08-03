@@ -4,6 +4,7 @@ model_id: commodity_polling_1ms_obss_primary_t0_v1
 
 dataset:
   schema_version: 2
+  manifest_sha256: cf2d4b5081a407ad20a866d533fd2448102dffa623e52ea76fc95f58f072945d
   sha256: 18c231a29e6045902ffca0d84d4c5881321d19cc7b5358bd8f665775570bc4eb
   project_git_commits: [ecb08139ea201b8453fb234799a2ca7bd3f242d6]
   ns3_upstream_commits: [d2add90b452d600cfb4859baed8e9ea633519447]

@@ -25,6 +25,10 @@ def model_manifest() -> dict[str, object]:
         "path_id": 1,
         "copy_id": 0,
         "stage": "T0",
+        "scenario_name": "obss_only",
+        "selected_policy": "fixed_link_1",
+        "feature_set": "F0+F1-degraded",
+        "degradation_profile": "polling_1ms",
     }
     return {
         "model_id": "commodity_polling_1ms_obss_primary_t0_v1",
@@ -52,6 +56,24 @@ class ExportIdentityTests(unittest.TestCase):
         manifest["target_provenance_sha256"] = canonical_sha256(provenance)
         with self.assertRaisesRegex(ValueError, "treatment-free primary-copy"):
             export_identity(manifest)
+
+    def test_rejects_rehashed_primary_t0_contract_changes(self) -> None:
+        changes = {
+            "target_id": "other_deadline_miss",
+            "stage": "T4",
+            "scenario_name": "constructed_easy_environment",
+            "selected_policy": "adaptive_airtime_duplication",
+            "feature_set": "ideal",
+            "degradation_profile": "none",
+        }
+        for key, value in changes.items():
+            with self.subTest(key=key):
+                manifest = model_manifest()
+                provenance = manifest["target_provenance"]
+                provenance[key] = value
+                manifest["target_provenance_sha256"] = canonical_sha256(provenance)
+                with self.assertRaisesRegex(ValueError, "target contract"):
+                    export_identity(manifest)
 
     def test_rejects_boolean_copy_identifier(self) -> None:
         manifest = model_manifest()

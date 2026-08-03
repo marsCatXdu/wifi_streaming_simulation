@@ -20,6 +20,7 @@ from validate_outputs import (
     PRIMARY_TARGET_ID,
     PRIMARY_TARGET_PROVENANCE_SHA256,
     ValidationError,
+    _prediction_model_offsets_valid,
     _validate_adaptive_config,
     _validate_adaptive_decisions,
     _validate_secondary_airtime,
@@ -365,8 +366,25 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             "model_id": PRIMARY_T0_MODEL_ID,
             "target_id": PRIMARY_TARGET_ID,
             "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+            "decision_offsets_us": [0],
+            "stages": ["T0"],
         })
-        self.assertEqual(_validate_adaptive_config(config), [0, 1000])
+        self.assertEqual(_validate_adaptive_config(config), [0])
+
+    def test_rejects_later_stage_with_primary_t0_model(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "model_id": PRIMARY_T0_MODEL_ID,
+            "target_id": PRIMARY_TARGET_ID,
+            "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+        })
+        with self.assertRaisesRegex(ValidationError, "only supports offset 0"):
+            _validate_adaptive_config(config)
+
+    def test_selective_offsets_reject_later_primary_t0_stage(self) -> None:
+        config = {"model_id": PRIMARY_T0_MODEL_ID}
+        self.assertTrue(_prediction_model_offsets_valid(config, [0]))
+        self.assertFalse(_prediction_model_offsets_valid(config, [0, 1000]))
 
     def test_rejects_primary_t0_without_target_provenance(self) -> None:
         config = adaptive_config()

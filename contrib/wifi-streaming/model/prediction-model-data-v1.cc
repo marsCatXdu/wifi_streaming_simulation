@@ -5,7 +5,7 @@
  * Export schema: 1
  * Model ID: commodity_polling_1ms_obss_primary_t0_v1
  * Target ID: primary_copy_deadline_miss
- * Target provenance SHA-256: b9d214c16b56af93042b228b09098ccbe3eec26c786e82ea47caf2161e48a1dc
+ * Target provenance SHA-256: e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84
  * Source model SHA-256: 735e69ea4ad0ce615b6f827aaa8e3362135cf3f18e4c727d69920af9898d73bf
  */
 
@@ -22,7 +22,7 @@ namespace
 {
 constexpr std::string_view g_modelId{"commodity_polling_1ms_obss_primary_t0_v1"};
 constexpr std::string_view g_targetId{"primary_copy_deadline_miss"};
-constexpr std::string_view g_targetProvenanceSha256{"b9d214c16b56af93042b228b09098ccbe3eec26c786e82ea47caf2161e48a1dc"};
+constexpr std::string_view g_targetProvenanceSha256{"e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84"};
 constexpr std::string_view g_sourceModelSha256{"735e69ea4ad0ce615b6f827aaa8e3362135cf3f18e4c727d69920af9898d73bf"};
 
 constexpr std::array<std::string_view, 86> g_featureNames{{

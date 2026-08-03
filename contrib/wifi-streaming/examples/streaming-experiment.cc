@@ -36,6 +36,14 @@ namespace
 #define WIFI_STREAMING_PROJECT_COMMIT "unknown"
 #endif
 
+bool
+IsPrimaryRiskT0Model()
+{
+    return PredictionModelEvaluator::GetModelId() ==
+               "commodity_polling_1ms_obss_primary_t0_v1" &&
+           PredictionModelEvaluator::GetTargetId() == "primary_copy_deadline_miss";
+}
+
 void
 PopulateNeighborCaches()
 {
@@ -750,6 +758,9 @@ main(int argc, char* argv[])
                                 true);
         NS_ABORT_MSG_IF(resolvedSelectiveDecisionOffsetsUs.front() != 0,
                         "Selective duplication decision offsets must start with zero");
+        NS_ABORT_MSG_IF(IsPrimaryRiskT0Model() &&
+                            resolvedSelectiveDecisionOffsetsUs.size() != 1,
+                        "Primary-risk T0 model only supports decision offset 0");
         for (const auto offset : resolvedSelectiveDecisionOffsetsUs)
         {
             NS_ABORT_MSG_IF(std::find(resolvedPredictionSampleOffsetsUs.begin(),
@@ -795,6 +806,9 @@ main(int argc, char* argv[])
                                 true);
         NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.front() != 0,
                         "Adaptive airtime decision offsets must start with zero");
+        NS_ABORT_MSG_IF(IsPrimaryRiskT0Model() &&
+                            resolvedAdaptiveDecisionOffsetsUs.size() != 1,
+                        "Primary-risk T0 model only supports decision offset 0");
         for (const auto offset : resolvedAdaptiveDecisionOffsetsUs)
         {
             NS_ABORT_MSG_IF(std::find(resolvedPredictionSampleOffsetsUs.begin(),

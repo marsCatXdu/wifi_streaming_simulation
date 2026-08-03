@@ -113,7 +113,7 @@ PREDICTION_SUPPORT_MASK_VERSION = 2
 PRIMARY_T0_MODEL_ID = "commodity_polling_1ms_obss_primary_t0_v1"
 PRIMARY_TARGET_ID = "primary_copy_deadline_miss"
 PRIMARY_TARGET_PROVENANCE_SHA256 = (
-    "b9d214c16b56af93042b228b09098ccbe3eec26c786e82ea47caf2161e48a1dc"
+    "e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84"
 )
 PREDICTION_BASE_COLUMNS = {
     "telemetry_schema_version", "run_id", "frame_id", "path_id", "copy_id",
@@ -414,6 +414,13 @@ def _prediction_target_provenance_valid(config: dict[str, Any]) -> bool:
     )
 
 
+def _prediction_model_offsets_valid(
+    config: dict[str, Any], offsets: list[int]
+) -> bool:
+    """Restrict target-domain models to stages actually retrained for them."""
+    return config.get("model_id") != PRIMARY_T0_MODEL_ID or offsets == [0]
+
+
 def _validate_adaptive_config(
     config: dict[str, Any],
     expected_selection: str = "full_forward",
@@ -456,6 +463,8 @@ def _validate_adaptive_config(
              "resolved_config.json: adaptive decision offsets must include T0")
     _require(set(offsets) <= {0, 1000, 2000, 4000},
              "resolved_config.json: adaptive predictor has an unsupported stage")
+    _require(_prediction_model_offsets_valid(config, offsets),
+             "resolved_config.json: primary T0 predictor only supports offset 0")
     _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
              "resolved_config.json: adaptive stages do not match decision offsets")
 
@@ -2091,6 +2100,8 @@ def validate_run(
             selective_config.get("stages") == [_stage_name(offset) for offset in offsets],
             "resolved_config.json: invalid selective predictor provenance",
         )
+        _require(_prediction_model_offsets_valid(selective_config, offsets),
+                 "resolved_config.json: primary T0 predictor only supports offset 0")
         selective_path = run_dir / "selective_duplication_decisions.csv"
         _require(selective_path.is_file(),
                  "missing core file: selective_duplication_decisions.csv")

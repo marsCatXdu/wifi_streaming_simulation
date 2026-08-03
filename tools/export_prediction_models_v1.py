@@ -23,6 +23,15 @@ from prediction.online_replay import read_model_bundle
 EXPORT_SCHEMA_VERSION = 1
 PIPELINE_ID = "commodity_polling_1ms"
 STAGES = ("T0", "T1", "T2", "T4")
+PRIMARY_T0_MODEL_ID = "commodity_polling_1ms_obss_primary_t0_v1"
+PRIMARY_T0_TARGET_CONTRACT = {
+    "target_id": "primary_copy_deadline_miss",
+    "stage": "T0",
+    "scenario_name": "obss_only",
+    "selected_policy": "fixed_link_1",
+    "feature_set": "F0+F1-degraded",
+    "degradation_profile": "polling_1ms",
+}
 IDENTIFIER_PATTERN = re.compile(r"[a-z][a-z0-9_]{0,127}")
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 
@@ -84,6 +93,11 @@ def export_identity(manifest: dict[str, Any]) -> ExportIdentity:
         or declared_digest != canonical_sha256(provenance)
     ):
         raise ValueError("target provenance checksum does not match its manifest")
+    if model_id == PRIMARY_T0_MODEL_ID and any(
+        provenance.get(key) != value
+        for key, value in PRIMARY_T0_TARGET_CONTRACT.items()
+    ):
+        raise ValueError("primary T0 model manifest has a different target contract")
     return ExportIdentity(model_id, target_id, declared_digest)
 
 

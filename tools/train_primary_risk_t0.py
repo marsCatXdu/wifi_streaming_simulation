@@ -23,6 +23,7 @@ from typing import Any
 import numpy as np
 import pyarrow.parquet as pq
 import yaml
+from joblib.hashing import NumpyHasher
 
 TOOLS = Path(__file__).resolve().parent
 if str(TOOLS) not in sys.path:
@@ -45,6 +46,7 @@ from prediction.online_replay import (
 )
 
 TRAINING_SCHEMA_VERSION = 1
+PREDICTOR_FINGERPRINT_METHOD = "joblib_numpy_hasher_sha256"
 REQUIRED_CONFIG_KEYS = {
     "primary_risk_training_schema_version",
     "artifact_id",
@@ -81,6 +83,15 @@ def provenance_sha256(value: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json(value).encode()).hexdigest()
 
 
+def is_sha256(value: Any) -> bool:
+    """Return whether a value is one lowercase hexadecimal SHA-256 digest."""
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
 def load_config(path: Path) -> dict[str, Any]:
     """Load and strictly validate the frozen training configuration."""
     value = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -91,6 +102,11 @@ def load_config(path: Path) -> dict[str, Any]:
         raise ValueError(f"primary-risk training config is missing: {', '.join(missing)}")
     if value["primary_risk_training_schema_version"] != TRAINING_SCHEMA_VERSION:
         raise ValueError("unsupported primary-risk training schema")
+    dataset = value["dataset"]
+    if not is_sha256(dataset.get("manifest_sha256")) or not is_sha256(
+        dataset.get("sha256")
+    ):
+        raise ValueError("primary-risk dataset digests are not frozen SHA-256 values")
     target = value["target"]
     expected_target = {
         "target_id": "primary_copy_deadline_miss",
@@ -247,7 +263,8 @@ def select_risk_density_threshold(
     best_threshold = float(np.max(density))
     best_action = density > best_threshold
     best_cost = 0.0
-    for threshold in np.unique(density):
+    candidates = np.unique(np.concatenate((density, np.asarray([0.0]))))
+    for threshold in candidates:
         action = density > threshold
         cost = float(estimated_cost_us[action].sum())
         if cost <= budget_us + 1e-9 and cost > best_cost + 1e-9:
@@ -255,6 +272,46 @@ def select_risk_density_threshold(
             best_action = action
             best_cost = cost
     return best_threshold, best_action
+
+
+def physical_feature_names(predictor: FrozenPredictor) -> tuple[str, ...]:
+    """Map the deployed feature contract to recorded dataset columns."""
+    return tuple(
+        f"polling_1ms_{name}" if name in predictor.f1_feature_names else name
+        for name in predictor.feature_names
+    )
+
+
+def predictor_fingerprint(predictor: Any) -> str:
+    """Return a canonical SHA-256 fingerprint of one fitted predictor."""
+    return NumpyHasher(hash_name="sha256", coerce_mmap=False).hash(predictor)
+
+
+def preserved_predictor_fingerprints(
+    base: dict[tuple[str, str], Any],
+    output: dict[tuple[str, str], Any],
+    replaced_key: tuple[str, str],
+) -> list[dict[str, Any]]:
+    """Prove that every non-replaced predictor has identical serialized state."""
+    if set(base) != set(output):
+        raise ValueError("output predictor key set differs from base bundle")
+    fingerprints = []
+    for key in sorted(base):
+        if key == replaced_key:
+            continue
+        base_digest = predictor_fingerprint(base[key])
+        output_digest = predictor_fingerprint(output[key])
+        if base_digest != output_digest:
+            raise ValueError(f"preserved predictor changed: {key[0]} {key[1]}")
+        fingerprints.append(
+            {
+                "pipeline_id": key[0],
+                "stage": key[1],
+                "method": PREDICTOR_FINGERPRINT_METHOD,
+                "sha256": base_digest,
+            }
+        )
+    return fingerprints
 
 
 def _json(path: Path) -> dict[str, Any]:
@@ -308,7 +365,8 @@ def _audit_source_frames(
         resolved = _json(resolved_path)
         build = _json(build_path)
         if (
-            resolved.get("policy") != target["selected_policy"]
+            resolved.get("run_id") != run["run_id"]
+            or resolved.get("policy") != target["selected_policy"]
             or int(resolved.get("duration_s", -1))
             != int(population["measurement_duration_s"])
             or resolved.get("topology") != "dual_interface"
@@ -324,6 +382,10 @@ def _audit_source_frames(
         with frame_path.open(newline="", encoding="utf-8") as source:
             reader = csv.DictReader(source)
             for row in reader:
+                if row.get("run_id") != run["run_id"]:
+                    raise ValueError(
+                        f"source frame run ID differs from manifest: {run['run_id']}"
+                    )
                 frame_id = int(row["frame_id"])
                 key = (run["run_id"], frame_id)
                 if key in labels:
@@ -376,10 +438,7 @@ def _load_target_rows(
     source_labels: dict[tuple[str, int], int],
 ) -> dict[str, Any]:
     target = config["target"]
-    physical_features = [
-        f"polling_1ms_{name}" if name in predictor.f1_feature_names else name
-        for name in predictor.feature_names
-    ]
+    physical_features = list(physical_feature_names(predictor))
     metadata = [
         "sample_stage",
         "path_id",
@@ -611,6 +670,8 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     dataset_manifest = _json(dataset_manifest_path)
     dataset_path = dataset_dir / dataset_manifest["dataset_file"]
     frozen_dataset = config["dataset"]
+    if sha256_file(dataset_manifest_path) != frozen_dataset["manifest_sha256"]:
+        raise ValueError("dataset manifest file differs from frozen training config")
     if dataset_manifest.get("dataset_schema_version") != frozen_dataset["schema_version"]:
         raise ValueError("dataset schema differs from frozen training config")
     if dataset_manifest.get("dataset_sha256") != frozen_dataset["sha256"]:
@@ -767,11 +828,70 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     ):
         raise ValueError("frozen I-frame airtime differs from controller estimator")
     normalized_cost = all_cost / reference_cost
-    calibration_duration_us = (
-        len(set(data["run"][calibration_mask]))
-        * int(config["expected_population"]["measurement_duration_s"])
-        * 1e6
+    measurement_duration_us = (
+        int(config["expected_population"]["measurement_duration_s"]) * 1e6
     )
+    calibration_duration_us = (
+        len(set(data["run"][calibration_mask])) * measurement_duration_us
+    )
+    test_duration_us = len(set(data["run"][test_mask])) * measurement_duration_us
+
+    # Select gates with the evaluation model's calibration partition, then
+    # apply each gate unchanged to the outcome-blind held-out test partition.
+    # These are the honest operating-point estimates. They are separate from
+    # the deployment gates below because the deployment ranker was refit with
+    # the former test groups.
+    evaluation_operating_points: dict[str, Any] = {}
+    for budget_fraction in map(
+        float, estimator["estimated_airtime_budget_fractions"]
+    ):
+        calibration_budget_us = budget_fraction * calibration_duration_us
+        density_threshold, calibration_action = select_risk_density_threshold(
+            evaluation_calibration_probability,
+            normalized_cost[calibration_mask],
+            all_cost[calibration_mask],
+            calibration_budget_us,
+        )
+        expected_action = (
+            evaluation_calibration_probability / normalized_cost[calibration_mask]
+            > density_threshold
+        )
+        if not np.array_equal(calibration_action, expected_action):
+            raise AssertionError("evaluation risk-density selector disagrees with strict gate")
+        key = format(budget_fraction, ".12g")
+        evaluation_operating_points[key] = {
+            "estimated_airtime_budget_fraction": budget_fraction,
+            "threshold_selection_role": "calibration",
+            "risk_density_threshold": density_threshold,
+            "calibration": _operating_point_metrics(
+                data["label"][calibration_mask],
+                evaluation_calibration_probability,
+                normalized_cost[calibration_mask],
+                all_cost[calibration_mask],
+                data["frame_type"][calibration_mask],
+                calibration_duration_us,
+                density_threshold,
+            ),
+            "heldout_test": _operating_point_metrics(
+                data["label"][test_mask],
+                test_probability,
+                normalized_cost[test_mask],
+                all_cost[test_mask],
+                data["frame_type"][test_mask],
+                test_duration_us,
+                density_threshold,
+            ),
+        }
+    evaluation_risk_density = {
+        "ranker_training_role": "training",
+        "threshold_selection_role": "calibration",
+        "heldout_application_role": "test",
+        "threshold_selection_uses_labels": False,
+        "budget_recommendation_uses_heldout_outcomes": False,
+        "threshold_comparator": "strict_greater",
+        "operating_points": evaluation_operating_points,
+    }
+
     operating_points: dict[str, Any] = {}
     recommended_budget = None
     minimum_plausible_recall = float(estimator["minimum_plausible_primary_miss_recall"])
@@ -816,6 +936,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
         ):
             recommended_budget = budget_fraction
     operating_point = {
+        "fit_scope": "deployment",
         "selection_partition": "calibration",
         "candidate_selection_uses_test_outcomes": False,
         "deployment_ranker_training_roles": ["training", "test"],
@@ -866,6 +987,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     target_provenance = {
         **copy.deepcopy(config["target"]),
         "dataset_sha256": frozen_dataset["sha256"],
+        "dataset_manifest_sha256": frozen_dataset["manifest_sha256"],
         "training_config_sha256": sha256_file(config_path),
         "split_seed": config["split"]["seed"],
         "evaluation_training_run_group_count": len(set(data["group"][train_mask])),
@@ -887,6 +1009,12 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
     try:
         model_path = staging / "model_bundle.pkl"
         write_model_bundle(model_path, bundle)
+        published_bundle = read_model_bundle(model_path)
+        preserved_fingerprints = preserved_predictor_fingerprints(
+            base_bundle.predictors,
+            published_bundle.predictors,
+            (pipeline_id, "T0"),
+        )
         model_digest = sha256_file(model_path)
         split_manifest = {
             "primary_risk_split_schema_version": 1,
@@ -921,6 +1049,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
                 "heldout_test_role": "test",
                 "calibration_metrics": evaluation_calibration_metrics,
                 "heldout_test_metrics": test_metrics,
+                "risk_density_operating_points": evaluation_risk_density,
             },
             "cross_validation": cross_validation_metrics,
             "deployment_fit": {
@@ -928,8 +1057,8 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
                 "calibration_role": "calibration",
                 "calibration_metrics": deployment_calibration_metrics,
                 "independent_test": "future fresh-seed simulation",
+                "risk_density_operating_point": operating_point,
             },
-            "risk_density_operating_point": operating_point,
         }
         _write_json(staging / "training_metrics.json", metrics_manifest)
         bundle_manifest = {
@@ -940,6 +1069,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
             "dataset_schema_version": dataset_manifest["dataset_schema_version"],
             "dataset": os.path.relpath(dataset_path, output_dir),
             "dataset_sha256": frozen_dataset["sha256"],
+            "dataset_manifest_sha256": frozen_dataset["manifest_sha256"],
             "f1_observation_source": "recorded_periodic_observation",
             "primary_link": bundle.primary_link,
             "primary_band": "5GHz",
@@ -959,6 +1089,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
                 for key in sorted(base_bundle.predictors)
                 if key != (pipeline_id, "T0")
             ],
+            "preserved_predictor_fingerprints": preserved_fingerprints,
             "replaced_predictor_key": {"pipeline_id": pipeline_id, "stage": "T0"},
             "predictors": _predictor_manifest(predictors),
             "source_audit": source_audit,
@@ -968,6 +1099,7 @@ def train(args: argparse.Namespace) -> dict[str, Any]:
                 "numpy": importlib.metadata.version("numpy"),
                 "scipy": importlib.metadata.version("scipy"),
                 "scikit_learn": importlib.metadata.version("scikit-learn"),
+                "joblib": importlib.metadata.version("joblib"),
                 "pyarrow": importlib.metadata.version("pyarrow"),
                 "pyyaml": importlib.metadata.version("PyYAML"),
             },
