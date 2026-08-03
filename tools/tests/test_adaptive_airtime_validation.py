@@ -468,7 +468,10 @@ def make_analysis_run(
 ) -> dict[str, object]:
     directory = root / run_id
     directory.mkdir()
-    write_rows(directory / "frames.csv", [{"deadline_miss": "0"}])
+    write_rows(
+        directory / "frames.csv",
+        [{"generation_time_us": "0", "deadline_miss": "0"}],
+    )
     write_rows(
         directory / "link_intervals.csv",
         [{"link_id": "0", "phy_tx_time_us": str(link0_tx_us)}],
@@ -533,6 +536,38 @@ class AdaptiveAirtimePlotTest(unittest.TestCase):
         _, lower, _ = _interval(values)
         normal_half = 1.96 * statistics.stdev(values) / (30 ** 0.5)
         self.assertGreater(lower, normal_half)
+
+    def test_sorts_frames_by_generation_time_for_miss_bursts(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = make_analysis_run(
+                root, "fixed", 1, 1, "dual_interface", "fixed_link_1", 20
+            )
+            write_rows(
+                root / "fixed" / "frames.csv",
+                [
+                    {"generation_time_us": "0", "deadline_miss": "1"},
+                    {"generation_time_us": "2000", "deadline_miss": "0"},
+                    {"generation_time_us": "1000", "deadline_miss": "1"},
+                ],
+            )
+
+            [summary] = summarize_adaptive_runs({"runs": [run]}, root)
+
+            self.assertEqual(summary["max_miss_burst"], 2)
+            self.assertEqual(summary["p95_miss_burst"], 2.0)
+
+    def test_falls_back_from_stale_serialized_run_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            run = make_analysis_run(
+                root, "fixed", 1, 1, "dual_interface", "fixed_link_1", 20
+            )
+            run["run_dir"] = str(root / "remote-workstation" / "fixed")
+
+            [summary] = summarize_adaptive_runs({"runs": [run]}, root)
+
+            self.assertEqual(Path(summary["run_dir"]), root / "fixed")
 
     def test_pairs_by_seed_and_run_and_plots_complete_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

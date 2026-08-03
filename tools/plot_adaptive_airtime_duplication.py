@@ -69,7 +69,13 @@ def _policy_label(policy: str, topology: str) -> str:
 
 
 def _run_directory(run: dict[str, Any], result_root: Path) -> Path:
-    return Path(run.get("run_dir", result_root / run["run_id"]))
+    local_directory = result_root / run["run_id"]
+    serialized_directory = run.get("run_dir")
+    if serialized_directory:
+        candidate = Path(serialized_directory)
+        if candidate.is_dir():
+            return candidate
+    return local_directory
 
 
 def _pair_key(row: dict[str, Any]) -> tuple[int, int]:
@@ -116,7 +122,10 @@ def summarize_adaptive_runs(
     rows: list[dict[str, Any]] = []
     for run in aggregate["runs"]:
         run_dir = _run_directory(run, result_root)
-        frames = _read_csv(run_dir / "frames.csv")
+        frames = sorted(
+            _read_csv(run_dir / "frames.csv"),
+            key=lambda row: int(row["generation_time_us"]),
+        )
         misses = [row["deadline_miss"] in {"1", "true", "True"} for row in frames]
         bursts = _burst_lengths(misses)
         airtime_fraction = 0.0
