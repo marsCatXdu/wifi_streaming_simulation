@@ -402,6 +402,8 @@ def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
     )
     _require(offsets[0] == 0,
              "resolved_config.json: adaptive decision offsets must include T0")
+    _require(set(offsets) <= {0, 1000, 2000, 4000},
+             "resolved_config.json: adaptive predictor has an unsupported stage")
     _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
              "resolved_config.json: adaptive stages do not match decision offsets")
 
@@ -1822,26 +1824,31 @@ def validate_run(
         selective_config = config.get("selectiveDuplication")
         _require(isinstance(selective_config, dict),
                  "resolved_config.json: missing selectiveDuplication object")
+        offsets = _strict_integer_list(
+            selective_config.get("decision_offsets_us"),
+            "selectiveDuplication.decision_offsets_us",
+            positive=False,
+        )
         _require(
             selective_config.get("model_id") in {
                 "commodity_polling_1ms_genuine_v1",
                 "commodity_polling_1ms_legacy_frame_delayed_v1",
             } and
             isinstance(selective_config.get("source_model_sha256"), str) and
-            len(selective_config["source_model_sha256"]) == 64 and
-            all(character in "0123456789abcdef"
-                for character in selective_config["source_model_sha256"]) and
+            re.fullmatch(r"[0-9a-f]{64}", selective_config["source_model_sha256"])
+            is not None and
             selective_config.get("feature_set") == "F0+F1-degraded" and
             selective_config.get("degradation_profile") == "polling_1ms" and
             selective_config.get("calibration") == "platt" and
-            selective_config.get("stages") == ["T0", "T1", "T2", "T4"],
+            offsets[0] == 0 and
+            set(offsets) <= {0, 1000, 2000, 4000} and
+            selective_config.get("stages") == [_stage_name(offset) for offset in offsets],
             "resolved_config.json: invalid selective predictor provenance",
         )
         selective_path = run_dir / "selective_duplication_decisions.csv"
         _require(selective_path.is_file(),
                  "missing core file: selective_duplication_decisions.csv")
         selective = _csv(selective_path, SELECTIVE_DECISION_COLUMNS)
-        offsets = [int(value) for value in selective_config["decision_offsets_us"]]
         _require(len(selective) == total * len(offsets),
                  "selective decisions: frame/stage cardinality mismatch")
         _require(all(row["run_id"] == run_id for row in selective),

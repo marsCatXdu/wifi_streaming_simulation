@@ -161,6 +161,13 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "provenance"):
             _validate_adaptive_config(config)
 
+    def test_rejects_stage_unsupported_by_frozen_model(self) -> None:
+        config = adaptive_config()
+        config["decision_offsets_us"] = [0, 1500]
+        config["stages"] = ["T0", "offset_1500us"]
+        with self.assertRaisesRegex(ValidationError, "unsupported stage"):
+            _validate_adaptive_config(config)
+
     def test_rejects_cost_arithmetic_mutation(self) -> None:
         rows = adaptive_rows()
         rows[1]["normalized_cost"] = "0.9"
