@@ -326,6 +326,39 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"tid_to_link_mapping_ul\": \"" << JsonEscape(config.tidToLinkMapping)
            << "\",\n"
            << "    \"str_mode\": \"" << JsonEscape(config.strMode) << "\",\n"
+           << "    \"multi_link_mode\": \"" << JsonEscape(config.multiLinkMode) << "\",\n"
+           << "    \"emlsr\": {\n"
+           << "      \"activated\": " << config.emlsrActivated << ",\n"
+           << "      \"profile\": \"" << JsonEscape(config.emlsrProfile) << "\",\n"
+           << "      \"manager\": \"" << JsonEscape(config.emlsrManager) << "\",\n"
+           << "      \"link_ids\": [";
+    for (std::size_t i = 0; i < config.emlsrLinkIds.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << +config.emlsrLinkIds[i];
+    }
+    output << "],\n"
+           << "      \"main_phy_id\": " << +config.emlsrMainPhyId << ",\n"
+           << "      \"padding_delay_us\": " << config.emlsrPaddingDelayUs << ",\n"
+           << "      \"transition_delay_us\": " << config.emlsrTransitionDelayUs << ",\n"
+           << "      \"channel_switch_delay_us\": " << config.emlsrChannelSwitchDelayUs
+           << ",\n"
+           << "      \"switch_aux_phy\": " << config.emlsrSwitchAuxPhy << ",\n"
+           << "      \"aux_phy_tx_capable\": " << config.emlsrAuxPhyTxCapable << ",\n"
+           << "      \"aux_phy_channel_width_mhz\": "
+           << config.emlsrAuxPhyChannelWidthMhz << ",\n"
+           << "      \"put_aux_phy_to_sleep\": " << config.emlsrPutAuxPhyToSleep << ",\n"
+           << "      \"in_device_interference\": "
+           << config.emlsrInDeviceInterference << ",\n"
+           << "      \"notify_mac_header_rx_end\": "
+           << config.emlsrNotifyMacHeaderRxEnd << ",\n"
+           << "      \"main_phy_frequency_ranges\": [";
+    for (std::size_t i = 0; i < config.emlsrMainPhyFrequencyRanges.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << '"'
+               << JsonEscape(config.emlsrMainPhyFrequencyRanges[i]) << '"';
+    }
+    output << "]\n"
+           << "    },\n"
            << "    \"application_socket_count\": " << config.applicationSocketCount << ",\n"
            << "    \"application_duplication\": " << config.applicationDuplication << "\n"
            << "  },\n"
@@ -574,6 +607,64 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "  },\n";
     }
     output << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"
+           << "}\n";
+}
+
+void
+ExperimentOutput::WriteMloRuntime(const std::string& outputDir, const MloRuntimeInfo& info)
+{
+    auto output = OpenOutput(outputDir, "mlo_runtime.json");
+    output << "{\n"
+           << "  \"mode\": \"" << JsonEscape(info.mode) << "\",\n"
+           << "  \"profile\": \"" << JsonEscape(info.profile) << "\",\n"
+           << "  \"station_emlsr_activated\": " << std::boolalpha
+           << info.stationEmlsrActivated << ",\n"
+           << "  \"ap_emlsr_activated\": " << info.apEmlsrActivated << ",\n"
+           << "  \"emlsr_manager\": \"" << JsonEscape(info.emlsrManager) << "\",\n"
+           << "  \"emlsr_link_ids\": [";
+    for (std::size_t i = 0; i < info.emlsrLinkIds.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << +info.emlsrLinkIds[i];
+    }
+    output << "],\n"
+           << "  \"ap_emlsr_enabled_per_link\": [";
+    for (std::size_t i = 0; i < info.apEmlsrEnabledPerLink.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << info.apEmlsrEnabledPerLink[i];
+    }
+    output << "],\n"
+           << "  \"main_phy_id\": " << +info.mainPhyId << ",\n"
+           << "  \"initial_main_phy_link_id\": " << +info.initialMainPhyLinkId << ",\n"
+           << "  \"initial_main_phy_band\": \"" << JsonEscape(info.initialMainPhyBand)
+           << "\",\n"
+           << "  \"padding_delay_us\": " << info.paddingDelayUs << ",\n"
+           << "  \"transition_delay_us\": " << info.transitionDelayUs << ",\n"
+           << "  \"channel_switch_delay_us\": " << info.channelSwitchDelayUs << ",\n"
+           << "  \"switch_aux_phy\": " << info.switchAuxPhy << ",\n"
+           << "  \"aux_phy_tx_capable\": " << info.auxPhyTxCapable << ",\n"
+           << "  \"aux_phy_channel_width_mhz\": " << info.auxPhyChannelWidthMhz << ",\n"
+           << "  \"put_aux_phy_to_sleep\": " << info.putAuxPhyToSleep << ",\n"
+           << "  \"in_device_interference\": " << info.inDeviceInterference << ",\n"
+           << "  \"notify_mac_header_rx_end\": " << info.notifyMacHeaderRxEnd << ",\n"
+           << "  \"main_phy_frequency_ranges\": [";
+    for (std::size_t i = 0; i < info.mainPhyFrequencyRanges.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << '"'
+               << JsonEscape(info.mainPhyFrequencyRanges[i]) << '"';
+    }
+    output << "],\n"
+           << "  \"successful_mpdus_per_link\": [";
+    for (std::size_t i = 0; i < info.successfulMpdusPerLink.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << info.successfulMpdusPerLink[i];
+    }
+    output << "],\n"
+           << "  \"phy_tx_time_us_per_link\": [";
+    for (std::size_t i = 0; i < info.phyTxTimeUsPerLink.size(); ++i)
+    {
+        output << (i == 0 ? "" : ", ") << info.phyTxTimeUsPerLink[i];
+    }
+    output << "]\n"
            << "}\n";
 }
 

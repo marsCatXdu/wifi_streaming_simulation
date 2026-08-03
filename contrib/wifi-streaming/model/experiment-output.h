@@ -93,6 +93,22 @@ struct StreamingRunConfig
     bool staticAssociation{false};
     std::string tidToLinkMapping;
     std::string strMode{"not_applicable"};
+    std::string multiLinkMode{"not_applicable"};
+    bool emlsrActivated{false};
+    std::string emlsrProfile{"not_applicable"};
+    std::string emlsrManager{"not_applicable"};
+    std::vector<uint8_t> emlsrLinkIds;
+    uint8_t emlsrMainPhyId{0};
+    uint32_t emlsrPaddingDelayUs{0};
+    uint32_t emlsrTransitionDelayUs{0};
+    uint32_t emlsrChannelSwitchDelayUs{0};
+    bool emlsrSwitchAuxPhy{false};
+    bool emlsrAuxPhyTxCapable{false};
+    uint32_t emlsrAuxPhyChannelWidthMhz{0};
+    bool emlsrPutAuxPhyToSleep{false};
+    bool emlsrInDeviceInterference{false};
+    bool emlsrNotifyMacHeaderRxEnd{false};
+    std::vector<std::string> emlsrMainPhyFrequencyRanges;
     uint32_t applicationSocketCount{0};
     bool applicationDuplication{false};
     bool packetEventLogsEnabled{false};
@@ -167,6 +183,35 @@ struct StreamingRunConfig
     int64_t obssApplicationStreamBase{0};
     int64_t obssWifiStreamBase{0};
     std::vector<ObssBssConfig> obssBsses;
+};
+
+/**
+ * Runtime state proving that the requested EMLSR profile was activated.
+ */
+struct MloRuntimeInfo
+{
+    std::string mode{"not_applicable"};
+    std::string profile{"not_applicable"};
+    bool stationEmlsrActivated{false};
+    bool apEmlsrActivated{false};
+    std::string emlsrManager{"not_applicable"};
+    std::vector<uint8_t> emlsrLinkIds;
+    std::vector<bool> apEmlsrEnabledPerLink;
+    uint8_t mainPhyId{0};
+    uint8_t initialMainPhyLinkId{0};
+    std::string initialMainPhyBand{"not_applicable"};
+    uint32_t paddingDelayUs{0};
+    uint32_t transitionDelayUs{0};
+    uint32_t channelSwitchDelayUs{0};
+    bool switchAuxPhy{false};
+    bool auxPhyTxCapable{false};
+    uint32_t auxPhyChannelWidthMhz{0};
+    bool putAuxPhyToSleep{false};
+    bool inDeviceInterference{false};
+    bool notifyMacHeaderRxEnd{false};
+    std::vector<std::string> mainPhyFrequencyRanges;
+    std::vector<uint64_t> successfulMpdusPerLink;
+    std::vector<uint64_t> phyTxTimeUsPerLink;
 };
 
 /**
@@ -320,6 +365,7 @@ class ExperimentOutput
     static void PrepareRunDirectory(const std::string& outputDir);
     static void WriteResolvedConfig(const std::string& outputDir,
                                     const StreamingRunConfig& config);
+    static void WriteMloRuntime(const std::string& outputDir, const MloRuntimeInfo& info);
     static void WriteBuildInfo(const std::string& outputDir, const StreamingBuildInfo& info);
     static void WriteLinkIntervals(const std::string& outputDir,
                                    const std::vector<LinkIntervalRecord>& records);

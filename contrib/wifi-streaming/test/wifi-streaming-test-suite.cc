@@ -1590,6 +1590,31 @@ class OutputStatisticsTestCase : public TestCase
         config.runId = "schema-test";
         ExperimentOutput::WriteResolvedConfig(directory, config);
 
+        MloRuntimeInfo mloRuntime;
+        mloRuntime.mode = "EMLSR";
+        mloRuntime.stationEmlsrActivated = true;
+        mloRuntime.apEmlsrActivated = true;
+        mloRuntime.emlsrManager = "ns3::DefaultEmlsrManager";
+        mloRuntime.emlsrLinkIds = {0, 1};
+        mloRuntime.apEmlsrEnabledPerLink = {true, true};
+        mloRuntime.mainPhyId = 1;
+        mloRuntime.initialMainPhyLinkId = 1;
+        mloRuntime.initialMainPhyBand = "5 GHz";
+        mloRuntime.successfulMpdusPerLink = {4, 5};
+        mloRuntime.phyTxTimeUsPerLink = {40, 50};
+        ExperimentOutput::WriteMloRuntime(directory, mloRuntime);
+        std::ifstream mloRuntimeFile(directory + "/mlo_runtime.json");
+        std::ostringstream mloRuntimeText;
+        mloRuntimeText << mloRuntimeFile.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(mloRuntimeText.str().find(
+                                  "\"emlsr_manager\": \"ns3::DefaultEmlsrManager\""),
+                              std::string::npos,
+                              "EMLSR runtime manager is missing");
+        NS_TEST_ASSERT_MSG_NE(mloRuntimeText.str().find(
+                                  "\"successful_mpdus_per_link\": [4, 5]"),
+                              std::string::npos,
+                              "EMLSR runtime per-link activity is missing");
+
         const std::string adaptiveDirectory = directory + "/adaptive";
         ExperimentOutput::PrepareRunDirectory(adaptiveDirectory);
         StreamingRunConfig adaptiveConfig;

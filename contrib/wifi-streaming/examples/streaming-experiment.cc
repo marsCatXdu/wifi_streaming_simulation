@@ -23,6 +23,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <set>
 #include <string_view>
 #include <unistd.h>
 
@@ -477,7 +478,9 @@ main(int argc, char* argv[])
     command.AddValue("emissionMode", "burst or uniform_within_frame", emissionMode);
     command.AddValue("source", "Frame source: synthetic or trace", sourceName);
     command.AddValue("traceFile", "Frame trace CSV required when source=trace", traceFile);
-    command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
+    command.AddValue("topology",
+                     "single_link, dual_interface, mlo_str, or mlo_emlsr",
+                     topology);
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, full_duplication, "
                      "selective_duplication, adaptive_airtime_duplication, or "
@@ -889,7 +892,7 @@ main(int argc, char* argv[])
     const std::string resolvedBackgroundStandard1 =
         backgroundStandard1 == "inherit" ? wifiStandard : backgroundStandard1;
     NS_ABORT_MSG_IF(topology != "single_link" && topology != "dual_interface" &&
-                        topology != "mlo_str",
+                        topology != "mlo_str" && topology != "mlo_emlsr",
                     "Unknown topology " << topology);
     NS_ABORT_MSG_IF(policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                         policyName != "static_best" && policyName != "full_duplication" &&
@@ -901,10 +904,13 @@ main(int argc, char* argv[])
                     "fullDuplicationPrimaryPath must be 0 or 1");
     NS_ABORT_MSG_IF(topology == "single_link" && policyName != "fixed_link_0",
                     "single_link supports only fixed_link_0");
-    NS_ABORT_MSG_IF(topology == "mlo_str" && policyName != "fixed_link_0",
-                    "mlo_str uses one native MLO path and supports only fixed_link_0");
-    NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
-                    "mlo_str requires --wifiStandard=eht");
+    const bool nativeMloTopology = topology == "mlo_str" || topology == "mlo_emlsr";
+    NS_ABORT_MSG_IF(nativeMloTopology && policyName != "fixed_link_0",
+                    topology << " uses one native MLO path and supports only fixed_link_0");
+    NS_ABORT_MSG_IF(nativeMloTopology && wifiStandard != "eht",
+                    topology << " requires --wifiStandard=eht");
+    NS_ABORT_MSG_IF(topology == "mlo_emlsr" && mloStaMaxInflights != 1,
+                    "mlo_emlsr reference profile requires mloStaMaxInflights=1");
     NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
                         policyName != "selective_duplication" &&
                         policyName != "adaptive_airtime_duplication" &&
@@ -977,11 +983,11 @@ main(int argc, char* argv[])
                     "downlink cannot safely select a legacy station MCS");
     NS_ABORT_MSG_IF(topology == "single_link" && backgroundStations1 != 0,
                     "single_link cannot have backgroundStations1");
-    NS_ABORT_MSG_IF(topology == "mlo_str" &&
+    NS_ABORT_MSG_IF(nativeMloTopology &&
                         backgroundProfile != "legacy_mixed8" &&
                         (backgroundTraffic != "none" || backgroundStations0 != 0 ||
                          backgroundStations1 != 0),
-                    "mlo_str supports background traffic only through legacy_mixed8");
+                    topology << " supports background traffic only through legacy_mixed8");
     NS_ABORT_MSG_IF(backgroundTraffic == "none" &&
                         (backgroundStations0 != 0 || backgroundStations1 != 0),
                     "Background station counts require non-none backgroundTraffic");
@@ -1014,7 +1020,17 @@ main(int argc, char* argv[])
     accessPoint.Create(1);
     NodeContainer edge;
     edge.Create(1);
-    const bool nativeMlo = topology == "mlo_str";
+    const bool nativeMlo = nativeMloTopology;
+    const bool emlsrMlo = topology == "mlo_emlsr";
+    constexpr uint8_t emlsrMainPhyId = 1;
+    constexpr uint32_t emlsrPaddingDelayUs = 128;
+    constexpr uint32_t emlsrTransitionDelayUs = 128;
+    constexpr uint32_t emlsrChannelSwitchDelayUs = 100;
+    constexpr uint32_t emlsrAuxPhyChannelWidthMhz = 20;
+    Ptr<WifiNetDevice> targetStaMld;
+    Ptr<WifiNetDevice> targetApMld;
+    MloRuntimeInfo mloRuntime;
+    bool mloRuntimeCaptured = false;
     std::vector<NodeContainer> backgroundStations(linkCount);
     backgroundStations[0].Create(backgroundStations0);
     if (linkCount == 2)
@@ -1230,6 +1246,10 @@ main(int argc, char* argv[])
     }
     else
     {
+        if (emlsrMlo)
+        {
+            wifi.ConfigEhtOptions("EmlsrActivated", BooleanValue(true));
+        }
         Ptr<MultiModelSpectrumChannel> channel2Ghz = makeWifiChannel(referenceLoss2GhzDb, 0);
         wifiChannels[0] = channel2Ghz;
 
@@ -1238,12 +1258,22 @@ main(int argc, char* argv[])
 
         SpectrumWifiPhyHelper phy(2);
         phy.AddPhyToFreqRangeMapping(0, WIFI_SPECTRUM_2_4_GHZ);
+        if (emlsrMlo)
+        {
+            phy.AddPhyToFreqRangeMapping(emlsrMainPhyId, WIFI_SPECTRUM_2_4_GHZ);
+        }
         phy.AddPhyToFreqRangeMapping(1, WIFI_SPECTRUM_5_GHZ);
         phy.AddChannel(channel2Ghz, WIFI_SPECTRUM_2_4_GHZ);
         phy.AddChannel(channel5Ghz, WIFI_SPECTRUM_5_GHZ);
         phy.Set(0, "ChannelSettings", StringValue("{1, 20, BAND_2_4GHZ, 0}"));
         phy.Set(1, "ChannelSettings", StringValue("{36, 20, BAND_5GHZ, 0}"));
         phy.Set("RxGain", DoubleValue(0));
+        if (emlsrMlo)
+        {
+            phy.Set("ChannelSwitchDelay",
+                    TimeValue(MicroSeconds(emlsrChannelSwitchDelayUs)));
+            phy.Set("NotifyMacHdrRxEnd", BooleanValue(true));
+        }
 
         uint8_t link0 = 0;
         wifi.SetRemoteStationManager(link0,
@@ -1285,6 +1315,28 @@ main(int argc, char* argv[])
                     UintegerValue(maxAmpduSize),
                     "BE_MaxAmsduSize",
                     UintegerValue(maxAmsduSize));
+        if (emlsrMlo)
+        {
+            mac.SetEmlsrManager("ns3::AdvancedEmlsrManager",
+                                "EmlsrLinkSet",
+                                StringValue("0,1"),
+                                "MainPhyId",
+                                UintegerValue(emlsrMainPhyId),
+                                "EmlsrPaddingDelay",
+                                TimeValue(MicroSeconds(emlsrPaddingDelayUs)),
+                                "EmlsrTransitionDelay",
+                                TimeValue(MicroSeconds(emlsrTransitionDelayUs)),
+                                "SwitchAuxPhy",
+                                BooleanValue(false),
+                                "AuxPhyTxCapable",
+                                BooleanValue(false),
+                                "AuxPhyChannelWidth",
+                                UintegerValue(emlsrAuxPhyChannelWidthMhz),
+                                "PutAuxPhyToSleep",
+                                BooleanValue(false),
+                                "InDeviceInterference",
+                                BooleanValue(false));
+        }
         mac.SetEdca(AC_BE,
                     "NMaxInflights",
                     UintegerValue(mloStaMaxInflights),
@@ -1316,9 +1368,13 @@ main(int argc, char* argv[])
                                 std::to_string(txopLimitUs) + "us"));
         apWifiDevices = wifi.Install(phy, mac, accessPoint);
 
-        Ptr<WifiNetDevice> staMld = DynamicCast<WifiNetDevice>(stationDevices.Get(0));
-        Ptr<WifiNetDevice> apMld = DynamicCast<WifiNetDevice>(apWifiDevices.Get(0));
-        WifiStaticSetupHelper::SetStaticAssociation(apMld, staMld);
+        targetStaMld = DynamicCast<WifiNetDevice>(stationDevices.Get(0));
+        targetApMld = DynamicCast<WifiNetDevice>(apWifiDevices.Get(0));
+        WifiStaticSetupHelper::SetStaticAssociation(targetApMld, targetStaMld);
+        if (emlsrMlo)
+        {
+            WifiStaticSetupHelper::SetStaticEmlsr(targetApMld, targetStaMld);
+        }
         if (backgroundProfile == "legacy_mixed8")
         {
             installBackgroundLink("wifi-streaming-mld",
@@ -1330,9 +1386,129 @@ main(int argc, char* argv[])
         }
         if (maxAmpduSize > 0)
         {
-            WifiStaticSetupHelper::SetStaticBlockAck(apMld, staMld, 0);
-            WifiStaticSetupHelper::SetStaticBlockAck(staMld, apMld, 0);
+            WifiStaticSetupHelper::SetStaticBlockAck(targetApMld, targetStaMld, 0);
+            WifiStaticSetupHelper::SetStaticBlockAck(targetStaMld, targetApMld, 0);
         }
+    }
+    if (emlsrMlo)
+    {
+        Simulator::Schedule(NanoSeconds(1),
+                            [targetStaMld,
+                             targetApMld,
+                             &mloRuntime,
+                             &mloRuntimeCaptured]() {
+                                auto staMac = DynamicCast<StaWifiMac>(targetStaMld->GetMac());
+                                NS_ABORT_MSG_IF(!staMac || !staMac->IsAssociated(),
+                                                "EMLSR runtime check requires an associated STA "
+                                                "MLD");
+                                auto manager = staMac->GetEmlsrManager();
+                                NS_ABORT_MSG_IF(!manager,
+                                                "EMLSR runtime check found no EMLSR manager");
+                                const std::set<uint8_t> expectedLinks{0, 1};
+                                NS_ABORT_MSG_IF(manager->GetEmlsrLinks() != expectedLinks,
+                                                "EMLSR runtime link set is not {0,1}");
+
+                                mloRuntime.mode = "EMLSR";
+                                mloRuntime.profile = "advanced_fixed_aux_v1";
+                                mloRuntime.stationEmlsrActivated =
+                                    targetStaMld->IsEmlsrActivated();
+                                mloRuntime.apEmlsrActivated = targetApMld->IsEmlsrActivated();
+                                mloRuntime.emlsrManager = manager->GetInstanceTypeId().GetName();
+                                mloRuntime.emlsrLinkIds.assign(expectedLinks.begin(),
+                                                               expectedLinks.end());
+                                mloRuntime.mainPhyId = manager->GetMainPhyId();
+                                const auto mainPhyLink =
+                                    staMac->GetLinkForPhy(mloRuntime.mainPhyId);
+                                NS_ABORT_MSG_IF(!mainPhyLink,
+                                                "EMLSR main PHY is not mapped to a setup link");
+                                mloRuntime.initialMainPhyLinkId = *mainPhyLink;
+                                const auto mainPhy = targetStaMld->GetPhy(mloRuntime.mainPhyId);
+                                const auto mainPhyBand = mainPhy->GetPhyBand();
+                                mloRuntime.initialMainPhyBand =
+                                    mainPhyBand == WIFI_PHY_BAND_5GHZ ? "5 GHz" : "unexpected";
+                                auto spectrumMainPhy = DynamicCast<SpectrumWifiPhy>(mainPhy);
+                                NS_ABORT_MSG_IF(!spectrumMainPhy,
+                                                "EMLSR main PHY is not a SpectrumWifiPhy");
+                                const auto& interfaces =
+                                    spectrumMainPhy->GetSpectrumPhyInterfaces();
+                                NS_ABORT_MSG_IF(
+                                    !interfaces.contains(WIFI_SPECTRUM_2_4_GHZ) ||
+                                        !interfaces.contains(WIFI_SPECTRUM_5_GHZ),
+                                    "EMLSR main PHY does not cover both configured bands");
+                                mloRuntime.mainPhyFrequencyRanges = {
+                                    "WIFI_SPECTRUM_2_4_GHZ", "WIFI_SPECTRUM_5_GHZ"};
+
+                                TimeValue paddingDelay;
+                                TimeValue transitionDelay;
+                                BooleanValue switchAuxPhy;
+                                BooleanValue auxPhyTxCapable;
+                                UintegerValue auxPhyChannelWidth;
+                                BooleanValue putAuxPhyToSleep;
+                                BooleanValue inDeviceInterference;
+                                BooleanValue notifyMacHeaderRxEnd;
+                                manager->GetAttribute("EmlsrPaddingDelay", paddingDelay);
+                                manager->GetAttribute("EmlsrTransitionDelay", transitionDelay);
+                                manager->GetAttribute("SwitchAuxPhy", switchAuxPhy);
+                                manager->GetAttribute("AuxPhyTxCapable", auxPhyTxCapable);
+                                manager->GetAttribute("AuxPhyChannelWidth", auxPhyChannelWidth);
+                                manager->GetAttribute("PutAuxPhyToSleep", putAuxPhyToSleep);
+                                manager->GetAttribute("InDeviceInterference",
+                                                      inDeviceInterference);
+                                mainPhy->GetAttribute("NotifyMacHdrRxEnd",
+                                                      notifyMacHeaderRxEnd);
+                                mloRuntime.paddingDelayUs =
+                                    paddingDelay.Get().GetMicroSeconds();
+                                mloRuntime.transitionDelayUs =
+                                    transitionDelay.Get().GetMicroSeconds();
+                                mloRuntime.channelSwitchDelayUs =
+                                    targetStaMld->GetPhy(mloRuntime.mainPhyId)
+                                        ->GetChannelSwitchDelay()
+                                        .GetMicroSeconds();
+                                mloRuntime.switchAuxPhy = switchAuxPhy.Get();
+                                mloRuntime.auxPhyTxCapable = auxPhyTxCapable.Get();
+                                mloRuntime.auxPhyChannelWidthMhz = auxPhyChannelWidth.Get();
+                                mloRuntime.putAuxPhyToSleep = putAuxPhyToSleep.Get();
+                                mloRuntime.inDeviceInterference =
+                                    inDeviceInterference.Get();
+                                mloRuntime.notifyMacHeaderRxEnd =
+                                    notifyMacHeaderRxEnd.Get();
+
+                                auto apMac = DynamicCast<ApWifiMac>(targetApMld->GetMac());
+                                NS_ABORT_MSG_IF(!apMac, "EMLSR runtime check requires an AP MLD");
+                                for (const auto linkId : expectedLinks)
+                                {
+                                    const auto clientLinkAddress =
+                                        staMac->GetFrameExchangeManager(linkId)->GetAddress();
+                                    mloRuntime.apEmlsrEnabledPerLink.push_back(
+                                        apMac->GetWifiRemoteStationManager(linkId)
+                                            ->GetEmlsrEnabled(clientLinkAddress));
+                                }
+
+                                NS_ABORT_MSG_IF(!mloRuntime.stationEmlsrActivated ||
+                                                    !mloRuntime.apEmlsrActivated ||
+                                                    mloRuntime.emlsrManager !=
+                                                        "ns3::AdvancedEmlsrManager" ||
+                                                    mloRuntime.mainPhyId != 1 ||
+                                                    mloRuntime.initialMainPhyLinkId != 1 ||
+                                                    mainPhyBand != WIFI_PHY_BAND_5GHZ ||
+                                                    mloRuntime.paddingDelayUs != 128 ||
+                                                    mloRuntime.transitionDelayUs != 128 ||
+                                                    mloRuntime.channelSwitchDelayUs != 100 ||
+                                                    mloRuntime.switchAuxPhy ||
+                                                    mloRuntime.auxPhyTxCapable ||
+                                                    mloRuntime.auxPhyChannelWidthMhz != 20 ||
+                                                    mloRuntime.putAuxPhyToSleep ||
+                                                    mloRuntime.inDeviceInterference ||
+                                                    !mloRuntime.notifyMacHeaderRxEnd,
+                                                "Resolved EMLSR runtime state differs from the "
+                                                "practical profile");
+                                NS_ABORT_MSG_IF(
+                                    !std::all_of(mloRuntime.apEmlsrEnabledPerLink.begin(),
+                                                 mloRuntime.apEmlsrEnabledPerLink.end(),
+                                                 [](bool enabled) { return enabled; }),
+                                    "AP did not enable EMLSR on both setup links");
+                                mloRuntimeCaptured = true;
+                            });
     }
     constexpr uint32_t obssBssCount = 4;
     std::vector<NodeContainer> obssAccessPoints(obssBssCount);
@@ -1719,7 +1895,29 @@ main(int argc, char* argv[])
     resolved.blockAckEnabled = maxAmpduSize > 0;
     resolved.staticAssociation = nativeMlo;
     resolved.tidToLinkMapping = nativeMlo ? "0 0,1" : "not_applicable";
-    resolved.strMode = nativeMlo ? "STR" : "not_applicable";
+    resolved.strMode = topology == "mlo_str" ? "STR" : "not_applicable";
+    resolved.multiLinkMode =
+        nativeMlo ? (emlsrMlo ? "EMLSR" : "STR") : "not_applicable";
+    resolved.emlsrActivated = emlsrMlo;
+    resolved.emlsrProfile = emlsrMlo ? "advanced_fixed_aux_v1" : "not_applicable";
+    resolved.emlsrManager = emlsrMlo ? "ns3::AdvancedEmlsrManager" : "not_applicable";
+    resolved.emlsrLinkIds = emlsrMlo ? std::vector<uint8_t>{0, 1}
+                                     : std::vector<uint8_t>{};
+    resolved.emlsrMainPhyId = emlsrMlo ? emlsrMainPhyId : 0;
+    resolved.emlsrPaddingDelayUs = emlsrMlo ? emlsrPaddingDelayUs : 0;
+    resolved.emlsrTransitionDelayUs = emlsrMlo ? emlsrTransitionDelayUs : 0;
+    resolved.emlsrChannelSwitchDelayUs = emlsrMlo ? emlsrChannelSwitchDelayUs : 0;
+    resolved.emlsrSwitchAuxPhy = false;
+    resolved.emlsrAuxPhyTxCapable = false;
+    resolved.emlsrAuxPhyChannelWidthMhz =
+        emlsrMlo ? emlsrAuxPhyChannelWidthMhz : 0;
+    resolved.emlsrPutAuxPhyToSleep = false;
+    resolved.emlsrInDeviceInterference = false;
+    resolved.emlsrNotifyMacHeaderRxEnd = emlsrMlo;
+    resolved.emlsrMainPhyFrequencyRanges =
+        emlsrMlo ? std::vector<std::string>{"WIFI_SPECTRUM_2_4_GHZ",
+                                            "WIFI_SPECTRUM_5_GHZ"}
+                 : std::vector<std::string>{};
     resolved.applicationSocketCount = stationDevices.GetN();
     resolved.applicationDuplication = policyName == "full_duplication";
     resolved.frameRetryLimit = frameRetryLimit;
@@ -2446,6 +2644,27 @@ main(int argc, char* argv[])
         mac.meanMpduServiceTimeUs = meanServiceTime;
         mac.p95MpduServiceTimeUs = p95ServiceTime;
         macSummaries.push_back(mac);
+    }
+    if (emlsrMlo)
+    {
+        NS_ABORT_MSG_IF(!mloRuntimeCaptured,
+                        "EMLSR runtime profile was not captured after static setup");
+        for (const auto& interval : linkIntervals)
+        {
+            mloRuntime.successfulMpdusPerLink.push_back(interval.successfulMpdus);
+            mloRuntime.phyTxTimeUsPerLink.push_back(interval.phyTxTimeUs);
+        }
+        ExperimentOutput::WriteMloRuntime(outputDir, mloRuntime);
+        NS_ABORT_MSG_IF(mloRuntime.successfulMpdusPerLink.size() != 2 ||
+                            mloRuntime.phyTxTimeUsPerLink.size() != 2 ||
+                            std::any_of(mloRuntime.successfulMpdusPerLink.begin(),
+                                        mloRuntime.successfulMpdusPerLink.end(),
+                                        [](uint64_t value) { return value == 0; }) ||
+                            std::any_of(mloRuntime.phyTxTimeUsPerLink.begin(),
+                                        mloRuntime.phyTxTimeUsPerLink.end(),
+                                        [](uint64_t value) { return value == 0; }),
+                        "EMLSR practical profile requires nonzero successful MPDUs and sender PHY TX "
+                        "airtime on both links");
     }
     ExperimentOutput::WriteLinkIntervals(outputDir, linkIntervals);
     ExperimentOutput::WriteMacSummary(outputDir, macSummaries);
