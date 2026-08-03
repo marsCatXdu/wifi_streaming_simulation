@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 import copy
+import csv
+import json
+import statistics
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -16,6 +20,11 @@ from validate_outputs import (
     _validate_adaptive_config,
     _validate_adaptive_decisions,
     _validate_secondary_airtime,
+)
+from plot_adaptive_airtime_duplication import (
+    _interval,
+    plot_adaptive_airtime,
+    summarize_adaptive_runs,
 )
 
 
@@ -216,6 +225,125 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "released reservation"):
             self.validate_fixture(*fixture)
 
+
+def write_rows(path: Path, rows: list[dict[str, object]]) -> None:
+    with path.open("w", newline="", encoding="utf-8") as target:
+        writer = csv.DictWriter(target, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def make_analysis_run(
+    root: Path,
+    run_id: str,
+    seed: int,
+    run: int,
+    topology: str,
+    policy: str,
+    link0_tx_us: int,
+) -> dict[str, object]:
+    directory = root / run_id
+    directory.mkdir()
+    write_rows(directory / "frames.csv", [{"deadline_miss": "0"}])
+    write_rows(
+        directory / "link_intervals.csv",
+        [{"link_id": "0", "phy_tx_time_us": str(link0_tx_us)}],
+    )
+    if policy == "adaptive_airtime_duplication":
+        meter = {
+            "tagged_secondary_tx_airtime_us": 100.0,
+            "tagged_secondary_tx_airtime_fraction": 0.1,
+            "measurement_duration_us": 1000.0,
+            "maximum_budget_debt_us": 0.0,
+            "estimated_action_airtime_us": 100.0,
+            "actual_to_estimated_airtime_ratio": 1.0,
+            "forced_reservation_settlements": 0,
+            "finite_run_budget_us": 150.0,
+            "budget_excess_us": 0.0,
+        }
+        (directory / "secondary_airtime_summary.json").write_text(
+            json.dumps(meter), encoding="utf-8"
+        )
+        write_rows(
+            directory / "adaptive_airtime_decisions.csv",
+            [{
+                "frame_id": "7",
+                "decision": "action",
+                "estimated_airtime_us": "100",
+                "sample_stage": "offset_1500us",
+                "sample_time_ns": "1500000",
+                "shadow_price": "0.2",
+                "bucket_balance_us": "50",
+            }],
+        )
+        write_rows(
+            directory / "secondary_airtime_settlements.csv",
+            [{"frame_id": "7", "measured_airtime_us": "100"}],
+        )
+    return {
+        "run_id": run_id,
+        "run_dir": str(directory),
+        "seed": seed,
+        "run": run,
+        "topology": topology,
+        "policy": policy,
+        "config": {"duration_s": 0.001},
+        "deadline_miss_ratio": 0.0,
+        "redundant_byte_ratio": 0.1 if policy == "adaptive_airtime_duplication" else 0.0,
+    }
+
+
+class AdaptiveAirtimePlotTest(unittest.TestCase):
+    def test_uses_student_t_interval(self) -> None:
+        values = [float(value) for value in range(30)]
+        _, lower, _ = _interval(values)
+        normal_half = 1.96 * statistics.stdev(values) / (30 ** 0.5)
+        self.assertGreater(lower, normal_half)
+
+    def test_pairs_by_seed_and_run_and_plots_complete_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            aggregate = {"runs": [
+                make_analysis_run(
+                    root, "fixed-run-2", 1, 2, "dual_interface", "fixed_link_1", 20
+                ),
+                make_analysis_run(
+                    root, "fixed-run-1", 1, 1, "dual_interface", "fixed_link_1", 900
+                ),
+                make_analysis_run(
+                    root,
+                    "adaptive-run-2",
+                    1,
+                    2,
+                    "dual_interface",
+                    "adaptive_airtime_duplication",
+                    120,
+                ),
+                make_analysis_run(
+                    root, "mlo-run-2", 1, 2, "mlo_str", "fixed_link_0", 70
+                ),
+            ]}
+            rows = summarize_adaptive_runs(aggregate, root)
+            adaptive = next(
+                row for row in rows if row["policy"] == "adaptive_airtime_duplication"
+            )
+            self.assertAlmostEqual(adaptive["incremental_link0_airtime_fraction"], 0.1)
+            self.assertEqual(adaptive["actions_stage_offset_1500us"], 1)
+
+            plot_adaptive_airtime(aggregate, root)
+            output = root / "plots/adaptive_airtime"
+            for name in (
+                "p95_miss_burst.png",
+                "tagged_vs_incremental_link0_airtime.png",
+                "estimated_vs_measured_airtime.png",
+                "action_stage_distribution.png",
+            ):
+                self.assertTrue((output / name).is_file(), name)
+            with (root / "adaptive_airtime_summary.csv").open(
+                newline="", encoding="utf-8"
+            ) as source:
+                header = next(csv.reader(source))
+            self.assertNotIn("run_dir", header)
 
 if __name__ == "__main__":
     unittest.main()
