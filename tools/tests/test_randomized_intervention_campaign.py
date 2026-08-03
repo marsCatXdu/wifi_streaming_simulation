@@ -75,10 +75,21 @@ class RandomizedInterventionCampaignTest(unittest.TestCase):
             "--predictionEventLogEnabled=0",
             "--predictionOracleFeaturesEnabled=0",
             "--secondaryAirtimeMeterEnabled=1",
+            "--queueMaxDelayMs=500",
+            "--maxAmpduSize=65535",
+            "--txopLimitUs=0",
+            "--rtsCtsThreshold=4692480",
+            "--guardIntervalNs=800",
         }
         for document in (self.pilot, self.collection):
             config = expand_config(document)[0]["config"]
             prediction = config["prediction"]
+            wifi = config["wifi"]
+            self.assertEqual(wifi["queue_max_delay_ms"], 500)
+            self.assertEqual(wifi["max_ampdu_size"], 65535)
+            self.assertEqual(wifi["txop_limit_us"], 0)
+            self.assertEqual(wifi["rts_cts_threshold"], 4692480)
+            self.assertEqual(wifi["guard_interval_ns"], 800)
             self.assertTrue(prediction["prediction_telemetry_enabled"])
             self.assertEqual(
                 prediction["prediction_sample_offsets_us"], [0, 2000, 4000]
