@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from randomized_frame_assignment import ALGORITHM_ID, assign_frame
+
 CORE_FILES = {
     "resolved_config.json",
     "build_info.json",
@@ -65,6 +67,64 @@ SECONDARY_AIRTIME_EVENT_COLUMNS = {
 SECONDARY_AIRTIME_SETTLEMENT_COLUMNS = {
     "run_id", "frame_id", "settlement_time_ns", "released_airtime_us",
     "measured_airtime_us", "nominal_airtime_us", "fallback",
+}
+RANDOMIZED_ASSIGNMENT_COLUMNS = {
+    "schema_version", "run_id", "frame_id", "eligible_t2", "eligibility_reason",
+    "assigned_arm", "assignment_seed", "assignment_run", "assignment_salt",
+    "assignment_algorithm", "raw_draw", "unit_draw", "t2_probability",
+    "t4_probability", "control_probability", "propensity", "primary_sample_time_ns",
+    "secondary_sample_time_ns", "primary_feature_watermark_time_ns",
+    "primary_feature_watermark_sequence", "secondary_feature_watermark_time_ns",
+    "secondary_feature_watermark_sequence", "generation_time_ns", "deadline_time_ns",
+    "prospective_t4_time_ns", "frame_size_bytes", "frame_packet_count", "frame_type",
+    "descriptor_available", "secondary_packet_count", "secondary_packet_indices",
+    "secondary_expected_mac_service_bytes", "cost_estimator", "cost_safety_factor",
+    "nominal_airtime_us", "estimated_airtime_us",
+}
+RANDOMIZED_EXECUTION_COLUMNS = {
+    "schema_version", "run_id", "frame_id", "eligible_t2", "eligibility_reason",
+    "assigned_arm", "assignment_seed", "assignment_run", "assignment_salt",
+    "assignment_algorithm", "raw_draw", "unit_draw", "t2_probability",
+    "t4_probability", "control_probability", "propensity", "execution_stage",
+    "primary_sample_time_ns", "secondary_sample_time_ns",
+    "primary_feature_watermark_time_ns", "primary_feature_watermark_sequence",
+    "secondary_feature_watermark_time_ns", "secondary_feature_watermark_sequence",
+    "generation_time_ns", "deadline_time_ns", "descriptor_available_at_assignment",
+    "descriptor_available_at_execution", "secondary_packet_count",
+    "secondary_packet_indices", "secondary_expected_mac_service_bytes", "cost_estimator",
+    "cost_safety_factor", "nominal_airtime_us", "estimated_airtime_us",
+    "primary_actionable", "attempted", "launched", "noncompliance", "status",
+}
+RANDOMIZED_CSV_SCHEMA_VERSION = 1
+RANDOMIZED_COST_ESTIMATOR = (
+    "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1"
+)
+RANDOMIZED_COST_SAFETY_FACTOR = 1.25
+RANDOMIZED_T2_OFFSET_US = 2000
+RANDOMIZED_T4_OFFSET_US = 4000
+RANDOMIZED_COMMON_ELIGIBILITY_RULE = (
+    "T2_at_or_after_start_and_prospective_T4_before_stop_and_"
+    "primary_actionable_and_canonical_secondary_descriptor_available"
+)
+RANDOMIZED_CONFIG_KEYS = {
+    "csv_schema_version", "assignment_algorithm", "assignment_salt",
+    "randomization_consumes_ns3_rng", "arm_probabilities", "stages",
+    "stage_offsets_us", "primary_path", "primary_copy_id", "secondary_path",
+    "secondary_copy_id", "assignment_window_start_ns",
+    "assignment_window_stop_ns", "assignment_stop_guard_us",
+    "common_eligibility_rule", "intervention", "token_gate_enabled",
+    "cost_estimator_id",
+}
+RANDOMIZED_PREDICTION_COLUMNS = {
+    "run_id", "frame_id", "path_id", "copy_id", "sample_stage",
+    "sample_offset_us", "sample_time_ns", "latest_feature_event_time_ns",
+    "latest_feature_event_sequence", "generation_time_ns", "deadline_time_ns",
+    "sender_mac_complete", "actionable", "frame_size_bytes", "frame_packet_count",
+    "frame_type", "packets_submitted", "application_socket_packet_bytes_submitted",
+    "packets_remaining_to_submit", "frame_packets_mac_enqueued",
+    "frame_packets_mac_dequeued", "frame_packets_tx_succeeded",
+    "frame_mpdu_attempt_failures", "frame_packets_terminally_dropped",
+    "frame_packets_currently_queued", "frame_mac_service_bytes_currently_queued",
 }
 SECONDARY_AIRTIME_SUMMARY_KEYS = {
     "tagged_ppdu_count", "mixed_ppdu_count", "tagged_secondary_tx_airtime_us",
@@ -1386,6 +1446,525 @@ def _validate_adaptive_decisions(
     return action_estimates
 
 
+def _validate_randomized_intervention(
+    run_dir: Path,
+    config: dict[str, Any],
+    run_id: str,
+    frames: list[dict[str, str]],
+    duplicated_frame_ids: set[int],
+) -> tuple[dict[int, float], dict[int, float]]:
+    """Reconstruct the randomized assignment and execution ledgers exactly."""
+    object_name = "randomizedIntervention"
+    randomized = config.get(object_name)
+    _require(isinstance(randomized, dict),
+             "resolved_config.json: missing randomizedIntervention object")
+    _require(set(randomized) == RANDOMIZED_CONFIG_KEYS,
+             "resolved_config.json: randomizedIntervention schema mismatch")
+    _require(config.get("policy") == "randomized_full_copy_exploration" and
+             config.get("topology") == "dual_interface",
+             "resolved_config.json: randomized intervention requires dual_interface")
+    _require(isinstance(randomized.get("csv_schema_version"), int) and
+             not isinstance(randomized.get("csv_schema_version"), bool) and
+             randomized.get("csv_schema_version") == RANDOMIZED_CSV_SCHEMA_VERSION and
+             randomized.get("assignment_algorithm") == ALGORITHM_ID and
+             randomized.get("randomization_consumes_ns3_rng") is False and
+             randomized.get("stages") == ["T2", "T4"] and
+             randomized.get("stage_offsets_us") == [RANDOMIZED_T2_OFFSET_US,
+                                                       RANDOMIZED_T4_OFFSET_US] and
+             randomized.get("primary_path") == 1 and
+             randomized.get("primary_copy_id") == 0 and
+             randomized.get("secondary_path") == 0 and
+             randomized.get("secondary_copy_id") == 1 and
+             randomized.get("common_eligibility_rule") ==
+             RANDOMIZED_COMMON_ELIGIBILITY_RULE and
+             randomized.get("intervention") == "canonical_full_secondary_copy" and
+             randomized.get("token_gate_enabled") is False and
+             randomized.get("cost_estimator_id") == RANDOMIZED_COST_ESTIMATOR,
+             "resolved_config.json: invalid randomized intervention provenance")
+    for key, expected in (
+        ("primary_path", 1), ("primary_copy_id", 0),
+        ("secondary_path", 0), ("secondary_copy_id", 1),
+    ):
+        value = randomized.get(key)
+        _require(isinstance(value, int) and not isinstance(value, bool) and
+                 value == expected,
+                 "resolved_config.json: invalid randomized intervention provenance")
+
+    salt = randomized.get("assignment_salt")
+    seed = config.get("seed")
+    run = config.get("run")
+    for key, value in (("assignment_salt", salt), ("seed", seed), ("run", run)):
+        _require(isinstance(value, int) and not isinstance(value, bool) and
+                 0 <= value < 2**64,
+                 f"resolved_config.json: randomized {key} is not uint64")
+
+    probabilities = randomized.get("arm_probabilities")
+    _require(isinstance(probabilities, dict) and
+             set(probabilities) == {"FULL_COPY_T2", "FULL_COPY_T4", "CONTROL"},
+             "resolved_config.json: invalid randomized arm probabilities")
+    t2_probability = _config_number(
+        probabilities, "FULL_COPY_T2", "randomizedIntervention.arm_probabilities"
+    )
+    t4_probability = _config_number(
+        probabilities, "FULL_COPY_T4", "randomizedIntervention.arm_probabilities"
+    )
+    control_probability = _config_number(
+        probabilities, "CONTROL", "randomizedIntervention.arm_probabilities"
+    )
+    _require(t2_probability > 0 and t4_probability > 0 and
+             control_probability > 0 and
+             _close(control_probability, (1.0 - t2_probability) - t4_probability),
+             "resolved_config.json: randomized arm probabilities do not partition one")
+
+    window_start = randomized.get("assignment_window_start_ns")
+    window_stop = randomized.get("assignment_window_stop_ns")
+    stop_guard_us = randomized.get("assignment_stop_guard_us")
+    _require(all(isinstance(value, int) and not isinstance(value, bool)
+                 for value in (window_start, window_stop, stop_guard_us)) and
+             window_start >= 0 and stop_guard_us > 0 and
+             window_stop > window_start + RANDOMIZED_T4_OFFSET_US * 1000,
+             "resolved_config.json: invalid randomized assignment window")
+    meter = config.get("secondaryAirtimeMeter")
+    _require(isinstance(meter, dict) and meter.get("enabled") is True,
+             "resolved_config.json: randomized intervention requires airtime meter")
+    meter_start = meter.get("measurement_start_ns")
+    meter_stop = meter.get("measurement_stop_ns")
+    _require(isinstance(meter_start, int) and not isinstance(meter_start, bool) and
+             isinstance(meter_stop, int) and not isinstance(meter_stop, bool) and
+             window_start == meter_start and
+             window_stop == meter_stop - stop_guard_us * 1000,
+             "resolved_config.json: randomized assignment window provenance mismatch")
+    warmup_s = config.get("warmup_s")
+    duration_s = config.get("duration_s")
+    _require(isinstance(warmup_s, (int, float)) and not isinstance(warmup_s, bool) and
+             isinstance(duration_s, (int, float)) and not isinstance(duration_s, bool) and
+             math.isfinite(float(warmup_s)) and math.isfinite(float(duration_s)) and
+             float(warmup_s) >= 0 and float(duration_s) > 0,
+             "resolved_config.json: invalid randomized run interval")
+    expected_start = math.floor(float(warmup_s) * 1e9 + 0.5)
+    expected_stop = math.floor((float(warmup_s) + float(duration_s)) * 1e9 + 0.5)
+    _require(meter_start == expected_start and meter_stop == expected_stop,
+             "resolved_config.json: randomized meter window differs from run interval")
+    prediction = config.get("predictionTelemetry")
+    _require(isinstance(prediction, dict) and prediction.get("enabled") is True and
+             prediction.get("sample_offsets_us") == [0, RANDOMIZED_T2_OFFSET_US,
+                                                       RANDOMIZED_T4_OFFSET_US] and
+             prediction.get("polling_interval_us") == 1000 and
+             prediction.get("polling_report_delay_us") == 1000 and
+             prediction.get("event_log_enabled") is False and
+             prediction.get("oracle_features_enabled") is False,
+             "resolved_config.json: invalid randomized paired prediction configuration")
+    wifi = config.get("wifi")
+    stream = config.get("stream")
+    _require(isinstance(wifi, dict) and wifi.get("guard_interval") == "800ns" and
+             all(isinstance(wifi.get(key), int) and
+                 not isinstance(wifi.get(key), bool) and wifi.get(key) == expected
+                 for key, expected in (
+                     ("max_ampdu_size_bytes", 65535), ("txop_limit_us", 0),
+                     ("rts_cts_threshold_bytes", 4692480),
+                 )),
+             "resolved_config.json: invalid randomized one-PPDU Wi-Fi provenance")
+    queue_max_delay_ms = wifi.get("queue_max_delay_ms")
+    _require(isinstance(queue_max_delay_ms, int) and
+             not isinstance(queue_max_delay_ms, bool) and queue_max_delay_ms > 0,
+             "resolved_config.json: invalid randomized queue delay")
+    _require(isinstance(stream, dict) and stream.get("source") == "synthetic" and
+             stream.get("emission_mode") == "burst",
+             "resolved_config.json: randomized intervention requires burst synthetic input")
+    frame_size = stream.get("frame_size_bytes")
+    payload_size = stream.get("payload_size_bytes")
+    keyframe_multiplier = stream.get("keyframe_size_multiplier")
+    deadline_us = stream.get("deadline_us")
+    _require(isinstance(frame_size, int) and not isinstance(frame_size, bool) and
+             frame_size > 0 and
+             isinstance(payload_size, int) and not isinstance(payload_size, bool) and
+             payload_size > 0 and
+             isinstance(keyframe_multiplier, (int, float)) and
+             not isinstance(keyframe_multiplier, bool) and
+             math.isfinite(float(keyframe_multiplier)) and
+             isinstance(deadline_us, int) and not isinstance(deadline_us, bool) and
+             deadline_us > RANDOMIZED_T4_OFFSET_US,
+             "resolved_config.json: invalid randomized bounded synthetic profile")
+    largest_frame_float = frame_size * float(keyframe_multiplier)
+    _require(math.isfinite(largest_frame_float) and
+             1 <= largest_frame_float <= 2**32 - 1,
+             "resolved_config.json: randomized synthetic frame bound is invalid")
+    largest_frame_bytes = math.floor(largest_frame_float + 0.5)
+    largest_frame_packets = 1 + (largest_frame_bytes - 1) // payload_size
+    largest_aggregate_bytes = largest_frame_bytes + largest_frame_packets * (
+        ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES +
+        ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES +
+        ADAPTIVE_ESTIMATOR_ADDITIONAL_BYTES_PER_PACKET
+    )
+    _require(largest_aggregate_bytes <= wifi["max_ampdu_size_bytes"],
+             "resolved_config.json: randomized frame exceeds one-PPDU estimator domain")
+    minimum_stop_guard_us = (
+        queue_max_delay_ms * 1000 + 1000 + deadline_us - RANDOMIZED_T4_OFFSET_US
+    )
+    _require(minimum_stop_guard_us <= stop_guard_us <= (2**63 - 1) // 1000 and
+             float(duration_s) * 1e6 > stop_guard_us + RANDOMIZED_T4_OFFSET_US,
+             "resolved_config.json: randomized stop guard does not cover settlement")
+
+    assignments_path = run_dir / "randomized_intervention_assignments.csv"
+    executions_path = run_dir / "randomized_intervention_executions.csv"
+    _require(assignments_path.is_file(),
+             "missing core file: randomized_intervention_assignments.csv")
+    _require(executions_path.is_file(),
+             "missing core file: randomized_intervention_executions.csv")
+    assignments = _csv(assignments_path, RANDOMIZED_ASSIGNMENT_COLUMNS)
+    executions = _csv(executions_path, RANDOMIZED_EXECUTION_COLUMNS)
+    _require(assignments and executions,
+             "randomized intervention ledgers contain no rows")
+    _require(all(set(row) == RANDOMIZED_ASSIGNMENT_COLUMNS and
+                 all(value is not None for value in row.values())
+                 for row in assignments),
+             "randomized intervention assignments: CSV schema mismatch")
+    _require(all(set(row) == RANDOMIZED_EXECUTION_COLUMNS and
+                 all(value is not None for value in row.values())
+                 for row in executions),
+             "randomized intervention executions: CSV schema mismatch")
+
+    frame_ids = [_integer(frame, "frame_id", "frames.csv") for frame in frames]
+    _require(len(frame_ids) == len(set(frame_ids)) and
+             all(frame_id < 2**64 for frame_id in frame_ids),
+             "frames.csv: invalid randomized frame IDs")
+    frame_by_id = dict(zip(frame_ids, frames))
+    expected_frame_ids = set(frame_by_id)
+    _require(all(frame.get("policy") == "randomized_full_copy_exploration" and
+                 frame.get("primary_link") == "1"
+                 for frame in frames),
+             "frames.csv: randomized policy/primary path mismatch")
+    _require(len(assignments) == len(frames) and len(executions) == len(frames),
+             "randomized intervention ledgers: frame cardinality mismatch")
+
+    def index_rows(rows: list[dict[str, str]], file_name: str) -> dict[int, dict[str, str]]:
+        indexed: dict[int, dict[str, str]] = {}
+        for row in rows:
+            frame_id = _integer(row, "frame_id", file_name)
+            _require(frame_id in expected_frame_ids,
+                     f"{file_name}: unknown frame")
+            _require(frame_id not in indexed,
+                     f"{file_name}: duplicate frame")
+            indexed[frame_id] = row
+        _require(set(indexed) == expected_frame_ids,
+                 f"{file_name}: frame coverage mismatch")
+        return indexed
+
+    assignment_by_frame = index_rows(
+        assignments, "randomized_intervention_assignments.csv"
+    )
+    execution_by_frame = index_rows(
+        executions, "randomized_intervention_executions.csv"
+    )
+
+    samples = _csv(run_dir / "prediction_samples.csv", RANDOMIZED_PREDICTION_COLUMNS)
+    sample_by_key: dict[tuple[int, int, int, int], dict[str, str]] = {}
+    for sample in samples:
+        offset = _integer(sample, "sample_offset_us", "prediction_samples.csv")
+        if offset not in {RANDOMIZED_T2_OFFSET_US, RANDOMIZED_T4_OFFSET_US}:
+            continue
+        frame_id = _integer(sample, "frame_id", "prediction_samples.csv")
+        path_id = _integer(sample, "path_id", "prediction_samples.csv")
+        copy_id = _integer(sample, "copy_id", "prediction_samples.csv")
+        key = (frame_id, offset, path_id, copy_id)
+        _require(key not in sample_by_key,
+                 "prediction_samples.csv: duplicate randomized paired sample")
+        sample_by_key[key] = sample
+    expected_sample_keys = {
+        (frame_id, offset, path_id, copy_id)
+        for frame_id in expected_frame_ids
+        for offset in (RANDOMIZED_T2_OFFSET_US, RANDOMIZED_T4_OFFSET_US)
+        for path_id, copy_id in ((1, 0), (0, 1))
+    }
+    _require(set(sample_by_key) == expected_sample_keys,
+             "prediction_samples.csv: randomized paired sample coverage mismatch")
+
+    def paired_samples(
+        frame_id: int, offset: int
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        primary = sample_by_key[(frame_id, offset, 1, 0)]
+        secondary = sample_by_key[(frame_id, offset, 0, 1)]
+        _require(primary["run_id"] == secondary["run_id"] == run_id,
+                 "prediction_samples.csv: randomized paired run_id mismatch")
+        for field in (
+            "frame_id", "sample_stage", "sample_offset_us", "sample_time_ns",
+            "generation_time_ns", "deadline_time_ns", "frame_size_bytes",
+            "frame_packet_count", "frame_type",
+        ):
+            _require(primary[field] == secondary[field],
+                     f"prediction_samples.csv: randomized paired {field} mismatch")
+        _require(primary["sample_stage"] == _stage_name(offset),
+                 "prediction_samples.csv: randomized stage mismatch")
+        return primary, secondary
+
+    def validate_untreated_secondary(sample: dict[str, str]) -> None:
+        file_name = "prediction_samples.csv"
+        packet_count = _integer(sample, "frame_packet_count", file_name)
+        _require(_integer(sample, "packets_submitted", file_name) == 0 and
+                 _integer(sample, "application_socket_packet_bytes_submitted", file_name) == 0 and
+                 _integer(sample, "packets_remaining_to_submit", file_name) == packet_count and
+                 not _flag(sample, "sender_mac_complete", file_name) and
+                 _flag(sample, "actionable", file_name),
+                 f"{file_name}: hypothetical secondary contains application progress")
+        for field in (
+            "frame_packets_mac_enqueued", "frame_packets_mac_dequeued",
+            "frame_packets_tx_succeeded", "frame_mpdu_attempt_failures",
+            "frame_packets_terminally_dropped", "frame_packets_currently_queued",
+            "frame_mac_service_bytes_currently_queued",
+        ):
+            value = _optional_integer(sample, field, file_name)
+            _require(value in {None, 0},
+                     f"{file_name}: hypothetical secondary contains MAC progress")
+
+    def validate_assignment_provenance(
+        row: dict[str, str], frame_id: int, file_name: str
+    ) -> None:
+        assignment = assign_frame(
+            salt, seed, run, frame_id, t2_probability, t4_probability
+        )
+        _require(row["run_id"] == run_id and
+                 _integer(row, "schema_version", file_name) ==
+                 RANDOMIZED_CSV_SCHEMA_VERSION and
+                 _integer(row, "assignment_seed", file_name) == seed and
+                 _integer(row, "assignment_run", file_name) == run and
+                 _integer(row, "assignment_salt", file_name) == salt and
+                 row["assignment_algorithm"] == ALGORITHM_ID and
+                 row["assigned_arm"] == assignment.arm.value,
+                 f"{file_name}: assignment provenance mismatch")
+        raw_draw = _integer(row, "raw_draw", file_name)
+        unit_draw = _number(row, "unit_draw", file_name)
+        _require(raw_draw < 2**64 and raw_draw == assignment.raw_draw and
+                 0 <= unit_draw < 1 and _close(unit_draw, assignment.unit_draw),
+                 f"{file_name}: deterministic assignment draw mismatch")
+        _require(_close(_number(row, "t2_probability", file_name), t2_probability) and
+                 _close(_number(row, "t4_probability", file_name), t4_probability) and
+                 _close(_number(row, "control_probability", file_name),
+                        control_probability) and
+                 _close(_number(row, "propensity", file_name),
+                        assignment.arm_probability),
+                 f"{file_name}: assignment probability mismatch")
+
+    def validate_snapshot_evidence(
+        row: dict[str, str],
+        primary: dict[str, str],
+        secondary: dict[str, str],
+        file_name: str,
+    ) -> None:
+        _require(row["primary_sample_time_ns"] == primary["sample_time_ns"] and
+                 row["secondary_sample_time_ns"] == secondary["sample_time_ns"] and
+                 row["primary_feature_watermark_time_ns"] ==
+                 primary["latest_feature_event_time_ns"] and
+                 row["primary_feature_watermark_sequence"] ==
+                 primary["latest_feature_event_sequence"] and
+                 row["secondary_feature_watermark_time_ns"] ==
+                 secondary["latest_feature_event_time_ns"] and
+                 row["secondary_feature_watermark_sequence"] ==
+                 secondary["latest_feature_event_sequence"] and
+                 row["generation_time_ns"] == primary["generation_time_ns"] and
+                 row["deadline_time_ns"] == primary["deadline_time_ns"],
+                 f"{file_name}: paired telemetry evidence mismatch")
+
+    def validate_descriptor(
+        row: dict[str, str],
+        frame: dict[str, str],
+        available_key: str,
+        file_name: str,
+    ) -> tuple[bool, float, float]:
+        available = _flag(row, available_key, file_name)
+        packet_count = _integer(row, "secondary_packet_count", file_name)
+        expected_service_bytes = _integer(
+            row, "secondary_expected_mac_service_bytes", file_name
+        )
+        safety_factor = _number(row, "cost_safety_factor", file_name)
+        nominal = _number(row, "nominal_airtime_us", file_name)
+        estimated = _number(row, "estimated_airtime_us", file_name)
+        _require(row["cost_estimator"] == RANDOMIZED_COST_ESTIMATOR and
+                 _close(safety_factor, RANDOMIZED_COST_SAFETY_FACTOR),
+                 f"{file_name}: randomized cost provenance mismatch")
+        if not available:
+            _require(packet_count == 0 and row["secondary_packet_indices"] == "" and
+                     expected_service_bytes == 0 and nominal == 0 and estimated == 0,
+                     f"{file_name}: unavailable descriptor has cost evidence")
+            return False, nominal, estimated
+        frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+        frame_packets = _integer(frame, "packet_count", "frames.csv")
+        expected_indices = ";".join(str(index) for index in range(frame_packets))
+        expected_service = frame_size + frame_packets * (
+            ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES +
+            ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
+        )
+        expected_nominal = _adaptive_nominal_airtime_us(
+            frame_size, frame_packets, 1.0
+        )
+        _require(packet_count == frame_packets and
+                 row["secondary_packet_indices"] == expected_indices and
+                 expected_service_bytes == expected_service and
+                 _close(nominal, expected_nominal) and
+                 _close(estimated, RANDOMIZED_COST_SAFETY_FACTOR * expected_nominal),
+                 f"{file_name}: randomized descriptor/cost arithmetic mismatch")
+        return True, nominal, estimated
+
+    launched_frame_ids: set[int] = set()
+    action_estimates: dict[int, float] = {}
+    action_nominal_airtimes: dict[int, float] = {}
+    launched_at_t2: set[int] = set()
+    for frame_id in sorted(expected_frame_ids):
+        frame = frame_by_id[frame_id]
+        assignment_row = assignment_by_frame[frame_id]
+        execution_row = execution_by_frame[frame_id]
+        t2_primary, t2_secondary = paired_samples(frame_id, RANDOMIZED_T2_OFFSET_US)
+        t4_primary, t4_secondary = paired_samples(frame_id, RANDOMIZED_T4_OFFSET_US)
+        validate_untreated_secondary(t2_secondary)
+        validate_assignment_provenance(
+            assignment_row, frame_id, "randomized_intervention_assignments.csv"
+        )
+        validate_snapshot_evidence(
+            assignment_row, t2_primary, t2_secondary,
+            "randomized_intervention_assignments.csv",
+        )
+        _require(assignment_row["prospective_t4_time_ns"] ==
+                 str(_integer(t2_primary, "generation_time_ns", "prediction_samples.csv") +
+                     RANDOMIZED_T4_OFFSET_US * 1000) and
+                 assignment_row["frame_size_bytes"] == t2_primary["frame_size_bytes"] and
+                 assignment_row["frame_packet_count"] ==
+                 t2_primary["frame_packet_count"] and
+                 assignment_row["frame_type"] == t2_primary["frame_type"],
+                 "randomized intervention assignments: immutable metadata mismatch")
+        descriptor_available, nominal, estimated = validate_descriptor(
+            assignment_row,
+            frame,
+            "descriptor_available",
+            "randomized_intervention_assignments.csv",
+        )
+        t2_actionable = _flag(t2_primary, "actionable", "prediction_samples.csv")
+        t2_sample_time = _integer(
+            t2_primary, "sample_time_ns", "prediction_samples.csv"
+        )
+        prospective_t4 = _integer(
+            assignment_row, "prospective_t4_time_ns",
+            "randomized_intervention_assignments.csv",
+        )
+        if t2_sample_time < window_start or prospective_t4 >= window_stop:
+            expected_eligibility = (False, "outside_assignment_window")
+        elif not t2_actionable:
+            expected_eligibility = (False, "primary_not_actionable_t2")
+        elif not descriptor_available:
+            expected_eligibility = (False, "delayed_copy_unavailable_t2")
+        else:
+            expected_eligibility = (True, "eligible")
+        eligible = _flag(
+            assignment_row, "eligible_t2", "randomized_intervention_assignments.csv"
+        )
+        _require((eligible, assignment_row["eligibility_reason"]) == expected_eligibility,
+                 "randomized intervention assignments: eligibility priority mismatch")
+
+        validate_assignment_provenance(
+            execution_row, frame_id, "randomized_intervention_executions.csv"
+        )
+        _require(execution_row["eligible_t2"] == assignment_row["eligible_t2"] and
+                 execution_row["eligibility_reason"] ==
+                 assignment_row["eligibility_reason"],
+                 "randomized intervention executions: assignment outcome changed")
+        arm = assignment_row["assigned_arm"]
+        expected_stage = "T4" if eligible and arm == "FULL_COPY_T4" else "T2"
+        _require(execution_row["execution_stage"] == expected_stage,
+                 "randomized intervention executions: stage mismatch")
+        execution_primary, execution_secondary = (
+            (t4_primary, t4_secondary) if expected_stage == "T4"
+            else (t2_primary, t2_secondary)
+        )
+        validate_snapshot_evidence(
+            execution_row,
+            execution_primary,
+            execution_secondary,
+            "randomized_intervention_executions.csv",
+        )
+        descriptor_at_assignment = _flag(
+            execution_row,
+            "descriptor_available_at_assignment",
+            "randomized_intervention_executions.csv",
+        )
+        _require(descriptor_at_assignment == descriptor_available,
+                 "randomized intervention executions: assignment descriptor flag changed")
+        execution_descriptor, execution_nominal, execution_estimated = validate_descriptor(
+            execution_row,
+            frame,
+            "descriptor_available_at_assignment",
+            "randomized_intervention_executions.csv",
+        )
+        _require(execution_descriptor == descriptor_available and
+                 _close(execution_nominal, nominal) and
+                 _close(execution_estimated, estimated) and
+                 execution_row["secondary_packet_count"] ==
+                 assignment_row["secondary_packet_count"] and
+                 execution_row["secondary_packet_indices"] ==
+                 assignment_row["secondary_packet_indices"] and
+                 execution_row["secondary_expected_mac_service_bytes"] ==
+                 assignment_row["secondary_expected_mac_service_bytes"],
+                 "randomized intervention executions: descriptor evidence changed")
+
+        file_name = "randomized_intervention_executions.csv"
+        descriptor_at_execution = _flag(
+            execution_row, "descriptor_available_at_execution", file_name
+        )
+        primary_actionable = _flag(execution_row, "primary_actionable", file_name)
+        attempted = _flag(execution_row, "attempted", file_name)
+        launched = _flag(execution_row, "launched", file_name)
+        noncompliance = _flag(execution_row, "noncompliance", file_name)
+        expected_primary_actionable = _flag(
+            execution_primary, "actionable", "prediction_samples.csv"
+        )
+        _require(primary_actionable == expected_primary_actionable,
+                 "randomized intervention executions: primary actionability mismatch")
+
+        if not eligible:
+            expected_execution = (
+                descriptor_available, False, False, False,
+                "not_exposed_ineligible_t2",
+            )
+        elif arm == "CONTROL":
+            expected_execution = (True, False, False, False, "control_no_launch")
+        elif arm == "FULL_COPY_T2":
+            expected_execution = (
+                True, True, launched, not launched,
+                "launched_t2" if launched else "launch_rejected_t2",
+            )
+        elif not primary_actionable:
+            expected_execution = (
+                False, False, False, False, "primary_not_actionable_t4"
+            )
+        elif not descriptor_at_execution:
+            expected_execution = (
+                False, False, False, True, "assigned_t4_not_launched"
+            )
+        else:
+            expected_execution = (
+                True, True, launched, not launched,
+                "launched_t4" if launched else "launch_rejected_t4",
+            )
+        _require(
+            (descriptor_at_execution, attempted, launched, noncompliance,
+             execution_row["status"]) == expected_execution,
+            "randomized intervention executions: status/compliance semantics mismatch",
+        )
+        if launched:
+            _require(frame_id not in launched_frame_ids,
+                     "randomized intervention executions: frame launched twice")
+            launched_frame_ids.add(frame_id)
+            action_estimates[frame_id] = estimated
+            action_nominal_airtimes[frame_id] = nominal
+            if expected_stage == "T2":
+                launched_at_t2.add(frame_id)
+
+    for frame_id in expected_frame_ids - launched_at_t2:
+        validate_untreated_secondary(
+            sample_by_key[(frame_id, RANDOMIZED_T4_OFFSET_US, 0, 1)]
+        )
+    _require(launched_frame_ids == duplicated_frame_ids,
+             "randomized intervention executions: launches do not match duplicated frames")
+    return action_estimates, action_nominal_airtimes
+
+
 def _validate_secondary_airtime(
     events: list[dict[str, str]],
     settlements: list[dict[str, str]],
@@ -1407,7 +1986,8 @@ def _validate_secondary_airtime(
              "secondary_airtime_summary.json: missing fields")
     _require(policy in {
         "selective_duplication", "adaptive_airtime_duplication",
-        "adaptive_deficit_duplication", "full_duplication",
+        "adaptive_deficit_duplication", "randomized_full_copy_exploration",
+        "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
     expected_settlement_nominals = dict(action_nominal_airtimes or {})
     if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
@@ -1548,13 +2128,18 @@ def _validate_secondary_airtime(
     _require(maximum_debt + 1e-9 >= observed_budget_debt_us,
              "secondary airtime summary: maximum debt misses an observed deficit")
 
-    if policy in {"adaptive_airtime_duplication", "adaptive_deficit_duplication"}:
-        _require(adaptive_config is not None,
-                 "adaptive secondary airtime validation lacks controller config")
+    reservation_policy = policy in {
+        "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+        "randomized_full_copy_exploration",
+    }
+    if reservation_policy:
+        if policy != "randomized_full_copy_exploration":
+            _require(adaptive_config is not None,
+                     "adaptive secondary airtime validation lacks controller config")
         _require(set(settlement_by_frame) == set(action_estimates),
-                 "secondary airtime settlements do not match adaptive actions")
+                 "secondary airtime settlements do not match reserved actions")
         _require(observed_event_frames <= set(action_estimates),
-                 "secondary airtime events do not match adaptive actions")
+                 "secondary airtime events do not match reserved actions")
         _require(_close(estimate_total, sum(action_estimates.values())),
                  "secondary airtime summary: action estimates do not sum")
         measured_total = sum(float(item["measured"]) for item in settlement_by_frame.values())
@@ -1582,22 +2167,33 @@ def _validate_secondary_airtime(
         expected_ratio = tagged_total / estimate_total if estimate_total else 0.0
         _require(_close(ratio, expected_ratio),
                  "secondary airtime summary: estimate ratio mismatch")
-        object_name = (
-            "adaptiveDeficitDuplication"
-            if policy == "adaptive_deficit_duplication"
-            else "adaptiveAirtimeDuplication"
-        )
-        fraction = _config_number(adaptive_config, "budget_fraction", object_name)
-        capacity = _config_number(
-            adaptive_config, "initial_bucket_capacity_us", object_name
-        )
-        finite_budget = fraction * duration_us + capacity
-        _require(_close(_summary_number(summary, "budget_fraction"), fraction) and
-                 _close(_summary_number(summary, "initial_bucket_capacity_us"), capacity) and
-                 _close(_summary_number(summary, "finite_run_budget_us"), finite_budget) and
-                 _close(_summary_number(summary, "budget_excess_us"),
-                        max(0.0, tagged_total - finite_budget)),
-                 "secondary airtime summary: finite-run budget mismatch")
+        if policy == "randomized_full_copy_exploration":
+            _require(_close(maximum_debt, 0.0),
+                     "secondary airtime summary: randomized policy has budget debt")
+            for key in (
+                "budget_fraction", "initial_bucket_capacity_us", "finite_run_budget_us",
+                "budget_excess_us",
+            ):
+                _require(summary.get(key) is None,
+                         f"secondary_airtime_summary.json: {key} must be null")
+        else:
+            assert adaptive_config is not None
+            object_name = (
+                "adaptiveDeficitDuplication"
+                if policy == "adaptive_deficit_duplication"
+                else "adaptiveAirtimeDuplication"
+            )
+            fraction = _config_number(adaptive_config, "budget_fraction", object_name)
+            capacity = _config_number(
+                adaptive_config, "initial_bucket_capacity_us", object_name
+            )
+            finite_budget = fraction * duration_us + capacity
+            _require(_close(_summary_number(summary, "budget_fraction"), fraction) and
+                     _close(_summary_number(summary, "initial_bucket_capacity_us"), capacity) and
+                     _close(_summary_number(summary, "finite_run_budget_us"), finite_budget) and
+                     _close(_summary_number(summary, "budget_excess_us"),
+                            max(0.0, tagged_total - finite_budget)),
+                     "secondary airtime summary: finite-run budget mismatch")
     else:
         _require(not settlements and not action_estimates and estimate_total == 0 and ratio == 0 and
                  fallback_count == 0,
@@ -2955,11 +3551,31 @@ def validate_run(
                  "adaptive decisions: launched actions do not match duplicated frames")
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for adaptive policy")
+    elif config["policy"] == "randomized_full_copy_exploration":
+        _require(all(key not in config for key in (
+            "selectiveDuplication", "adaptiveAirtimeDuplication",
+            "adaptiveDeficitDuplication",
+        )), "resolved_config.json: predictor controller object exists for randomized policy")
+        _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
+                 "selective decision output exists for randomized policy")
+        _require(not (run_dir / "adaptive_airtime_decisions.csv").exists(),
+                 "adaptive decision output exists for randomized policy")
+        action_estimates, action_nominal_airtimes = _validate_randomized_intervention(
+            run_dir, config, run_id, frames, duplicated_frame_ids
+        )
     else:
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for a non-selective policy")
         _require(not (run_dir / "adaptive_airtime_decisions.csv").exists(),
                  "adaptive decision output exists for a non-adaptive policy")
+
+    if config["policy"] != "randomized_full_copy_exploration":
+        _require("randomizedIntervention" not in config,
+                 "resolved_config.json: randomized object exists for another policy")
+        _require(not (run_dir / "randomized_intervention_assignments.csv").exists(),
+                 "randomized assignment output exists for another policy")
+        _require(not (run_dir / "randomized_intervention_executions.csv").exists(),
+                 "randomized execution output exists for another policy")
 
     meter = config.get("secondaryAirtimeMeter")
     if isinstance(meter, dict) and meter.get("enabled") is True:
