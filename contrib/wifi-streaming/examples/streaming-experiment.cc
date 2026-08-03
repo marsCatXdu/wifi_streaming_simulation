@@ -388,6 +388,7 @@ main(int argc, char* argv[])
     uint32_t rtsCtsThreshold = 4692480;
     uint32_t fragmentationThreshold = 65535;
     uint32_t guardIntervalNs = 800;
+    constexpr uint32_t expectedMacServiceOverheadBytes = 36;
     uint32_t mloStaMaxInflights = 1;
     bool ulOfdmaEnabled = false;
     std::string ulOfdmaScope = "all_he_eht_aps";
@@ -900,6 +901,17 @@ main(int argc, char* argv[])
                     "mlo_str uses one native MLO path and supports only fixed_link_0");
     NS_ABORT_MSG_IF(topology == "mlo_str" && wifiStandard != "eht",
                     "mlo_str requires --wifiStandard=eht");
+    NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
+                        policyName != "selective_duplication" &&
+                        policyName != "adaptive_airtime_duplication" &&
+                        policyName != "full_duplication",
+                    "Secondary airtime metering supports only selective, adaptive, or full "
+                    "duplication policies");
+    NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
+                        policyName == "full_duplication" &&
+                        fullDuplicationPrimaryPath != 1,
+                    "V1 full-duplication airtime metering requires primary path 1 so copy 1 "
+                    "uses secondary path 0");
     NS_ABORT_MSG_IF(mloStaMaxInflights < 1 || mloStaMaxInflights > 15,
                     "mloStaMaxInflights must be in [1,15]");
     NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard != "eht",
@@ -1888,7 +1900,7 @@ main(int argc, char* argv[])
     {
         // IPv4 (20) + UDP (8) + LLC/SNAP (8). Fragmentation and
         // A-MSDU are disabled by the prediction telemetry contract.
-        sender->SetExpectedMacServiceOverhead(36);
+        sender->SetExpectedMacServiceOverhead(expectedMacServiceOverheadBytes);
     }
     sender->SetEmissionMode(emissionMode == "uniform_within_frame"
                                 ? EmissionMode::UNIFORM_WITHIN_FRAME
@@ -1951,10 +1963,13 @@ main(int argc, char* argv[])
                         "Secondary airtime meter requires a secondary path device");
         secondaryAirtimeMeter = CreateObject<SecondaryAirtimeMeter>();
         secondaryAirtimeMeter->SetQueueMaxDelayMs(queueMaxDelayMs);
+        secondaryAirtimeMeter->SetMeasurementWindow(warmup.GetNanoSeconds(),
+                                                    measurementStop.GetNanoSeconds());
         secondaryAirtimeMeter->BindPath(0, stationDevices.Get(0));
         secondaryAirtimeMeter->SetOutputFiles(
             runId,
             (std::filesystem::path(outputDir) / "secondary_airtime_events.csv").string(),
+            (std::filesystem::path(outputDir) / "secondary_airtime_settlements.csv").string(),
             (std::filesystem::path(outputDir) / "secondary_airtime_summary.json").string());
     }
     if (policyName == "selective_duplication")
@@ -1993,6 +2008,13 @@ main(int argc, char* argv[])
         adaptiveController->SetCostSafetyFactor(adaptiveAirtimeCostSafetyFactor);
         adaptiveController->SetCostEwmaAlpha(adaptiveAirtimeCostEwmaAlpha);
         adaptiveController->SetDecisionOffsetsUs(resolvedAdaptiveDecisionOffsetsUs);
+        const uint32_t referencePacketCount = 1 + (frameSize - 1) / payloadSize;
+        const uint64_t referenceExpectedMacServiceBytes =
+            static_cast<uint64_t>(frameSize) +
+            static_cast<uint64_t>(referencePacketCount) *
+                (StreamingHeader::SERIALIZED_SIZE + expectedMacServiceOverheadBytes);
+        adaptiveController->SetReferenceCopyDescriptor(referencePacketCount,
+                                                       referenceExpectedMacServiceBytes);
         adaptiveController->SetOutputFile(
             runId,
             (std::filesystem::path(outputDir) / "adaptive_airtime_decisions.csv").string());
@@ -2240,9 +2262,7 @@ main(int argc, char* argv[])
     }
     if (secondaryAirtimeMeter)
     {
-        const uint64_t measurementDurationUs =
-            static_cast<uint64_t>(std::llround(durationSeconds * 1e6));
-        secondaryAirtimeMeter->WriteSummary(measurementDurationUs);
+        secondaryAirtimeMeter->WriteSummary();
     }
     metrics->FinalizeMissingFrames();
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)

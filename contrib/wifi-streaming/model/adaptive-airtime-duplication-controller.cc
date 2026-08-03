@@ -5,6 +5,7 @@
 #include "adaptive-airtime-duplication-controller.h"
 
 #include "multipath-sender.h"
+#include "streaming-header.h"
 
 #include "ns3/abort.h"
 #include "ns3/eht-phy.h"
@@ -53,7 +54,12 @@ AdaptiveAirtimeDuplicationController::GetTypeId()
     return tid;
 }
 
-AdaptiveAirtimeDuplicationController::AdaptiveAirtimeDuplicationController() = default;
+AdaptiveAirtimeDuplicationController::AdaptiveAirtimeDuplicationController()
+    : m_referencePacketCount(10),
+      m_referenceExpectedMacServiceBytes(
+          10ULL * (1200 + StreamingHeader::SERIALIZED_SIZE + 36))
+{
+}
 
 AdaptiveAirtimeDuplicationController::~AdaptiveAirtimeDuplicationController() = default;
 
@@ -154,6 +160,19 @@ AdaptiveAirtimeDuplicationController::SetDecisionOffsetsUs(
 }
 
 void
+AdaptiveAirtimeDuplicationController::SetReferenceCopyDescriptor(
+    uint32_t packetCount,
+    uint64_t expectedMacServiceBytes)
+{
+    NS_ABORT_MSG_IF(packetCount == 0 || expectedMacServiceBytes == 0,
+                    "Adaptive airtime reference copy must be nonempty");
+    NS_ABORT_MSG_IF(m_bucketInitialized,
+                    "Cannot change adaptive airtime reference after control starts");
+    m_referencePacketCount = packetCount;
+    m_referenceExpectedMacServiceBytes = expectedMacServiceBytes;
+}
+
+void
 AdaptiveAirtimeDuplicationController::SetOutputFile(const std::string& runId,
                                                     const std::string& fileName)
 {
@@ -173,6 +192,10 @@ AdaptiveAirtimeDuplicationController::InitializeBucket(uint64_t nowNs)
     m_bucketCapacityUs = m_budgetFraction * static_cast<double>(m_bucketHorizonUs);
     m_bucketBalanceUs = m_bucketCapacityUs;
     m_initialCapacityUs = m_bucketCapacityUs;
+    if (m_meter)
+    {
+        m_meter->SetBudgetMetadata(m_budgetFraction, m_initialCapacityUs);
+    }
     m_shadowPrice = m_initialShadowPrice;
     m_lastRefillTimeNs = nowNs;
     m_lastPriceUpdateNs = nowNs;
@@ -209,7 +232,7 @@ AdaptiveAirtimeDuplicationController::UpdateShadowPrice(uint64_t nowNs)
     const double elapsedUs =
         static_cast<double>(nowNs - m_lastPriceUpdateNs) / 1000.0;
     const double allowance = m_budgetFraction * elapsedUs;
-    const double reference = ReferenceAirtimeUs();
+    const double reference = GetReferenceAirtimeUs();
     NS_ABORT_MSG_IF(!(reference > 0), "Adaptive airtime reference cost must be positive");
     m_shadowPrice = std::clamp(
         m_shadowPrice +
@@ -240,14 +263,13 @@ AdaptiveAirtimeDuplicationController::EstimateSecondaryAirtimeUs(
 }
 
 double
-AdaptiveAirtimeDuplicationController::ReferenceAirtimeUs() const
+AdaptiveAirtimeDuplicationController::GetReferenceAirtimeUs() const
 {
-    // Normal 12 KB P-frame packetized into 1200-byte payloads => 10 packets.
-    // Expected MAC service bytes for prediction runs use 36 B overhead/packet
-    // plus the 28 B streaming header already counted in expectedMacServiceBytes.
-    constexpr uint32_t packets = 10;
-    constexpr uint64_t expectedMacServiceBytes = 10ULL * (1200 + 28 + 36);
-    return EstimateSecondaryAirtimeUs(packets, expectedMacServiceBytes, 1.0);
+    NS_ABORT_MSG_IF(m_referencePacketCount == 0 || m_referenceExpectedMacServiceBytes == 0,
+                    "Adaptive airtime reference copy is unset");
+    return EstimateSecondaryAirtimeUs(m_referencePacketCount,
+                                      m_referenceExpectedMacServiceBytes,
+                                      1.0);
 }
 
 void
@@ -281,7 +303,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                     "Adaptive airtime scorer returned an invalid probability");
 
     const auto descriptor = m_sender->GetDelayedSecondaryCopyDescriptor(sample.key.frameId);
-    const double referenceUs = ReferenceAirtimeUs();
+    const double referenceUs = GetReferenceAirtimeUs();
     double estimatedUs = 0;
     double normalizedCost = 0;
     double utility = std::numeric_limits<double>::quiet_NaN();
@@ -375,14 +397,12 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                                     descriptor->expectedMacServiceBytes,
                                     1.0);
     reservation.deadlineTimeNs = descriptor->deadlineTimeNs;
-    m_meter->RegisterLaunchedCopy(std::move(reservation));
 
     const bool launched =
         m_sender->RequestSecondaryCopy(sample.key.frameId,
                                        "adaptive airtime utility positive");
     if (!launched)
     {
-        m_meter->ReleaseReservation(sample.key.frameId);
         WriteDecision(sample,
                       probability,
                       estimatedUs,
@@ -390,12 +410,15 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       normalizedCost,
                       utility,
                       balanceUs,
-                      m_meter->GetReservedAirtimeUs(),
-                      m_bucketBalanceUs - m_meter->GetReservedAirtimeUs(),
+                      reservedUs,
+                      availableUs,
                       "launch_rejected",
                       false);
         return;
     }
+    // Zero-offset packet sends are scheduled events, so registering here still
+    // precedes every PHY trace while avoiding reservations for rejected launches.
+    m_meter->RegisterLaunchedCopy(std::move(reservation));
     frame->second.launched = true;
     ++m_actions;
     WriteDecision(sample,
@@ -405,8 +428,8 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                   normalizedCost,
                   utility,
                   balanceUs,
-                  m_meter->GetReservedAirtimeUs(),
-                  m_bucketBalanceUs - m_meter->GetReservedAirtimeUs(),
+                  reservedUs,
+                  availableUs,
                   "action",
                   true);
 }
@@ -421,9 +444,11 @@ AdaptiveAirtimeDuplicationController::NotifyMeasuredAirtime(uint64_t /*frameId*/
     RefillBucket(nowNs);
     m_bucketBalanceUs -= allocatedUs;
     m_measuredSinceLastT0Us += allocatedUs;
-    if (m_bucketBalanceUs < 0)
+    const double availableUs =
+        m_bucketBalanceUs - (m_meter ? m_meter->GetReservedAirtimeUs() : 0.0);
+    if (availableUs < 0)
     {
-        m_meter->ObserveBudgetDebt(-m_bucketBalanceUs);
+        m_meter->ObserveBudgetDebt(-availableUs);
     }
 }
 
@@ -461,6 +486,12 @@ AdaptiveAirtimeDuplicationController::GetBucketBalanceUs() const
     return m_bucketBalanceUs;
 }
 
+double
+AdaptiveAirtimeDuplicationController::GetInitialCapacityUs() const
+{
+    return m_initialCapacityUs;
+}
+
 void
 AdaptiveAirtimeDuplicationController::WriteHeader()
 {
@@ -468,6 +499,7 @@ AdaptiveAirtimeDuplicationController::WriteHeader()
                 "actionable,calibrated_probability,estimated_airtime_us,"
                 "reference_airtime_us,shadow_price,normalized_cost,net_utility,"
                 "airtime_budget_fraction,bucket_capacity_us,bucket_balance_us,"
+                "initial_bucket_capacity_us,"
                 "reserved_airtime_us,available_airtime_us,measured_airtime_total_us,"
                 "decision,secondary_launched\n";
 }
@@ -496,7 +528,8 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
              << sample.actionable << ',' << probability << ',' << estimatedUs << ','
              << referenceUs << ',' << m_shadowPrice << ',' << normalizedCost << ','
              << utility << ',' << m_budgetFraction << ',' << m_bucketCapacityUs << ','
-             << balanceUs << ',' << reservedUs << ',' << availableUs << ','
+             << balanceUs << ',' << m_initialCapacityUs << ',' << reservedUs << ','
+             << availableUs << ','
              << measuredTotal << ',' << decision << ',' << launched << '\n';
     m_output.flush();
 }

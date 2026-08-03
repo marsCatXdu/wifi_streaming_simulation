@@ -97,10 +97,11 @@ SecondaryAirtimeMeter::BindPath(uint8_t pathId, Ptr<NetDevice> device)
 void
 SecondaryAirtimeMeter::SetOutputFiles(const std::string& runId,
                                       const std::string& eventsFile,
+                                      const std::string& settlementsFile,
                                       const std::string& summaryFile)
 {
     NS_ABORT_MSG_IF(runId.empty(), "Secondary airtime run ID cannot be empty");
-    NS_ABORT_MSG_IF(eventsFile.empty() || summaryFile.empty(),
+    NS_ABORT_MSG_IF(eventsFile.empty() || settlementsFile.empty() || summaryFile.empty(),
                     "Secondary airtime output paths cannot be empty");
     NS_ABORT_MSG_IF(m_events.is_open(), "Secondary airtime outputs configured twice");
     m_runId = runId;
@@ -109,6 +110,34 @@ SecondaryAirtimeMeter::SetOutputFiles(const std::string& runId,
     NS_ABORT_MSG_IF(!m_events, "Cannot open secondary airtime events " << eventsFile);
     m_events << std::setprecision(12);
     WriteEventHeader();
+    m_settlements.open(settlementsFile, std::ios::out | std::ios::trunc);
+    NS_ABORT_MSG_IF(!m_settlements,
+                    "Cannot open secondary airtime settlements " << settlementsFile);
+    m_settlements << std::setprecision(12);
+    m_settlements << "run_id,frame_id,settlement_time_ns,released_airtime_us,"
+                     "measured_airtime_us,nominal_airtime_us,fallback\n";
+}
+
+void
+SecondaryAirtimeMeter::SetMeasurementWindow(uint64_t startTimeNs, uint64_t stopTimeNs)
+{
+    NS_ABORT_MSG_IF(stopTimeNs <= startTimeNs,
+                    "Secondary airtime measurement stop must follow its start");
+    NS_ABORT_MSG_IF(m_taggedPpduCount != 0,
+                    "Cannot change the secondary airtime window after measurement starts");
+    m_measurementStartNs = startTimeNs;
+    m_measurementStopNs = stopTimeNs;
+}
+
+void
+SecondaryAirtimeMeter::SetBudgetMetadata(double fraction, double initialCapacityUs)
+{
+    NS_ABORT_MSG_IF(!std::isfinite(fraction) || fraction <= 0 || fraction > 1,
+                    "Secondary airtime budget fraction must be in (0, 1]");
+    NS_ABORT_MSG_IF(!std::isfinite(initialCapacityUs) || initialCapacityUs <= 0,
+                    "Secondary airtime initial capacity must be positive");
+    m_budgetFraction = fraction;
+    m_initialCapacityUs = initialCapacityUs;
 }
 
 void
@@ -196,6 +225,12 @@ SecondaryAirtimeMeter::GetMixedPpduCount() const
 }
 
 uint64_t
+SecondaryAirtimeMeter::GetTaggedPpduCount() const
+{
+    return m_taggedPpduCount;
+}
+
+uint64_t
 SecondaryAirtimeMeter::GetForcedReservationSettlements() const
 {
     return m_forcedSettlements;
@@ -225,9 +260,16 @@ SecondaryAirtimeMeter::GetEstimatedActionAirtimeUs() const
 void
 SecondaryAirtimeMeter::NotifyPhyTxPsduBegin(WifiConstPsduMap psduMap,
                                             WifiTxVector txVector,
-                                            double)
+                                            double txPower)
 {
+    (void)txPower;
     NS_ABORT_MSG_IF(!m_phy, "Secondary airtime meter PHY is unbound");
+    const uint64_t nowNs = static_cast<uint64_t>(
+        std::max<int64_t>(0, Simulator::Now().GetNanoSeconds()));
+    if (!IsWithinMeasurementWindow(nowNs))
+    {
+        return;
+    }
     const Time duration = WifiPhy::CalculateTxDuration(psduMap, txVector, m_phy->GetPhyBand());
     const double durationUs = duration.GetSeconds() * 1e6;
     uint64_t taggedBytes = 0;
@@ -357,15 +399,22 @@ SecondaryAirtimeMeter::NotifyDroppedMpdu(WifiMacDropReason, Ptr<const WifiMpdu> 
 }
 
 void
-SecondaryAirtimeMeter::MarkPacketTerminal(uint64_t frameId, uint32_t /*packetIndex*/)
+SecondaryAirtimeMeter::MarkPacketTerminal(uint64_t frameId, uint32_t packetIndex)
 {
     auto iterator = m_reservations.find(frameId);
     if (iterator == m_reservations.end() || iterator->second.settled)
     {
         return;
     }
-    ++iterator->second.packetsTerminal;
-    if (iterator->second.packetsTerminal >= iterator->second.packetCount)
+    auto& reservation = iterator->second;
+    NS_ABORT_MSG_IF(packetIndex >= reservation.packetCount,
+                    "Secondary airtime terminal packet index is out of range");
+    const bool inserted = reservation.terminalPacketIndices.insert(packetIndex).second;
+    if (!inserted)
+    {
+        return;
+    }
+    if (reservation.terminalPacketIndices.size() == reservation.packetCount)
     {
         SettleFrame(frameId, false);
     }
@@ -390,6 +439,11 @@ SecondaryAirtimeMeter::SettleFrame(uint64_t frameId, bool fallback)
     const double released = reservation.reservedAirtimeUs;
     m_reservedAirtimeUs = std::max(0.0, m_reservedAirtimeUs - released);
     reservation.reservedAirtimeUs = 0;
+    WriteSettlement(frameId,
+                    released,
+                    reservation.measuredAirtimeUs,
+                    reservation.nominalAirtimeUs,
+                    fallback);
     if (!m_settlementCallback.IsNull())
     {
         m_settlementCallback(frameId,
@@ -398,6 +452,34 @@ SecondaryAirtimeMeter::SettleFrame(uint64_t frameId, bool fallback)
                              reservation.nominalAirtimeUs,
                              fallback);
     }
+    m_reservations.erase(iterator);
+}
+
+void
+SecondaryAirtimeMeter::WriteSettlement(uint64_t frameId,
+                                       double releasedUs,
+                                       double measuredUs,
+                                       double nominalUs,
+                                       bool fallback)
+{
+    if (!m_settlements)
+    {
+        return;
+    }
+    m_settlements << m_runId << ',' << frameId << ',' << Simulator::Now().GetNanoSeconds() << ','
+                  << releasedUs << ',' << measuredUs << ',' << nominalUs << ',' << fallback
+                  << '\n';
+    m_settlements.flush();
+}
+
+bool
+SecondaryAirtimeMeter::IsWithinMeasurementWindow(uint64_t timeNs) const
+{
+    if (!m_measurementStartNs || !m_measurementStopNs)
+    {
+        return true;
+    }
+    return timeNs >= *m_measurementStartNs && timeNs < *m_measurementStopNs;
 }
 
 void
@@ -435,6 +517,12 @@ SecondaryAirtimeMeter::ApplyTestPpdu(const std::map<uint64_t, uint64_t>& frameBy
                                      double ppduDurationUs,
                                      uint64_t otherDataBytes)
 {
+    const uint64_t nowNs = static_cast<uint64_t>(
+        std::max<int64_t>(0, Simulator::Now().GetNanoSeconds()));
+    if (!IsWithinMeasurementWindow(nowNs))
+    {
+        return;
+    }
     uint64_t taggedBytes = 0;
     for (const auto& [frameId, bytes] : frameBytes)
     {
@@ -491,9 +579,11 @@ SecondaryAirtimeMeter::ApplyTestPpdu(const std::map<uint64_t, uint64_t>& frameBy
 }
 
 void
-SecondaryAirtimeMeter::WriteSummary(uint64_t measurementDurationUs)
+SecondaryAirtimeMeter::WriteSummary()
 {
     NS_ABORT_MSG_IF(m_summaryFile.empty(), "Secondary airtime summary path is unset");
+    NS_ABORT_MSG_IF(!m_measurementStartNs || !m_measurementStopNs,
+                    "Secondary airtime measurement window is unset");
     // Settle any remaining reservations at end of run for deterministic output.
     std::vector<uint64_t> open;
     for (const auto& [frameId, reservation] : m_reservations)
@@ -512,10 +602,19 @@ SecondaryAirtimeMeter::WriteSummary(uint64_t measurementDurationUs)
         m_estimatedActionAirtimeUs > 0
             ? m_measuredAirtimeTotalUs / m_estimatedActionAirtimeUs
             : 0.0;
-    const double fraction =
-        measurementDurationUs > 0
-            ? m_measuredAirtimeTotalUs / static_cast<double>(measurementDurationUs)
-            : 0.0;
+    const double measurementDurationUs =
+        static_cast<double>(*m_measurementStopNs - *m_measurementStartNs) / 1000.0;
+    const double fraction = m_measuredAirtimeTotalUs / measurementDurationUs;
+    const std::optional<double> finiteRunBudgetUs =
+        m_budgetFraction && m_initialCapacityUs
+            ? std::optional<double>(*m_budgetFraction * measurementDurationUs +
+                                    *m_initialCapacityUs)
+            : std::nullopt;
+    const std::optional<double> budgetExcessUs =
+        finiteRunBudgetUs
+            ? std::optional<double>(std::max(0.0,
+                                             m_measuredAirtimeTotalUs - *finiteRunBudgetUs))
+            : std::nullopt;
     std::ofstream summary(m_summaryFile, std::ios::out | std::ios::trunc);
     NS_ABORT_MSG_IF(!summary, "Cannot open secondary airtime summary " << m_summaryFile);
     summary << std::setprecision(12);
@@ -523,12 +622,51 @@ SecondaryAirtimeMeter::WriteSummary(uint64_t measurementDurationUs)
             << "  \"tagged_ppdu_count\": " << m_taggedPpduCount << ",\n"
             << "  \"mixed_ppdu_count\": " << m_mixedPpduCount << ",\n"
             << "  \"tagged_secondary_tx_airtime_us\": " << m_measuredAirtimeTotalUs << ",\n"
+            << "  \"measurement_start_ns\": " << *m_measurementStartNs << ",\n"
+            << "  \"measurement_stop_ns\": " << *m_measurementStopNs << ",\n"
             << "  \"measurement_duration_us\": " << measurementDurationUs << ",\n"
             << "  \"tagged_secondary_tx_airtime_fraction\": " << fraction << ",\n"
             << "  \"maximum_budget_debt_us\": " << m_maximumBudgetDebtUs << ",\n"
             << "  \"estimated_action_airtime_us\": " << m_estimatedActionAirtimeUs << ",\n"
             << "  \"actual_to_estimated_airtime_ratio\": " << ratio << ",\n"
-            << "  \"forced_reservation_settlements\": " << m_forcedSettlements << "\n"
+            << "  \"forced_reservation_settlements\": " << m_forcedSettlements << ",\n"
+            << "  \"budget_fraction\": ";
+    if (m_budgetFraction)
+    {
+        summary << *m_budgetFraction;
+    }
+    else
+    {
+        summary << "null";
+    }
+    summary << ",\n  \"initial_bucket_capacity_us\": ";
+    if (m_initialCapacityUs)
+    {
+        summary << *m_initialCapacityUs;
+    }
+    else
+    {
+        summary << "null";
+    }
+    summary << ",\n  \"finite_run_budget_us\": ";
+    if (finiteRunBudgetUs)
+    {
+        summary << *finiteRunBudgetUs;
+    }
+    else
+    {
+        summary << "null";
+    }
+    summary << ",\n  \"budget_excess_us\": ";
+    if (budgetExcessUs)
+    {
+        summary << *budgetExcessUs;
+    }
+    else
+    {
+        summary << "null";
+    }
+    summary << "\n"
             << "}\n";
 }
 
@@ -548,6 +686,10 @@ SecondaryAirtimeMeter::DoDispose()
     if (m_events.is_open())
     {
         m_events.close();
+    }
+    if (m_settlements.is_open())
+    {
+        m_settlements.close();
     }
     Object::DoDispose();
 }

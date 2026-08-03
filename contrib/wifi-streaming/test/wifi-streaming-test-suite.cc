@@ -314,6 +314,25 @@ class PredictionTelemetryCollectorTestAccess
     }
 };
 
+/** Test-only access to deterministic secondary-airtime settlement callbacks. */
+class SecondaryAirtimeMeterTestAccess
+{
+  public:
+    /**
+     * Mark one packet terminal through the production de-duplication path.
+     *
+     * @param meter Meter under test.
+     * @param frameId Application frame identifier.
+     * @param packetIndex Packet index within the copy.
+     */
+    static void Terminal(Ptr<SecondaryAirtimeMeter> meter,
+                         uint64_t frameId,
+                         uint32_t packetIndex)
+    {
+        meter->MarkPacketTerminal(frameId, packetIndex);
+    }
+};
+
 } // namespace ns3
 
 using namespace ns3;
@@ -2035,7 +2054,197 @@ class SecondaryAirtimeMeterTestCase : public TestCase
                                   12.5,
                                   1e-9,
                                   "Maximum budget debt was not retained");
+
+        // ACK/drop callbacks for the same packet must settle it only once.
+        SecondaryAirtimeReservation third;
+        third.frameId = 3;
+        third.packetCount = 2;
+        third.reservedAirtimeUs = 100;
+        third.estimatedAirtimeUs = 100;
+        third.nominalAirtimeUs = 80;
+        third.deadlineTimeNs = 1'000'000;
+        meter->RegisterLaunchedCopy(std::move(third));
+        const double beforeTerminal = meter->GetReservedAirtimeUs();
+        SecondaryAirtimeMeterTestAccess::Terminal(meter, 3, 0);
+        SecondaryAirtimeMeterTestAccess::Terminal(meter, 3, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  beforeTerminal,
+                                  1e-9,
+                                  "Duplicate terminal callback released a reservation");
+        SecondaryAirtimeMeterTestAccess::Terminal(meter, 3, 1);
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  beforeTerminal - 100.0,
+                                  1e-9,
+                                  "Distinct terminal packets did not settle the frame");
+
+        // Only events in the configured half-open interval are measured.
+        auto windowMeter = CreateObject<SecondaryAirtimeMeter>();
+        windowMeter->SetMeasurementWindow(1000, 2000);
+        Simulator::Schedule(NanoSeconds(500),
+                            &SecondaryAirtimeMeter::ApplyTestPpdu,
+                            PeekPointer(windowMeter),
+                            std::map<uint64_t, uint64_t>{{4, 100}},
+                            10.0,
+                            static_cast<uint64_t>(0));
+        Simulator::Schedule(NanoSeconds(1000),
+                            &SecondaryAirtimeMeter::ApplyTestPpdu,
+                            PeekPointer(windowMeter),
+                            std::map<uint64_t, uint64_t>{{4, 100}},
+                            10.0,
+                            static_cast<uint64_t>(0));
+        Simulator::Schedule(NanoSeconds(1999),
+                            &SecondaryAirtimeMeter::ApplyTestPpdu,
+                            PeekPointer(windowMeter),
+                            std::map<uint64_t, uint64_t>{{4, 100}},
+                            10.0,
+                            static_cast<uint64_t>(0));
+        Simulator::Schedule(NanoSeconds(2000),
+                            &SecondaryAirtimeMeter::ApplyTestPpdu,
+                            PeekPointer(windowMeter),
+                            std::map<uint64_t, uint64_t>{{4, 100}},
+                            10.0,
+                            static_cast<uint64_t>(0));
+        Simulator::Stop(NanoSeconds(3000));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(windowMeter->GetTaggedPpduCount(),
+                              2,
+                              "Measurement-window boundary filtering is incorrect");
+        NS_TEST_ASSERT_MSG_EQ_TOL(windowMeter->GetMeasuredAirtimeTotalUs(),
+                                  20.0,
+                                  1e-9,
+                                  "Out-of-window airtime was measured");
         Simulator::Destroy();
+    }
+};
+
+class SecondaryAirtimeMeterWifiTraceTestCase : public TestCase
+{
+  public:
+    SecondaryAirtimeMeterWifiTraceTestCase()
+        : TestCase("Secondary airtime meter observes tagged Wi-Fi PHY transmissions")
+    {
+    }
+
+  private:
+    /**
+     * Submit one tagged secondary packet through the real UDP/Wi-Fi stack.
+     *
+     * @param socket Connected sender socket.
+     */
+    void SendTaggedPacket(Ptr<Socket> socket)
+    {
+        StreamingFrameTag tag;
+        tag.frameId = 77;
+        tag.pathId = 0;
+        tag.copyId = 1;
+        tag.packetIndex = 0;
+        tag.packetCount = 1;
+        tag.generationTimeNs = Simulator::Now().GetNanoSeconds();
+        tag.deadlineTimeNs = tag.generationTimeNs + 100000000;
+        tag.frameSizeBytes = 1000;
+        tag.frameType = FrameType::P_FRAME;
+        auto packet = Create<Packet>(1000);
+        packet->AddPacketTag(tag);
+        NS_TEST_ASSERT_MSG_EQ(socket->Send(packet) >= 0,
+                              true,
+                              "Tagged Wi-Fi packet submission failed");
+    }
+
+    void DoRun() override
+    {
+        NodeContainer station;
+        NodeContainer accessPoint;
+        station.Create(1);
+        accessPoint.Create(1);
+        InternetStackHelper internet;
+        internet.Install(station);
+        internet.Install(accessPoint);
+
+        YansWifiChannelHelper channel = YansWifiChannelHelper::Default();
+        YansWifiPhyHelper phy;
+        phy.SetChannel(channel.Create());
+        phy.Set("ChannelSettings", StringValue("{1, 20, BAND_2_4GHZ, 0}"));
+        WifiHelper wifi;
+        wifi.SetStandard(WIFI_STANDARD_80211be);
+        wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
+                                     "DataMode",
+                                     StringValue("EhtMcs5"),
+                                     "ControlMode",
+                                     StringValue("ErpOfdmRate24Mbps"),
+                                     "FragmentationThreshold",
+                                     UintegerValue(65535));
+        const Ssid ssid("secondary-airtime-meter-test");
+        WifiMacHelper mac;
+        mac.SetType("ns3::StaWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "ActiveProbing",
+                    BooleanValue(false),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(0));
+        const auto stationDevice = wifi.Install(phy, mac, station);
+        mac.SetType("ns3::ApWifiMac",
+                    "Ssid",
+                    SsidValue(ssid),
+                    "BE_MaxAmsduSize",
+                    UintegerValue(0));
+        const auto accessPointDevice = wifi.Install(phy, mac, accessPoint);
+
+        MobilityHelper mobility;
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+        mobility.Install(station);
+        mobility.Install(accessPoint);
+        station.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(0, 0, 0));
+        accessPoint.Get(0)->GetObject<MobilityModel>()->SetPosition(Vector(1, 0, 0));
+
+        Ipv4AddressHelper address;
+        address.SetBase("10.20.0.0", "255.255.255.0");
+        const auto stationInterface = address.Assign(stationDevice);
+        const auto accessPointInterface = address.Assign(accessPointDevice);
+        auto socket = Socket::CreateSocket(station.Get(0), UdpSocketFactory::GetTypeId());
+        NS_TEST_ASSERT_MSG_EQ(
+            socket->Bind(InetSocketAddress(stationInterface.GetAddress(0), 0)),
+            0,
+            "Airtime-meter sender bind failed");
+        NS_TEST_ASSERT_MSG_EQ(
+            socket->Connect(InetSocketAddress(accessPointInterface.GetAddress(0), 9090)),
+            0,
+            "Airtime-meter sender connect failed");
+
+        const std::string directory = "/tmp/ns3-wifi-streaming-airtime-meter-test";
+        std::filesystem::remove_all(directory);
+        std::filesystem::create_directories(directory);
+        auto meter = CreateObject<SecondaryAirtimeMeter>();
+        meter->SetMeasurementWindow(Seconds(0.9).GetNanoSeconds(),
+                                    Seconds(1.2).GetNanoSeconds());
+        meter->BindPath(0, stationDevice.Get(0));
+        meter->SetOutputFiles("airtime-wifi-test",
+                              directory + "/secondary_airtime_events.csv",
+                              directory + "/secondary_airtime_settlements.csv",
+                              directory + "/secondary_airtime_summary.json");
+        Simulator::Schedule(Seconds(1),
+                            &SecondaryAirtimeMeterWifiTraceTestCase::SendTaggedPacket,
+                            this,
+                            socket);
+        Simulator::Stop(Seconds(1.3));
+        Simulator::Run();
+        meter->WriteSummary();
+
+        NS_TEST_ASSERT_MSG_EQ(meter->GetTaggedPpduCount() > 0,
+                              true,
+                              "Real Wi-Fi trace produced no tagged PPDU event");
+        NS_TEST_ASSERT_MSG_EQ(meter->GetMeasuredAirtimeTotalUs() > 0,
+                              true,
+                              "Real Wi-Fi trace produced no measured airtime");
+        NS_TEST_ASSERT_MSG_EQ(meter->GetMixedPpduCount(),
+                              0,
+                              "Single tagged Wi-Fi packet was classified as mixed");
+        NS_TEST_ASSERT_MSG_EQ(std::filesystem::is_regular_file(
+                                  directory + "/secondary_airtime_summary.json"),
+                              true,
+                              "Airtime summary output is missing");
+        Simulator::Destroy();
+        std::filesystem::remove_all(directory);
     }
 };
 
@@ -2139,12 +2348,12 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         sender->SetStartTime(MilliSeconds(10));
         sender->SetStopTime(MilliSeconds(500));
 
-        // Force an overspend between early T0 samples so lambda rises.
+        // Charge frame 0 above its reservation so debt rises and later frames defer.
         Simulator::Schedule(MilliSeconds(40),
                             &SecondaryAirtimeMeter::ApplyTestPpdu,
                             PeekPointer(meter),
-                            std::map<uint64_t, uint64_t>{{999, 1000}},
-                            20000.0,
+                            std::map<uint64_t, uint64_t>{{0, 1000}},
+                            25000.0,
                             static_cast<uint64_t>(0));
 
         Simulator::Stop(Seconds(1));
@@ -2156,6 +2365,17 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(controller->GetShadowPrice() > 0.20,
                               true,
                               "Shadow price did not rise after overspending");
+        NS_TEST_ASSERT_MSG_EQ(meter->GetMaximumBudgetDebtUs() > 0,
+                              true,
+                              "Actual airtime above the reservation did not create debt");
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  0.0,
+                                  1e-9,
+                                  "Measured airtime did not reduce the frame reservation");
+        NS_TEST_ASSERT_MSG_EQ(controller->GetBucketBalanceUs() <
+                                  controller->GetInitialCapacityUs(),
+                              true,
+                              "Measured airtime did not reduce bucket balance");
 
         std::ifstream decisions(directory + "/adaptive_airtime_decisions.csv");
         NS_TEST_ASSERT_MSG_EQ(static_cast<bool>(decisions),
@@ -2168,6 +2388,8 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
                               "Adaptive decision schema is missing shadow_price");
         std::map<uint64_t, uint32_t> actionsByFrame;
         std::map<uint64_t, bool> rejectedThenActed;
+        std::vector<double> t0Prices;
+        bool sawAirtimeDeferred = false;
         std::string line;
         while (std::getline(decisions, line))
         {
@@ -2182,12 +2404,16 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
             {
                 fields.push_back(field);
             }
-            NS_TEST_ASSERT_MSG_EQ(fields.size() >= 20,
+            NS_TEST_ASSERT_MSG_EQ(fields.size() >= 21,
                                   true,
                                   "Adaptive decision row is truncated");
             const uint64_t frameId = std::stoull(fields[1]);
-            const std::string decision = fields[18];
-            const bool launched = fields[19] == "1";
+            if (fields[2] == "T0")
+            {
+                t0Prices.push_back(std::stod(fields[9]));
+            }
+            const std::string decision = fields[19];
+            const bool launched = fields[20] == "1";
             if (decision == "price_rejected")
             {
                 rejectedThenActed[frameId] = false;
@@ -2205,6 +2431,7 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
                                   "Adaptive launch flag mismatches decision");
             if (decision == "airtime_deferred")
             {
+                sawAirtimeDeferred = true;
                 NS_TEST_ASSERT_MSG_EQ(launched,
                                       false,
                                       "airtime_deferred must not launch");
@@ -2229,6 +2456,18 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(sawRejectedThenActed,
                               true,
                               "price_rejected never became an action at a later stage");
+        NS_TEST_ASSERT_MSG_EQ(sawAirtimeDeferred,
+                              true,
+                              "Controller test never exercised airtime deferral");
+        bool sawPriceRise = false;
+        bool sawPriceFall = false;
+        for (std::size_t index = 1; index < t0Prices.size(); ++index)
+        {
+            sawPriceRise = sawPriceRise || t0Prices[index] > t0Prices[index - 1] + 1e-12;
+            sawPriceFall = sawPriceFall || t0Prices[index] + 1e-12 < t0Prices[index - 1];
+        }
+        NS_TEST_ASSERT_MSG_EQ(sawPriceRise, true, "Shadow price never rose after overspending");
+        NS_TEST_ASSERT_MSG_EQ(sawPriceFall, true, "Shadow price never fell after underspending");
 
         // Larger frames must expose more secondary packets / MAC service bytes.
         FramePacketizer packetizer;
@@ -2259,6 +2498,26 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(largeBytes > smallBytes,
                               true,
                               "Larger frame did not increase expected MAC service bytes");
+        const double smallEstimate = controller->EstimateSecondaryAirtimeUs(
+            static_cast<uint32_t>(smallPlan.packets.size()),
+            smallBytes,
+            1.0);
+        const double largeEstimate = controller->EstimateSecondaryAirtimeUs(
+            static_cast<uint32_t>(largePlan.packets.size()),
+            largeBytes,
+            1.0);
+        NS_TEST_ASSERT_MSG_EQ(largeEstimate > smallEstimate,
+                              true,
+                              "Larger frame did not increase estimated airtime");
+        constexpr uint32_t referencePackets = 10;
+        constexpr uint64_t referenceBytes =
+            10ULL * (1200 + StreamingHeader::SERIALIZED_SIZE + 36);
+        NS_TEST_ASSERT_MSG_EQ_TOL(controller->EstimateSecondaryAirtimeUs(referencePackets,
+                                                                         referenceBytes,
+                                                                         1.0),
+                                  controller->GetReferenceAirtimeUs(),
+                                  1e-9,
+                                  "Normal-frame reference cost differs from its estimate");
 
         Simulator::Destroy();
         std::filesystem::remove_all(directory);
@@ -2683,6 +2942,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new SecondaryAirtimeMeterWifiTraceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new AdaptiveAirtimeDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionWifiTelemetryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FullDuplicationDeliveryTestCase, TestCase::Duration::QUICK);

@@ -467,7 +467,14 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"feature_set\": \"F0+F1-degraded\",\n"
                << "    \"degradation_profile\": \"polling_1ms\",\n"
                << "    \"calibration\": \"platt\",\n"
-               << "    \"stages\": [\"T0\", \"T1\", \"T2\", \"T4\"],\n"
+               << "    \"stages\": [";
+        for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
+             ++index)
+        {
+            output << (index == 0 ? "" : ", ") << "\"T"
+                   << config.adaptiveAirtimeDecisionOffsetsUs[index] / 1000 << "\"";
+        }
+        output << "],\n"
                << "    \"primary_path\": 1,\n"
                << "    \"secondary_path\": 0,\n"
                << "    \"probability_threshold\": "
@@ -502,6 +509,10 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"budget_fraction\": " << config.adaptiveAirtimeBudgetFraction << ",\n"
                << "    \"bucket_horizon_us\": " << config.adaptiveAirtimeBucketHorizonUs
                << ",\n"
+               << "    \"initial_bucket_capacity_us\": "
+               << config.adaptiveAirtimeBudgetFraction *
+                      static_cast<double>(config.adaptiveAirtimeBucketHorizonUs)
+               << ",\n"
                << "    \"initial_shadow_price\": "
                << config.adaptiveAirtimeInitialShadowPrice << ",\n"
                << "    \"dual_step\": " << config.adaptiveAirtimeDualStep << ",\n"
@@ -524,7 +535,13 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"enabled\": true,\n"
                << "    \"path_id\": 0,\n"
                << "    \"copy_id\": 1,\n"
-               << "    \"definition\": \"secondary_sender_phy_tx_airtime\"\n"
+               << "    \"definition\": \"secondary_sender_phy_tx_airtime\",\n"
+               << "    \"measurement_start_ns\": "
+               << static_cast<uint64_t>(std::llround(config.warmupSeconds * 1e9)) << ",\n"
+               << "    \"measurement_stop_ns\": "
+               << static_cast<uint64_t>(
+                      std::llround((config.warmupSeconds + config.durationSeconds) * 1e9))
+               << "\n"
                << "  },\n";
     }
     output << "  \"packet_event_logs_enabled\": " << config.packetEventLogsEnabled << "\n"

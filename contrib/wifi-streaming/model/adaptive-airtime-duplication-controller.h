@@ -117,6 +117,15 @@ class AdaptiveAirtimeDuplicationController : public Object
     void SetDecisionOffsetsUs(const std::vector<uint64_t>& offsetsUs);
 
     /**
+     * Configure the copy used to normalize admission costs.
+     *
+     * @param packetCount Number of packets in the reference frame copy.
+     * @param expectedMacServiceBytes Sum of expected MAC service bytes.
+     */
+    void SetReferenceCopyDescriptor(uint32_t packetCount,
+                                    uint64_t expectedMacServiceBytes);
+
+    /**
      * Configure the decision CSV output.
      *
      * @param runId Stable run identifier.
@@ -130,6 +139,25 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param sample Snapshot delivered after collector validation.
      */
     void NotifySnapshot(const PredictionSample& sample);
+
+    /**
+     * Estimate secondary sender PHY TX airtime.
+     *
+     * @param packetCount Number of packets in the copy.
+     * @param expectedMacServiceBytes Sum of expected MAC service bytes.
+     * @param inflation Retry and aggregation inflation multiplier.
+     * @return Estimated airtime in microseconds.
+     */
+    double EstimateSecondaryAirtimeUs(uint32_t packetCount,
+                                      uint64_t expectedMacServiceBytes,
+                                      double inflation) const;
+
+    /**
+     * Return the configured reference-copy airtime.
+     *
+     * @return Reference airtime in microseconds.
+     */
+    double GetReferenceAirtimeUs() const;
 
     /**
      * Return launched secondary copies.
@@ -152,29 +180,86 @@ class AdaptiveAirtimeDuplicationController : public Object
      */
     double GetBucketBalanceUs() const;
 
+    /**
+     * Return the startup token capacity recorded when control began.
+     *
+     * @return Initial capacity in microseconds.
+     */
+    double GetInitialCapacityUs() const;
+
   protected:
     void DoDispose() override;
 
   private:
+    /** Per-frame launch state retained across decision stages. */
     struct FrameState
     {
         bool launched{false}; ///< Whether a secondary copy was launched.
     };
 
+    /**
+     * Initialize the token bucket at the first causal snapshot.
+     *
+     * @param nowNs Current simulation time in nanoseconds.
+     */
     void InitializeBucket(uint64_t nowNs);
+
+    /**
+     * Refill the token bucket through a causal event timestamp.
+     *
+     * @param nowNs Current simulation time in nanoseconds.
+     */
     void RefillBucket(uint64_t nowNs);
+
+    /**
+     * Apply one projected dual-variable update.
+     *
+     * @param nowNs Current T0 timestamp in nanoseconds.
+     */
     void UpdateShadowPrice(uint64_t nowNs);
-    double EstimateSecondaryAirtimeUs(uint32_t packetCount,
-                                      uint64_t expectedMacServiceBytes,
-                                      double inflation) const;
-    double ReferenceAirtimeUs() const;
+
+    /**
+     * Charge measured PPDU airtime to the controller balance.
+     *
+     * @param frameId Frame receiving the allocated airtime.
+     * @param allocatedUs Airtime allocated to this frame in microseconds.
+     * @param ppduDurationUs Full PPDU duration in microseconds.
+     */
     void NotifyMeasuredAirtime(uint64_t frameId, double allocatedUs, double ppduDurationUs);
+
+    /**
+     * Update retry inflation after a reservation settles.
+     *
+     * @param frameId Settled frame identifier.
+     * @param releasedUs Unused reservation released in microseconds.
+     * @param measuredUs Measured frame airtime in microseconds.
+     * @param nominalUs Nominal frame estimate in microseconds.
+     * @param fallback Whether fallback timing caused settlement.
+     */
     void NotifySettlement(uint64_t frameId,
                           double releasedUs,
                           double measuredUs,
                           double nominalUs,
                           bool fallback);
+
+    /** Write the adaptive decision CSV header. */
     void WriteHeader();
+
+    /**
+     * Write one adaptive decision row.
+     *
+     * @param sample Causal prediction sample.
+     * @param probability Calibrated miss probability.
+     * @param estimatedUs Estimated secondary airtime in microseconds.
+     * @param referenceUs Reference airtime in microseconds.
+     * @param normalizedCost Estimated cost divided by reference cost.
+     * @param utility Net admission utility.
+     * @param balanceUs Pre-decision bucket balance.
+     * @param reservedUs Pre-decision outstanding reservations.
+     * @param availableUs Pre-decision unreserved balance.
+     * @param decision Stable decision name.
+     * @param launched Whether this row launched the secondary copy.
+     */
     void WriteDecision(const PredictionSample& sample,
                        double probability,
                        double estimatedUs,
@@ -202,6 +287,8 @@ class AdaptiveAirtimeDuplicationController : public Object
     double m_bucketCapacityUs{0}; ///< Maximum tokens.
     double m_bucketBalanceUs{0}; ///< Earned tokens minus measured airtime.
     double m_initialCapacityUs{0}; ///< Recorded startup fill.
+    uint32_t m_referencePacketCount{0}; ///< Packet count used for cost normalization.
+    uint64_t m_referenceExpectedMacServiceBytes{0}; ///< Reference MAC service bytes.
     uint64_t m_lastRefillTimeNs{0}; ///< Last refill timestamp.
     uint64_t m_lastPriceUpdateNs{0}; ///< Last T0 shadow-price update.
     double m_measuredSinceLastT0Us{0}; ///< Measured airtime since previous T0.
