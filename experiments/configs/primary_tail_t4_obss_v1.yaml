@@ -1,0 +1,129 @@
+primary_tail_t4_training_schema_version: 2
+artifact_id: primary-tail-t4-obss-v1
+model_id: primary_tail_t4_obss_v1
+
+# This frozen source is station-manager-corrected and oracle-disabled. The
+# seeds remain exhausted engineering data, not confirmation evidence.
+
+dataset:
+  schema_version: 2
+  manifest_sha256: 8ca795bfee353b31425b2705b8ccec86bc892880c383df0a08be3f683c15f55b
+  validation_sha256: 6a76ed8117d7b5e5b1c57e6c4a4f4f3abe824cb8ed53e06d7b36324696edab6d
+  validation_status: PASS
+  split_sufficiency_status: insufficient_data
+  sha256: f4cf948abb9a4538f758a86e9adceb941b8a6892941a4145e063cc11b4b44208
+  project_git_commits: [8ab05ac87e48f94a89fb1608b3964d45f97c1c7d]
+  ns3_upstream_commits: [d2add90b452d600cfb4859baed8e9ea633519447]
+  telemetry_schema_versions: [3]
+  support_mask_versions: [2]
+
+base_bundle:
+  sha256: 226472aa8cc91d44220154b783f94fe75866a4282a40fb006ab0758f545b01ce
+  pipeline_id: exportable_driver_polling_1ms
+  stage: T4
+  feature_set: F0+F1-degraded+F2-exportable
+  degradation_profile: polling_1ms
+  expected_feature_count: 101
+
+target:
+  source_column: deadline_miss
+  source_equivalence: fixed_link_copy_0_equals_union
+  deadline_comparator: completion_us_strictly_greater_than_deadline
+  incomplete_is_miss: true
+  treatment_free: true
+  scenario_name: obss_only
+  selected_policy: fixed_link_1
+  path_id: 1
+  copy_id: 0
+  stage: T4
+  feature_set: F0+F1-degraded+F2-exportable
+  degradation_profile: polling_1ms
+  actionable_only: true
+  source_oracle_features_enabled: false
+  heads:
+    primary_miss:
+      target_id: primary_miss_t4_v1
+      positive_definition: primary_copy_incomplete_or_after_deadline
+      fit_population: t4_actionable
+    completed_tail:
+      target_id: completed_primary_latency_ge_12500us_t4_v1
+      positive_definition: completed_primary_copy_latency_us_greater_equal_12500
+      fit_population: t4_actionable_and_primary_complete
+      latency_threshold_us: 12500
+
+expected_population:
+  run_group_count: 24
+  run_count: 24
+  frame_count: 43200
+  miss_count: 637
+  frames_per_run: 1800
+  measurement_duration_s: 60
+
+# These groups have already supported broad stage, feature, target, and cost
+# exploration. They are engineering data, not an untouched OOD test set.
+split:
+  status: engineering_meta_selected_no_independent_ood_claim
+  fold_count: 4
+  deployment_training_seeds:
+    - 402
+    - 403
+    - 405
+    - 406
+    - 407
+    - 408
+    - 410
+    - 411
+    - 412
+    - 413
+    - 414
+    - 415
+    - 416
+    - 420
+    - 421
+    - 423
+    - 424
+    - 425
+  calibration_seeds: [401, 404, 409, 418, 419, 422]
+  engineering_folds_by_seed:
+    - [402, 403, 415, 423, 424, 425]
+    - [401, 404, 409, 418, 419, 422]
+    - [406, 407, 410, 411, 420, 421]
+    - [405, 408, 412, 413, 414, 416]
+  independent_evaluation: fresh_seed_closed_loop_simulation_only
+
+model:
+  name: histogram_gradient_boosting
+  analysis_seed: 20260725
+  parameters:
+    learning_rate: 0.08
+    max_iter: 120
+    max_leaf_nodes: 15
+    l2_regularization: 1.0
+
+calibration:
+  method: platt
+  seed: 20260725
+  bin_count: 10
+
+hybrid:
+  output_name: admission_score
+  score_kind: weighted_head_probability_admission_score
+  combiner: weighted_arithmetic_mean
+  formula: (primary_miss_probability+0.2*completed_tail_probability)/1.2
+  primary_miss_weight: 1.0
+  completed_tail_weight: 0.2
+  normalization: 1.2
+  selection_status: engineering_meta_selected
+
+packetization:
+  payload_bytes_per_packet: 1200
+
+expected_artifact:
+  calibration_model:
+    calibration_actionable_rows: 3373
+    miss_ranker_sha256: b82ffd115c9e8bda376fd5c97f5b8b6f11d9c8b47d9b4c44114f7fc25d54e145
+    tail_ranker_sha256: 263097d5eec38b7337b9df104e9bec4891f0f10bc97103c2ed4a267ab148984c
+    miss_platt_coefficient: 0.7613756816386171
+    miss_platt_intercept: -2.027545284260559
+    tail_platt_coefficient: 1.0413545951753929
+    tail_platt_intercept: -1.371648412481597

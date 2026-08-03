@@ -158,10 +158,12 @@ def fitted_transforms(predictor: Any) -> list[tuple[str, int, float, float]]:
     return result
 
 
-def predictor_data(predictor: Any) -> dict[str, Any]:
+def predictor_data(
+    predictor: Any, expected_pipeline_id: str = PIPELINE_ID
+) -> dict[str, Any]:
     """Extract one supported sklearn predictor into stable plain data."""
-    if predictor.pipeline_id != PIPELINE_ID:
-        raise ValueError("attempted to export a non-commodity predictor")
+    if predictor.pipeline_id != expected_pipeline_id:
+        raise ValueError("predictor pipeline identity differs from export contract")
     if predictor.model_name != "histogram_gradient_boosting":
         raise ValueError("commodity predictor is not histogram gradient boosting")
     model = predictor.pipeline.named_steps["model"]
