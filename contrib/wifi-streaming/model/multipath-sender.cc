@@ -46,6 +46,12 @@ MultipathSender::SetPredictionTelemetryCollector(Ptr<PredictionTelemetryCollecto
 }
 
 void
+MultipathSender::SetDelayedSecondaryPredictionTrackingEnabled(bool enabled)
+{
+    m_delayedSecondaryPredictionTrackingEnabled = enabled;
+}
+
+void
 MultipathSender::SetPacketPayloadSize(uint32_t bytes)
 {
     m_packetizer.SetPayloadSize(bytes);
@@ -242,7 +248,7 @@ MultipathSender::RequestSecondaryCopyInternal(
                                                                  *packetIndices)
                                 : canonicalPlan;
     frame->second.launched = true;
-    ScheduleCopy(launchPlan, true, false);
+    ScheduleCopy(launchPlan, true, m_delayedSecondaryPredictionTrackingEnabled);
     if (m_collector)
     {
         m_collector->MarkPolicyDecisionDuplicated(frameId,
@@ -257,6 +263,8 @@ void
 MultipathSender::StartApplication()
 {
     NS_ABORT_MSG_IF(!m_source, "MultipathSender requires a FrameSource");
+    NS_ABORT_MSG_IF(m_delayedSecondaryPredictionTrackingEnabled && !m_predictionCollector,
+                    "Delayed secondary prediction tracking requires a prediction collector");
     if (!m_policy)
     {
         auto fixed = CreateObject<FixedLinkPolicy>();
@@ -359,6 +367,13 @@ MultipathSender::GenerateFrame(FrameDescriptor frame)
     if (m_predictionCollector)
     {
         m_predictionCollector->RegisterFrame(primaryPlan);
+        if (m_delayedSecondaryPredictionTrackingEnabled && m_delayedSecondaryPath)
+        {
+            // Preserve the primary-first callback contract while registering
+            // the immutable full delayed plan stored for launch-time projection.
+            m_predictionCollector->RegisterFrame(
+                m_delayedFrames.at(frame.frameId).secondaryPlan);
+        }
     }
 
     std::optional<PacketizationPlan> secondaryPlan;

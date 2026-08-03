@@ -2669,6 +2669,319 @@ class IntegrationDeliveryTestCase : public TestCase
     }
 };
 
+/**
+ * Verify opt-in prediction tracking for a canonical delayed secondary plan.
+ */
+class DelayedSecondaryPredictionTrackingTestCase : public TestCase
+{
+  public:
+    DelayedSecondaryPredictionTrackingTestCase()
+        : TestCase("Delayed secondary prediction tracking is paired and opt-in")
+    {
+    }
+
+  private:
+    /**
+     * Objects retained for one sender scenario.
+     */
+    struct Scenario
+    {
+        Ptr<MultipathSender> sender;                   ///< Sender under test.
+        Ptr<PredictionTelemetryCollector> prediction; ///< Prediction collector under test.
+    };
+
+    /**
+     * Minimal snapshot-callback observation used to pin delivery order.
+     */
+    struct CallbackObservation
+    {
+        uint64_t offsetUs{0}; ///< Snapshot offset.
+        uint8_t pathId{0};    ///< Snapshot path.
+        uint8_t copyId{0};    ///< Snapshot copy.
+    };
+
+    /**
+     * Record one snapshot callback in delivery order.
+     *
+     * @param sample Immutable prediction snapshot.
+     */
+    void RecordSnapshot(const PredictionSample& sample)
+    {
+        m_callbackOrder.push_back(
+            {sample.sampleOffsetUs, sample.key.pathId, sample.key.copyId});
+    }
+
+    /**
+     * Configure one single-frame two-path sender scenario.
+     *
+     * @param trackingEnabled Whether delayed secondary prediction tracking is enabled.
+     * @param port Receiver UDP port.
+     * @return Configured sender and prediction collector.
+     */
+    Scenario ConfigureScenario(bool trackingEnabled, uint16_t port)
+    {
+        m_callbackOrder.clear();
+        NodeContainer nodes;
+        nodes.Create(2);
+        InternetStackHelper internet;
+        internet.Install(nodes);
+        CsmaHelper csma;
+        csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
+        csma.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+        const auto devices = csma.Install(nodes);
+        Ipv4AddressHelper address;
+        address.SetBase("10.31.0.0", "255.255.255.0");
+        const auto interfaces = address.Assign(devices);
+
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), port));
+        receiver->SetHoldForDelayedSecondary(true);
+        nodes.Get(1)->AddApplication(receiver);
+        receiver->SetStartTime(Time());
+        receiver->SetStopTime(MilliSeconds(30));
+
+        auto source = CreateObject<SyntheticFrameSource>();
+        source->SetFps(30);
+        source->SetDuration(MilliSeconds(1));
+        source->SetConstantFrameSize(2501);
+        source->SetDeadline(20000);
+
+        auto prediction = CreateObject<PredictionTelemetryCollector>();
+        prediction->SetSampleOffsetsUs({0, 2000, 4000});
+        prediction->SetSnapshotCallback(
+            MakeCallback(&DelayedSecondaryPredictionTrackingTestCase::RecordSnapshot, this));
+        PredictionTelemetryCollectorTestAccess::AddPath(prediction, 0);
+        PredictionTelemetryCollectorTestAccess::AddPath(prediction, 1);
+        PredictionTelemetryCollectorTestAccess::InitializePhyHistory(prediction,
+                                                                     0,
+                                                                     WifiPhyState::IDLE);
+        PredictionTelemetryCollectorTestAccess::InitializePhyHistory(prediction,
+                                                                     1,
+                                                                     WifiPhyState::IDLE);
+
+        auto policy = CreateObject<SelectiveDuplicationPolicy>();
+        policy->SetPrimaryPath(0);
+        auto sender = CreateObject<MultipathSender>();
+        sender->SetFrameSource(source);
+        sender->SetPacketPayloadSize(1000);
+        sender->SetExpectedMacServiceOverhead(36);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(1);
+        if (trackingEnabled)
+        {
+            // Deliberately enable before attaching the collector to pin
+            // order-independent configuration semantics.
+            sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
+        }
+        sender->SetPredictionTelemetryCollector(prediction);
+        for (uint8_t path = 0; path < 2; ++path)
+        {
+            auto socket = Socket::CreateSocket(nodes.Get(0), UdpSocketFactory::GetTypeId());
+            NS_ABORT_MSG_IF(socket->Bind(InetSocketAddress(interfaces.GetAddress(0), 0)) != 0,
+                            "Delayed-telemetry sender bind failed");
+            NS_ABORT_MSG_IF(
+                socket->Connect(InetSocketAddress(interfaces.GetAddress(1), port)) != 0,
+                "Delayed-telemetry sender connect failed");
+            sender->AddPath(path, socket, devices.Get(0));
+        }
+        nodes.Get(0)->AddApplication(sender);
+        sender->SetStartTime(MilliSeconds(10));
+        sender->SetStopTime(MilliSeconds(30));
+        return {sender, prediction};
+    }
+
+    /**
+     * Assert primary-before-secondary callback order at T0, T2, and T4.
+     *
+     * @param samples Captured paired samples.
+     */
+    void AssertPairedOrder(const std::vector<PredictionSample>& samples)
+    {
+        constexpr std::array<uint64_t, 6> expectedOffsets{0, 0, 2000, 2000, 4000, 4000};
+        constexpr std::array<uint8_t, 6> expectedPaths{0, 1, 0, 1, 0, 1};
+        constexpr std::array<uint8_t, 6> expectedCopies{0, 1, 0, 1, 0, 1};
+        NS_TEST_ASSERT_MSG_EQ(samples.size(),
+                              expectedOffsets.size(),
+                              "Paired prediction snapshots are missing");
+        if (samples.size() != expectedOffsets.size())
+        {
+            return;
+        }
+        for (std::size_t index = 0; index < samples.size(); ++index)
+        {
+            NS_TEST_ASSERT_MSG_EQ(samples[index].sampleOffsetUs,
+                                  expectedOffsets[index],
+                                  "Paired snapshot offset order changed");
+            NS_TEST_ASSERT_MSG_EQ(samples[index].key.pathId,
+                                  expectedPaths[index],
+                                  "Primary-before-secondary path order changed");
+            NS_TEST_ASSERT_MSG_EQ(samples[index].key.copyId,
+                                  expectedCopies[index],
+                                  "Primary-before-secondary copy order changed");
+        }
+        NS_TEST_ASSERT_MSG_EQ(m_callbackOrder.size(),
+                              expectedOffsets.size(),
+                              "Paired snapshot callbacks are missing");
+        if (m_callbackOrder.size() != expectedOffsets.size())
+        {
+            return;
+        }
+        for (std::size_t index = 0; index < m_callbackOrder.size(); ++index)
+        {
+            NS_TEST_ASSERT_MSG_EQ(m_callbackOrder[index].offsetUs,
+                                  expectedOffsets[index],
+                                  "Paired callback offset order changed");
+            NS_TEST_ASSERT_MSG_EQ(m_callbackOrder[index].pathId,
+                                  expectedPaths[index],
+                                  "Primary-before-secondary callback path order changed");
+            NS_TEST_ASSERT_MSG_EQ(m_callbackOrder[index].copyId,
+                                  expectedCopies[index],
+                                  "Primary-before-secondary callback copy order changed");
+        }
+    }
+
+    /**
+     * Run one scenario through all configured snapshots.
+     */
+    void RunScenario()
+    {
+        Simulator::Stop(MilliSeconds(25));
+        Simulator::Run();
+    }
+
+    void DoRun() override
+    {
+        // The default keeps delayed launch telemetry entirely unchanged: only
+        // the primary is registered, even when the delayed copy launches.
+        auto scenario = ConfigureScenario(false, 9031);
+        bool fullLaunchAccepted = false;
+        Simulator::Schedule(MilliSeconds(11), [&]() {
+            fullLaunchAccepted =
+                scenario.sender->RequestSecondaryCopy(0, "default untracked launch");
+        });
+        RunScenario();
+        NS_TEST_ASSERT_MSG_EQ(fullLaunchAccepted, true, "Default delayed launch was rejected");
+        NS_TEST_ASSERT_MSG_EQ(scenario.prediction->GetRegisteredFrameCount(),
+                              1,
+                              "Default behavior registered a delayed prediction frame");
+        NS_TEST_ASSERT_MSG_EQ(scenario.prediction->GetSamples().size(),
+                              3,
+                              "Default behavior emitted secondary prediction samples");
+        for (const auto& sample : scenario.prediction->GetSamples())
+        {
+            NS_TEST_ASSERT_MSG_EQ(sample.key.pathId,
+                                  0,
+                                  "Default prediction sample moved off the primary path");
+            NS_TEST_ASSERT_MSG_EQ(sample.key.copyId,
+                                  0,
+                                  "Default prediction sample changed copy identity");
+        }
+        NS_TEST_ASSERT_MSG_EQ(scenario.sender->GetPacketsSent(),
+                              6,
+                              "Default tracked state changed delayed packet transmission");
+        Simulator::Destroy();
+
+        // With paired tracking enabled and no intervention, every stage is
+        // emitted primary-first and the secondary has path context but no
+        // sender, MAC, or PHY frame progress.
+        scenario = ConfigureScenario(true, 9032);
+        RunScenario();
+        NS_TEST_ASSERT_MSG_EQ(scenario.prediction->GetRegisteredFrameCount(),
+                              2,
+                              "Opt-in did not register both frame copies");
+        const auto& idleSamples = scenario.prediction->GetSamples();
+        AssertPairedOrder(idleSamples);
+        if (idleSamples.size() == 6)
+        {
+            for (const std::size_t index : {1U, 3U, 5U})
+            {
+                const auto& sample = idleSamples[index];
+                NS_TEST_ASSERT_MSG_EQ(sample.packetsSubmitted,
+                                      0,
+                                      "Idle delayed copy gained application progress");
+                NS_TEST_ASSERT_MSG_EQ(sample.framePacketsMacEnqueued.has_value() &&
+                                          *sample.framePacketsMacEnqueued == 0,
+                                      true,
+                                      "Idle delayed copy gained MAC enqueue progress");
+                NS_TEST_ASSERT_MSG_EQ(sample.framePacketsTxSucceeded.has_value() &&
+                                          *sample.framePacketsTxSucceeded == 0,
+                                      true,
+                                      "Idle delayed copy gained MAC success progress");
+                NS_TEST_ASSERT_MSG_EQ(sample.mpduTxAttemptsTotal.has_value(),
+                                      true,
+                                      "Delayed sample lacks its bound path context");
+                NS_TEST_ASSERT_MSG_EQ(
+                    sample.featureSupportMask,
+                    PredictionTelemetryCollectorTestAccess::MakeSupportMask(true, false),
+                    "Delayed sample has the wrong bound-path support mask");
+            }
+        }
+        Simulator::Destroy();
+
+        // A full delayed launch updates the already registered canonical copy.
+        scenario = ConfigureScenario(true, 9033);
+        fullLaunchAccepted = false;
+        Simulator::Schedule(MilliSeconds(11), [&]() {
+            fullLaunchAccepted =
+                scenario.sender->RequestSecondaryCopy(0, "tracked full launch");
+        });
+        RunScenario();
+        NS_TEST_ASSERT_MSG_EQ(fullLaunchAccepted, true, "Tracked full launch was rejected");
+        const auto& fullSamples = scenario.prediction->GetSamples();
+        AssertPairedOrder(fullSamples);
+        if (fullSamples.size() == 6)
+        {
+            const auto& fullT2 = fullSamples[3];
+            NS_TEST_ASSERT_MSG_EQ(fullT2.packetsSubmitted,
+                                  3,
+                                  "Tracked full launch did not submit every secondary packet");
+            NS_TEST_ASSERT_MSG_EQ(fullT2.packetsRemainingToSubmit,
+                                  0,
+                                  "Tracked full launch retained unsent secondary packets");
+            NS_TEST_ASSERT_MSG_EQ(fullT2.applicationSocketPacketBytesSubmitted,
+                                  2501 + 3 * StreamingHeader::SERIALIZED_SIZE,
+                                  "Tracked full launch recorded the wrong socket bytes");
+        }
+        Simulator::Destroy();
+
+        // A projected launch records only its original selected packet indexes
+        // against the full immutable plan and leaves the remainder unsent.
+        scenario = ConfigureScenario(true, 9034);
+        bool partialLaunchAccepted = false;
+        Simulator::Schedule(MilliSeconds(11), [&]() {
+            partialLaunchAccepted = scenario.sender->RequestSecondaryPackets(
+                0,
+                std::vector<uint32_t>{2, 0},
+                "tracked projected launch");
+        });
+        RunScenario();
+        NS_TEST_ASSERT_MSG_EQ(partialLaunchAccepted,
+                              true,
+                              "Tracked projected launch was rejected");
+        const auto& projectedSamples = scenario.prediction->GetSamples();
+        AssertPairedOrder(projectedSamples);
+        if (projectedSamples.size() == 6)
+        {
+            const auto& projectedT2 = projectedSamples[3];
+            NS_TEST_ASSERT_MSG_EQ(projectedT2.packetsSubmitted,
+                                  2,
+                                  "Tracked projection submitted the wrong packet count");
+            NS_TEST_ASSERT_MSG_EQ(projectedT2.packetsRemainingToSubmit,
+                                  1,
+                                  "Tracked projection changed canonical frame cardinality");
+            NS_TEST_ASSERT_MSG_EQ(projectedT2.applicationSocketPacketBytesSubmitted,
+                                  1501 + 2 * StreamingHeader::SERIALIZED_SIZE,
+                                  "Tracked projection recorded the wrong socket bytes");
+        }
+        NS_TEST_ASSERT_MSG_EQ(scenario.sender->GetRedundantBytesSent(),
+                              1501 + 2 * StreamingHeader::SERIALIZED_SIZE,
+                              "Tracked projection changed redundant byte accounting");
+        Simulator::Destroy();
+    }
+
+    std::vector<CallbackObservation> m_callbackOrder; ///< Delivered snapshot callbacks.
+};
+
 class SelectiveDuplicationControllerTestCase : public TestCase
 {
   public:
@@ -4441,6 +4754,8 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new DelayedSecondaryHoldTestCase, TestCase::Duration::QUICK);
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new DelayedSecondaryPredictionTrackingTestCase,
+                    TestCase::Duration::QUICK);
         AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ExplicitSecondaryPacketSelectionTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterTestCase, TestCase::Duration::QUICK);

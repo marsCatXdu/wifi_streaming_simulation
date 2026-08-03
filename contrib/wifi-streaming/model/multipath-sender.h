@@ -58,6 +58,19 @@ class MultipathSender : public Application
      * @param collector Collector that receives plans and submission progress.
      */
     void SetPredictionTelemetryCollector(Ptr<PredictionTelemetryCollector> collector);
+
+    /**
+     * Enable paired prediction telemetry for the canonical delayed copy.
+     *
+     * Disabled by default. When enabled, the delayed copy is registered at
+     * frame generation and any subsequently launched packets are recorded as
+     * submissions against that immutable full-copy plan. A prediction
+     * telemetry collector must be attached before the application starts.
+     *
+     * @param enabled True to track delayed secondary frame copies.
+     */
+    void SetDelayedSecondaryPredictionTrackingEnabled(bool enabled);
+
     void SetPacketPayloadSize(uint32_t bytes);
     /**
      * Set exact lower-layer bytes added after socket submission.
@@ -221,6 +234,7 @@ class MultipathSender : public Application
     std::map<PathId, Path> m_paths;
     std::map<uint64_t, DelayedFrameState> m_delayedFrames;
     std::optional<PathId> m_delayedSecondaryPath;
+    bool m_delayedSecondaryPredictionTrackingEnabled{false}; ///< Track delayed-copy telemetry.
     PathId m_primaryPath{0};
     Ptr<RedundancyPolicy> m_policy;
     LinkTelemetrySnapshot m_telemetry;
