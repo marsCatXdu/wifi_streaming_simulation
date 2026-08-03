@@ -109,6 +109,10 @@ CLI_KEYS = {
     "prediction_polling_report_delay_us": "predictionPollingReportDelayUs",
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
+    "randomized_assignment_salt": "randomizedAssignmentSalt",
+    "randomized_t2_probability": "randomizedT2Probability",
+    "randomized_t4_probability": "randomizedT4Probability",
+    "randomized_assignment_stop_guard_us": "randomizedAssignmentStopGuardUs",
     "selective_duplication_threshold": "selectiveDuplicationThreshold",
     "selective_duplication_frame_budget": "selectiveDuplicationFrameBudget",
     "selective_duplication_burst_horizon_frames": "selectiveDuplicationBurstHorizonFrames",
@@ -397,6 +401,12 @@ def write_experiment_description(document: dict[str, Any],
         if spec["config"].get("prediction", {}).get("prediction_telemetry_enabled", False)
     ]
     prediction = prediction_configs[0] if prediction_configs else {}
+    randomized_predictions = [
+        spec["config"].get("prediction", {})
+        for spec in specs
+        if spec["config"].get("policy") == "randomized_full_copy_exploration"
+    ]
+    randomized_prediction = randomized_predictions[0] if randomized_predictions else {}
     approaches = sorted({
         (
             spec["config"]["topology"],
@@ -409,6 +419,9 @@ def write_experiment_description(document: dict[str, Any],
     has_adaptive = any(policy in {
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
     } for _, policy, _ in approaches)
+    has_randomized = any(
+        policy == "randomized_full_copy_exploration" for _, policy, _ in approaches
+    )
     has_deficit = any(policy == "adaptive_deficit_duplication"
                       for _, policy, _ in approaches)
     approach_lines: list[str] = []
@@ -450,6 +463,18 @@ def write_experiment_description(document: dict[str, Any],
                 "  on the 5 GHz interface. Adaptive admission launches only the",
                 "  primary-unacknowledged packet indexes on 2.4 GHz in reverse",
                 "  order under the secondary PHY TX airtime token budget.",
+            ]
+        elif (
+            topology == "dual_interface"
+            and policy == "randomized_full_copy_exploration"
+        ):
+            approach_lines += [
+                "* ``Randomized delayed full-copy exploration``: each frame starts",
+                "  on the 5 GHz interface. Deterministic per-frame randomization",
+                "  assigns eligible frames to control, T2 full-copy, or T4",
+                "  full-copy treatment. A treatment launches on 2.4 GHz only if",
+                "  the primary remains actionable at its assigned paired-link",
+                "  snapshot; the randomized intervention is not token-gated.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -496,6 +521,7 @@ def write_experiment_description(document: dict[str, Any],
         f"{stream.get('payload_size', 1200)}-byte UDP payloads.",
         "",
     ]
+    action_sentences = []
     if has_selective or has_adaptive:
         if has_selective and has_adaptive:
             controller_names = "The selective and adaptive arms"
@@ -513,6 +539,23 @@ def write_experiment_description(document: dict[str, Any],
                 " Primary-deficit packet selection additionally reads the exact "
                 "causal primary per-packet ACK state."
             )
+        action_sentences.append(action_text)
+    if has_randomized:
+        randomized_t2 = randomized_prediction.get("randomized_t2_probability", 0.08)
+        randomized_t4 = randomized_prediction.get("randomized_t4_probability", 0.12)
+        randomized_control = 1.0 - randomized_t2 - randomized_t4
+        randomized_salt = randomized_prediction.get("randomized_assignment_salt", 0)
+        action_sentences.append(
+            "The randomized exploration arm uses only paired causal snapshots "
+            "and deterministic frame assignment; receiver outcomes never enter "
+            "assignment or execution. Its configured control, T2, and T4 "
+            f"probabilities are {randomized_control:g}, {randomized_t2:g}, and "
+            f"{randomized_t4:g}, with assignment salt {randomized_salt}. "
+            "Assignment and execution are logged separately, and the secondary "
+            "airtime meter observes treatment cost."
+        )
+    if action_sentences:
+        action_text = " ".join(action_sentences)
     else:
         action_text = "Adaptive actions are disabled in this telemetry matrix."
     if has_legacy:
@@ -552,6 +595,11 @@ def write_experiment_description(document: dict[str, Any],
             "",
         ]
     if prediction.get("prediction_telemetry_enabled", False):
+        snapshot_text = (
+            "The sender records passive, receiver-independent paired-link causal"
+            if has_randomized
+            else "The primary-link sender records passive, receiver-independent causal"
+        )
         offsets = ", ".join(
             str(value) for value in prediction.get(
                 "prediction_sample_offsets_us", [0, 1000, 2000, 4000]
@@ -566,7 +614,7 @@ def write_experiment_description(document: dict[str, Any],
             "Prediction telemetry",
             "--------------------",
             "",
-            "The primary-link sender records passive, receiver-independent causal",
+            snapshot_text,
             f"snapshots at offsets {offsets} us. Rolling MAC/PHY windows are",
             f"{windows} us. F1 reports are captured by a frame-independent "
             f"{prediction.get('prediction_polling_interval_us', 1000)} us clock and become "
