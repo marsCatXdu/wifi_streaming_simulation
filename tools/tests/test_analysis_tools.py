@@ -774,8 +774,8 @@ class MatrixTests(unittest.TestCase):
             write_experiment_description(document, specs, Path(directory))
             description = (Path(directory) / "DESCRIPTION.rst").read_text()
         self.assertIn("EMLSR MLO", description)
-        self.assertIn("advanced fixed-aux profile", description)
-        self.assertIn("Both links must", description)
+        self.assertIn("advanced STA/AP fixed-aux profile", description)
+        self.assertIn("without conditioning", description)
 
     def test_ofdma_states_have_distinct_plot_labels(self) -> None:
         disabled = {

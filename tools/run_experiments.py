@@ -448,10 +448,11 @@ def write_experiment_description(document: dict[str, Any],
         elif topology == "mlo_emlsr":
             approach_lines += [
                 "* ``EMLSR MLO``: one two-link 802.11be EMLSR MLD uses the",
-                "  predeclared advanced fixed-aux profile. PHY 1 starts as the",
+                "  predeclared advanced STA/AP fixed-aux profile. PHY 1 starts as the",
                 "  5 GHz main PHY and may switch across both bands; the 2.4 GHz",
-                "  auxiliary PHY is fixed and not TX capable. Both links must",
-                "  record successful MPDUs and sender PHY TX airtime.",
+                "  auxiliary PHY is fixed and not TX capable. Per-link successful",
+                "  MPDUs and sender PHY TX airtime are recorded without conditioning",
+                "  experiment acceptance on which link wins access.",
             ]
         else:
             approach_lines += [

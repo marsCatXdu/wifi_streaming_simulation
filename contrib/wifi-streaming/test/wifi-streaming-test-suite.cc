@@ -1646,10 +1646,11 @@ class OutputStatisticsTestCase : public TestCase
 
         MloRuntimeInfo mloRuntime;
         mloRuntime.mode = "EMLSR";
-        mloRuntime.profile = "advanced_fixed_aux_v1";
+        mloRuntime.profile = "advanced_sta_ap_fixed_aux_v2";
         mloRuntime.stationEmlsrActivated = true;
         mloRuntime.apEmlsrActivated = true;
         mloRuntime.emlsrManager = "ns3::AdvancedEmlsrManager";
+        mloRuntime.apEmlsrManager = "ns3::AdvancedApEmlsrManager";
         mloRuntime.emlsrLinkIds = {0, 1};
         mloRuntime.apEmlsrEnabledPerLink = {true, true};
         mloRuntime.mainPhyId = 1;
@@ -1667,6 +1668,11 @@ class OutputStatisticsTestCase : public TestCase
                                   "\"emlsr_manager\": \"ns3::AdvancedEmlsrManager\""),
                               std::string::npos,
                               "EMLSR runtime manager is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            mloRuntimeText.str().find(
+                "\"ap_emlsr_manager\": \"ns3::AdvancedApEmlsrManager\""),
+            std::string::npos,
+            "AP EMLSR runtime manager is missing");
         NS_TEST_ASSERT_MSG_NE(mloRuntimeText.str().find(
                                   "\"successful_mpdus_per_link\": [4, 5]"),
                               std::string::npos,

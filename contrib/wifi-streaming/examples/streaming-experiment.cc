@@ -1039,8 +1039,16 @@ main(int argc, char* argv[])
     constexpr uint8_t emlsrMainPhyId = 1;
     constexpr uint32_t emlsrPaddingDelayUs = 128;
     constexpr uint32_t emlsrTransitionDelayUs = 128;
+    constexpr uint32_t emlsrTransitionTimeoutUs = 0;
+    constexpr uint32_t emlsrMediumSyncDurationUs = 5472;
+    constexpr int32_t emlsrMsdOfdmEdThresholdDbm = -72;
+    constexpr uint8_t emlsrMsdMaxNTxops = 1;
     constexpr uint32_t emlsrChannelSwitchDelayUs = 100;
     constexpr uint32_t emlsrAuxPhyChannelWidthMhz = 20;
+    constexpr uint32_t emlsrSwitchMainPhyBackDelayUs = 5000;
+    constexpr uint32_t emlsrCamResetBackoffThresholdUs = 0;
+    constexpr uint8_t emlsrCamNSlotsLeft = 0;
+    constexpr uint32_t emlsrCamNSlotsLeftMinDelayUs = 25;
     Ptr<WifiNetDevice> targetStaMld;
     Ptr<WifiNetDevice> targetApMld;
     MloRuntimeInfo mloRuntime;
@@ -1262,7 +1270,17 @@ main(int argc, char* argv[])
     {
         if (emlsrMlo)
         {
-            wifi.ConfigEhtOptions("EmlsrActivated", BooleanValue(true));
+            wifi.ConfigEhtOptions(
+                "EmlsrActivated",
+                BooleanValue(true),
+                "TransitionTimeout",
+                TimeValue(MicroSeconds(emlsrTransitionTimeoutUs)),
+                "MediumSyncDuration",
+                TimeValue(MicroSeconds(emlsrMediumSyncDurationUs)),
+                "MsdOfdmEdThreshold",
+                IntegerValue(emlsrMsdOfdmEdThresholdDbm),
+                "MsdMaxNTxops",
+                UintegerValue(emlsrMsdMaxNTxops));
         }
         Ptr<MultiModelSpectrumChannel> channel2Ghz = makeWifiChannel(referenceLoss2GhzDb, 0);
         wifiChannels[0] = channel2Ghz;
@@ -1317,6 +1335,20 @@ main(int argc, char* argv[])
             StringValue("0 0,1"));
 
         WifiMacHelper mac;
+        if (emlsrMlo)
+        {
+            mac.SetChannelAccessManager(
+                "GenerateBackoffIfTxopWithoutTx",
+                BooleanValue(false),
+                "ProactiveBackoff",
+                BooleanValue(false),
+                "ResetBackoffThreshold",
+                TimeValue(MicroSeconds(emlsrCamResetBackoffThresholdUs)),
+                "NSlotsLeft",
+                UintegerValue(emlsrCamNSlotsLeft),
+                "NSlotsLeftMinDelay",
+                TimeValue(MicroSeconds(emlsrCamNSlotsLeftMinDelayUs)));
+        }
         const Ssid ssid("wifi-streaming-mld");
         mac.SetType("ns3::StaWifiMac",
                     "Ssid",
@@ -1346,10 +1378,30 @@ main(int argc, char* argv[])
                                 BooleanValue(false),
                                 "AuxPhyChannelWidth",
                                 UintegerValue(emlsrAuxPhyChannelWidthMhz),
+                                "AuxPhyMaxModClass",
+                                EnumValue(WIFI_MOD_CLASS_OFDM),
                                 "PutAuxPhyToSleep",
                                 BooleanValue(false),
                                 "InDeviceInterference",
-                                BooleanValue(false));
+                                BooleanValue(false),
+                                "UseNotifiedMacHdr",
+                                BooleanValue(true),
+                                "ResetCamState",
+                                BooleanValue(false),
+                                "AllowUlTxopInRx",
+                                BooleanValue(false),
+                                "InterruptSwitch",
+                                BooleanValue(false),
+                                "UseAuxPhyCca",
+                                BooleanValue(false),
+                                "SwitchMainPhyBackDelay",
+                                TimeValue(MicroSeconds(emlsrSwitchMainPhyBackDelayUs)),
+                                "KeepMainPhyAfterDlTxop",
+                                BooleanValue(false),
+                                "CheckAccessOnMainPhyLink",
+                                BooleanValue(true),
+                                "MinAcToSkipCheckAccess",
+                                EnumValue(AcIndex::AC_BK));
         }
         mac.SetEdca(AC_BE,
                     "NMaxInflights",
@@ -1376,6 +1428,20 @@ main(int argc, char* argv[])
                     UintegerValue(maxAmpduSize),
                     "BE_MaxAmsduSize",
                     UintegerValue(maxAmsduSize));
+        if (emlsrMlo)
+        {
+            mac.SetApEmlsrManager("ns3::AdvancedApEmlsrManager",
+                                  "UseNotifiedMacHdr",
+                                  BooleanValue(true),
+                                  "EarlySwitchToListening",
+                                  BooleanValue(false),
+                                  "WaitTransDelayOnPsduRxError",
+                                  BooleanValue(true),
+                                  "UpdateCwAfterFailedIcf",
+                                  BooleanValue(true),
+                                  "ReportFailedIcf",
+                                  BooleanValue(true));
+        }
         mac.SetEdca(AC_BE,
                     "TxopLimits",
                     StringValue(std::to_string(txopLimitUs) + "us," +
@@ -1415,19 +1481,26 @@ main(int argc, char* argv[])
                                 NS_ABORT_MSG_IF(!staMac || !staMac->IsAssociated(),
                                                 "EMLSR runtime check requires an associated STA "
                                                 "MLD");
+                                auto apMac = DynamicCast<ApWifiMac>(targetApMld->GetMac());
+                                NS_ABORT_MSG_IF(!apMac, "EMLSR runtime check requires an AP MLD");
                                 auto manager = staMac->GetEmlsrManager();
                                 NS_ABORT_MSG_IF(!manager,
                                                 "EMLSR runtime check found no EMLSR manager");
+                                auto apManager = apMac->GetApEmlsrManager();
+                                NS_ABORT_MSG_IF(!apManager,
+                                                "EMLSR runtime check found no AP EMLSR manager");
                                 const std::set<uint8_t> expectedLinks{0, 1};
                                 NS_ABORT_MSG_IF(manager->GetEmlsrLinks() != expectedLinks,
                                                 "EMLSR runtime link set is not {0,1}");
 
                                 mloRuntime.mode = "EMLSR";
-                                mloRuntime.profile = "advanced_fixed_aux_v1";
+                                mloRuntime.profile = "advanced_sta_ap_fixed_aux_v2";
                                 mloRuntime.stationEmlsrActivated =
                                     targetStaMld->IsEmlsrActivated();
                                 mloRuntime.apEmlsrActivated = targetApMld->IsEmlsrActivated();
                                 mloRuntime.emlsrManager = manager->GetInstanceTypeId().GetName();
+                                mloRuntime.apEmlsrManager =
+                                    apManager->GetInstanceTypeId().GetName();
                                 mloRuntime.emlsrLinkIds.assign(expectedLinks.begin(),
                                                                expectedLinks.end());
                                 mloRuntime.mainPhyId = manager->GetMainPhyId();
@@ -1457,23 +1530,59 @@ main(int argc, char* argv[])
                                 BooleanValue switchAuxPhy;
                                 BooleanValue auxPhyTxCapable;
                                 UintegerValue auxPhyChannelWidth;
+                                EnumValue<WifiModulationClass> auxPhyMaxModClass;
                                 BooleanValue putAuxPhyToSleep;
                                 BooleanValue inDeviceInterference;
+                                BooleanValue useNotifiedMacHdr;
+                                BooleanValue resetCamState;
+                                BooleanValue allowUlTxopInRx;
+                                BooleanValue interruptSwitch;
+                                BooleanValue useAuxPhyCca;
+                                TimeValue switchMainPhyBackDelay;
+                                BooleanValue keepMainPhyAfterDlTxop;
+                                BooleanValue checkAccessOnMainPhyLink;
+                                EnumValue<AcIndex> minAcToSkipCheckAccess;
                                 BooleanValue notifyMacHeaderRxEnd;
                                 manager->GetAttribute("EmlsrPaddingDelay", paddingDelay);
                                 manager->GetAttribute("EmlsrTransitionDelay", transitionDelay);
                                 manager->GetAttribute("SwitchAuxPhy", switchAuxPhy);
                                 manager->GetAttribute("AuxPhyTxCapable", auxPhyTxCapable);
                                 manager->GetAttribute("AuxPhyChannelWidth", auxPhyChannelWidth);
+                                manager->GetAttribute("AuxPhyMaxModClass", auxPhyMaxModClass);
                                 manager->GetAttribute("PutAuxPhyToSleep", putAuxPhyToSleep);
                                 manager->GetAttribute("InDeviceInterference",
                                                       inDeviceInterference);
+                                manager->GetAttribute("UseNotifiedMacHdr", useNotifiedMacHdr);
+                                manager->GetAttribute("ResetCamState", resetCamState);
+                                manager->GetAttribute("AllowUlTxopInRx", allowUlTxopInRx);
+                                manager->GetAttribute("InterruptSwitch", interruptSwitch);
+                                manager->GetAttribute("UseAuxPhyCca", useAuxPhyCca);
+                                manager->GetAttribute("SwitchMainPhyBackDelay",
+                                                      switchMainPhyBackDelay);
+                                manager->GetAttribute("KeepMainPhyAfterDlTxop",
+                                                      keepMainPhyAfterDlTxop);
+                                manager->GetAttribute("CheckAccessOnMainPhyLink",
+                                                      checkAccessOnMainPhyLink);
+                                manager->GetAttribute("MinAcToSkipCheckAccess",
+                                                      minAcToSkipCheckAccess);
                                 mainPhy->GetAttribute("NotifyMacHdrRxEnd",
                                                       notifyMacHeaderRxEnd);
+                                const auto transitionTimeout = manager->GetTransitionTimeout();
+                                const auto msdMaxNTxops = manager->GetMediumSyncMaxNTxops();
                                 mloRuntime.paddingDelayUs =
                                     paddingDelay.Get().GetMicroSeconds();
                                 mloRuntime.transitionDelayUs =
                                     transitionDelay.Get().GetMicroSeconds();
+                                mloRuntime.transitionTimeoutUs =
+                                    transitionTimeout
+                                        ? transitionTimeout->GetMicroSeconds()
+                                        : 0;
+                                mloRuntime.mediumSyncDurationUs =
+                                    manager->GetMediumSyncDuration().GetMicroSeconds();
+                                mloRuntime.msdOfdmEdThresholdDbm =
+                                    manager->GetMediumSyncOfdmEdThreshold();
+                                mloRuntime.msdMaxNTxops =
+                                    msdMaxNTxops ? *msdMaxNTxops : 0;
                                 mloRuntime.channelSwitchDelayUs =
                                     targetStaMld->GetPhy(mloRuntime.mainPhyId)
                                         ->GetChannelSwitchDelay()
@@ -1481,14 +1590,56 @@ main(int argc, char* argv[])
                                 mloRuntime.switchAuxPhy = switchAuxPhy.Get();
                                 mloRuntime.auxPhyTxCapable = auxPhyTxCapable.Get();
                                 mloRuntime.auxPhyChannelWidthMhz = auxPhyChannelWidth.Get();
+                                mloRuntime.auxPhyMaxModulationClass =
+                                    auxPhyMaxModClass.Get() == WIFI_MOD_CLASS_OFDM
+                                        ? "OFDM"
+                                        : "unexpected";
                                 mloRuntime.putAuxPhyToSleep = putAuxPhyToSleep.Get();
                                 mloRuntime.inDeviceInterference =
                                     inDeviceInterference.Get();
+                                mloRuntime.useNotifiedMacHeader = useNotifiedMacHdr.Get();
+                                mloRuntime.resetCamState = resetCamState.Get();
+                                mloRuntime.allowUlTxopInRx = allowUlTxopInRx.Get();
+                                mloRuntime.interruptSwitch = interruptSwitch.Get();
+                                mloRuntime.useAuxPhyCca = useAuxPhyCca.Get();
+                                mloRuntime.switchMainPhyBackDelayUs =
+                                    switchMainPhyBackDelay.Get().GetMicroSeconds();
+                                mloRuntime.keepMainPhyAfterDlTxop =
+                                    keepMainPhyAfterDlTxop.Get();
+                                mloRuntime.checkAccessOnMainPhyLink =
+                                    checkAccessOnMainPhyLink.Get();
+                                mloRuntime.minAcToSkipCheckAccess =
+                                    minAcToSkipCheckAccess.Get() == AcIndex::AC_BK
+                                        ? "AC_BK"
+                                        : "unexpected";
                                 mloRuntime.notifyMacHeaderRxEnd =
                                     notifyMacHeaderRxEnd.Get();
 
-                                auto apMac = DynamicCast<ApWifiMac>(targetApMld->GetMac());
-                                NS_ABORT_MSG_IF(!apMac, "EMLSR runtime check requires an AP MLD");
+                                BooleanValue apUseNotifiedMacHdr;
+                                BooleanValue apEarlySwitchToListening;
+                                BooleanValue apWaitTransDelayOnPsduRxError;
+                                BooleanValue apUpdateCwAfterFailedIcf;
+                                BooleanValue apReportFailedIcf;
+                                apManager->GetAttribute("UseNotifiedMacHdr",
+                                                        apUseNotifiedMacHdr);
+                                apManager->GetAttribute("EarlySwitchToListening",
+                                                        apEarlySwitchToListening);
+                                apManager->GetAttribute("WaitTransDelayOnPsduRxError",
+                                                        apWaitTransDelayOnPsduRxError);
+                                apManager->GetAttribute("UpdateCwAfterFailedIcf",
+                                                        apUpdateCwAfterFailedIcf);
+                                apManager->GetAttribute("ReportFailedIcf",
+                                                        apReportFailedIcf);
+                                mloRuntime.apUseNotifiedMacHeader =
+                                    apUseNotifiedMacHdr.Get();
+                                mloRuntime.apEarlySwitchToListening =
+                                    apEarlySwitchToListening.Get();
+                                mloRuntime.apWaitTransDelayOnPsduRxError =
+                                    apWaitTransDelayOnPsduRxError.Get();
+                                mloRuntime.apUpdateCwAfterFailedIcf =
+                                    apUpdateCwAfterFailedIcf.Get();
+                                mloRuntime.apReportFailedIcf = apReportFailedIcf.Get();
+
                                 for (const auto linkId : expectedLinks)
                                 {
                                     const auto clientLinkAddress =
@@ -1498,26 +1649,110 @@ main(int argc, char* argv[])
                                             ->GetEmlsrEnabled(clientLinkAddress));
                                 }
 
-                                NS_ABORT_MSG_IF(!mloRuntime.stationEmlsrActivated ||
-                                                    !mloRuntime.apEmlsrActivated ||
-                                                    mloRuntime.emlsrManager !=
-                                                        "ns3::AdvancedEmlsrManager" ||
-                                                    mloRuntime.mainPhyId != 1 ||
-                                                    mloRuntime.initialMainPhyLinkId != 1 ||
-                                                    mainPhyBand != WIFI_PHY_BAND_5GHZ ||
-                                                    mloRuntime.paddingDelayUs != 128 ||
-                                                    mloRuntime.transitionDelayUs != 128 ||
-                                                    mloRuntime.channelSwitchDelayUs != 100 ||
-                                                    mloRuntime.switchAuxPhy ||
-                                                    mloRuntime.auxPhyTxCapable ||
-                                                    mloRuntime.auxPhyChannelWidthMhz != 20 ||
-                                                    mloRuntime.putAuxPhyToSleep ||
-                                                    mloRuntime.inDeviceInterference ||
-                                                    !mloRuntime.notifyMacHeaderRxEnd,
+                                const auto phySettingsMatch = [](Ptr<WifiNetDevice> device) {
+                                    if (device->GetNPhys() != 2)
+                                    {
+                                        return false;
+                                    }
+                                    for (const auto& phy : device->GetPhys())
+                                    {
+                                        BooleanValue notifyMacHeader;
+                                        phy->GetAttribute("NotifyMacHdrRxEnd", notifyMacHeader);
+                                        if (!notifyMacHeader.Get() ||
+                                            phy->GetChannelSwitchDelay() != MicroSeconds(100))
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                    return true;
+                                };
+                                mloRuntime.allPhySettingsMatchProfile =
+                                    phySettingsMatch(targetStaMld) &&
+                                    phySettingsMatch(targetApMld);
+
+                                const auto camSettingsMatch = [](Ptr<WifiMac> wifiMac) {
+                                    if (wifiMac->GetNLinks() != 2)
+                                    {
+                                        return false;
+                                    }
+                                    for (uint8_t linkId = 0; linkId < wifiMac->GetNLinks(); ++linkId)
+                                    {
+                                        const auto cam =
+                                            wifiMac->GetChannelAccessManager(linkId);
+                                        BooleanValue generateBackoffWithoutTx;
+                                        BooleanValue proactiveBackoff;
+                                        TimeValue resetBackoffThreshold;
+                                        UintegerValue nSlotsLeft;
+                                        TimeValue nSlotsLeftMinDelay;
+                                        cam->GetAttribute("GenerateBackoffIfTxopWithoutTx",
+                                                          generateBackoffWithoutTx);
+                                        cam->GetAttribute("ProactiveBackoff", proactiveBackoff);
+                                        cam->GetAttribute("ResetBackoffThreshold",
+                                                          resetBackoffThreshold);
+                                        cam->GetAttribute("NSlotsLeft", nSlotsLeft);
+                                        cam->GetAttribute("NSlotsLeftMinDelay",
+                                                          nSlotsLeftMinDelay);
+                                        if (generateBackoffWithoutTx.Get() ||
+                                            proactiveBackoff.Get() ||
+                                            resetBackoffThreshold.Get() != MicroSeconds(0) ||
+                                            nSlotsLeft.Get() != 0 ||
+                                            nSlotsLeftMinDelay.Get() != MicroSeconds(25))
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                    return true;
+                                };
+                                mloRuntime.allCamSettingsMatchProfile =
+                                    camSettingsMatch(staMac) && camSettingsMatch(apMac);
+
+                                const bool profileMatches =
+                                    mloRuntime.stationEmlsrActivated &&
+                                    mloRuntime.apEmlsrActivated &&
+                                    mloRuntime.emlsrManager ==
+                                        "ns3::AdvancedEmlsrManager" &&
+                                    mloRuntime.apEmlsrManager ==
+                                        "ns3::AdvancedApEmlsrManager" &&
+                                    mloRuntime.mainPhyId == 1 &&
+                                    mloRuntime.initialMainPhyLinkId == 1 &&
+                                    mainPhyBand == WIFI_PHY_BAND_5GHZ &&
+                                    mloRuntime.paddingDelayUs == 128 &&
+                                    mloRuntime.transitionDelayUs == 128 &&
+                                    transitionTimeout &&
+                                    *transitionTimeout == MicroSeconds(0) &&
+                                    mloRuntime.mediumSyncDurationUs == 5472 &&
+                                    mloRuntime.msdOfdmEdThresholdDbm == -72 &&
+                                    msdMaxNTxops && *msdMaxNTxops == 1 &&
+                                    mloRuntime.channelSwitchDelayUs == 100 &&
+                                    !mloRuntime.switchAuxPhy &&
+                                    !mloRuntime.auxPhyTxCapable &&
+                                    mloRuntime.auxPhyChannelWidthMhz == 20 &&
+                                    mloRuntime.auxPhyMaxModulationClass == "OFDM" &&
+                                    !mloRuntime.putAuxPhyToSleep &&
+                                    !mloRuntime.inDeviceInterference &&
+                                    mloRuntime.useNotifiedMacHeader &&
+                                    !mloRuntime.resetCamState &&
+                                    !mloRuntime.allowUlTxopInRx &&
+                                    !mloRuntime.interruptSwitch &&
+                                    !mloRuntime.useAuxPhyCca &&
+                                    mloRuntime.switchMainPhyBackDelayUs == 5000 &&
+                                    !mloRuntime.keepMainPhyAfterDlTxop &&
+                                    mloRuntime.checkAccessOnMainPhyLink &&
+                                    mloRuntime.minAcToSkipCheckAccess == "AC_BK" &&
+                                    mloRuntime.apUseNotifiedMacHeader &&
+                                    !mloRuntime.apEarlySwitchToListening &&
+                                    mloRuntime.apWaitTransDelayOnPsduRxError &&
+                                    mloRuntime.apUpdateCwAfterFailedIcf &&
+                                    mloRuntime.apReportFailedIcf &&
+                                    mloRuntime.notifyMacHeaderRxEnd &&
+                                    mloRuntime.allPhySettingsMatchProfile &&
+                                    mloRuntime.allCamSettingsMatchProfile;
+                                NS_ABORT_MSG_IF(!profileMatches,
                                                 "Resolved EMLSR runtime state differs from the "
                                                 "practical profile");
                                 NS_ABORT_MSG_IF(
-                                    !std::all_of(mloRuntime.apEmlsrEnabledPerLink.begin(),
+                                    mloRuntime.apEmlsrEnabledPerLink.size() != 2 ||
+                                        !std::all_of(mloRuntime.apEmlsrEnabledPerLink.begin(),
                                                  mloRuntime.apEmlsrEnabledPerLink.end(),
                                                  [](bool enabled) { return enabled; }),
                                     "AP did not enable EMLSR on both setup links");
@@ -1913,20 +2148,51 @@ main(int argc, char* argv[])
     resolved.multiLinkMode =
         nativeMlo ? (emlsrMlo ? "EMLSR" : "STR") : "not_applicable";
     resolved.emlsrActivated = emlsrMlo;
-    resolved.emlsrProfile = emlsrMlo ? "advanced_fixed_aux_v1" : "not_applicable";
+    resolved.emlsrProfile =
+        emlsrMlo ? "advanced_sta_ap_fixed_aux_v2" : "not_applicable";
     resolved.emlsrManager = emlsrMlo ? "ns3::AdvancedEmlsrManager" : "not_applicable";
+    resolved.emlsrApManager =
+        emlsrMlo ? "ns3::AdvancedApEmlsrManager" : "not_applicable";
     resolved.emlsrLinkIds = emlsrMlo ? std::vector<uint8_t>{0, 1}
                                      : std::vector<uint8_t>{};
     resolved.emlsrMainPhyId = emlsrMlo ? emlsrMainPhyId : 0;
     resolved.emlsrPaddingDelayUs = emlsrMlo ? emlsrPaddingDelayUs : 0;
     resolved.emlsrTransitionDelayUs = emlsrMlo ? emlsrTransitionDelayUs : 0;
+    resolved.emlsrTransitionTimeoutUs = emlsrMlo ? emlsrTransitionTimeoutUs : 0;
+    resolved.emlsrMediumSyncDurationUs = emlsrMlo ? emlsrMediumSyncDurationUs : 0;
+    resolved.emlsrMsdOfdmEdThresholdDbm =
+        emlsrMlo ? emlsrMsdOfdmEdThresholdDbm : 0;
+    resolved.emlsrMsdMaxNTxops = emlsrMlo ? emlsrMsdMaxNTxops : 0;
     resolved.emlsrChannelSwitchDelayUs = emlsrMlo ? emlsrChannelSwitchDelayUs : 0;
     resolved.emlsrSwitchAuxPhy = false;
     resolved.emlsrAuxPhyTxCapable = false;
     resolved.emlsrAuxPhyChannelWidthMhz =
         emlsrMlo ? emlsrAuxPhyChannelWidthMhz : 0;
+    resolved.emlsrAuxPhyMaxModulationClass = emlsrMlo ? "OFDM" : "not_applicable";
     resolved.emlsrPutAuxPhyToSleep = false;
     resolved.emlsrInDeviceInterference = false;
+    resolved.emlsrUseNotifiedMacHeader = emlsrMlo;
+    resolved.emlsrResetCamState = false;
+    resolved.emlsrAllowUlTxopInRx = false;
+    resolved.emlsrInterruptSwitch = false;
+    resolved.emlsrUseAuxPhyCca = false;
+    resolved.emlsrSwitchMainPhyBackDelayUs =
+        emlsrMlo ? emlsrSwitchMainPhyBackDelayUs : 0;
+    resolved.emlsrKeepMainPhyAfterDlTxop = false;
+    resolved.emlsrCheckAccessOnMainPhyLink = emlsrMlo;
+    resolved.emlsrMinAcToSkipCheckAccess = emlsrMlo ? "AC_BK" : "not_applicable";
+    resolved.emlsrApUseNotifiedMacHeader = emlsrMlo;
+    resolved.emlsrApEarlySwitchToListening = false;
+    resolved.emlsrApWaitTransDelayOnPsduRxError = emlsrMlo;
+    resolved.emlsrApUpdateCwAfterFailedIcf = emlsrMlo;
+    resolved.emlsrApReportFailedIcf = emlsrMlo;
+    resolved.emlsrCamGenerateBackoffWithoutTx = false;
+    resolved.emlsrCamProactiveBackoff = false;
+    resolved.emlsrCamResetBackoffThresholdUs =
+        emlsrMlo ? emlsrCamResetBackoffThresholdUs : 0;
+    resolved.emlsrCamNSlotsLeft = emlsrMlo ? emlsrCamNSlotsLeft : 0;
+    resolved.emlsrCamNSlotsLeftMinDelayUs =
+        emlsrMlo ? emlsrCamNSlotsLeftMinDelayUs : 0;
     resolved.emlsrNotifyMacHeaderRxEnd = emlsrMlo;
     resolved.emlsrMainPhyFrequencyRanges =
         emlsrMlo ? std::vector<std::string>{"WIFI_SPECTRUM_2_4_GHZ",
@@ -2670,15 +2936,8 @@ main(int argc, char* argv[])
         }
         ExperimentOutput::WriteMloRuntime(outputDir, mloRuntime);
         NS_ABORT_MSG_IF(mloRuntime.successfulMpdusPerLink.size() != 2 ||
-                            mloRuntime.phyTxTimeUsPerLink.size() != 2 ||
-                            std::any_of(mloRuntime.successfulMpdusPerLink.begin(),
-                                        mloRuntime.successfulMpdusPerLink.end(),
-                                        [](uint64_t value) { return value == 0; }) ||
-                            std::any_of(mloRuntime.phyTxTimeUsPerLink.begin(),
-                                        mloRuntime.phyTxTimeUsPerLink.end(),
-                                        [](uint64_t value) { return value == 0; }),
-                        "EMLSR practical profile requires nonzero successful MPDUs and sender PHY TX "
-                        "airtime on both links");
+                            mloRuntime.phyTxTimeUsPerLink.size() != 2,
+                        "EMLSR runtime activity arrays must contain both setup links");
     }
     ExperimentOutput::WriteLinkIntervals(outputDir, linkIntervals);
     ExperimentOutput::WriteMacSummary(outputDir, macSummaries);

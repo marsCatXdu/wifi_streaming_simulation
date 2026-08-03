@@ -97,16 +97,41 @@ struct StreamingRunConfig
     bool emlsrActivated{false};                  ///< Whether EMLSR support is activated
     std::string emlsrProfile{"not_applicable"}; ///< Predeclared EMLSR profile identifier
     std::string emlsrManager{"not_applicable"}; ///< EMLSR manager TypeId name
+    std::string emlsrApManager{"not_applicable"}; ///< AP EMLSR manager TypeId name
     std::vector<uint8_t> emlsrLinkIds;           ///< Links configured for EMLSR mode
     uint8_t emlsrMainPhyId{0};                   ///< Preferred main PHY identifier
     uint32_t emlsrPaddingDelayUs{0};             ///< Advertised padding delay in microseconds
     uint32_t emlsrTransitionDelayUs{0};          ///< Advertised transition delay in microseconds
+    uint32_t emlsrTransitionTimeoutUs{0};         ///< AP transition timeout in microseconds
+    uint32_t emlsrMediumSyncDurationUs{0};        ///< Medium sync duration in microseconds
+    int32_t emlsrMsdOfdmEdThresholdDbm{0};        ///< Medium sync OFDM threshold in dBm
+    uint8_t emlsrMsdMaxNTxops{0};                 ///< Medium sync TXOP-attempt limit
     uint32_t emlsrChannelSwitchDelayUs{0};       ///< PHY channel switch delay in microseconds
     bool emlsrSwitchAuxPhy{false};               ///< Whether the auxiliary PHY switches bands
     bool emlsrAuxPhyTxCapable{false};            ///< Whether the auxiliary PHY can transmit
     uint32_t emlsrAuxPhyChannelWidthMhz{0};      ///< Auxiliary PHY channel width in MHz
+    std::string emlsrAuxPhyMaxModulationClass{"not_applicable"}; ///< Auxiliary modulation limit
     bool emlsrPutAuxPhyToSleep{false};           ///< Whether the auxiliary PHY sleeps in TXOPs
     bool emlsrInDeviceInterference{false};       ///< Whether in-device interference is modeled
+    bool emlsrUseNotifiedMacHeader{false};        ///< Whether the STA manager uses MAC headers
+    bool emlsrResetCamState{false};               ///< Whether switches reset channel access state
+    bool emlsrAllowUlTxopInRx{false};             ///< Whether UL TXOPs may start during reception
+    bool emlsrInterruptSwitch{false};             ///< Whether a main-PHY switch may be interrupted
+    bool emlsrUseAuxPhyCca{false};                ///< Whether switching reuses auxiliary PHY CCA
+    uint32_t emlsrSwitchMainPhyBackDelayUs{0};    ///< Main-PHY return delay in microseconds
+    bool emlsrKeepMainPhyAfterDlTxop{false};      ///< Whether the main PHY stays after DL TXOPs
+    bool emlsrCheckAccessOnMainPhyLink{false};    ///< Whether main-link access is compared
+    std::string emlsrMinAcToSkipCheckAccess{"not_applicable"}; ///< Minimum AC allowed to skip
+    bool emlsrApUseNotifiedMacHeader{false};      ///< Whether the AP manager uses MAC headers
+    bool emlsrApEarlySwitchToListening{false};    ///< Whether the AP switches early to listening
+    bool emlsrApWaitTransDelayOnPsduRxError{false}; ///< Whether AP waits after PSDU RX errors
+    bool emlsrApUpdateCwAfterFailedIcf{false};    ///< Whether AP updates CW after failed ICFs
+    bool emlsrApReportFailedIcf{false};           ///< Whether AP reports failed ICFs
+    bool emlsrCamGenerateBackoffWithoutTx{false}; ///< Whether an unused TXOP generates backoff
+    bool emlsrCamProactiveBackoff{false};         ///< Whether channel access backs off proactively
+    uint32_t emlsrCamResetBackoffThresholdUs{0}; ///< Channel-access reset threshold
+    uint8_t emlsrCamNSlotsLeft{0};                ///< Early channel-access alert threshold
+    uint32_t emlsrCamNSlotsLeftMinDelayUs{0};     ///< Early-alert minimum delay
     bool emlsrNotifyMacHeaderRxEnd{false};       ///< Whether PHY MAC-header notifications are on
     std::vector<std::string> emlsrMainPhyFrequencyRanges; ///< Main PHY frequency interfaces
     uint32_t applicationSocketCount{0};
@@ -195,6 +220,7 @@ struct MloRuntimeInfo
     bool stationEmlsrActivated{false};            ///< STA EMLSR activation state
     bool apEmlsrActivated{false};                 ///< AP EMLSR activation state
     std::string emlsrManager{"not_applicable"};  ///< Observed EMLSR manager TypeId name
+    std::string apEmlsrManager{"not_applicable"}; ///< Observed AP EMLSR manager TypeId name
     std::vector<uint8_t> emlsrLinkIds;            ///< Observed EMLSR link identifiers
     std::vector<bool> apEmlsrEnabledPerLink;      ///< AP view of EMLSR per setup link
     uint8_t mainPhyId{0};                         ///< Observed main PHY identifier
@@ -202,12 +228,33 @@ struct MloRuntimeInfo
     std::string initialMainPhyBand{"not_applicable"}; ///< Initial main PHY frequency band
     uint32_t paddingDelayUs{0};                   ///< Observed padding delay in microseconds
     uint32_t transitionDelayUs{0};                ///< Observed transition delay in microseconds
+    uint32_t transitionTimeoutUs{0};              ///< Observed transition timeout in microseconds
+    uint32_t mediumSyncDurationUs{0};             ///< Observed medium sync duration in microseconds
+    int32_t msdOfdmEdThresholdDbm{0};             ///< Observed medium sync threshold in dBm
+    uint8_t msdMaxNTxops{0};                      ///< Observed medium sync TXOP-attempt limit
     uint32_t channelSwitchDelayUs{0};             ///< Observed switch delay in microseconds
     bool switchAuxPhy{false};                     ///< Observed auxiliary PHY switching mode
     bool auxPhyTxCapable{false};                  ///< Observed auxiliary transmit capability
     uint32_t auxPhyChannelWidthMhz{0};            ///< Observed auxiliary channel width in MHz
+    std::string auxPhyMaxModulationClass{"not_applicable"}; ///< Auxiliary modulation limit
     bool putAuxPhyToSleep{false};                 ///< Observed auxiliary PHY sleep setting
     bool inDeviceInterference{false};             ///< Observed in-device interference setting
+    bool useNotifiedMacHeader{false};              ///< Observed STA MAC-header-use setting
+    bool resetCamState{false};                     ///< Observed channel-access reset setting
+    bool allowUlTxopInRx{false};                   ///< Observed UL-during-RX setting
+    bool interruptSwitch{false};                   ///< Observed switch-interruption setting
+    bool useAuxPhyCca{false};                      ///< Observed auxiliary CCA setting
+    uint32_t switchMainPhyBackDelayUs{0};          ///< Observed main-PHY return delay
+    bool keepMainPhyAfterDlTxop{false};            ///< Observed post-DL main-PHY setting
+    bool checkAccessOnMainPhyLink{false};          ///< Observed main-link access check
+    std::string minAcToSkipCheckAccess{"not_applicable"}; ///< Observed skip-check AC
+    bool apUseNotifiedMacHeader{false};            ///< Observed AP MAC-header-use setting
+    bool apEarlySwitchToListening{false};          ///< Observed AP early-listening setting
+    bool apWaitTransDelayOnPsduRxError{false};     ///< Observed AP RX-error delay setting
+    bool apUpdateCwAfterFailedIcf{false};          ///< Observed AP failed-ICF CW setting
+    bool apReportFailedIcf{false};                 ///< Observed AP failed-ICF report setting
+    bool allPhySettingsMatchProfile{false};        ///< Whether every STA/AP PHY matches the profile
+    bool allCamSettingsMatchProfile{false};        ///< Whether every STA/AP CAM matches the profile
     bool notifyMacHeaderRxEnd{false};             ///< Observed PHY MAC-header notification setting
     std::vector<std::string> mainPhyFrequencyRanges; ///< Main PHY frequency interfaces
     std::vector<uint64_t> successfulMpdusPerLink; ///< Successful MPDUs ordered by link ID
