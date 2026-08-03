@@ -1,0 +1,85 @@
+primary_risk_training_schema_version: 1
+artifact_id: primary-risk-t0-obss-v1
+model_id: commodity_polling_1ms_obss_primary_t0_v1
+
+dataset:
+  schema_version: 2
+  sha256: 18c231a29e6045902ffca0d84d4c5881321d19cc7b5358bd8f665775570bc4eb
+  project_git_commits: [ecb08139ea201b8453fb234799a2ca7bd3f242d6]
+  ns3_upstream_commits: [d2add90b452d600cfb4859baed8e9ea633519447]
+  telemetry_schema_versions: [3]
+  support_mask_versions: [2]
+
+base_bundle:
+  sha256: 226472aa8cc91d44220154b783f94fe75866a4282a40fb006ab0758f545b01ce
+  pipeline_id: commodity_polling_1ms
+  preserved_stages: [T1, T2, T4]
+
+target:
+  target_id: primary_copy_deadline_miss
+  source_column: deadline_miss
+  source_equivalence: fixed_link_copy_0_equals_union
+  deadline_comparator: completion_us_strictly_greater_than_deadline
+  incomplete_is_miss: true
+  treatment_free: true
+  scenario_name: obss_only
+  selected_policy: fixed_link_1
+  path_id: 1
+  copy_id: 0
+  stage: T0
+  feature_set: F0+F1-degraded
+  degradation_profile: polling_1ms
+
+expected_population:
+  run_group_count: 24
+  run_count: 24
+  frame_count: 43200
+  miss_count: 637
+  frames_per_run: 1800
+  measurement_duration_s: 60
+
+# Groups are ordered by SHA-256("primary-risk-t0-v1:" + run_group_id), then
+# assigned round-robin to four folds. Labels do not enter the assignment.
+split:
+  seed: primary-risk-t0-v1
+  fold_count: 4
+  role_by_fold: [test, calibration, training, training]
+
+model:
+  name: histogram_gradient_boosting
+  analysis_seed: 20260725
+  parameters:
+    learning_rate: 0.08
+    max_iter: 120
+    max_leaf_nodes: 15
+    l2_regularization: 1.0
+
+calibration:
+  method: platt
+  seed: 20260725
+  bin_count: 10
+
+ranking_budgets: [0.02, 0.05, 0.10, 0.20]
+confidence_level: 0.95
+
+# This reproduces AdaptiveAirtimeDuplicationController's nominal whole-copy
+# estimate at T0. Runtime retry inflation can only increase the estimate; the
+# measured-airtime token bucket remains the authoritative hard limit.
+risk_density_operating_point:
+  estimated_airtime_budget_fractions: [0.005, 0.007, 0.0095]
+  formal_maximum_budget_fraction: 0.0095
+  reference_primary_miss_rate: 0.015
+  reference_mlo_miss_rate: 0.0072
+  minimum_plausible_primary_miss_recall: 0.52
+  threshold_comparator: strict_greater
+  cost_safety_factor: 1.25
+  retry_inflation: 1.0
+  phy_preamble_us: 48.0
+  phy_data_rate_bps: 68823530
+  streaming_header_bytes: 50
+  expected_mac_service_overhead_bytes: 36
+  additional_airtime_bytes_per_packet: 38
+  reference_frame_size_bytes: 12000
+  reference_packet_count: 10
+  expected_reference_airtime_us: 1983.760667318285
+  expected_i_frame_airtime_us: 7755.04266927314

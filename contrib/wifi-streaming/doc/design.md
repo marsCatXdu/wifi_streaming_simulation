@@ -256,6 +256,9 @@ run-level contract consists of `adaptive_airtime_decisions.csv`,
 arithmetic, action frame IDs, event total, per-frame settlements, link-0 PHY TX
 occupancy, and finite-run budget.
 
+The controller-specific target-domain T0 training and its treatment-free
+primary-copy label audit are documented in `primary-risk-t0-training.md`.
+
 ### Adaptive primary-deficit duplication
 
 `adaptive_deficit_duplication` preserves the adaptive-airtime admission and
