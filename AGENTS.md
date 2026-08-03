@@ -147,6 +147,12 @@ class MyClass
 
 ### Commit Guidelines
 
+- Commit regularly at clean logical boundaries. Keep each commit reasonably
+  sized, focused on one coherent change, and independently reviewable, as a
+  human developer would.
+- Do not combine unrelated fixes in one commit. Run the relevant focused checks
+  before committing each boundary, then run the broader required test set
+  before final handoff.
 - Present tense, imperative mood ("Add feature" not "Added feature")
 - Reference modules: "core, network: Add new feature"
   - if list of edited modules spans more than two, suppress listing
