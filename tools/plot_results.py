@@ -71,7 +71,9 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
     elif topology == "dual_interface" and policy == "fixed_link_1":
         label = "Single 5 GHz interface"
     elif topology == "mlo_str":
-        label = f"MLO NMaxInflights={inflights}"
+        label = f"STR MLO NMaxInflights={inflights}"
+    elif topology == "mlo_emlsr":
+        label = "EMLSR MLO"
     else:
         label = f"{topology}/{policy}"
     if "ul_ofdma_enabled" in item.get("config", {}).get("wifi", {}):

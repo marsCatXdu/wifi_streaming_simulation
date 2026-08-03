@@ -38,14 +38,15 @@ Empty completion timestamps represent incomplete copies or frames; they are
 not encoded as zero.
 
 The example supports `--topology=single_link` (the original deterministic
-5 GHz setup), `--topology=dual_interface`, and `--topology=mlo_str`. Dual mode installs independent
-2.4 GHz and 5 GHz `SpectrumWifiPhy` channels, MAC/PHY contention state,
-station/AP device pairs, and IP subnets. Each sender UDP socket is bound both
-to its radio's source address and its `NetDevice`; matching host routes lead
-through the corresponding AP interface to the shared high-rate CSMA edge
-subnet. A constant station manager and `FixedRssLossModel` avoid unrelated
-randomness. `--policy` selects `fixed_link_0`, `fixed_link_1`, `static_best`,
-or `full_duplication` in dual mode. Application output, rather than PCAP or
+5 GHz setup), `--topology=dual_interface`, `--topology=mlo_str`, and
+`--topology=mlo_emlsr`. Dual mode installs independent 2.4 GHz and 5 GHz
+`SpectrumWifiPhy` channels, MAC/PHY contention state, station/AP device pairs,
+and IP subnets. Each sender UDP socket is bound both to its radio's source
+address and its `NetDevice`; matching host routes lead through the
+corresponding AP interface to the shared high-rate CSMA edge subnet. A
+constant station manager and `FixedRssLossModel` avoid unrelated randomness.
+`--policy` selects `fixed_link_0`, `fixed_link_1`, `static_best`, or
+`full_duplication` in dual mode. Application output, rather than PCAP or
 FlowMonitor, is the source of truth.
 
 Dual mode requires IEEE 802.11be and installs two independent single-link
@@ -63,6 +64,27 @@ Uplink TID 0 is mapped to the set `{0,1}`, leaving queueing and link selection
 to the native ns-3 MLO MAC. The application creates one UDP socket, one IP
 interface, and one application copy. Explicit routes replace global routing,
 which cannot query a single channel from a multi-channel MLD.
+
+Native EMLSR mode reuses that two-link MLD and one-copy application path, with
+`NMaxInflights=1`. Static setup is deliberately ordered as association, EMLSR
+activation, then bidirectional Block Ack. The predeclared
+`advanced_fixed_aux_v1` practical profile uses `AdvancedEmlsrManager`, EMLSR
+links `{0,1}`, PHY 1 initially on the 5 GHz link as the main PHY, 128 us
+padding and transition delays, and a 100 us channel-switch delay. The fixed
+20 MHz auxiliary PHY is not TX capable, does not switch bands, is not put to
+sleep, and models no in-device interference. MAC-header receive-end
+notification is enabled. The main PHY has spectrum interfaces for both bands,
+which is required for an actual cross-band switch.
+
+An earlier literal `DefaultEmlsrManager` reference profile (32 us padding,
+128 us transition, TX-capable switching auxiliary PHY) activated EMLSR in both
+MLDs but used only the 5 GHz link: a neutral mixed4x4 smoke observed zero 2.4
+GHz successful MPDUs and PHY TX time. It is therefore a configuration/model
+failure, not an EMLSR performance result, and is not an experiment baseline.
+Every practical-profile run writes `mlo_runtime.json` and is invalid unless
+both links have nonzero successful MPDUs and sender PHY TX airtime. The
+validator cross-checks those runtime arrays against `link_intervals.csv` in
+link-ID order.
 
 `mloStaMaxInflights` controls the target STA's BE `QosTxop::NMaxInflights`.
 The value one permits traffic splitting but prevents an MPDU from being
@@ -308,6 +330,11 @@ delivery and link-0 MPDU service time.
 MLO delivery, one socket/no duplication metadata, two rows sharing one device
 ID, and successful MPDUs plus PHY TX occupancy on both links.
 
+`contrib/wifi-streaming/test/mlo-emlsr-integration.py` additionally requires
+the exact practical profile in resolved and runtime metadata, initial 5 GHz
+main-PHY placement, AP-side EMLSR enablement on both links, and exact equality
+between runtime and interval activity counters.
+
 `contrib/wifi-streaming/test/selective-meter-regression.py` runs the frozen
 selective controller with identical RNG inputs and the passive airtime meter
 disabled and enabled. After removing run IDs, it requires identical field
@@ -317,7 +344,8 @@ values in the frame, final policy-decision, and selective-controller CSV rows.
 
 - Stations associated with the target MLO AP are supported only by the
   `legacy_mixed8` uplink profile. Independent OBSS networks support both
-  directions. STR is implemented; EMLSR is not configured or implied.
+  directions. STR and the predeclared practical EMLSR profile are implemented;
+  no other EMLSR manager or hardware profile is implied.
 - ns-3.48 reports successful MPDUs and their service times per MLD link, but
   failed MPDUs and retry-limit drops only per device. Those device-level
   failure totals are placed on MLO link row 0 to avoid double-counting;

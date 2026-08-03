@@ -732,9 +732,50 @@ class MatrixTests(unittest.TestCase):
             "topology": "mlo_str", "policy": "fixed_link_0",
             "config": {"wifi": {"sta_max_inflights": 2}},
         }
-        self.assertEqual(_approach_label(first), "MLO NMaxInflights=1")
-        self.assertEqual(_approach_label(second), "MLO NMaxInflights=2")
+        self.assertEqual(_approach_label(first), "STR MLO NMaxInflights=1")
+        self.assertEqual(_approach_label(second), "STR MLO NMaxInflights=2")
         self.assertNotEqual(_approach_key(first), _approach_key(second))
+
+    def test_str_and_emlsr_have_distinct_plot_labels(self) -> None:
+        str_mlo = {
+            "topology": "mlo_str", "policy": "fixed_link_0",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        emlsr_mlo = {
+            "topology": "mlo_emlsr", "policy": "fixed_link_0",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        self.assertEqual(_approach_label(str_mlo), "STR MLO NMaxInflights=1")
+        self.assertEqual(_approach_label(emlsr_mlo), "EMLSR MLO")
+        self.assertNotEqual(_approach_key(str_mlo), _approach_key(emlsr_mlo))
+
+    def test_emlsr_experiment_description_names_practical_profile(self) -> None:
+        arguments = cli_arguments({
+            "topology": "mlo_emlsr",
+            "policy": "fixed_link_0",
+            "wifi": {"mlo_sta_max_inflights": 1},
+        }, Path("."))
+        self.assertIn("--topology=mlo_emlsr", arguments)
+        self.assertIn("--policy=fixed_link_0", arguments)
+        self.assertIn("--mloStaMaxInflights=1", arguments)
+        document = {
+            "name": "EMLSR smoke",
+            "base": {"wifi": {}, "stream": {}, "background": {}, "obss": {}},
+        }
+        specs = [{
+            "seed": 1,
+            "config": {
+                "topology": "mlo_emlsr",
+                "policy": "fixed_link_0",
+                "wifi": {"mlo_sta_max_inflights": 1},
+            },
+        }]
+        with tempfile.TemporaryDirectory() as directory:
+            write_experiment_description(document, specs, Path(directory))
+            description = (Path(directory) / "DESCRIPTION.rst").read_text()
+        self.assertIn("EMLSR MLO", description)
+        self.assertIn("advanced fixed-aux profile", description)
+        self.assertIn("Both links must", description)
 
     def test_ofdma_states_have_distinct_plot_labels(self) -> None:
         disabled = {

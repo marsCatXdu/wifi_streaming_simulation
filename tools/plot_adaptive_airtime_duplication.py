@@ -57,7 +57,9 @@ def _burst_lengths(misses: list[bool]) -> list[int]:
 
 def _policy_label(policy: str, topology: str) -> str:
     if topology == "mlo_str":
-        return "MLO"
+        return "STR MLO"
+    if topology == "mlo_emlsr":
+        return "EMLSR MLO"
     labels = {
         "fixed_link_1": "Single 5 GHz",
         "selective_duplication": "Selective 0.20",
@@ -431,31 +433,34 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
         [row for row in rows if row["policy"] == "fixed_link_1"],
         "single-5-GHz",
     )
-    mlo = _unique_pair_index(
-        [row for row in rows if row["topology"] == "mlo_str"],
-        "MLO",
-    )
+    mlo_by_topology = {
+        topology: _unique_pair_index(
+            [row for row in rows if row["topology"] == topology],
+            _policy_label("fixed_link_0", topology),
+        )
+        for topology in ("mlo_str", "mlo_emlsr")
+        if any(row["topology"] == topology for row in rows)
+    }
     paired_series: list[tuple[str, list[float]]] = []
     for policy, policy_rows in adaptive_by_policy.items():
         label = _policy_label(policy, "dual_interface")
-        paired_series.extend((
-            (
-                f"{label} - Single 5 GHz",
-                [
-                    float(row["deadline_miss_ratio"]) -
-                    float(fixed[_pair_key(row)]["deadline_miss_ratio"])
-                    for row in policy_rows if _pair_key(row) in fixed
-                ],
-            ),
-            (
-                f"{label} - MLO",
+        paired_series.append((
+            f"{label} - Single 5 GHz",
+            [
+                float(row["deadline_miss_ratio"]) -
+                float(fixed[_pair_key(row)]["deadline_miss_ratio"])
+                for row in policy_rows if _pair_key(row) in fixed
+            ],
+        ))
+        for topology, mlo in mlo_by_topology.items():
+            paired_series.append((
+                f"{label} - {_policy_label('fixed_link_0', topology)}",
                 [
                     float(row["deadline_miss_ratio"]) -
                     float(mlo[_pair_key(row)]["deadline_miss_ratio"])
                     for row in policy_rows if _pair_key(row) in mlo
                 ],
-            ),
-        ))
+            ))
     if any(series for _, series in paired_series):
         plt.figure(figsize=(7, 4.8))
         names = []

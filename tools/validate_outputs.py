@@ -1793,7 +1793,9 @@ def validate_run(
     _require(config.get("run_id") == run_id, "resolved_config.json: run_id mismatch")
     _require(isinstance(config.get("seed"), int) and config["seed"] > 0, "invalid seed")
     _require(isinstance(config.get("run"), int) and config["run"] > 0, "invalid run")
-    _require(config.get("topology") in {"single_link", "dual_interface", "mlo_str"},
+    _require(config.get("topology") in {
+        "single_link", "dual_interface", "mlo_str", "mlo_emlsr",
+    },
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
     wifi = config.get("wifi", {})
@@ -1803,6 +1805,72 @@ def validate_run(
     _require(max_inflights == 1 or
              (config["topology"] == "mlo_str" and wifi.get("block_ack_enabled") is True),
              "resolved_config.json: multiple inflights require MLO Block Ack")
+    mlo_runtime: dict[str, Any] | None = None
+    mlo_runtime_path = run_dir / "mlo_runtime.json"
+    if config["topology"] == "mlo_emlsr":
+        _require(max_inflights == 1,
+                 "resolved_config.json: EMLSR requires one maximum inflight")
+        _require(wifi.get("block_ack_enabled") is True and
+                 wifi.get("static_association") is True and
+                 wifi.get("tid_to_link_mapping_ul") == "0 0,1" and
+                 wifi.get("str_mode") == "not_applicable" and
+                 wifi.get("multi_link_mode") == "EMLSR" and
+                 wifi.get("application_socket_count") == 1 and
+                 wifi.get("application_duplication") is False,
+                 "resolved_config.json: invalid EMLSR MLD/application setup")
+        expected_emlsr = {
+            "activated": True,
+            "profile": "advanced_fixed_aux_v1",
+            "manager": "ns3::AdvancedEmlsrManager",
+            "link_ids": [0, 1],
+            "main_phy_id": 1,
+            "padding_delay_us": 128,
+            "transition_delay_us": 128,
+            "channel_switch_delay_us": 100,
+            "switch_aux_phy": False,
+            "aux_phy_tx_capable": False,
+            "aux_phy_channel_width_mhz": 20,
+            "put_aux_phy_to_sleep": False,
+            "in_device_interference": False,
+            "notify_mac_header_rx_end": True,
+            "main_phy_frequency_ranges": [
+                "WIFI_SPECTRUM_2_4_GHZ", "WIFI_SPECTRUM_5_GHZ",
+            ],
+        }
+        _require(wifi.get("emlsr") == expected_emlsr,
+                 "resolved_config.json: invalid practical EMLSR profile")
+        _require(mlo_runtime_path.is_file(), "missing core file: mlo_runtime.json")
+        mlo_runtime = _json(mlo_runtime_path)
+        expected_runtime = {
+            "mode": "EMLSR",
+            "profile": "advanced_fixed_aux_v1",
+            "station_emlsr_activated": True,
+            "ap_emlsr_activated": True,
+            "emlsr_manager": "ns3::AdvancedEmlsrManager",
+            "emlsr_link_ids": [0, 1],
+            "ap_emlsr_enabled_per_link": [True, True],
+            "main_phy_id": 1,
+            "initial_main_phy_link_id": 1,
+            "initial_main_phy_band": "5 GHz",
+            "padding_delay_us": 128,
+            "transition_delay_us": 128,
+            "channel_switch_delay_us": 100,
+            "switch_aux_phy": False,
+            "aux_phy_tx_capable": False,
+            "aux_phy_channel_width_mhz": 20,
+            "put_aux_phy_to_sleep": False,
+            "in_device_interference": False,
+            "notify_mac_header_rx_end": True,
+            "main_phy_frequency_ranges": [
+                "WIFI_SPECTRUM_2_4_GHZ", "WIFI_SPECTRUM_5_GHZ",
+            ],
+        }
+        _require(all(mlo_runtime.get(key) == value
+                     for key, value in expected_runtime.items()),
+                 "mlo_runtime.json: practical EMLSR profile mismatch")
+    else:
+        _require(not mlo_runtime_path.exists(),
+                 "mlo_runtime.json exists for a non-EMLSR topology")
     ul_ofdma_enabled = wifi.get("ul_ofdma_enabled", False)
     _require(isinstance(ul_ofdma_enabled, bool),
              "resolved_config.json: invalid UL OFDMA enabled flag")
@@ -2174,6 +2242,29 @@ def validate_run(
     for key in ("successful_mpdus", "failed_mpdus", "retransmissions"):
         _require(sum(_integer(row, key, "mac_summary.csv") for row in mac) == summary[key],
                  f"mac_summary.csv: {key} total mismatch")
+    if config["topology"] in {"mlo_str", "mlo_emlsr"}:
+        _require(sorted(link_ids) == [0, 1],
+                 "link_intervals.csv: native MLO requires links 0 and 1")
+        _require(len({row["device_id"] for row in mac}) == 1,
+                 "mac_summary.csv: native MLO links do not share one device")
+    if config["topology"] == "mlo_emlsr":
+        _require(mlo_runtime is not None,
+                 "mlo_runtime.json: EMLSR runtime metadata is absent")
+        ordered_links = sorted(links, key=lambda row: int(row["link_id"]))
+        successful_mpdus = [
+            _integer(row, "successful_mpdus", "link_intervals.csv")
+            for row in ordered_links
+        ]
+        phy_tx_time_us = [
+            _integer(row, "phy_tx_time_us", "link_intervals.csv")
+            for row in ordered_links
+        ]
+        _require(mlo_runtime.get("successful_mpdus_per_link") == successful_mpdus and
+                 mlo_runtime.get("phy_tx_time_us_per_link") == phy_tx_time_us,
+                 "mlo_runtime.json: per-link activity differs from link_intervals.csv")
+        _require(all(value > 0 for value in successful_mpdus) and
+                 all(value > 0 for value in phy_tx_time_us),
+                 "EMLSR requires successful MPDUs and sender PHY TX time on both links")
     if obss_enabled:
         station_count = int(obss["stations_per_bss"])
         _require(len(obss.get("bsses", [])) == 4, "resolved_config.json: expected four OBSSs")

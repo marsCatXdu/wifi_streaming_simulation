@@ -93,22 +93,22 @@ struct StreamingRunConfig
     bool staticAssociation{false};
     std::string tidToLinkMapping;
     std::string strMode{"not_applicable"};
-    std::string multiLinkMode{"not_applicable"};
-    bool emlsrActivated{false};
-    std::string emlsrProfile{"not_applicable"};
-    std::string emlsrManager{"not_applicable"};
-    std::vector<uint8_t> emlsrLinkIds;
-    uint8_t emlsrMainPhyId{0};
-    uint32_t emlsrPaddingDelayUs{0};
-    uint32_t emlsrTransitionDelayUs{0};
-    uint32_t emlsrChannelSwitchDelayUs{0};
-    bool emlsrSwitchAuxPhy{false};
-    bool emlsrAuxPhyTxCapable{false};
-    uint32_t emlsrAuxPhyChannelWidthMhz{0};
-    bool emlsrPutAuxPhyToSleep{false};
-    bool emlsrInDeviceInterference{false};
-    bool emlsrNotifyMacHeaderRxEnd{false};
-    std::vector<std::string> emlsrMainPhyFrequencyRanges;
+    std::string multiLinkMode{"not_applicable"}; ///< Active native multi-link mode
+    bool emlsrActivated{false};                  ///< Whether EMLSR support is activated
+    std::string emlsrProfile{"not_applicable"}; ///< Predeclared EMLSR profile identifier
+    std::string emlsrManager{"not_applicable"}; ///< EMLSR manager TypeId name
+    std::vector<uint8_t> emlsrLinkIds;           ///< Links configured for EMLSR mode
+    uint8_t emlsrMainPhyId{0};                   ///< Preferred main PHY identifier
+    uint32_t emlsrPaddingDelayUs{0};             ///< Advertised padding delay in microseconds
+    uint32_t emlsrTransitionDelayUs{0};          ///< Advertised transition delay in microseconds
+    uint32_t emlsrChannelSwitchDelayUs{0};       ///< PHY channel switch delay in microseconds
+    bool emlsrSwitchAuxPhy{false};               ///< Whether the auxiliary PHY switches bands
+    bool emlsrAuxPhyTxCapable{false};            ///< Whether the auxiliary PHY can transmit
+    uint32_t emlsrAuxPhyChannelWidthMhz{0};      ///< Auxiliary PHY channel width in MHz
+    bool emlsrPutAuxPhyToSleep{false};           ///< Whether the auxiliary PHY sleeps in TXOPs
+    bool emlsrInDeviceInterference{false};       ///< Whether in-device interference is modeled
+    bool emlsrNotifyMacHeaderRxEnd{false};       ///< Whether PHY MAC-header notifications are on
+    std::vector<std::string> emlsrMainPhyFrequencyRanges; ///< Main PHY frequency interfaces
     uint32_t applicationSocketCount{0};
     bool applicationDuplication{false};
     bool packetEventLogsEnabled{false};
@@ -190,28 +190,28 @@ struct StreamingRunConfig
  */
 struct MloRuntimeInfo
 {
-    std::string mode{"not_applicable"};
-    std::string profile{"not_applicable"};
-    bool stationEmlsrActivated{false};
-    bool apEmlsrActivated{false};
-    std::string emlsrManager{"not_applicable"};
-    std::vector<uint8_t> emlsrLinkIds;
-    std::vector<bool> apEmlsrEnabledPerLink;
-    uint8_t mainPhyId{0};
-    uint8_t initialMainPhyLinkId{0};
-    std::string initialMainPhyBand{"not_applicable"};
-    uint32_t paddingDelayUs{0};
-    uint32_t transitionDelayUs{0};
-    uint32_t channelSwitchDelayUs{0};
-    bool switchAuxPhy{false};
-    bool auxPhyTxCapable{false};
-    uint32_t auxPhyChannelWidthMhz{0};
-    bool putAuxPhyToSleep{false};
-    bool inDeviceInterference{false};
-    bool notifyMacHeaderRxEnd{false};
-    std::vector<std::string> mainPhyFrequencyRanges;
-    std::vector<uint64_t> successfulMpdusPerLink;
-    std::vector<uint64_t> phyTxTimeUsPerLink;
+    std::string mode{"not_applicable"};          ///< Observed native multi-link mode
+    std::string profile{"not_applicable"};       ///< Predeclared EMLSR profile identifier
+    bool stationEmlsrActivated{false};            ///< STA EMLSR activation state
+    bool apEmlsrActivated{false};                 ///< AP EMLSR activation state
+    std::string emlsrManager{"not_applicable"};  ///< Observed EMLSR manager TypeId name
+    std::vector<uint8_t> emlsrLinkIds;            ///< Observed EMLSR link identifiers
+    std::vector<bool> apEmlsrEnabledPerLink;      ///< AP view of EMLSR per setup link
+    uint8_t mainPhyId{0};                         ///< Observed main PHY identifier
+    uint8_t initialMainPhyLinkId{0};              ///< Initial link carrying the main PHY
+    std::string initialMainPhyBand{"not_applicable"}; ///< Initial main PHY frequency band
+    uint32_t paddingDelayUs{0};                   ///< Observed padding delay in microseconds
+    uint32_t transitionDelayUs{0};                ///< Observed transition delay in microseconds
+    uint32_t channelSwitchDelayUs{0};             ///< Observed switch delay in microseconds
+    bool switchAuxPhy{false};                     ///< Observed auxiliary PHY switching mode
+    bool auxPhyTxCapable{false};                  ///< Observed auxiliary transmit capability
+    uint32_t auxPhyChannelWidthMhz{0};            ///< Observed auxiliary channel width in MHz
+    bool putAuxPhyToSleep{false};                 ///< Observed auxiliary PHY sleep setting
+    bool inDeviceInterference{false};             ///< Observed in-device interference setting
+    bool notifyMacHeaderRxEnd{false};             ///< Observed PHY MAC-header notification setting
+    std::vector<std::string> mainPhyFrequencyRanges; ///< Main PHY frequency interfaces
+    std::vector<uint64_t> successfulMpdusPerLink; ///< Successful MPDUs ordered by link ID
+    std::vector<uint64_t> phyTxTimeUsPerLink;     ///< Sender PHY TX time ordered by link ID
 };
 
 /**
@@ -365,6 +365,12 @@ class ExperimentOutput
     static void PrepareRunDirectory(const std::string& outputDir);
     static void WriteResolvedConfig(const std::string& outputDir,
                                     const StreamingRunConfig& config);
+    /**
+     * Write the observed EMLSR profile and per-link activity.
+     *
+     * @param outputDir Run output directory.
+     * @param info Observed multi-link runtime state.
+     */
     static void WriteMloRuntime(const std::string& outputDir, const MloRuntimeInfo& info);
     static void WriteBuildInfo(const std::string& outputDir, const StreamingBuildInfo& info);
     static void WriteLinkIntervals(const std::string& outputDir,

@@ -442,8 +442,16 @@ def write_experiment_description(document: dict[str, Any],
             ]
         elif topology == "mlo_str":
             approach_lines += [
-                f"* ``MLO NMaxInflights={inflights}``: one two-link 802.11be STR",
+                f"* ``STR MLO NMaxInflights={inflights}``: one two-link 802.11be STR",
                 f"  MLD uses a BE NMaxInflights value of {inflights}.",
+            ]
+        elif topology == "mlo_emlsr":
+            approach_lines += [
+                "* ``EMLSR MLO``: one two-link 802.11be EMLSR MLD uses the",
+                "  predeclared advanced fixed-aux profile. PHY 1 starts as the",
+                "  5 GHz main PHY and may switch across both bands; the 2.4 GHz",
+                "  auxiliary PHY is fixed and not TX capable. Both links must",
+                "  record successful MPDUs and sender PHY TX airtime.",
             ]
         else:
             approach_lines += [
@@ -562,7 +570,10 @@ def write_experiment_description(document: dict[str, Any],
     target_sta_count = 1
     extra_sta_count = (16 if has_legacy else 0) + (16 if has_obss else 0)
     has_dual = any(topology == "dual_interface" for topology, _, _ in approaches)
-    has_mlo = any(topology == "mlo_str" for topology, _, _ in approaches)
+    has_mlo = any(
+        topology in {"mlo_str", "mlo_emlsr"}
+        for topology, _, _ in approaches
+    )
     if has_dual and has_mlo:
         target_ap_description = (
             "The target AP is one logical node using either two independent AP "

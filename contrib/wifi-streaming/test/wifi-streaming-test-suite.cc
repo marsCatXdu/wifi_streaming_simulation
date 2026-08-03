@@ -1646,14 +1646,17 @@ class OutputStatisticsTestCase : public TestCase
 
         MloRuntimeInfo mloRuntime;
         mloRuntime.mode = "EMLSR";
+        mloRuntime.profile = "advanced_fixed_aux_v1";
         mloRuntime.stationEmlsrActivated = true;
         mloRuntime.apEmlsrActivated = true;
-        mloRuntime.emlsrManager = "ns3::DefaultEmlsrManager";
+        mloRuntime.emlsrManager = "ns3::AdvancedEmlsrManager";
         mloRuntime.emlsrLinkIds = {0, 1};
         mloRuntime.apEmlsrEnabledPerLink = {true, true};
         mloRuntime.mainPhyId = 1;
         mloRuntime.initialMainPhyLinkId = 1;
         mloRuntime.initialMainPhyBand = "5 GHz";
+        mloRuntime.mainPhyFrequencyRanges = {"WIFI_SPECTRUM_2_4_GHZ",
+                                              "WIFI_SPECTRUM_5_GHZ"};
         mloRuntime.successfulMpdusPerLink = {4, 5};
         mloRuntime.phyTxTimeUsPerLink = {40, 50};
         ExperimentOutput::WriteMloRuntime(directory, mloRuntime);
@@ -1661,7 +1664,7 @@ class OutputStatisticsTestCase : public TestCase
         std::ostringstream mloRuntimeText;
         mloRuntimeText << mloRuntimeFile.rdbuf();
         NS_TEST_ASSERT_MSG_NE(mloRuntimeText.str().find(
-                                  "\"emlsr_manager\": \"ns3::DefaultEmlsrManager\""),
+                                  "\"emlsr_manager\": \"ns3::AdvancedEmlsrManager\""),
                               std::string::npos,
                               "EMLSR runtime manager is missing");
         NS_TEST_ASSERT_MSG_NE(mloRuntimeText.str().find(
