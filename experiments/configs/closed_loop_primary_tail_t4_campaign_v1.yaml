@@ -1,0 +1,147 @@
+extends: closed_loop_primary_risk_mlo_005.yaml
+name: closed-loop-primary-tail-t4-campaign-v1
+output_root: results/primary_tail_t4_campaign_v1/runs
+workers: 64
+
+# Seeds 43-54 are development evidence.  All arms inherit the same mixed4x4
+# OBSS environment; only the staged T4 operating point or packet-selection
+# mechanism changes.  The fixed-link policies below are the native MLO
+# baselines, not single-link comparisons.
+seeds: [43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54]
+runs: [1]
+
+topologies:
+  - name: dual_interface
+  - name: mlo_str
+  - name: mlo_emlsr
+
+policies:
+  # Full-copy T4, calibrated for a 0.55% joint T0/T4 nominal cost target.
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_admission_packet_cost: launched_packet_set
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0, 4000]
+      prediction.adaptive_airtime_decision_offset_shadow_prices: "0:0.034,4000:0.07905991394024306"
+      prediction.adaptive_airtime_i_frame_only_decision_offsets_us: [0]
+
+  # Full-copy T4, calibrated for a 0.8% joint T0/T4 nominal cost target.
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_admission_packet_cost: launched_packet_set
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0, 4000]
+      prediction.adaptive_airtime_decision_offset_shadow_prices: "0:0.034,4000:0.04585237128013217"
+      prediction.adaptive_airtime_i_frame_only_decision_offsets_us: [0]
+
+  # Full-copy T4, calibrated for a 1.0% joint T0/T4 nominal cost target.
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_admission_packet_cost: launched_packet_set
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0, 4000]
+      prediction.adaptive_airtime_decision_offset_shadow_prices: "0:0.034,4000:0.030390547162877975"
+      prediction.adaptive_airtime_i_frame_only_decision_offsets_us: [0]
+
+  # Full-copy T4, calibrated for a 1.2% joint T0/T4 nominal cost target.
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_admission_packet_cost: launched_packet_set
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0, 4000]
+      prediction.adaptive_airtime_decision_offset_shadow_prices: "0:0.034,4000:0.02073164341662734"
+      prediction.adaptive_airtime_i_frame_only_decision_offsets_us: [0]
+
+  # Mechanism-only ISO ablation at the balanced 0.8% gate.  Deficit launch is
+  # charged as a whole copy so its admission decisions match the full-copy arm
+  # before measured-token availability is considered.
+  - name: adaptive_deficit_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 4000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_admission_packet_cost: whole_copy
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0, 4000]
+      prediction.adaptive_airtime_decision_offset_shadow_prices: "0:0.034,4000:0.04585237128013217"
+      prediction.adaptive_airtime_i_frame_only_decision_offsets_us: [0]
+
+  - name: fixed_link_0
+    topologies: [mlo_str, mlo_emlsr]

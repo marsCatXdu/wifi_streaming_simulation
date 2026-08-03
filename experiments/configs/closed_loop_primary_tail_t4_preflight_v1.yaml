@@ -1,0 +1,5 @@
+extends: closed_loop_primary_tail_t4_campaign_v1.yaml
+name: closed-loop-primary-tail-t4-preflight-v1
+output_root: results/primary_tail_t4_preflight_v1/runs
+workers: 7
+seeds: [43]
