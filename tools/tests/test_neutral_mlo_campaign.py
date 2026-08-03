@@ -221,6 +221,18 @@ class NeutralMloCampaignTest(unittest.TestCase):
             set(comparison["summed_sender_phy_tx_airtime"]["per_band"]),
             {"2.4GHz", "5GHz"},
         )
+        airtime_distribution = comparison["summed_sender_phy_tx_airtime"][
+            "per_run_relative_increase_distribution"
+        ]
+        self.assertEqual(airtime_distribution["valid_unit_count"], 4)
+        self.assertEqual(airtime_distribution["excluded_zero_baseline_unit_count"], 0)
+        self.assertAlmostEqual(
+            airtime_distribution["empirical_distribution"]["max"], 0.15
+        )
+        self.assertEqual(airtime_distribution["above_threshold"]["count"], 0)
+        self.assertEqual(
+            airtime_distribution["top_tail_units"][0]["seed"], 31
+        )
         self.assertEqual(comparison["defeat_status"], "pass")
         self.assertEqual(comparison["ideal_pareto_status"], "pass")
         self.assertEqual(
@@ -233,7 +245,114 @@ class NeutralMloCampaignTest(unittest.TestCase):
         self.assertEqual(diagnostics["maximum_observed_budget_debt_us"], 2003.0)
         self.assertEqual(diagnostics["maximum_observed_budget_excess_us"], 0.0)
         self.assertIn("Adaptive versus STR MLO", render_markdown(report))
+        self.assertIn(
+            "Paired per-run summed-airtime relative increase", render_markdown(report)
+        )
         self.assertIn("Per-band sender-airtime change", render_markdown(report))
+
+    def test_reports_empirical_airtime_tail_and_threshold_units(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "runs"
+            pairs = [(seed, 1) for seed in range(91, 96)]
+            path, _ = _write_campaign(root, pairs, include_ignored=False)
+            adaptive_totals = {
+                91: 90_000.0,
+                92: 100_000.0,
+                93: 120_000.0,
+                94: 121_000.0,
+                95: 150_000.0,
+            }
+            for seed, total_us in adaptive_totals.items():
+                _write_link_airtime(
+                    root / f"adaptive-{seed}-1" / "link_intervals.csv",
+                    (80_000.0, total_us - 80_000.0),
+                )
+                _write_link_airtime(
+                    root / f"str_mlo-{seed}-1" / "link_intervals.csv",
+                    (45_000.0, 55_000.0),
+                )
+            report = analyze_campaign(path)
+            custom_report = analyze_campaign(
+                path, Thresholds(max_airtime_increase=0.25)
+            )
+
+        distribution = report["comparisons"]["str_mlo"][
+            "summed_sender_phy_tx_airtime"
+        ]["per_run_relative_increase_distribution"]
+        self.assertEqual(distribution["valid_unit_count"], 5)
+        self.assertEqual(distribution["empirical_distribution"], {
+            "min": -0.1,
+            "median": 0.2,
+            "p90": 0.5,
+            "max": 0.5,
+        })
+        self.assertEqual(distribution["above_threshold"]["threshold_fraction"], 0.2)
+        self.assertEqual(distribution["above_threshold"]["count"], 2)
+        self.assertEqual(distribution["above_threshold"]["fraction_of_valid_units"], 0.4)
+        self.assertEqual(
+            [
+                (unit["seed"], unit["run"])
+                for unit in distribution["above_threshold"]["units"]
+            ],
+            [(95, 1), (94, 1)],
+        )
+        self.assertEqual(
+            [unit["seed"] for unit in distribution["top_tail_units"]],
+            [95, 94, 93, 92, 91],
+        )
+        custom_distribution = custom_report["comparisons"]["str_mlo"][
+            "summed_sender_phy_tx_airtime"
+        ]["per_run_relative_increase_distribution"]
+        self.assertEqual(
+            custom_distribution["above_threshold"]["threshold_fraction"], 0.25
+        )
+        self.assertEqual(custom_distribution["above_threshold"]["count"], 1)
+        rendered = render_markdown(report)
+        self.assertIn("2/5 (40.00%) valid units", rendered)
+        self.assertIn("seed=95/run=1: 50.00%", rendered)
+        json.loads(json.dumps(report))
+
+    def test_excludes_and_identifies_zero_airtime_baseline_units(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "runs"
+            path, _ = _write_campaign(
+                root, [(101, 1), (102, 2)], include_ignored=False
+            )
+            for seed, run_number in ((101, 1), (102, 2)):
+                _write_link_airtime(
+                    root / f"str_mlo-{seed}-{run_number}" / "link_intervals.csv",
+                    (0.0, 0.0),
+                )
+            report = analyze_campaign(path)
+
+        airtime = report["comparisons"]["str_mlo"]["summed_sender_phy_tx_airtime"]
+        distribution = airtime["per_run_relative_increase_distribution"]
+        self.assertEqual(distribution["valid_unit_count"], 0)
+        self.assertEqual(distribution["excluded_zero_baseline_unit_count"], 2)
+        self.assertEqual(
+            distribution["empirical_distribution"],
+            {"min": None, "median": None, "p90": None, "max": None},
+        )
+        self.assertIsNone(distribution["above_threshold"]["fraction_of_valid_units"])
+        self.assertEqual(distribution["above_threshold"]["units"], [])
+        self.assertEqual(distribution["top_tail_units"], [])
+        self.assertEqual(
+            [
+                (unit["seed"], unit["run"])
+                for unit in distribution["zero_baseline_units"]
+            ],
+            [(101, 1), (102, 2)],
+        )
+        self.assertIsNone(
+            airtime["paired_relative_increase"]["ratio_of_paired_means"]
+        )
+        rendered = render_markdown(report)
+        self.assertIn("min n/a; median n/a; p90 n/a; max n/a", rendered)
+        self.assertIn(
+            "Zero-airtime baseline units excluded from per-run ratios: "
+            "seed=101/run=1; seed=102/run=2.",
+            rendered,
+        )
 
     def test_merges_adaptive_and_baselines_from_different_result_roots(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

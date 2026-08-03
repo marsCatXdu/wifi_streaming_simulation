@@ -88,6 +88,8 @@ METER_FIELDS = (
     "budget_excess_us",
 )
 
+AIRTIME_TOP_TAIL_UNIT_LIMIT = 5
+
 
 class CampaignError(ValueError):
     """Raised when the input is not one valid paired campaign."""
@@ -431,6 +433,82 @@ def _relative_summary(
     return result
 
 
+def _airtime_relative_distribution(
+    adaptive: list[dict[str, Any]],
+    baseline: list[dict[str, Any]],
+    threshold: float,
+) -> dict[str, Any]:
+    """Summarize paired per-run airtime ratios and retain their identities."""
+    valid_units: list[dict[str, Any]] = []
+    zero_baseline_units: list[dict[str, Any]] = []
+    for adaptive_row, baseline_row in zip(adaptive, baseline):
+        if adaptive_row["pair"] != baseline_row["pair"]:
+            raise CampaignError("internal error: airtime rows are not paired by seed and run")
+        seed, run_number = adaptive_row["pair"]
+        adaptive_us = adaptive_row["sender_airtime_total_us"]
+        baseline_us = baseline_row["sender_airtime_total_us"]
+        unit = {
+            "seed": seed,
+            "run": run_number,
+            "adaptive_airtime_us": adaptive_us,
+            "baseline_airtime_us": baseline_us,
+        }
+        if baseline_us == 0:
+            zero_baseline_units.append(unit)
+            continue
+        valid_units.append({
+            **unit,
+            "relative_increase_fraction": (adaptive_us - baseline_us) / baseline_us,
+        })
+
+    descending = sorted(
+        valid_units,
+        key=lambda unit: (
+            -unit["relative_increase_fraction"],
+            unit["seed"],
+            unit["run"],
+        ),
+    )
+    values = sorted(unit["relative_increase_fraction"] for unit in valid_units)
+    above_threshold = [
+        unit for unit in descending if unit["relative_increase_fraction"] > threshold
+    ]
+    if values:
+        p90_index = math.ceil(0.90 * len(values)) - 1
+        empirical = {
+            "min": values[0],
+            "median": statistics.median(values),
+            "p90": values[p90_index],
+            "max": values[-1],
+        }
+        above_fraction: float | None = len(above_threshold) / len(values)
+    else:
+        empirical = {name: None for name in ("min", "median", "p90", "max")}
+        above_fraction = None
+
+    return {
+        "definition": (
+            "(adaptive summed sender PHY TX airtime - baseline summed sender PHY TX "
+            "airtime) / baseline summed sender PHY TX airtime, per paired seed/run"
+        ),
+        "empirical_quantile_method": (
+            "conventional sample median; nearest-rank p90 (ceil(0.90 * n))"
+        ),
+        "valid_unit_count": len(valid_units),
+        "excluded_zero_baseline_unit_count": len(zero_baseline_units),
+        "zero_baseline_units": zero_baseline_units,
+        "empirical_distribution": empirical,
+        "above_threshold": {
+            "threshold_fraction": threshold,
+            "count": len(above_threshold),
+            "fraction_of_valid_units": above_fraction,
+            "units": above_threshold,
+        },
+        "top_tail_unit_limit": AIRTIME_TOP_TAIL_UNIT_LIMIT,
+        "top_tail_units": descending[:AIRTIME_TOP_TAIL_UNIT_LIMIT],
+    }
+
+
 def _criterion(
     rule: str,
     observed: float | None,
@@ -573,6 +651,9 @@ def _comparison(
     airtime_relative = _relative_summary(
         adaptive_airtime, baseline_airtime, lambda left, right: (left - right) / right
     )
+    airtime_distribution = _airtime_relative_distribution(
+        adaptive, baseline, thresholds.max_airtime_increase
+    )
     background_difference = confidence_interval([
         left - right for left, right in zip(adaptive_background, baseline_background)
     ])
@@ -679,6 +760,7 @@ def _comparison(
             "paired_us_difference_adaptive_minus_mlo": airtime_us_difference,
             "paired_fraction_difference_adaptive_minus_mlo": airtime_difference,
             "paired_relative_increase": airtime_relative,
+            "per_run_relative_increase_distribution": airtime_distribution,
             "per_band": per_band,
         },
         "background_throughput_mbps": {
@@ -890,6 +972,13 @@ def _format_percent(value: float | None) -> str:
     return "n/a" if value is None else f"{100 * value:.2f}%"
 
 
+def _format_airtime_unit(unit: dict[str, Any]) -> str:
+    return (
+        f"seed={unit['seed']}/run={unit['run']}: "
+        f"{_format_percent(unit['relative_increase_fraction'])}"
+    )
+
+
 def render_markdown(report: dict[str, Any]) -> str:
     """Render the compact human report; the JSON form retains all diagnostics."""
     checks = report["campaign_checks"]
@@ -934,6 +1023,10 @@ def render_markdown(report: dict[str, Any]) -> str:
         airtime_relative = _format_percent(
             airtime["paired_relative_increase"]["ratio_of_paired_means"]
         )
+        airtime_distribution = airtime["per_run_relative_increase_distribution"]
+        empirical_airtime = airtime_distribution["empirical_distribution"]
+        airtime_threshold = airtime_distribution["above_threshold"]
+        above_fraction = _format_percent(airtime_threshold["fraction_of_valid_units"])
         background_delta = _format_interval(
             background["paired_difference_adaptive_minus_mlo"], 1, 3
         )
@@ -959,6 +1052,26 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{background_delta} Mbps | {background_relative} change | "
             f"{comparison['criteria']['background_throughput_preservation']['status'].upper()} |",
             "",
+            "Paired per-run summed-airtime relative increase: "
+            f"min {_format_percent(empirical_airtime['min'])}; "
+            f"median {_format_percent(empirical_airtime['median'])}; "
+            f"p90 {_format_percent(empirical_airtime['p90'])}; "
+            f"max {_format_percent(empirical_airtime['max'])}. "
+            f"Above {_format_percent(airtime_threshold['threshold_fraction'])}: "
+            f"{airtime_threshold['count']}/{airtime_distribution['valid_unit_count']} "
+            f"({above_fraction}) valid units.",
+            "",
+            "Worst paired units (up to "
+            f"{airtime_distribution['top_tail_unit_limit']}): "
+            + (
+                "; ".join(
+                    _format_airtime_unit(unit)
+                    for unit in airtime_distribution["top_tail_units"]
+                )
+                or "none"
+            )
+            + ".",
+            "",
             "Per-band sender-airtime change:",
             "",
             "| Band | Fraction change (percentage points, 95% CI) | Relative point increase |",
@@ -974,6 +1087,15 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.append(
                 f"| {band} | {band_delta} | {band_relative} |"
             )
+        if airtime_distribution["zero_baseline_units"]:
+            zero_units = "; ".join(
+                f"seed={unit['seed']}/run={unit['run']}"
+                for unit in airtime_distribution["zero_baseline_units"]
+            )
+            lines += [
+                "",
+                "Zero-airtime baseline units excluded from per-run ratios: " + zero_units + ".",
+            ]
         miss_ambition = comparison["criteria"][
             "deadline_miss_ratio_relative_ambition"
         ]["status"].upper()
