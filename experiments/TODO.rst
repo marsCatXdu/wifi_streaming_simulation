@@ -82,6 +82,35 @@ whole-copy rescue, a fixed risk-density gate, and a burst-capable bucket whose
 startup credit and total finite-run airtime remain explicit.  Evaluate it on a
 new seed block before any publication-scale campaign.
 
+The frozen T0 design has two predeclared engineering operating points.  During
+honest procedure evaluation, an evaluation ranker fit on the training groups
+used calibration-selected gates on then-untouched test groups.  The
+0.50-percent procedure recalled 77.0 percent of primary misses at 0.407 percent
+estimated nominal secondary airtime; the 0.70-percent procedure recalled 86.7
+percent at 0.594 percent.  After that evaluation was frozen, the deployment
+ranker was refit on the former training and test groups; the calibration groups
+alone fit its probability calibration and deployment gates.  Thus the fresh
+engineering seeds are the first independent assessment of the exact deployed
+ranker and thresholds.  Runtime admission must use nominal airtime, as the
+calibration did, while token reservation and measurement retain the
+retry-inflated estimate.
+
+Retrospective replay on the failed pilot seeds is mechanism evidence only.  It
+showed that a strict equal wall-clock budget clips actions most aggressively in
+the naturally difficult OBSS realizations: a 0.60-percent token rate retained
+only 46.5 percent of primary misses selected by the 0.50-percent gate, whereas
+the unthrottled fixed gate selected 77.5 percent.  Consequently, the fresh
+``primary_risk_mlo_005_v1`` and ``primary_risk_mlo_007_v1`` engineering runs use
+a 2-percent token rate with ten seconds of capacity and two seconds of startup
+credit as a loose catastrophe guard.  The resulting 60-second nominal
+finite-run secondary-airtime allowance is 2.067 percent; a retry-cost
+underestimate can still create explicitly reported settlement excess.  This is
+not a claim that the controller guarantees the less-than-20-percent
+total-airtime ambition.  Judge that ambition from the paired measured mean, and
+report per-run scatter, high-airtime tails, bucket deferrals, debt, and any
+budget excess.  Seeds 43--54 are reserved for this engineering comparison; do
+not reuse them as final confirmation evidence.
+
 Deadline-aware frame abandonment
 --------------------------------
 

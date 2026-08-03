@@ -1,0 +1,35 @@
+extends: closed_loop_primary_risk_mlo_005.yaml
+name: closed-loop-primary-risk-mlo-007-v1
+output_root: results/primary_risk_mlo_007_v1/runs
+workers: 12
+
+# Reuse the matched STR and EMLSR runs from the 0.50% matrix. This root adds
+# only the more permissive adaptive operating point on the same fresh seeds.
+topologies:
+  - name: dual_interface
+
+policies:
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      # Honest evaluation of the 0.70% gate-selection procedure achieved
+      # 86.7% heldout primary-miss recall. Admission uses nominal airtime and
+      # the same loose 2% measured-airtime catastrophe guard as the 0.50%
+      # operating point, so the fixed gate is the only intended difference.
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.028614642886399477
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0]
