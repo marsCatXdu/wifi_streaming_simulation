@@ -1,58 +1,30 @@
-# Adaptive airtime duplication under OBSS
+# Adaptive airtime OBSS v1 — invalidated
 
-This directory is the compact evidence snapshot for the OBSS-only
-`adaptive_airtime_duplication` closed-loop matrix. Raw per-run directories remain
-under `results/adaptive_airtime_obss_v1/runs/`.
+This snapshot is retained only as an audit artifact. Do not use its aggregates,
+figures, or headline values as experimental evidence.
 
-## Experiment
+The v1 runs fail the corrected output contract for several independent reasons:
 
-Thirty paired seeds compare five approaches under the same OBSS topology,
-traffic, and propagation used by the genuine-polling closed-loop OBSS matrix:
+- The runner overrode `project_git_commit` with `a829356` even though the
+  executed binary contained later, uncommitted implementation changes. The
+  recorded run IDs and build metadata therefore do not identify the source that
+  produced the data.
+- Secondary reservations could settle after duplicate terminal callbacks rather
+  than after all distinct packets reached terminal MAC state.
+- Controller logs mixed pre- and post-decision reservation state, used the wrong
+  reference header size, and did not preserve a per-frame settlement ledger.
+- `policy_decisions.csv` recorded the initial primary-only state instead of the
+  final delayed-duplication decision.
+- The old validator checked row counts and aggregate sums but did not enforce the
+  decision arithmetic, half-open measurement window, finite-run budget, or
+  event/settlement reconciliation.
 
-1. Single 5 GHz (`fixed_link_1`)
-2. Selective duplication at threshold `0.20` with a 30% frame-token budget
-3. Adaptive airtime duplication (`rho=0.02`, initial shadow price `0.20`)
-4. Full application duplication (primary path 1)
-5. MLO STR with `NMaxInflights=1`
+Those defects were corrected in commits `74da235`, `475beef`, `dd5bff9`, and
+`fdeead8`. The corrected experiment is versioned separately as
+`closed-loop-adaptive-airtime-obss-v2` and writes to
+`results/adaptive_airtime_obss_v2/runs`.
 
-The adaptive controller budgets secondary-sender PHY TX airtime on path 0
-rather than frame tokens, and adapts a shadow price online. The receiver hold
-for delayed secondary copies (`0fcee68`) is required so late-stage actions are
-not discarded after primary-only finalize.
-
-Matrix run IDs preserve the original launch identity commit `a829356`; the
-executed binary includes the adaptive policy and delayed-secondary hold fix.
-
-## Headline results
-
-All values are means across the 30 paired seeds. The deadline is 33.333 ms.
-
-| Approach | Miss ratio | P99 latency | Redundant bytes | Tagged secondary airtime |
-|---|---:|---:|---:|---:|
-| Single 5 GHz | 1.307% | 19.51 ms | 0% | 0% |
-| Selective duplication (0.20) | 0.976% | 18.82 ms | 1.263% | 0.105% |
-| Adaptive airtime duplication | 0.611% | 16.33 ms | 20.836% | 1.944% |
-| Full duplication | 0.043% | 9.92 ms | 50% | 7.718% |
-| MLO `NMaxInflights=1` | 0.715% | 19.02 ms | 0% | 0% |
-
-Selective duplication launches 23.4 of 1,800 frames per run on average
-(1.30% action rate) with no budget suppressions. Adaptive airtime
-duplication launches 498.4 frames per run on average while staying near the
-configured 2% long-run secondary PHY TX budget (measured tagged airtime
-fraction 1.944%).
-
-Lower miss ratio for the adaptive arm is therefore confounded by much higher
-measured secondary airtime than selective duplication. Treat the first matrix
-as a budget-utilization study; a later cost-matched or budget-sweep comparison
-is required before attributing gains to the decision rule alone.
-
-## Directory guide
-
-- `aggregate.csv` / `aggregate.json`: run-level and grouped summaries
-- `adaptive_airtime_summary.csv`: adaptive-specific control and airtime metrics
-- `selective_duplication_summary.csv`: selective control rates for the paired arm
-- `experiment_manifest.json`: full matrix provenance (150 runs)
-- `DESCRIPTION.rst`: generated matrix description
-- `figures/`: general latency, miss, redundancy, and background plots
-- `figures/adaptive_airtime/`: adaptive-specific miss, airtime, price, and stage plots
-- `figures/selective_control/`: selective action-rate and stage plots
+The files in this directory are unchanged historical outputs except for this
+notice. `experiment_manifest.json` demonstrates the invalid identity override;
+the remaining tables and figures are useful only for tracing how the obsolete
+claims were produced.

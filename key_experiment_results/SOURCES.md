@@ -21,7 +21,7 @@ following ignored result roots:
 | `04_genuine_polling_v1/closed_loop_obss_threshold_015` | `results/genuine_polling_v1/closed_loop_obss_threshold_015/runs` plus repair provenance from its `extras/` directory |
 | `04_genuine_polling_v1/closed_loop_combined_threshold_020` | `results/genuine_polling_v1/closed_loop_combined/runs` |
 | `04_genuine_polling_v1/predicted_risk_threshold_020` | `results/genuine_polling_v1/predicted_risk_duplication_threshold_020` and `results/genuine_polling_v1/predicted_risk_unconditional_threshold_020` |
-| `05_adaptive_airtime_obss_v1` | `results/adaptive_airtime_obss_v1/runs` |
+| `05_adaptive_airtime_obss_v1` | `results/adaptive_airtime_obss_v1/runs` (invalidated; audit only) |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
