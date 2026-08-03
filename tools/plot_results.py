@@ -64,6 +64,8 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
         label = "Closed-loop selective duplication"
     elif topology == "dual_interface" and policy == "adaptive_airtime_duplication":
         label = "Adaptive airtime duplication"
+    elif topology == "dual_interface" and policy == "adaptive_deficit_duplication":
+        label = "Adaptive primary-deficit duplication"
     elif topology == "dual_interface" and policy == "fixed_link_0":
         label = "Single 2.4 GHz interface"
     elif topology == "dual_interface" and policy == "fixed_link_1":

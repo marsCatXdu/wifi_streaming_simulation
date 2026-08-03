@@ -192,6 +192,152 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         )
         self.assertEqual(estimates, {7: 100.0})
 
+    def test_accepts_exact_primary_deficit_packet_metadata(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "admission_feature_set": "F0+F1-degraded",
+            "packet_selection_feature_set": "F2-primary-frame-ack-state",
+            "packet_selection": "primary_unacknowledged_reverse",
+        })
+        rows = adaptive_rows()
+        rows[0].update({
+            "frame_packet_count": "4",
+            "primary_acked_packets": "2",
+            "primary_acked_packet_indices": "0;2",
+            "secondary_packet_count": "2",
+            "secondary_packet_indices": "3;1",
+            "secondary_packet_order": "primary_unacknowledged_reverse",
+        })
+        rows[1].update({
+            "frame_packet_count": "4",
+            "primary_acked_packets": "3",
+            "primary_acked_packet_indices": "0;2;3",
+            "secondary_packet_count": "1",
+            "secondary_packet_indices": "1",
+            "secondary_packet_order": "primary_unacknowledged_reverse",
+        })
+        samples = prediction_samples()
+        samples[(7, 0)].update({
+            "frame_packet_count": "4", "frame_packets_tx_succeeded": "2",
+        })
+        samples[(7, 1000)].update({
+            "frame_packet_count": "4", "frame_packets_tx_succeeded": "3",
+        })
+        self.assertEqual(
+            _validate_adaptive_config(config, "primary_unacknowledged_reverse"),
+            [0, 1000],
+        )
+        estimates = _validate_adaptive_decisions(
+            rows,
+            config,
+            [{"frame_id": "7", "generation_time_us": "1000"}],
+            samples,
+            "run",
+        )
+        self.assertEqual(estimates, {7: 100.0})
+
+    def test_rejects_primary_deficit_packet_count_mutation(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "admission_feature_set": "F0+F1-degraded",
+            "packet_selection_feature_set": "F2-primary-frame-ack-state",
+            "packet_selection": "primary_unacknowledged_reverse",
+        })
+        rows = adaptive_rows()
+        for row in rows:
+            row.update({
+                "frame_packet_count": "4",
+                "primary_acked_packets": "2",
+                "primary_acked_packet_indices": "0;2",
+                "secondary_packet_count": "1",
+                "secondary_packet_indices": "3",
+                "secondary_packet_order": "primary_unacknowledged_reverse",
+            })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample.update({
+                "frame_packet_count": "4", "frame_packets_tx_succeeded": "2",
+            })
+        with self.assertRaisesRegex(ValidationError, "selected packet set"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                samples,
+                "run",
+            )
+
+    def test_rejects_primary_deficit_packet_identity_mutation(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "admission_feature_set": "F0+F1-degraded",
+            "packet_selection_feature_set": "F2-primary-frame-ack-state",
+            "packet_selection": "primary_unacknowledged_reverse",
+        })
+        rows = adaptive_rows()
+        for row in rows:
+            row.update({
+                "frame_packet_count": "4",
+                "primary_acked_packets": "2",
+                "primary_acked_packet_indices": "0;2",
+                "secondary_packet_count": "2",
+                "secondary_packet_indices": "3;2",
+                "secondary_packet_order": "primary_unacknowledged_reverse",
+            })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample.update({
+                "frame_packet_count": "4", "frame_packets_tx_succeeded": "2",
+            })
+        with self.assertRaisesRegex(ValidationError, "selected packet set"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                samples,
+                "run",
+            )
+
+    def test_rejects_zero_deficit_before_all_packets_are_acked(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "admission_feature_set": "F0+F1-degraded",
+            "packet_selection_feature_set": "F2-primary-frame-ack-state",
+            "packet_selection": "primary_unacknowledged_reverse",
+        })
+        rows = adaptive_rows()
+        for row in rows:
+            row.update({
+                "frame_packet_count": "4",
+                "primary_acked_packets": "2",
+                "primary_acked_packet_indices": "0;2",
+                "secondary_packet_count": "2",
+                "secondary_packet_indices": "3;1",
+                "secondary_packet_order": "primary_unacknowledged_reverse",
+            })
+        rows[0].update({
+            "estimated_airtime_us": "0",
+            "normalized_cost": "0",
+            "net_utility": "nan",
+            "decision": "no_primary_deficit",
+            "secondary_packet_count": "0",
+            "secondary_packet_indices": "",
+            "secondary_packet_order": "none",
+        })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample.update({
+                "frame_packet_count": "4", "frame_packets_tx_succeeded": "2",
+            })
+        with self.assertRaisesRegex(ValidationError, "zero deficit"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                samples,
+                "run",
+            )
+
     def test_rejects_decision_timestamp_different_from_telemetry(self) -> None:
         rows = adaptive_rows()
         rows[1]["sample_time_ns"] = "2000001"
@@ -327,7 +473,7 @@ def make_analysis_run(
         directory / "link_intervals.csv",
         [{"link_id": "0", "phy_tx_time_us": str(link0_tx_us)}],
     )
-    if policy == "adaptive_airtime_duplication":
+    if policy in {"adaptive_airtime_duplication", "adaptive_deficit_duplication"}:
         meter = {
             "tagged_secondary_tx_airtime_us": 100.0,
             "tagged_secondary_tx_airtime_fraction": 0.1,
@@ -367,7 +513,17 @@ def make_analysis_run(
         "policy": policy,
         "config": {"duration_s": 0.001},
         "deadline_miss_ratio": 0.0,
-        "redundant_byte_ratio": 0.1 if policy == "adaptive_airtime_duplication" else 0.0,
+        "latency_p99_us": {
+            "fixed_link_1": 120.0,
+            "fixed_link_0": 100.0,
+            "adaptive_airtime_duplication": 90.0,
+            "adaptive_deficit_duplication": 80.0,
+        }.get(policy, 110.0),
+        "redundant_byte_ratio": (
+            0.1
+            if policy in {"adaptive_airtime_duplication", "adaptive_deficit_duplication"}
+            else 0.0
+        ),
     }
 
 
@@ -422,6 +578,56 @@ class AdaptiveAirtimePlotTest(unittest.TestCase):
             ) as source:
                 header = next(csv.reader(source))
             self.assertNotIn("run_dir", header)
+
+    def test_keeps_adaptive_treatments_in_separate_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            aggregate = {"runs": [
+                make_analysis_run(
+                    root, "fixed", 1, 1, "dual_interface", "fixed_link_1", 80
+                ),
+                make_analysis_run(
+                    root, "mlo", 1, 1, "mlo_str", "fixed_link_0", 100
+                ),
+                make_analysis_run(
+                    root,
+                    "adaptive",
+                    1,
+                    1,
+                    "dual_interface",
+                    "adaptive_airtime_duplication",
+                    120,
+                ),
+                make_analysis_run(
+                    root,
+                    "deficit",
+                    1,
+                    1,
+                    "dual_interface",
+                    "adaptive_deficit_duplication",
+                    110,
+                ),
+            ]}
+            plot_adaptive_airtime(aggregate, root)
+            output = root / "plots/adaptive_airtime"
+            for policy in (
+                "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+            ):
+                self.assertTrue(
+                    (output / f"action_stage_distribution_{policy}.png").is_file()
+                )
+                self.assertTrue(
+                    (output / f"estimated_vs_measured_airtime_{policy}.png").is_file()
+                )
+            for name in (
+                "latency_p99.png",
+                "paired_miss_deltas.png",
+                "paired_p99_deltas.png",
+                "paired_total_airtime_increase_vs_mlo.png",
+                "reliability_vs_total_airtime.png",
+                "p99_vs_total_airtime.png",
+            ):
+                self.assertTrue((output / name).is_file(), name)
 
 if __name__ == "__main__":
     unittest.main()

@@ -54,6 +54,10 @@ ADAPTIVE_DECISION_COLUMNS = {
     "initial_bucket_capacity_us", "reserved_airtime_us", "available_airtime_us",
     "measured_airtime_total_us", "decision", "secondary_launched",
 }
+DEFICIT_DECISION_COLUMNS = {
+    "frame_packet_count", "primary_acked_packets", "primary_acked_packet_indices",
+    "secondary_packet_count", "secondary_packet_indices", "secondary_packet_order",
+}
 SECONDARY_AIRTIME_EVENT_COLUMNS = {
     "run_id", "time_ns", "path_id", "ppdu_duration_us", "tagged_mpdu_bytes",
     "frame_ids", "mixed_ppdu", "cumulative_tagged_airtime_us",
@@ -387,9 +391,19 @@ def _summary_integer(summary: dict[str, Any], key: str) -> int:
     return value
 
 
-def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
+def _validate_adaptive_config(
+    config: dict[str, Any],
+    expected_selection: str = "full_forward",
+) -> list[int]:
     """Validate adaptive controller provenance and return decision offsets."""
+    _require(expected_selection in {"full_forward", "primary_unacknowledged_reverse"},
+             "resolved_config.json: unknown adaptive packet selection")
     source_sha = config.get("source_model_sha256")
+    object_name = (
+        "adaptiveDeficitDuplication"
+        if expected_selection == "primary_unacknowledged_reverse"
+        else "adaptiveAirtimeDuplication"
+    )
     _require(
         config.get("model_id") == "commodity_polling_1ms_genuine_v1" and
         isinstance(source_sha, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha) is not None and
@@ -397,12 +411,19 @@ def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
         config.get("degradation_profile") == "polling_1ms" and
         config.get("calibration") == "platt" and
         config.get("budget_definition") == "secondary_sender_phy_tx_airtime" and
-        config.get("primary_path") == 1 and config.get("secondary_path") == 0,
+        config.get("primary_path") == 1 and config.get("secondary_path") == 0 and
+        config.get("packet_selection", "full_forward") == expected_selection and
+        config.get("admission_feature_set", "F0+F1-degraded") == "F0+F1-degraded" and
+        config.get("packet_selection_feature_set", "none") == (
+            "F2-primary-frame-ack-state"
+            if expected_selection == "primary_unacknowledged_reverse"
+            else "none"
+        ),
         "resolved_config.json: invalid adaptive airtime provenance",
     )
     offsets = _strict_integer_list(
         config.get("decision_offsets_us"),
-        "adaptiveAirtimeDuplication.decision_offsets_us",
+        f"{object_name}.decision_offsets_us",
         positive=False,
     )
     _require(offsets[0] == 0,
@@ -412,13 +433,13 @@ def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
     _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
              "resolved_config.json: adaptive stages do not match decision offsets")
 
-    fraction = _config_number(config, "budget_fraction", "adaptiveAirtimeDuplication")
+    fraction = _config_number(config, "budget_fraction", object_name)
     initial_price = _config_number(
-        config, "initial_shadow_price", "adaptiveAirtimeDuplication"
+        config, "initial_shadow_price", object_name
     )
-    dual_step = _config_number(config, "dual_step", "adaptiveAirtimeDuplication")
-    safety = _config_number(config, "cost_safety_factor", "adaptiveAirtimeDuplication")
-    alpha = _config_number(config, "cost_ewma_alpha", "adaptiveAirtimeDuplication")
+    dual_step = _config_number(config, "dual_step", object_name)
+    safety = _config_number(config, "cost_safety_factor", object_name)
+    alpha = _config_number(config, "cost_ewma_alpha", object_name)
     horizon = config.get("bucket_horizon_us")
     _require(isinstance(horizon, int) and not isinstance(horizon, bool) and horizon > 0,
              "resolved_config.json: invalid adaptive bucket horizon")
@@ -426,7 +447,7 @@ def _validate_adaptive_config(config: dict[str, Any]) -> list[int]:
              safety >= 1 and 0 < alpha <= 1,
              "resolved_config.json: adaptive parameter outside its domain")
     initial_capacity = _config_number(
-        config, "initial_bucket_capacity_us", "adaptiveAirtimeDuplication"
+        config, "initial_bucket_capacity_us", object_name
     )
     _require(_close(initial_capacity, fraction * horizon),
              "resolved_config.json: adaptive initial capacity mismatch")
@@ -484,7 +505,13 @@ def _validate_adaptive_decisions(
     The returned mapping contains the reservation estimate for every launched
     frame and is used to reconcile the independent PHY-airtime ledger.
     """
-    offsets = _validate_adaptive_config(config)
+    packet_selection = config.get("packet_selection", "full_forward")
+    offsets = _validate_adaptive_config(config, packet_selection)
+    primary_deficit = packet_selection == "primary_unacknowledged_reverse"
+    object_name = (
+        "adaptiveDeficitDuplication" if primary_deficit
+        else "adaptiveAirtimeDuplication"
+    )
     file_name = "adaptive_airtime_decisions.csv"
     frame_generation_us = {
         _integer(frame, "frame_id", "frames.csv"):
@@ -496,16 +523,16 @@ def _validate_adaptive_decisions(
     _require(all(row.get("run_id") == run_id for row in rows),
              "adaptive decisions: run_id mismatch")
 
-    fraction = _config_number(config, "budget_fraction", "adaptiveAirtimeDuplication")
+    fraction = _config_number(config, "budget_fraction", object_name)
     horizon = int(config["bucket_horizon_us"])
     capacity = fraction * horizon
     initial_price = _config_number(
-        config, "initial_shadow_price", "adaptiveAirtimeDuplication"
+        config, "initial_shadow_price", object_name
     )
-    dual_step = _config_number(config, "dual_step", "adaptiveAirtimeDuplication")
+    dual_step = _config_number(config, "dual_step", object_name)
     allowed_decisions = {
         "price_rejected", "airtime_deferred", "action", "already_resolved",
-        "not_actionable", "launch_rejected",
+        "not_actionable", "launch_rejected", "no_primary_deficit",
     }
     seen_samples: set[tuple[int, int]] = set()
     action_estimates: dict[int, float] = {}
@@ -583,6 +610,54 @@ def _validate_adaptive_decisions(
         _require(launched == (decision == "action"),
                  "adaptive decisions: action/launch mismatch")
 
+        if primary_deficit:
+            frame_packet_count = _integer(row, "frame_packet_count", file_name)
+            _require(frame_packet_count == _integer(
+                prediction, "frame_packet_count", "prediction_samples.csv"
+            ), "adaptive deficit decisions: frame packet count mismatch")
+            prediction_acked = prediction.get("frame_packets_tx_succeeded", "")
+            logged_acked = row.get("primary_acked_packets", "")
+            _require(logged_acked != "" and logged_acked == prediction_acked,
+                     "adaptive deficit decisions: ACK count mismatch")
+            acked_count = int(logged_acked)
+            acked_text = row.get("primary_acked_packet_indices", "")
+            acked_tokens = [] if not acked_text else acked_text.split(";")
+            _require(all(re.fullmatch(r"[0-9]+", token) for token in acked_tokens),
+                     "adaptive deficit decisions: malformed ACKed packet indexes")
+            acked_indices = [int(token) for token in acked_tokens]
+            _require(len(acked_indices) == acked_count and
+                     len(acked_indices) == len(set(acked_indices)) and
+                     all(0 <= index < frame_packet_count for index in acked_indices) and
+                     acked_indices == sorted(acked_indices),
+                     "adaptive deficit decisions: invalid ACKed packet indexes")
+            selected_count = _integer(row, "secondary_packet_count", file_name)
+            index_text = row.get("secondary_packet_indices", "")
+            index_tokens = [] if not index_text else index_text.split(";")
+            _require(all(re.fullmatch(r"[0-9]+", token) for token in index_tokens),
+                     "adaptive deficit decisions: malformed selected packet indexes")
+            selected_indices = [int(token) for token in index_tokens]
+            _require(len(selected_indices) == selected_count and
+                     len(selected_indices) == len(set(selected_indices)) and
+                     all(0 <= index < frame_packet_count for index in selected_indices),
+                     "adaptive deficit decisions: invalid selected packet indexes")
+            order = row.get("secondary_packet_order")
+            descriptor_absent = decision in {"already_resolved", "no_primary_deficit"}
+            if descriptor_absent:
+                _require(selected_count == 0 and order == "none",
+                         "adaptive deficit decisions: resolved row retains a packet set")
+                if decision == "no_primary_deficit":
+                    _require(acked_indices == list(range(frame_packet_count)),
+                             "adaptive deficit decisions: zero deficit lacks all ACKs")
+            else:
+                expected_indices = sorted(
+                    set(range(frame_packet_count)) - set(acked_indices),
+                    reverse=True,
+                )
+                _require(selected_count == frame_packet_count - acked_count and
+                         selected_indices == expected_indices and
+                         order == "primary_unacknowledged_reverse",
+                         "adaptive deficit decisions: selected packet set is inconsistent")
+
         if estimated > 0:
             _require(_close(normalized, estimated / reference) and
                      math.isfinite(utility) and
@@ -607,6 +682,9 @@ def _validate_adaptive_decisions(
         elif decision == "not_actionable":
             _require(not actionable and estimated > 0,
                      "adaptive decisions: invalid not-actionable predicate")
+        elif decision == "no_primary_deficit":
+            _require(primary_deficit and estimated == 0 and not launched,
+                     "adaptive decisions: invalid zero-deficit predicate")
         elif decision == "already_resolved":
             _require(frame_id in action_estimates and estimated == 0,
                      "adaptive decisions: invalid already-resolved predicate")
@@ -659,7 +737,8 @@ def _validate_secondary_airtime(
     _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
              "secondary_airtime_summary.json: missing fields")
     _require(policy in {
-        "selective_duplication", "adaptive_airtime_duplication", "full_duplication",
+        "selective_duplication", "adaptive_airtime_duplication",
+        "adaptive_deficit_duplication", "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
     _require(meter_config.get("definition") == "secondary_sender_phy_tx_airtime" and
              meter_config.get("path_id") == 0 and meter_config.get("copy_id") == 1,
@@ -770,7 +849,7 @@ def _validate_secondary_airtime(
     _require(maximum_debt + 1e-9 >= observed_budget_debt_us,
              "secondary airtime summary: maximum debt misses an observed deficit")
 
-    if policy == "adaptive_airtime_duplication":
+    if policy in {"adaptive_airtime_duplication", "adaptive_deficit_duplication"}:
         _require(adaptive_config is not None,
                  "adaptive secondary airtime validation lacks controller config")
         _require(set(settlement_by_frame) == set(action_estimates),
@@ -804,11 +883,14 @@ def _validate_secondary_airtime(
         expected_ratio = tagged_total / estimate_total if estimate_total else 0.0
         _require(_close(ratio, expected_ratio),
                  "secondary airtime summary: estimate ratio mismatch")
-        fraction = _config_number(
-            adaptive_config, "budget_fraction", "adaptiveAirtimeDuplication"
+        object_name = (
+            "adaptiveDeficitDuplication"
+            if policy == "adaptive_deficit_duplication"
+            else "adaptiveAirtimeDuplication"
         )
+        fraction = _config_number(adaptive_config, "budget_fraction", object_name)
         capacity = _config_number(
-            adaptive_config, "initial_bucket_capacity_us", "adaptiveAirtimeDuplication"
+            adaptive_config, "initial_bucket_capacity_us", object_name
         )
         finite_budget = fraction * duration_us + capacity
         _require(_close(_summary_number(summary, "budget_fraction"), fraction) and
@@ -875,7 +957,7 @@ def _validate_prediction(
              "prediction telemetry requires dual_interface")
     _require(config.get("policy") in {
         "fixed_link_0", "fixed_link_1", "selective_duplication",
-        "adaptive_airtime_duplication",
+        "adaptive_airtime_duplication", "adaptive_deficit_duplication",
     }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
@@ -1883,6 +1965,7 @@ def validate_run(
     decision_samples: dict[tuple[int, int], dict[str, str]] = {}
     if config["policy"] in {
         "selective_duplication", "adaptive_airtime_duplication",
+        "adaptive_deficit_duplication",
     }:
         decision_samples = _prediction_decision_samples(
             run_dir, run_id, expected_path=1
@@ -1976,15 +2059,28 @@ def validate_run(
                 action_frames.add(frame_id)
         _require(action_frames == duplicated_frame_ids,
                  "selective decisions: launched actions do not match duplicated frames")
-    elif config["policy"] == "adaptive_airtime_duplication":
-        adaptive_config = config.get("adaptiveAirtimeDuplication")
+    elif config["policy"] in {
+        "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+    }:
+        primary_deficit = config["policy"] == "adaptive_deficit_duplication"
+        config_key = (
+            "adaptiveDeficitDuplication" if primary_deficit
+            else "adaptiveAirtimeDuplication"
+        )
+        adaptive_config = config.get(config_key)
         _require(isinstance(adaptive_config, dict),
-                 "resolved_config.json: missing adaptiveAirtimeDuplication object")
-        _validate_adaptive_config(adaptive_config)
+                 f"resolved_config.json: missing {config_key} object")
+        expected_selection = (
+            "primary_unacknowledged_reverse" if primary_deficit else "full_forward"
+        )
+        _validate_adaptive_config(adaptive_config, expected_selection)
         adaptive_path = run_dir / "adaptive_airtime_decisions.csv"
         _require(adaptive_path.is_file(),
                  "missing core file: adaptive_airtime_decisions.csv")
-        adaptive = _csv(adaptive_path, ADAPTIVE_DECISION_COLUMNS)
+        required_columns = ADAPTIVE_DECISION_COLUMNS | (
+            DEFICIT_DECISION_COLUMNS if primary_deficit else set()
+        )
+        adaptive = _csv(adaptive_path, required_columns)
         action_estimates = _validate_adaptive_decisions(
             adaptive, adaptive_config, frames, decision_samples, run_id
         )

@@ -395,6 +395,11 @@ def write_experiment_description(document: dict[str, Any],
         for spec in specs
     })
     has_selective = any(policy == "selective_duplication" for _, policy, _ in approaches)
+    has_adaptive = any(policy in {
+        "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+    } for _, policy, _ in approaches)
+    has_deficit = any(policy == "adaptive_deficit_duplication"
+                      for _, policy, _ in approaches)
     approach_lines: list[str] = []
     for topology, policy, inflights in approaches:
         if topology == "dual_interface" and policy == "fixed_link_0":
@@ -427,6 +432,13 @@ def write_experiment_description(document: dict[str, Any],
                 "  on the 5 GHz interface. The frozen predictor may launch a delayed",
                 "  2.4 GHz copy using a shadow-price utility and secondary PHY TX",
                 "  airtime token budget.",
+            ]
+        elif topology == "dual_interface" and policy == "adaptive_deficit_duplication":
+            approach_lines += [
+                "* ``Adaptive primary-deficit duplication``: each frame starts",
+                "  on the 5 GHz interface. Adaptive admission launches only the",
+                "  primary-unacknowledged packet indexes on 2.4 GHz in reverse",
+                "  order under the secondary PHY TX airtime token budget.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -464,12 +476,25 @@ def write_experiment_description(document: dict[str, Any],
         f"{stream.get('payload_size', 1200)}-byte UDP payloads.",
         "",
     ]
-    action_text = (
-        "The selective arm feeds these snapshots to the frozen F0+F1-degraded "
-        "commodity predictor; receiver outcomes never enter the decision."
-        if has_selective else
-        "Adaptive actions are disabled in this telemetry matrix."
-    )
+    if has_selective or has_adaptive:
+        if has_selective and has_adaptive:
+            controller_names = "The selective and adaptive arms"
+            controller_verb = "feed"
+        else:
+            controller_names = "The selective arm" if has_selective else "The adaptive arm"
+            controller_verb = "feeds"
+        action_text = (
+            f"{controller_names} {controller_verb} these snapshots to the frozen "
+            "F0+F1-degraded commodity predictor; receiver outcomes never enter "
+            "the decision."
+        )
+        if has_deficit:
+            action_text += (
+                " Primary-deficit packet selection additionally reads the exact "
+                "causal primary per-packet ACK state."
+            )
+    else:
+        action_text = "Adaptive actions are disabled in this telemetry matrix."
     if has_legacy:
         lines += [
             "Same-BSS contention devices",

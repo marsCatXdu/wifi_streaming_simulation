@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,11 +15,35 @@ import sys
 from unittest import mock
 
 sys.path.insert(0, str(TOOLS))
-from run_experiments import expand_config
+from run_experiments import expand_config, load_yaml, write_experiment_description
 from run_adaptive_airtime_obss import main as run_matrix
 
 
 class AdaptiveAirtimeObssConfigTest(unittest.TestCase):
+    def test_deficit_matrix_has_paired_five_way_runs(self) -> None:
+        path = ROOT / "experiments/configs/closed_loop_adaptive_deficit_obss.yaml"
+        document = load_yaml(path)
+        specs = expand_config(document)
+        expected = {
+            ("dual_interface", "fixed_link_1"),
+            ("dual_interface", "adaptive_airtime_duplication"),
+            ("dual_interface", "adaptive_deficit_duplication"),
+            ("dual_interface", "full_duplication"),
+            ("mlo_str", "fixed_link_0"),
+        }
+        self.assertEqual(len(specs), 150)
+        self.assertEqual(document["workers"], 64)
+        self.assertEqual({
+            (item["config"]["topology"], item["config"]["policy"])
+            for item in specs
+        }, expected)
+        with tempfile.TemporaryDirectory() as temporary:
+            write_experiment_description(document, specs, Path(temporary))
+            description = (Path(temporary) / "DESCRIPTION.rst").read_text()
+        self.assertIn("Adaptive primary-deficit duplication", description)
+        self.assertIn("exact causal primary per-packet ACK state", description)
+        self.assertNotIn("Adaptive actions are disabled", description)
+
     def test_matrix_has_paired_five_way_runs(self) -> None:
         path = ROOT / "experiments/configs/closed_loop_adaptive_airtime_obss.yaml"
         document = yaml.safe_load(path.read_text(encoding="utf-8"))

@@ -24,6 +24,7 @@ POLICIES = (
     "fixed_link_1",
     "selective_duplication",
     "adaptive_airtime_duplication",
+    "adaptive_deficit_duplication",
     "full_duplication",
     "fixed_link_0",
 )
@@ -61,6 +62,7 @@ def _policy_label(policy: str, topology: str) -> str:
         "fixed_link_1": "Single 5 GHz",
         "selective_duplication": "Selective 0.20",
         "adaptive_airtime_duplication": "Adaptive airtime",
+        "adaptive_deficit_duplication": "Adaptive deficit",
         "full_duplication": "Full duplication",
     }
     return labels.get(policy, policy)
@@ -94,12 +96,17 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(source))
 
 
-def _link0_phy_tx_us(run_dir: Path) -> float:
+def _link_phy_tx_us(run_dir: Path) -> dict[int, float]:
     rows = _read_csv(run_dir / "link_intervals.csv")
-    matches = [row for row in rows if int(row["link_id"]) == 0]
-    if len(matches) != 1:
-        raise ValueError(f"{run_dir}: expected one link-0 interval")
-    return float(matches[0]["phy_tx_time_us"])
+    result: dict[int, float] = {}
+    for row in rows:
+        link_id = int(row["link_id"])
+        if link_id in result:
+            raise ValueError(f"{run_dir}: duplicate link-{link_id} interval")
+        result[link_id] = float(row["phy_tx_time_us"])
+    if 0 not in result:
+        raise ValueError(f"{run_dir}: missing link-0 interval")
+    return result
 
 
 def summarize_adaptive_runs(
@@ -123,10 +130,13 @@ def summarize_adaptive_runs(
         actions = 0
         stage_counts: dict[str, int] = {}
         duration_us = float(run["config"]["duration_s"]) * 1_000_000
-        link0_phy_tx_us = _link0_phy_tx_us(run_dir)
+        link_phy_tx_us = _link_phy_tx_us(run_dir)
+        link0_phy_tx_us = link_phy_tx_us[0]
+        target_phy_tx_us = sum(link_phy_tx_us.values())
         if run["policy"] in {
             "selective_duplication",
             "adaptive_airtime_duplication",
+            "adaptive_deficit_duplication",
             "full_duplication",
         }:
             summary_path = run_dir / "secondary_airtime_summary.json"
@@ -168,7 +178,9 @@ def summarize_adaptive_runs(
                 raise ValueError(
                     f"{run_dir}: tagged airtime exceeds link-0 PHY TX airtime"
                 )
-        if run["policy"] == "adaptive_airtime_duplication":
+        if run["policy"] in {
+            "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+        }:
             decisions = _read_csv(run_dir / "adaptive_airtime_decisions.csv")
             action_rows = [row for row in decisions if row["decision"] == "action"]
             actions = len(action_rows)
@@ -184,6 +196,7 @@ def summarize_adaptive_runs(
             "policy": run["policy"],
             "label": _policy_label(run["policy"], run["topology"]),
             "deadline_miss_ratio": run["deadline_miss_ratio"],
+            "latency_p99_us": run.get("latency_p99_us"),
             "redundant_byte_ratio": run["redundant_byte_ratio"],
             "max_miss_burst": max(bursts),
             "p95_miss_burst": float(np.percentile(bursts, 95)),
@@ -198,6 +211,8 @@ def summarize_adaptive_runs(
             "budget_excess_us": budget_excess_us,
             "link0_phy_tx_time_us": link0_phy_tx_us,
             "link0_phy_tx_fraction": link0_phy_tx_us / duration_us,
+            "target_phy_tx_time_us": target_phy_tx_us,
+            "target_phy_tx_fraction": target_phy_tx_us / duration_us,
             "adaptive_actions": actions,
             "_stage_counts": stage_counts,
         })
@@ -252,6 +267,7 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
         "Single 5 GHz",
         "Selective 0.20",
         "Adaptive airtime",
+        "Adaptive deficit",
         "Full duplication",
         "MLO",
     ) if label in by_label]
@@ -273,7 +289,35 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
     plt.savefig(output / "deadline_miss_ratio.png", dpi=200)
     plt.close()
 
-    adaptive = [row for row in rows if row["policy"] == "adaptive_airtime_duplication"]
+    p99_labels = [
+        label for label in labels
+        if all(row["latency_p99_us"] is not None for row in by_label[label])
+    ]
+    if p99_labels:
+        p99_intervals = [
+            _interval([float(row["latency_p99_us"]) for row in by_label[label]])
+            for label in p99_labels
+        ]
+        plt.figure(figsize=(9, 4.8))
+        means = [item[0] for item in p99_intervals]
+        errors = np.asarray([
+            [item[1] for item in p99_intervals],
+            [item[2] for item in p99_intervals],
+        ])
+        plt.bar(p99_labels, means, yerr=errors, capsize=4)
+        plt.ylabel("P99 frame latency (us)")
+        plt.ylim(bottom=0)
+        plt.title("OBSS P99 frame latency (95% CI)")
+        plt.xticks(rotation=15, ha="right")
+        plt.tight_layout()
+        plt.savefig(output / "latency_p99.png", dpi=200)
+        plt.close()
+
+    adaptive_by_policy = {
+        policy: [row for row in rows if row["policy"] == policy]
+        for policy in ("adaptive_airtime_duplication", "adaptive_deficit_duplication")
+        if any(row["policy"] == policy for row in rows)
+    }
     fixed = _unique_pair_index(
         [row for row in rows if row["policy"] == "fixed_link_1"],
         "single-5-GHz",
@@ -282,25 +326,33 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
         [row for row in rows if row["topology"] == "mlo_str"],
         "MLO",
     )
-    paired_fixed = [
-        float(row["deadline_miss_ratio"]) -
-        float(fixed[_pair_key(row)]["deadline_miss_ratio"])
-        for row in adaptive if _pair_key(row) in fixed
-    ]
-    paired_mlo = [
-        float(row["deadline_miss_ratio"]) -
-        float(mlo[_pair_key(row)]["deadline_miss_ratio"])
-        for row in adaptive if _pair_key(row) in mlo
-    ]
-    if paired_fixed or paired_mlo:
+    paired_series: list[tuple[str, list[float]]] = []
+    for policy, policy_rows in adaptive_by_policy.items():
+        label = _policy_label(policy, "dual_interface")
+        paired_series.extend((
+            (
+                f"{label} - Single 5 GHz",
+                [
+                    float(row["deadline_miss_ratio"]) -
+                    float(fixed[_pair_key(row)]["deadline_miss_ratio"])
+                    for row in policy_rows if _pair_key(row) in fixed
+                ],
+            ),
+            (
+                f"{label} - MLO",
+                [
+                    float(row["deadline_miss_ratio"]) -
+                    float(mlo[_pair_key(row)]["deadline_miss_ratio"])
+                    for row in policy_rows if _pair_key(row) in mlo
+                ],
+            ),
+        ))
+    if any(series for _, series in paired_series):
         plt.figure(figsize=(7, 4.8))
         names = []
         values = []
         errs = []
-        for name, series in (
-            ("Adaptive - Single 5 GHz", paired_fixed),
-            ("Adaptive - MLO", paired_mlo),
-        ):
+        for name, series in paired_series:
             if not series:
                 continue
             mean, lo, hi = _interval(series)
@@ -311,16 +363,78 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
         plt.bar(names, values, yerr=error, capsize=4)
         plt.axhline(0.0, color="black", linewidth=0.8)
         plt.ylabel("Paired miss-ratio delta")
-        plt.title("Adaptive paired miss-ratio deltas")
+        plt.title("Adaptive-treatment paired miss-ratio deltas")
         plt.xticks(rotation=12, ha="right")
         plt.tight_layout()
         plt.savefig(output / "paired_miss_deltas.png", dpi=200)
         plt.close()
 
+    paired_p99_series: list[tuple[str, list[float]]] = []
+    paired_airtime_series: list[tuple[str, list[float]]] = []
+    for policy, policy_rows in adaptive_by_policy.items():
+        label = _policy_label(policy, "dual_interface")
+        paired_p99_series.append((
+            f"{label} - MLO",
+            [
+                float(row["latency_p99_us"]) -
+                float(mlo[_pair_key(row)]["latency_p99_us"])
+                for row in policy_rows
+                if _pair_key(row) in mlo and row["latency_p99_us"] is not None and
+                mlo[_pair_key(row)]["latency_p99_us"] is not None
+            ],
+        ))
+        paired_airtime_series.append((
+            label,
+            [
+                float(row["target_phy_tx_time_us"]) /
+                float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) - 1.0
+                for row in policy_rows
+                if _pair_key(row) in mlo and
+                float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) > 0
+            ],
+        ))
+    for series_with_names, ylabel, title, file_name, reference in (
+        (
+            paired_p99_series,
+            "Paired P99 latency delta (us)",
+            "Adaptive-treatment P99 deltas versus MLO",
+            "paired_p99_deltas.png",
+            0.0,
+        ),
+        (
+            paired_airtime_series,
+            "Total sender PHY TX increase versus MLO",
+            "Adaptive-treatment total airtime cost versus MLO",
+            "paired_total_airtime_increase_vs_mlo.png",
+            0.20,
+        ),
+    ):
+        populated = [(name, series) for name, series in series_with_names if series]
+        if not populated:
+            continue
+        intervals = [_interval(series) for _, series in populated]
+        plt.figure(figsize=(8, 4.8))
+        means = [item[0] for item in intervals]
+        errors = np.asarray([
+            [item[1] for item in intervals],
+            [item[2] for item in intervals],
+        ])
+        plt.bar([name for name, _ in populated], means, yerr=errors, capsize=4)
+        plt.axhline(reference, color="black", linewidth=0.8, linestyle="--")
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.xticks(rotation=12, ha="right")
+        plt.tight_layout()
+        plt.savefig(output / file_name, dpi=200)
+        plt.close()
+
     airtime_labels = [
         label for label in labels
         if any(row["secondary_airtime_fraction"] > 0 for row in by_label[label])
-        or label in {"Selective 0.20", "Adaptive airtime", "Full duplication"}
+        or label in {
+            "Selective 0.20", "Adaptive airtime", "Adaptive deficit",
+            "Full duplication",
+        }
     ]
     if airtime_labels:
         intervals = [
@@ -400,78 +514,122 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
     plt.savefig(output / "reliability_vs_airtime.png", dpi=200)
     plt.close()
 
-    if adaptive:
+    for metric, ylabel, title, file_name in (
+        (
+            "deadline_miss_ratio",
+            "Deadline miss ratio",
+            "Reliability versus total sender PHY TX airtime",
+            "reliability_vs_total_airtime.png",
+        ),
+        (
+            "latency_p99_us",
+            "P99 frame latency (us)",
+            "P99 latency versus total sender PHY TX airtime",
+            "p99_vs_total_airtime.png",
+        ),
+    ):
+        plt.figure(figsize=(7, 4.8))
+        plotted = False
+        for label in labels:
+            points = [row for row in by_label[label] if row[metric] is not None]
+            if not points:
+                continue
+            plotted = True
+            plt.scatter(
+                [float(row["target_phy_tx_fraction"]) for row in points],
+                [float(row[metric]) for row in points],
+                label=label,
+                s=36,
+            )
+        if plotted:
+            plt.xlabel("Total target sender PHY TX fraction")
+            plt.ylabel(ylabel)
+            plt.title(title)
+            plt.legend(fontsize=8)
+            plt.tight_layout()
+            plt.savefig(output / file_name, dpi=200)
+        plt.close()
+
+    if adaptive_by_policy:
         stage_columns = sorted(
             column for column in rows[0] if column.startswith("actions_stage_")
         )
         stage_labels = [column.removeprefix("actions_stage_") for column in stage_columns]
-        stage_counts = [
-            sum(int(row[column]) for row in adaptive) for column in stage_columns
-        ]
-        if stage_columns:
-            plt.figure(figsize=(7, 4.8))
-            plt.bar(stage_labels, stage_counts)
-            plt.xlabel("Action stage")
-            plt.ylabel("Actions across all runs")
-            plt.title("Adaptive action stage distribution")
-            plt.tight_layout()
-            plt.savefig(output / "action_stage_distribution.png", dpi=200)
-            plt.close()
+        multiple_adaptive_policies = len(adaptive_by_policy) > 1
+        for policy, policy_rows in adaptive_by_policy.items():
+            suffix = f"_{policy}" if multiple_adaptive_policies else ""
+            label = _policy_label(policy, "dual_interface")
+            stage_counts = [
+                sum(int(row[column]) for row in policy_rows) for column in stage_columns
+            ]
+            if stage_columns:
+                plt.figure(figsize=(7, 4.8))
+                plt.bar(stage_labels, stage_counts)
+                plt.xlabel("Action stage")
+                plt.ylabel("Actions across all runs")
+                plt.title(f"{label} action stage distribution")
+                plt.tight_layout()
+                plt.savefig(output / f"action_stage_distribution{suffix}.png", dpi=200)
+                plt.close()
 
-        first_run = min(adaptive, key=_pair_key)
-        first = Path(first_run["run_dir"]) / "adaptive_airtime_decisions.csv"
-        if first.is_file():
-            decisions = _read_csv(first)
-            times = [float(row["sample_time_ns"]) / 1e9 for row in decisions
-                     if row["sample_stage"] == "T0"]
-            prices = [float(row["shadow_price"]) for row in decisions
-                      if row["sample_stage"] == "T0"]
-            balances = [float(row["bucket_balance_us"]) for row in decisions
-                        if row["sample_stage"] == "T0"]
-            if times:
-                fig, ax1 = plt.subplots(figsize=(8, 4.8))
-                ax1.plot(times, prices, color="tab:blue", label="shadow price")
-                ax1.set_xlabel("Simulation time (s)")
-                ax1.set_ylabel("Shadow price", color="tab:blue")
-                ax2 = ax1.twinx()
-                ax2.plot(times, balances, color="tab:orange", label="bucket balance")
-                ax2.set_ylabel("Bucket balance (us)", color="tab:orange")
-                fig.tight_layout()
-                fig.savefig(output / "shadow_price_bucket_timeline.png", dpi=200)
-                plt.close(fig)
+            first_run = min(policy_rows, key=_pair_key)
+            first = Path(first_run["run_dir"]) / "adaptive_airtime_decisions.csv"
+            if first.is_file():
+                decisions = _read_csv(first)
+                times = [float(row["sample_time_ns"]) / 1e9 for row in decisions
+                         if row["sample_stage"] == "T0"]
+                prices = [float(row["shadow_price"]) for row in decisions
+                          if row["sample_stage"] == "T0"]
+                balances = [float(row["bucket_balance_us"]) for row in decisions
+                            if row["sample_stage"] == "T0"]
+                if times:
+                    fig, ax1 = plt.subplots(figsize=(8, 4.8))
+                    ax1.plot(times, prices, color="tab:blue", label="shadow price")
+                    ax1.set_xlabel("Simulation time (s)")
+                    ax1.set_ylabel("Shadow price", color="tab:blue")
+                    ax2 = ax1.twinx()
+                    ax2.plot(times, balances, color="tab:orange", label="bucket balance")
+                    ax2.set_ylabel("Bucket balance (us)", color="tab:orange")
+                    fig.suptitle(label)
+                    fig.tight_layout()
+                    fig.savefig(
+                        output / f"shadow_price_bucket_timeline{suffix}.png",
+                        dpi=200,
+                    )
+                    plt.close(fig)
 
-        estimated: list[float] = []
-        measured: list[float] = []
-        for adaptive_run in adaptive:
-            adaptive_dir = Path(adaptive_run["run_dir"])
-            action_rows = {
-                int(row["frame_id"]): float(row["estimated_airtime_us"])
-                for row in _read_csv(adaptive_dir / "adaptive_airtime_decisions.csv")
-                if row["decision"] == "action"
-            }
-            settlement_rows = {
-                int(row["frame_id"]): float(row["measured_airtime_us"])
-                for row in _read_csv(adaptive_dir / "secondary_airtime_settlements.csv")
-            }
-            if set(action_rows) != set(settlement_rows):
-                raise ValueError(
-                    f"{adaptive_dir}: adaptive actions and settlements do not match"
-                )
-            for frame_id in sorted(action_rows):
-                estimated.append(action_rows[frame_id])
-                measured.append(settlement_rows[frame_id])
-        if estimated:
-            limit = max(estimated + measured)
-            plt.figure(figsize=(6, 5.2))
-            plt.scatter(estimated, measured, s=12, alpha=0.25)
-            plt.plot([0, limit], [0, limit], linestyle="--", color="black", label="ideal")
-            plt.xlabel("Estimated airtime per action (us)")
-            plt.ylabel("Measured airtime per action (us)")
-            plt.title("Secondary airtime estimate calibration")
-            plt.legend()
-            plt.tight_layout()
-            plt.savefig(output / "estimated_vs_measured_airtime.png", dpi=200)
-            plt.close()
+            estimated: list[float] = []
+            measured: list[float] = []
+            for adaptive_run in policy_rows:
+                adaptive_dir = Path(adaptive_run["run_dir"])
+                action_rows = {
+                    int(row["frame_id"]): float(row["estimated_airtime_us"])
+                    for row in _read_csv(adaptive_dir / "adaptive_airtime_decisions.csv")
+                    if row["decision"] == "action"
+                }
+                settlement_rows = {
+                    int(row["frame_id"]): float(row["measured_airtime_us"])
+                    for row in _read_csv(adaptive_dir / "secondary_airtime_settlements.csv")
+                }
+                if set(action_rows) != set(settlement_rows):
+                    raise ValueError(
+                        f"{adaptive_dir}: adaptive actions and settlements do not match"
+                    )
+                for frame_id in sorted(action_rows):
+                    estimated.append(action_rows[frame_id])
+                    measured.append(settlement_rows[frame_id])
+            if estimated:
+                limit = max(estimated + measured)
+                plt.figure(figsize=(6, 5.2))
+                plt.scatter(estimated, measured, s=12, alpha=0.25)
+                plt.plot([0, limit], [0, limit], linestyle="--", color="black", label="ideal")
+                plt.xlabel("Estimated airtime per action (us)")
+                plt.ylabel("Measured airtime per action (us)")
+                plt.title(f"{label} airtime estimate calibration")
+                plt.legend()
+                plt.tight_layout()
+                plt.savefig(output / f"estimated_vs_measured_airtime{suffix}.png", dpi=200)
+                plt.close()
 
     for metric, ylabel, title, file_name in (
         (
