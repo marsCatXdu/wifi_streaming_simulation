@@ -1,0 +1,320 @@
+primary_tail_t4_operating_profiles_schema_version: 1
+analysis_id: primary-tail-t4-operating-profiles-v1
+evidence_status: post_selection_engineering_sensitivity
+independent_ood_claim: false
+
+model_artifact:
+  model_id: primary_tail_t4_obss_v1
+  bundle_schema_version: 2
+  artifact_scope: action_neutral_two_head_model
+  bundle_sha256: 1a9afc23452952d87c7b5845a22260321ba302f38f1c3fb1eeaafadb0a12856c
+  manifest_sha256: aaefb85bea8e96b615d6f52f3525e5a0cc0478554c2a1cf79b3c6ae9bd138c6e
+  target_provenance_sha256: 2b16b96bef68a32ec282e01b18a30506eaab933039c85e9bb1f6302da7b73be5
+  training_config_sha256: e6ac09cb00e9f91e3cc48b29cf408a302d465bbd98f6c619c7da0e3450eda2d6
+  runtime_export:
+    export_sha256: 164e87a3c4649f35d70fa1a3f3826211da0ae6590eeb84eefac8a45307ef885c
+    export_manifest_sha256: 6159ace30648e3ea00116628f05155d120423201fda911e84b72f1122a826870
+    target_provenance_sha256: 2b16b96bef68a32ec282e01b18a30506eaab933039c85e9bb1f6302da7b73be5
+    feature_contract_sha256: 8ccf33d6af8dffb8da758016acbd809a7cc054be4a1abc070d129c788b9c7cb0
+    combiner_sha256: 3d47b994ef5fcf579c73fb74492e0293dfe3ba377911f72f7a6b5fe764e6d9e0
+    primary_miss_model_sha256: 8f8944a536166cb0f7dcc7c1a7bcf781f6a4d8fc25a995e3b8ed983b8886d98d
+    completed_tail_model_sha256: ce787f6aaa9e2607c10bdb9227ae831eb6eb94e1499e9e1240e4d4ddc62a1fec
+
+dataset:
+  sha256: f4cf948abb9a4538f758a86e9adceb941b8a6892941a4145e063cc11b4b44208
+  manifest_sha256: 8ca795bfee353b31425b2705b8ccec86bc892880c383df0a08be3f683c15f55b
+  validation_sha256: 6a76ed8117d7b5e5b1c57e6c4a4f4f3abe824cb8ed53e06d7b36324696edab6d
+
+t0_dependency:
+  model_id: commodity_polling_1ms_obss_primary_t0_v1
+  bundle_sha256: 735e69ea4ad0ce615b6f827aaa8e3362135cf3f18e4c727d69920af9898d73bf
+  manifest_sha256: 80a69ba25ddd0704cb539ad22db5cf25972df122398a5bc9b9b2572d4a45f31a
+  target_provenance_sha256: e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84
+  pipeline_id: commodity_polling_1ms
+  stage: T0
+  expected_feature_count: 86
+  eligible_frame_type: I_FRAME
+  risk_density_threshold: 0.034
+  threshold_comparator: strict_greater
+  cost_mode: whole_secondary_copy
+  corrected_source_equivalence:
+    reference_dataset_sha256: 18c231a29e6045902ffca0d84d4c5881321d19cc7b5358bd8f665775570bc4eb
+    reference_dataset_manifest_sha256: cf2d4b5081a407ad20a866d533fd2448102dffa623e52ea76fc95f58f072945d
+    join_key: [seed, run, frame_id]
+    required_stages: [T0, T4]
+    required_relation: exact_outcomes_and_physical_features
+    expected_stage_audit:
+      T0:
+        frame_count: 43200
+        physical_feature_count: 86
+        physical_feature_names_sha256: 4a3f5c9de137f0ca4b8bb9f41e22d3e8042076c3e4206212e9ee37844bb34c4f
+        keyed_values_sha256: 932fa1e9d1eafe7f5a0793f8f9f0807ff6fea046237aaab67d564d26b856ee91
+        exactly_equal: true
+      T4:
+        frame_count: 43200
+        physical_feature_count: 101
+        physical_feature_names_sha256: 2136259648c281013a461b0287020df8c37b625165ccdeefc82ee0b7ffa1f36d
+        keyed_values_sha256: ad8aeb2d5829f4a3d933e5beed2969663ba71c4190121cb0e773bbb46aad72c4
+        exactly_equal: true
+
+airtime_estimator:
+  cost_safety_factor: 1.25
+  retry_inflation: 1.0
+  phy_preamble_us: 48.0
+  phy_data_rate_bps: 68823530
+  streaming_header_bytes: 50
+  expected_mac_service_overhead_bytes: 36
+  additional_airtime_bytes_per_packet: 38
+  payload_bytes_per_packet: 1200
+  reference_frame_size_bytes: 12000
+  reference_packet_count: 10
+  expected_reference_airtime_us: 1983.760667318285
+
+threshold_selection:
+  partition: calibration_seeds
+  calibration_seeds: [401, 404, 409, 418, 419, 422]
+  uses_labels: false
+  threshold_comparator: strict_greater
+  joint_t0_cost_accounting: subtract_raw_t0_i_gate_cost_before_residual_t4_selection
+  representation_stabilization: label_free_all_engineering_nearest_density_midpoint_preserving_preselected_strict_mask
+
+profiles:
+  full_copy_primary:
+    role: primary_closed_loop_candidate_family
+    t4_action_mode: whole_secondary_copy
+    admission_cost_mode: whole_secondary_copy
+    absolute_nominal_budget_fractions: [0.0055, 0.008, 0.010, 0.012]
+    candidate_designations:
+      balanced: 0.008
+      strong_tail: 0.010
+    token_bucket_fraction: 0.020
+    bucket_horizon_us: 10000000
+    initial_bucket_horizon_us: 2000000
+    runtime_bucket_accounting: measured_secondary_sender_phy_airtime
+    offline_replay_accounting: whole_copy_admission_price_debited_immediately
+  primary_deficit_iso_ablation:
+    role: mechanism_iso_ablation_not_deployment
+    t4_action_mode: reverse_primary_unacknowledged_packets
+    admission_cost_mode: whole_secondary_copy
+    decision_source: full_copy_primary_same_budget
+    token_bucket_fraction: 0.020
+    bucket_horizon_us: 10000000
+    initial_bucket_horizon_us: 2000000
+    runtime_bucket_accounting: measured_secondary_sender_phy_airtime
+    offline_replay_accounting: whole_copy_admission_price_debited_immediately
+
+expected_diagnostics:
+  runtime_export_audit:
+    validation: generator_validate_artifacts
+    actionable_score_count: 12650
+    maximum_absolute_admission_score_difference: 2.220446049250313e-16
+    export: 164e87a3c4649f35d70fa1a3f3826211da0ae6590eeb84eefac8a45307ef885c
+    target_provenance: 2b16b96bef68a32ec282e01b18a30506eaab933039c85e9bb1f6302da7b73be5
+    feature_contract: 8ccf33d6af8dffb8da758016acbd809a7cc054be4a1abc070d129c788b9c7cb0
+    combiner: 3d47b994ef5fcf579c73fb74492e0293dfe3ba377911f72f7a6b5fe764e6d9e0
+    primary_miss_model: 8f8944a536166cb0f7dcc7c1a7bcf781f6a4d8fc25a995e3b8ed983b8886d98d
+    completed_tail_model: ce787f6aaa9e2607c10bdb9227ae831eb6eb94e1499e9e1240e4d4ddc62a1fec
+  outcome_population:
+    source_seed_count: 24
+    run_group_count: 24
+    frame_count: 43200
+    actionable_t4_frame_count: 12650
+    primary_miss_count: 637
+    actionable_t4_primary_miss_count: 626
+    completed_tail_count: 2006
+    actionable_t4_completed_tail_count: 1996
+  corrected_source_equivalence:
+    T0:
+      frame_count: 43200
+      physical_feature_count: 86
+      physical_feature_names_sha256: 4a3f5c9de137f0ca4b8bb9f41e22d3e8042076c3e4206212e9ee37844bb34c4f
+      keyed_values_sha256: 932fa1e9d1eafe7f5a0793f8f9f0807ff6fea046237aaab67d564d26b856ee91
+      exactly_equal: true
+    T4:
+      frame_count: 43200
+      physical_feature_count: 101
+      physical_feature_names_sha256: 2136259648c281013a461b0287020df8c37b625165ccdeefc82ee0b7ffa1f36d
+      keyed_values_sha256: ad8aeb2d5829f4a3d933e5beed2969663ba71c4190121cb0e773bbb46aad72c4
+      exactly_equal: true
+  receiver_release_mismatch:
+    primary_miss_count: 637
+    primary_miss_mismatch_count: 204
+    actionable_t4_primary_miss_count: 626
+    actionable_t4_primary_miss_mismatch_count: 193
+  full_copy_primary:
+    "0.0055":
+      risk_density_threshold: 0.07905991394024306
+      selection_boundary_risk_density: 0.07903474843584872
+      maximum_rejected_risk_density: 0.07903474843584872
+      minimum_selected_risk_density: 0.07908507944463741
+      margin_above_maximum_rejected: 2.51655043943394e-05
+      margin_below_minimum_selected: 2.5165504394353277e-05
+      selection_action_mask_unchanged: true
+      stabilization_action_mask_unchanged: true
+      representation_stabilization: label_free_nearest_density_midpoint_preserving_preselected_strict_mask
+      stabilization_partition_rows: 43200
+      stabilization_candidate_rows: 12612
+      stabilization_uses_labels: false
+      calibration_runtime_gate_mask_difference_count: 0
+      all_engineering_runtime_gate_mask_difference_count: 0
+      calibration_combined_planned_cost_us: 1978173.1459836487
+      calibration_combined_planned_cost_fraction: 0.005494925405510135
+      calibration_bucket_rejections: 0
+      raw_action_identity_sha256: b2215d112992153ef44168aab9d729f45d95d34cc89e4fcdf0d1b5b9f61df830
+      raw_combined_actions: 3376
+      raw_admission_priced_cost_us: 6985740.112964274
+      raw_admission_priced_cost_fraction: 0.004851208411780746
+      raw_primary_miss_selected: 590
+      raw_completed_tail_selected: 1248
+      raw_i_actions: 50
+      raw_p_actions: 3326
+      realized_action_identity_sha256: b2215d112992153ef44168aab9d729f45d95d34cc89e4fcdf0d1b5b9f61df830
+      realized_combined_actions: 3376
+      realized_bucket_rejections: 0
+      realized_admission_priced_cost_us: 6985740.112964274
+      realized_admission_priced_cost_fraction: 0.004851208411780746
+      realized_primary_miss_selected: 590
+      realized_completed_tail_selected: 1248
+      realized_i_actions: 50
+      realized_p_actions: 3326
+    "0.008":
+      risk_density_threshold: 0.04585237128013217
+      selection_boundary_risk_density: 0.045843484453842585
+      maximum_rejected_risk_density: 0.045843484453842585
+      minimum_selected_risk_density: 0.04586125810642175
+      margin_above_maximum_rejected: 8.886826289584981e-06
+      margin_below_minimum_selected: 8.886826289578043e-06
+      selection_action_mask_unchanged: true
+      stabilization_action_mask_unchanged: true
+      representation_stabilization: label_free_nearest_density_midpoint_preserving_preselected_strict_mask
+      stabilization_partition_rows: 43200
+      stabilization_candidate_rows: 12612
+      stabilization_uses_labels: false
+      calibration_runtime_gate_mask_difference_count: 0
+      all_engineering_runtime_gate_mask_difference_count: 0
+      calibration_combined_planned_cost_us: 2879708.010280786
+      calibration_combined_planned_cost_fraction: 0.007999188917446628
+      calibration_bucket_rejections: 0
+      raw_action_identity_sha256: f3a7c1183827ba481d362cca2b791d25b2296f59d2ac382774e5f910a9e4cc50
+      raw_combined_actions: 4883
+      raw_admission_priced_cost_us: 10258060.256708717
+      raw_admission_priced_cost_fraction: 0.0071236529560477204
+      raw_primary_miss_selected: 613
+      raw_completed_tail_selected: 1600
+      raw_i_actions: 99
+      raw_p_actions: 4784
+      realized_action_identity_sha256: f3a7c1183827ba481d362cca2b791d25b2296f59d2ac382774e5f910a9e4cc50
+      realized_combined_actions: 4883
+      realized_bucket_rejections: 0
+      realized_admission_priced_cost_us: 10258060.256708717
+      realized_admission_priced_cost_fraction: 0.0071236529560477204
+      realized_primary_miss_selected: 613
+      realized_completed_tail_selected: 1600
+      realized_i_actions: 99
+      realized_p_actions: 4784
+    "0.01":
+      risk_density_threshold: 0.030390547162877975
+      selection_boundary_risk_density: 0.03038859651002042
+      maximum_rejected_risk_density: 0.03038859651002042
+      minimum_selected_risk_density: 0.030392497815735532
+      margin_above_maximum_rejected: 1.9506528575567728e-06
+      margin_below_minimum_selected: 1.9506528575567728e-06
+      selection_action_mask_unchanged: true
+      stabilization_action_mask_unchanged: true
+      representation_stabilization: label_free_nearest_density_midpoint_preserving_preselected_strict_mask
+      stabilization_partition_rows: 43200
+      stabilization_candidate_rows: 12612
+      stabilization_uses_labels: false
+      calibration_runtime_gate_mask_difference_count: 0
+      all_engineering_runtime_gate_mask_difference_count: 0
+      calibration_combined_planned_cost_us: 3599640.6538519603
+      calibration_combined_planned_cost_fraction: 0.009999001816255446
+      calibration_bucket_rejections: 6
+      raw_action_identity_sha256: a4eafc9b226717c1d3431a416b793bbe4f5e7b08895c0d363e76ae49ce191a68
+      raw_combined_actions: 5999
+      raw_admission_priced_cost_us: 12870155.619570807
+      raw_admission_priced_cost_fraction: 0.008937608069146393
+      raw_primary_miss_selected: 618
+      raw_completed_tail_selected: 1760
+      raw_i_actions: 168
+      raw_p_actions: 5831
+      realized_action_identity_sha256: 19ad99f55bb9d5d20dff1fc0103ad1cb5242ec29ed1a5cb44669c2a2bbf57442
+      realized_combined_actions: 5993
+      realized_bucket_rejections: 6
+      realized_admission_priced_cost_us: 12852481.773564944
+      realized_admission_priced_cost_fraction: 0.008925334564975655
+      realized_primary_miss_selected: 617
+      realized_completed_tail_selected: 1759
+      realized_i_actions: 167
+      realized_p_actions: 5826
+    "0.012":
+      risk_density_threshold: 0.02073164341662734
+      selection_boundary_risk_density: 0.02072698852935
+      maximum_rejected_risk_density: 0.02072698852935
+      minimum_selected_risk_density: 0.020736298303904683
+      margin_above_maximum_rejected: 4.654887277341646e-06
+      margin_below_minimum_selected: 4.654887277341646e-06
+      selection_action_mask_unchanged: true
+      stabilization_action_mask_unchanged: true
+      representation_stabilization: label_free_nearest_density_midpoint_preserving_preselected_strict_mask
+      stabilization_partition_rows: 43200
+      stabilization_candidate_rows: 12612
+      stabilization_uses_labels: false
+      calibration_runtime_gate_mask_difference_count: 0
+      all_engineering_runtime_gate_mask_difference_count: 0
+      calibration_combined_planned_cost_us: 4319573.297423134
+      calibration_combined_planned_cost_fraction: 0.01199881471506426
+      calibration_bucket_rejections: 34
+      raw_action_identity_sha256: 024448837cdc5d8fa4eaa4405bde7c1671ffab61e820f41bdb65a99956adee3c
+      raw_combined_actions: 7119
+      raw_admission_priced_cost_us: 15519042.435111947
+      raw_admission_priced_cost_fraction: 0.010777112802161074
+      raw_primary_miss_selected: 621
+      raw_completed_tail_selected: 1859
+      raw_i_actions: 242
+      raw_p_actions: 6877
+      realized_action_identity_sha256: 4fd9a3dc90393b36b0bc7030a573d8d562879541e906c48c28e4def5fed31718
+      realized_combined_actions: 7078
+      realized_bucket_rejections: 41
+      realized_admission_priced_cost_us: 15426165.683747988
+      realized_admission_priced_cost_fraction: 0.010712615058158325
+      realized_primary_miss_selected: 618
+      realized_completed_tail_selected: 1847
+      realized_i_actions: 240
+      realized_p_actions: 6838
+  primary_deficit_iso_ablation:
+    "0.0055":
+      raw_action_identity_sha256: b2215d112992153ef44168aab9d729f45d95d34cc89e4fcdf0d1b5b9f61df830
+      raw_mechanism_nominal_cost_us: 4851904.780774832
+      raw_mechanism_nominal_cost_fraction: 0.003369378319982522
+      realized_action_identity_sha256: b2215d112992153ef44168aab9d729f45d95d34cc89e4fcdf0d1b5b9f61df830
+      realized_mechanism_nominal_cost_us: 4851904.780774832
+      realized_mechanism_nominal_cost_fraction: 0.003369378319982522
+    "0.008":
+      raw_action_identity_sha256: f3a7c1183827ba481d362cca2b791d25b2296f59d2ac382774e5f910a9e4cc50
+      raw_mechanism_nominal_cost_us: 6742387.637184551
+      raw_mechanism_nominal_cost_fraction: 0.004682213636933716
+      realized_action_identity_sha256: f3a7c1183827ba481d362cca2b791d25b2296f59d2ac382774e5f910a9e4cc50
+      realized_mechanism_nominal_cost_us: 6742387.637184551
+      realized_mechanism_nominal_cost_fraction: 0.004682213636933716
+    "0.01":
+      raw_action_identity_sha256: a4eafc9b226717c1d3431a416b793bbe4f5e7b08895c0d363e76ae49ce191a68
+      raw_mechanism_nominal_cost_us: 8313151.350827254
+      raw_mechanism_nominal_cost_fraction: 0.005773021771407816
+      realized_action_identity_sha256: 19ad99f55bb9d5d20dff1fc0103ad1cb5242ec29ed1a5cb44669c2a2bbf57442
+      realized_mechanism_nominal_cost_us: 8300479.2825564165
+      realized_mechanism_nominal_cost_fraction: 0.005764221723997511
+    "0.012":
+      raw_action_identity_sha256: 024448837cdc5d8fa4eaa4405bde7c1671ffab61e820f41bdb65a99956adee3c
+      raw_mechanism_nominal_cost_us: 9861069.936462138
+      raw_mechanism_nominal_cost_fraction: 0.006847965233654263
+      realized_action_identity_sha256: 4fd9a3dc90393b36b0bc7030a573d8d562879541e906c48c28e4def5fed31718
+      realized_mechanism_nominal_cost_us: 9804937.013843957
+      realized_mechanism_nominal_cost_fraction: 0.006808984037391637
+
+limitations:
+  - all_24_source_seeds_were_consumed_by_engineering_meta_selection
+  - selected_positive_counts_are_not_closed_loop_rescues
+  - offline_full_and_deficit_action_identity_is_not_a_closed_loop_identity_claim
+  - nominal_airtime_does_not_include_closed_loop_retry_or_reservation_feedback
+  - fresh_seed_closed_loop_str_and_emlsr_mlo_comparisons_are_required

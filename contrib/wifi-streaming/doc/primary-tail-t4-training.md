@@ -111,3 +111,41 @@ Publish the trusted-local bundle and deterministic plain export:
 
 The trainer omits wall-clock time, timestamps, and invocation paths. Repeated
 runs with the same environment and inputs produce byte-identical artifacts.
+
+## Freeze operating profiles
+
+The deployment gates are defined separately in
+`experiments/configs/primary_tail_t4_operating_profiles_v1.yaml`. The nominal
+budget selector uses only the six calibration seeds and no outcome labels. A
+second, representation-only step places each strict `>` gate at the midpoint
+between the nearest rejected and selected score densities. That midpoint uses
+the score distribution from all 24 engineering seeds, without labels, solely
+to preserve the action mask selected by the calibration procedure. Fresh
+confirmation seeds are not involved.
+
+This interior threshold matters because the original boundary was exactly
+equal to a rejected sample density. A last-bit difference between the sklearn
+and plain-export evaluators could therefore change an action. The profile
+evaluator independently replays the exported heads and requires identical
+gate masks on both the calibration partition and all engineering rows. It also
+pins the model, export, target, feature, combiner, and head identities.
+
+Reproduce and verify the named profiles with:
+
+```bash
+.venv/bin/python tools/evaluate_primary_tail_t4_profiles.py \
+  results/primary_tail_t4_source_v1/dataset \
+  --model-dir results/primary_tail_t4_corrected_v1/models \
+  --model-config experiments/configs/primary_tail_t4_obss_v1.yaml \
+  --t0-bundle-dir results/primary_risk_t0_obss_v1/models \
+  --t0-reference-dataset-dir results/genuine_polling_v1/dataset \
+  --profile-config \
+    experiments/configs/primary_tail_t4_operating_profiles_v1.yaml \
+  --output \
+    results/primary_tail_t4_corrected_v1/models/operating_profile_diagnostics.json
+```
+
+The offline replay estimates admission cost and verifies controller identity;
+it does not claim closed-loop delivery benefit. Retry inflation, measured
+airtime settlement, secondary completion time, and action feedback are tested
+only by the paired STR MLO and EMLSR MLO campaign.
