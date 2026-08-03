@@ -45,6 +45,43 @@ explains the shared Block Ack/in-flight recovery failure.  Do not include it
 as a valid headline treatment merely because it enables opportunistic MPDU
 duplication.
 
+Current engineering evidence
+----------------------------
+
+The 30-seed ``adaptive_deficit_obss_v1`` discovery matrix established that
+the whole secondary copy is the useful action.  It reduced the union miss
+ratio to 0.609 percent, but used 1.94 percent secondary airtime and increased
+summed target sender airtime by about 33 percent relative to STR MLO.  At the
+same measured airtime, primary-deficit duplication was worse.  In particular,
+partial deficit copies consumed 37.3 percent of the deficit arm's airtime but
+rescued only 4 primary misses.
+
+Interpret predictor outcomes against the pre-intervention primary copy, not
+against the receiver union after an action.  In the discovery matrix, the T0
+score has primary-miss ROC AUC 0.851 and average precision 0.198.  Whole-copy
+actions rescued 378 of 384 selected primary misses, but 97.3 percent of their
+measured airtime was spent on frames whose primary copy met the deadline.
+Thus early selection, rather than conditional whole-copy rescue, is the main
+bottleneck.
+
+The 12-seed ``early_risk_obss_pilot_v1`` matrix is engineering evidence, not a
+positive result.  Its T0-only fixed risk-density gate kept mean summed sender
+airtime 16.5 percent above STR MLO, but missed 1.005 percent of frames versus
+0.718 percent for MLO.  Pooled completed-frame P99 latency was 21.78 ms versus
+19.63 ms.  The 1.5 s bucket deferred 1,328 risk-eligible actions, including 85
+actual primary misses, and used only 0.61 percent secondary airtime.  Do not
+promote or reuse these seeds as confirmation evidence.
+
+The existing treatment-free prediction dataset already contains correct
+primary-copy labels.  A group-held-out audit found that its neutral OBSS slice
+had never entered deployed-model training.  With the model family and feature
+contract held fixed, target-domain T0 training increased held-out ROC AUC from
+0.835 to 0.943 and top-10-percent miss recall from 58.6 to 81.9 percent.  The
+next controller iteration should therefore combine this frozen T0 model with
+whole-copy rescue, a fixed risk-density gate, and a burst-capable bucket whose
+startup credit and total finite-run airtime remain explicit.  Evaluate it on a
+new seed block before any publication-scale campaign.
+
 Deadline-aware frame abandonment
 --------------------------------
 
