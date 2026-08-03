@@ -97,6 +97,69 @@ def _unique_pair_index(
     return result
 
 
+def _ordered_policy_labels(
+    by_label: dict[str, list[dict[str, Any]]],
+) -> list[str]:
+    """Return the stable display order for every supported treatment."""
+    return [label for label in (
+        "Single 5 GHz",
+        "Selective 0.20",
+        "Adaptive airtime",
+        "Adaptive deficit",
+        "Full duplication",
+        "STR MLO",
+        "EMLSR MLO",
+    ) if label in by_label]
+
+
+def _paired_mlo_diagnostics(
+    adaptive_by_policy: dict[str, list[dict[str, Any]]],
+    mlo_by_topology: dict[str, dict[tuple[int, int], dict[str, Any]]],
+) -> tuple[
+    list[tuple[str, list[float]]],
+    list[tuple[str, list[float]]],
+    list[tuple[str, list[float]]],
+]:
+    """Build paired miss, P99, and airtime series for each MLO baseline."""
+    paired_miss_series: list[tuple[str, list[float]]] = []
+    paired_p99_series: list[tuple[str, list[float]]] = []
+    paired_airtime_series: list[tuple[str, list[float]]] = []
+    for policy, policy_rows in adaptive_by_policy.items():
+        treatment_label = _policy_label(policy, "dual_interface")
+        for topology, mlo in mlo_by_topology.items():
+            baseline_label = _policy_label("fixed_link_0", topology)
+            comparison_label = f"{treatment_label} - {baseline_label}"
+            paired_miss_series.append((
+                comparison_label,
+                [
+                    float(row["deadline_miss_ratio"]) -
+                    float(mlo[_pair_key(row)]["deadline_miss_ratio"])
+                    for row in policy_rows if _pair_key(row) in mlo
+                ],
+            ))
+            paired_p99_series.append((
+                comparison_label,
+                [
+                    float(row["latency_p99_us"]) -
+                    float(mlo[_pair_key(row)]["latency_p99_us"])
+                    for row in policy_rows
+                    if _pair_key(row) in mlo and row["latency_p99_us"] is not None and
+                    mlo[_pair_key(row)]["latency_p99_us"] is not None
+                ],
+            ))
+            paired_airtime_series.append((
+                comparison_label,
+                [
+                    float(row["target_phy_tx_time_us"]) /
+                    float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) - 1.0
+                    for row in policy_rows
+                    if _pair_key(row) in mlo and
+                    float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) > 0
+                ],
+            ))
+    return paired_miss_series, paired_p99_series, paired_airtime_series
+
+
 def _read_csv(path: Path) -> list[dict[str, str]]:
     if not path.is_file():
         raise ValueError(f"missing adaptive analysis input: {path}")
@@ -374,14 +437,7 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
     by_label: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         by_label[row["label"]].append(row)
-    labels = [label for label in (
-        "Single 5 GHz",
-        "Selective 0.20",
-        "Adaptive airtime",
-        "Adaptive deficit",
-        "Full duplication",
-        "MLO",
-    ) if label in by_label]
+    labels = _ordered_policy_labels(by_label)
 
     miss_intervals = [
         _interval([float(row["deadline_miss_ratio"]) for row in by_label[label]])
@@ -452,15 +508,10 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
                 for row in policy_rows if _pair_key(row) in fixed
             ],
         ))
-        for topology, mlo in mlo_by_topology.items():
-            paired_series.append((
-                f"{label} - {_policy_label('fixed_link_0', topology)}",
-                [
-                    float(row["deadline_miss_ratio"]) -
-                    float(mlo[_pair_key(row)]["deadline_miss_ratio"])
-                    for row in policy_rows if _pair_key(row) in mlo
-                ],
-            ))
+    paired_mlo_miss, paired_p99_series, paired_airtime_series = (
+        _paired_mlo_diagnostics(adaptive_by_policy, mlo_by_topology)
+    )
+    paired_series.extend(paired_mlo_miss)
     if any(series for _, series in paired_series):
         plt.figure(figsize=(7, 4.8))
         names = []
@@ -483,42 +534,18 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
         plt.savefig(output / "paired_miss_deltas.png", dpi=200)
         plt.close()
 
-    paired_p99_series: list[tuple[str, list[float]]] = []
-    paired_airtime_series: list[tuple[str, list[float]]] = []
-    for policy, policy_rows in adaptive_by_policy.items():
-        label = _policy_label(policy, "dual_interface")
-        paired_p99_series.append((
-            f"{label} - MLO",
-            [
-                float(row["latency_p99_us"]) -
-                float(mlo[_pair_key(row)]["latency_p99_us"])
-                for row in policy_rows
-                if _pair_key(row) in mlo and row["latency_p99_us"] is not None and
-                mlo[_pair_key(row)]["latency_p99_us"] is not None
-            ],
-        ))
-        paired_airtime_series.append((
-            label,
-            [
-                float(row["target_phy_tx_time_us"]) /
-                float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) - 1.0
-                for row in policy_rows
-                if _pair_key(row) in mlo and
-                float(mlo[_pair_key(row)]["target_phy_tx_time_us"]) > 0
-            ],
-        ))
     for series_with_names, ylabel, title, file_name, reference in (
         (
             paired_p99_series,
             "Paired P99 latency delta (us)",
-            "Adaptive-treatment P99 deltas versus MLO",
+            "Adaptive-treatment P99 deltas versus MLO baselines",
             "paired_p99_deltas.png",
             0.0,
         ),
         (
             paired_airtime_series,
             "Total sender PHY TX increase versus MLO",
-            "Adaptive-treatment total airtime cost versus MLO",
+            "Adaptive-treatment total airtime cost versus MLO baselines",
             "paired_total_airtime_increase_vs_mlo.png",
             0.20,
         ),
