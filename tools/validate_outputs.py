@@ -1930,8 +1930,16 @@ def _validate_randomized_intervention(
                 "launched_t2" if launched else "launch_rejected_t2",
             )
         elif not primary_actionable:
+            # The controller queries the canonical descriptor before checking
+            # T4 actionability.  A frame can therefore become MAC-complete
+            # while its delayed-copy descriptor remains observable; either
+            # descriptor value is factual and neither is noncompliance.
             expected_execution = (
-                False, False, False, False, "primary_not_actionable_t4"
+                descriptor_at_execution,
+                False,
+                False,
+                False,
+                "primary_not_actionable_t4",
             )
         elif not descriptor_at_execution:
             expected_execution = (

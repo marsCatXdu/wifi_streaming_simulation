@@ -283,7 +283,9 @@ class RandomizedInterventionFixture:
                 descriptor_at_execution, attempted, launched = 1, 1, 1
                 noncompliance, status = 0, "launched_t4"
             elif role == "t4_nonactionable":
-                descriptor_at_execution, attempted, launched = 0, 0, 0
+                # Production can still observe the delayed descriptor after
+                # the primary becomes nonactionable at T4.
+                descriptor_at_execution, attempted, launched = 1, 0, 0
                 noncompliance, status = 0, "primary_not_actionable_t4"
             else:
                 descriptor_at_execution, attempted, launched = 0, 0, 0
@@ -371,6 +373,21 @@ class RandomizedInterventionValidationTest(unittest.TestCase):
             estimates, nominals = fixture.validate()
             self.assertEqual(set(estimates), fixture.duplicated)
             self.assertEqual(set(nominals), fixture.duplicated)
+
+    def test_accepts_nonactionable_t4_after_descriptor_disappears(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fixture = self.fixture(Path(temporary))
+            frame_id = next(
+                frame_id for frame_id, role in fixture.roles.items()
+                if role == "t4_nonactionable"
+            )
+            fixture.mutate(
+                "randomized_intervention_executions.csv",
+                frame_id,
+                "descriptor_available_at_execution",
+                0,
+            )
+            fixture.validate()
 
     def test_rejects_random_draw_mutation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
