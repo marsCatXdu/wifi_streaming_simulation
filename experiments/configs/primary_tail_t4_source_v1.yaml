@@ -1,0 +1,39 @@
+extends: prediction_obss.yaml
+name: primary-tail-t4-corrected-source-v1
+output_root: results/primary_tail_t4_source_v1/runs
+workers: 24
+
+# These runs replace the exhausted fixed-link source population at the
+# station-manager-corrected project commit. They remain engineering data: the
+# only independent evaluation is a later fresh-seed closed-loop campaign.
+seeds:
+  - 401
+  - 402
+  - 403
+  - 404
+  - 405
+  - 406
+  - 407
+  - 408
+  - 409
+  - 410
+  - 411
+  - 412
+  - 413
+  - 414
+  - 415
+  - 416
+  - 418
+  - 419
+  - 420
+  - 421
+  - 422
+  - 423
+  - 424
+  - 425
+
+policies:
+  - name: fixed_link_1
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_oracle_features_enabled: false

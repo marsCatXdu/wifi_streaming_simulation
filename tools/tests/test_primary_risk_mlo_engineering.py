@@ -172,6 +172,32 @@ class PrimaryRiskMloEngineeringConfigTest(unittest.TestCase):
             self.assertEqual(prediction["adaptive_airtime_budget_fraction"], 0.02)
             self.assertEqual(prediction["adaptive_airtime_dual_step"], 0.0)
 
+    def test_primary_tail_source_replays_corrected_fixed_link_population(self) -> None:
+        document = load_yaml(
+            ROOT / "experiments/configs/primary_tail_t4_source_v1.yaml"
+        )
+        specs = expand_config(document)
+
+        expected_seeds = set(range(401, 417)) | set(range(418, 426))
+        self.assertEqual(document["name"], "primary-tail-t4-corrected-source-v1")
+        self.assertEqual(document["workers"], 24)
+        self.assertEqual(len(specs), 24)
+        self.assertEqual({spec["seed"] for spec in specs}, expected_seeds)
+        self.assertEqual(
+            {
+                (spec["config"]["topology"], spec["config"]["policy"])
+                for spec in specs
+            },
+            {("dual_interface", "fixed_link_1")},
+        )
+        for spec in specs:
+            prediction = spec["config"]["prediction"]
+            self.assertTrue(prediction["prediction_telemetry_enabled"])
+            self.assertEqual(
+                prediction["prediction_sample_offsets_us"], [0, 1000, 2000, 4000]
+            )
+            self.assertFalse(prediction["prediction_oracle_features_enabled"])
+
 
 if __name__ == "__main__":
     unittest.main()
