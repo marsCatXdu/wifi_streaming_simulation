@@ -282,7 +282,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  },\n"
            << "  \"wifi\": {\n"
            << "    \"standard\": \"" << JsonEscape(config.standard) << "\",\n"
-           << "    \"station_manager\": \"ConstantRateWifiManager\",\n"
+           << "    \"station_manager\": \"" << JsonEscape(config.stationManager)
+           << "\",\n"
            << "    \"data_mode\": \"" << JsonEscape(config.dataMode) << "\",\n"
            << "    \"control_mode\": \"" << JsonEscape(config.controlMode) << "\",\n"
            << "    \"guard_interval\": \"" << JsonEscape(config.guardInterval) << "\",\n"

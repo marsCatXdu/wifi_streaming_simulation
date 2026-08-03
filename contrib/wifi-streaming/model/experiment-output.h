@@ -67,6 +67,7 @@ struct StreamingRunConfig
     double nakagamiM2{0.75};
     int64_t propagationStreamBase{5000};
     std::string standard;
+    std::string stationManager{"ConstantRateWifiManager"};
     std::string dataMode;
     std::string controlMode;
     std::vector<std::string> channelSettings;

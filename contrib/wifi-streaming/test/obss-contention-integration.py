@@ -110,6 +110,14 @@ def main() -> None:
         )
         assert all(value > 0 for value in dual_summary["background_bytes_received_per_link"])
         assert all(value > 0 for value in mlo_summary["background_bytes_received_per_link"])
+        assert dual_config["wifi"]["station_manager"] == "ConstantRateWifiManager"
+        assert dual_config["wifi"]["control_mode"] == (
+            "ErpOfdmRate24Mbps,OfdmRate24Mbps"
+        )
+        assert mlo_config["wifi"]["station_manager"] == "ConstantRateWifiManager"
+        assert mlo_config["wifi"]["control_mode"] == (
+            "ErpOfdmRate24Mbps,OfdmRate24Mbps"
+        )
         assert dual_config["wifi"]["sta_max_inflights"] == 1
         assert mlo_config["wifi"]["sta_max_inflights"] == 2
 

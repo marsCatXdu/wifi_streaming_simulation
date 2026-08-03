@@ -1109,15 +1109,6 @@ main(int argc, char* argv[])
     {
         wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
     }
-    wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                 "DataMode",
-                                 StringValue(dataMode),
-                                 "ControlMode",
-                                 StringValue(controlModeForLink(0)),
-                                 "RtsCtsThreshold",
-                                 UintegerValue(rtsCtsThreshold),
-                                 "FragmentationThreshold",
-                                 UintegerValue(fragmentationThreshold));
     NetDeviceContainer stationDevices;
     NetDeviceContainer apWifiDevices;
     std::vector<NetDeviceContainer> backgroundDevices(linkCount);
@@ -1206,6 +1197,16 @@ main(int argc, char* argv[])
         Ptr<MultiModelSpectrumChannel> channel = makeWifiChannel(referenceLossDb, link);
         wifiChannels[link] = channel;
 
+        wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
+                                     "DataMode",
+                                     StringValue(dataMode),
+                                     "ControlMode",
+                                     StringValue(controlModeForLink(link)),
+                                     "RtsCtsThreshold",
+                                     UintegerValue(rtsCtsThreshold),
+                                     "FragmentationThreshold",
+                                     UintegerValue(fragmentationThreshold));
+
         SpectrumWifiPhyHelper phy;
         phy.SetChannel(channel);
         phy.Set("ChannelSettings", StringValue(channelSettings));
@@ -1231,20 +1232,6 @@ main(int argc, char* argv[])
         {
             installBackgroundLink(ssidName, channelSettings, link);
         }
-        wifi.SetStandard(standard);
-        if (wifiStandard == "he" || wifiStandard == "eht")
-        {
-            wifi.ConfigHeOptions("GuardInterval", TimeValue(NanoSeconds(guardIntervalNs)));
-        }
-        wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                     "DataMode",
-                                     StringValue(dataMode),
-                                     "ControlMode",
-                                     StringValue(controlModeForLink(link)),
-                                     "RtsCtsThreshold",
-                                     UintegerValue(rtsCtsThreshold),
-                                     "FragmentationThreshold",
-                                     UintegerValue(fragmentationThreshold));
         ConfigureUlOfdmaScheduler(mac,
                                   ulOfdmaEnabled,
                                   ulOfdmaAccessIntervalMs,
@@ -1487,6 +1474,35 @@ main(int argc, char* argv[])
             WifiStaticSetupHelper::SetStaticBlockAck(targetStaMld, targetApMld, 0);
         }
     }
+
+    std::string observedStationManager;
+    std::string observedControlModes;
+    for (uint32_t deviceIndex = 0; deviceIndex < stationDevices.GetN(); ++deviceIndex)
+    {
+        const auto wifiDevice = DynamicCast<WifiNetDevice>(stationDevices.Get(deviceIndex));
+        NS_ABORT_MSG_IF(!wifiDevice, "Target station device is not a WifiNetDevice");
+        for (const auto& manager : wifiDevice->GetRemoteStationManagers())
+        {
+            const std::string managerName = manager->GetInstanceTypeId().GetName();
+            NS_ABORT_MSG_IF(managerName != "ns3::ConstantRateWifiManager",
+                            "Unexpected target station manager: " << managerName);
+            observedStationManager = "ConstantRateWifiManager";
+            WifiModeValue controlMode;
+            manager->GetAttribute("ControlMode", controlMode);
+            if (!observedControlModes.empty())
+            {
+                observedControlModes += ",";
+            }
+            observedControlModes += controlMode.Get().GetUniqueName();
+        }
+    }
+    const std::string expectedControlModes =
+        topology == "single_link" ? "OfdmRate24Mbps"
+                                  : "ErpOfdmRate24Mbps,OfdmRate24Mbps";
+    NS_ABORT_MSG_IF(observedControlModes != expectedControlModes,
+                    "Target station control modes are " << observedControlModes
+                                                         << ", expected "
+                                                         << expectedControlModes);
     if (emlsrMlo)
     {
         Simulator::Schedule(NanoSeconds(1),
@@ -2130,9 +2146,8 @@ main(int argc, char* argv[])
     resolved.propagationStreamBase = propagationStreamBase;
     resolved.standard = StandardLabel(wifiStandard);
     resolved.dataMode = dataMode;
-    resolved.controlMode = topology == "single_link"
-                               ? "OfdmRate24Mbps"
-                               : "ErpOfdmRate24Mbps,OfdmRate24Mbps";
+    resolved.stationManager = observedStationManager;
+    resolved.controlMode = observedControlModes;
     resolved.guardInterval = std::to_string(guardIntervalNs) + "ns";
     resolved.channelSettings =
         topology == "single_link"
