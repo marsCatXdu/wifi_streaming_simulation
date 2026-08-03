@@ -234,6 +234,27 @@ stream assignments and delivered totals. `background_rate_periods.csv`
 records every ON interval and its sampled rate. Resolved propagation,
 positions, and stream bases are retained in `resolved_config.json`.
 
+### Adaptive secondary-airtime duplication
+
+`adaptive_airtime_duplication` sends every frame first on path 1 (5 GHz) and
+may launch one delayed whole-frame copy on path 0 (2.4 GHz). The frozen causal
+predictor is evaluated only at configured telemetry stages. Admission uses the
+calibrated miss probability minus a shadow-price-weighted, normalized estimate
+of secondary sender PHY TX airtime. A token bucket limits measured airtime;
+outstanding estimates are reservations and do not reduce the earned balance
+until a tagged PPDU actually transmits.
+
+`SecondaryAirtimeMeter` observes path-0 sender `PhyTxPsduBegin` events in the
+half-open measurement interval. It counts a tagged data PPDU once, allocates a
+multi-frame PPDU in proportion to tagged MPDU bytes, and counts retransmissions
+again. Reservations settle only after every distinct packet is ACKed or
+terminally dropped, with a logged deadline-plus-queue-delay fallback. The
+run-level contract consists of `adaptive_airtime_decisions.csv`,
+`secondary_airtime_events.csv`, `secondary_airtime_settlements.csv`, and
+`secondary_airtime_summary.json`. Validation reconciles the controller
+arithmetic, action frame IDs, event total, per-frame settlements, link-0 PHY TX
+occupancy, and finite-run budget.
+
 Controller behavior is covered by deterministic, common-versus-local, trace,
 and independent-versus-common tests in the module suite. The controlled
 end-to-end check
@@ -245,6 +266,11 @@ delivery and link-0 MPDU service time.
 MLO delivery, one socket/no duplication metadata, two rows sharing one device
 ID, and successful MPDUs plus PHY TX occupancy on both links.
 
+`contrib/wifi-streaming/test/selective-meter-regression.py` runs the frozen
+selective controller with identical RNG inputs and the passive airtime meter
+disabled and enabled. After removing run IDs, it requires identical field
+values in the frame, final policy-decision, and selective-controller CSV rows.
+
 ## Current boundaries
 
 - Stations associated with the target MLO AP are supported only by the
@@ -254,9 +280,11 @@ ID, and successful MPDUs plus PHY TX occupancy on both links.
   failed MPDUs and retry-limit drops only per device. Those device-level
   failure totals are placed on MLO link row 0 to avoid double-counting;
   successful retransmissions are summed from per-link success records.
-- Prediction telemetry is passive and restricted to fixed-link dual-interface
-  runs. No model or adaptive action is implemented. `StaticBestLinkPolicy`
-  uses configured initialization scores and does not switch during a run.
+- Prediction telemetry remains receiver-independent and is restricted to
+  fixed-link, selective-duplication, and adaptive-airtime dual-interface runs.
+  The selective and adaptive policies use the frozen commodity-polling model;
+  `StaticBestLinkPolicy` uses configured initialization scores and does not
+  switch during a run.
 - A duplicated frame retains its union-completion timestamp while the receiver
   waits for both complete copy states or a finalization timeout. This permits
   independent copy-completion and duplicate accounting without changing the
