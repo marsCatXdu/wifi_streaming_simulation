@@ -165,6 +165,54 @@ class AdaptiveDeficitDuplicationPolicy : public AdaptiveAirtimeDuplicationPolicy
     std::string GetName() const override;
 };
 
+/**
+ * Select a fixed primary for randomized delayed full-copy exploration.
+ *
+ * This policy does not duplicate at the frame boundary. A separate experiment
+ * controller uses a precomputed frame assignment to launch a full secondary
+ * copy at the assigned T2 or T4 intervention time. The distinct policy type
+ * and name preserve experiment provenance.
+ */
+class RandomizedFullCopyExplorationPolicy : public RedundancyPolicy
+{
+  public:
+    /**
+     * Get the policy TypeId.
+     *
+     * @return Policy TypeId.
+     */
+    static TypeId GetTypeId();
+
+    RandomizedFullCopyExplorationPolicy();
+
+    /**
+     * Set the fixed primary path used for every frame.
+     *
+     * @param path Primary application path.
+     */
+    void SetPrimaryPath(PathId path);
+
+    /**
+     * Select the fixed primary without immediate duplication.
+     *
+     * @param frame Frame being assigned to the primary path.
+     * @param telemetry Causal link telemetry at the frame boundary.
+     * @return Fixed-primary decision for later experimental intervention.
+     */
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+
+    /**
+     * Get the stable policy provenance name.
+     *
+     * @return Policy name.
+     */
+    std::string GetName() const override;
+
+  private:
+    PathId m_primary{1}; ///< Primary path used before the assigned intervention.
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H

@@ -16,6 +16,7 @@ build_lib(
     model/secondary-airtime-meter.cc
     model/metrics-collector.cc
     model/experiment-output.cc
+    model/randomized-frame-assignment.cc
     model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
@@ -38,6 +39,7 @@ build_lib(
     model/secondary-airtime-meter.h
     model/metrics-collector.h
     model/experiment-output.h
+    model/randomized-frame-assignment.h
     model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h

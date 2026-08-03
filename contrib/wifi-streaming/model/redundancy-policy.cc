@@ -17,6 +17,7 @@ NS_OBJECT_ENSURE_REGISTERED(FullDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(SelectiveDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveDeficitDuplicationPolicy);
+NS_OBJECT_ENSURE_REGISTERED(RandomizedFullCopyExplorationPolicy);
 
 TypeId
 RedundancyPolicy::GetTypeId()
@@ -285,6 +286,50 @@ std::string
 AdaptiveDeficitDuplicationPolicy::GetName() const
 {
     return "adaptive_deficit_duplication";
+}
+
+TypeId
+RandomizedFullCopyExplorationPolicy::GetTypeId()
+{
+    static TypeId tid =
+        TypeId("ns3::RandomizedFullCopyExplorationPolicy")
+            .SetParent<RedundancyPolicy>()
+            .SetGroupName("WifiStreaming")
+            .AddConstructor<RandomizedFullCopyExplorationPolicy>()
+            .AddAttribute("PrimaryPath",
+                          "Path used before the assigned randomized intervention.",
+                          UintegerValue(1),
+                          MakeUintegerAccessor(&RandomizedFullCopyExplorationPolicy::m_primary),
+                          MakeUintegerChecker<PathId>());
+    return tid;
+}
+
+RandomizedFullCopyExplorationPolicy::RandomizedFullCopyExplorationPolicy() = default;
+
+void
+RandomizedFullCopyExplorationPolicy::SetPrimaryPath(PathId path)
+{
+    m_primary = path;
+}
+
+PolicyDecision
+RandomizedFullCopyExplorationPolicy::Decide(const FrameDescriptor&,
+                                            const LinkTelemetrySnapshot& telemetry)
+{
+    PolicyDecision decision;
+    decision.primaryPath = m_primary;
+    decision.reason = "randomized delayed full-copy exploration primary";
+    if (auto score = telemetry.pathScores.find(m_primary); score != telemetry.pathScores.end())
+    {
+        decision.primaryScore = score->second;
+    }
+    return decision;
+}
+
+std::string
+RandomizedFullCopyExplorationPolicy::GetName() const
+{
+    return "randomized_full_copy_exploration";
 }
 
 } // namespace ns3

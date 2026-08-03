@@ -17,6 +17,8 @@
 #include "ns3/multipath-sender.h"
 #include "ns3/prediction-model-evaluator.h"
 #include "ns3/prediction-telemetry-collector.h"
+#include "ns3/random-variable-stream.h"
+#include "ns3/randomized-frame-assignment.h"
 #include "ns3/random-rate-on-off-application.h"
 #include "ns3/redundancy-policy.h"
 #include "ns3/secondary-airtime-meter.h"
@@ -33,6 +35,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -1646,6 +1649,325 @@ class PolicyTestCase : public TestCase
                               true,
                               "Duplication secondary is absent");
         NS_TEST_ASSERT_MSG_EQ(*decision.secondaryPath, 1, "Wrong duplication secondary");
+    }
+};
+
+/**
+ * Pin the splitmix64_v1 tuple fold and top-53-bit conversion.
+ */
+class RandomizedFrameAssignmentGoldenTestCase : public TestCase
+{
+  public:
+    RandomizedFrameAssignmentGoldenTestCase()
+        : TestCase("Randomized frame assignment matches splitmix64_v1 golden vectors")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        struct GoldenCase
+        {
+            uint64_t salt;                ///< Experiment salt.
+            uint64_t seed;                ///< Experiment seed.
+            uint64_t run;                 ///< Experiment run.
+            uint64_t frameId;             ///< Frame identifier.
+            uint64_t rawDraw;             ///< Expected full-width draw.
+            double unitDraw;              ///< Expected unit draw.
+            RandomizedExplorationArm arm; ///< Expected arm for pT2=0.2 and pT4=0.5.
+            double armProbability;        ///< Expected assigned-arm probability.
+        };
+
+        constexpr std::array<GoldenCase, 7> goldenCases{{
+            {0x0ULL,
+             0x0ULL,
+             0x0ULL,
+             0x0ULL,
+             0x2130748aaac80268ULL,
+             0x1.0983a45556400p-3,
+             RandomizedExplorationArm::FULL_COPY_T2,
+             0.2},
+            {0x1ULL,
+             0x0ULL,
+             0x0ULL,
+             0x0ULL,
+             0xe28195ddd9ee4956ULL,
+             0x1.c5032bbbb3dc9p-1,
+             RandomizedExplorationArm::CONTROL,
+             0.3},
+            {0x0ULL,
+             0x1ULL,
+             0x0ULL,
+             0x0ULL,
+             0xd1c0270687984b37ULL,
+             0x1.a3804e0d0f309p-1,
+             RandomizedExplorationArm::CONTROL,
+             0.3},
+            {0x0ULL,
+             0x0ULL,
+             0x1ULL,
+             0x0ULL,
+             0xd9eef7f073d37c42ULL,
+             0x1.b3ddefe0e7a6fp-1,
+             RandomizedExplorationArm::CONTROL,
+             0.3},
+            {0x0ULL,
+             0x0ULL,
+             0x0ULL,
+             0x1ULL,
+             0x2a4f111b3be57715ULL,
+             0x1.527888d9df2b8p-3,
+             RandomizedExplorationArm::FULL_COPY_T2,
+             0.2},
+            {0xdecafbad12345678ULL,
+             123ULL,
+             17ULL,
+             999999ULL,
+             0xc55c5329fe091c3bULL,
+             0x1.8ab8a653fc123p-1,
+             RandomizedExplorationArm::CONTROL,
+             0.3},
+            {0xffffffffffffffffULL,
+             0xffffffffffffffffULL,
+             0xffffffffffffffffULL,
+             0xffffffffffffffffULL,
+             0x9c666618c8f279d7ULL,
+             0x1.38cccc3191e4fp-1,
+             RandomizedExplorationArm::FULL_COPY_T4,
+             0.5},
+        }};
+
+        NS_TEST_ASSERT_MSG_EQ(RandomizedFrameAssignment::GetAlgorithmId(),
+                              "splitmix64_v1",
+                              "Assignment algorithm provenance changed");
+        for (const auto& golden : goldenCases)
+        {
+            const auto assignment = RandomizedFrameAssignment::Assign(golden.salt,
+                                                                      golden.seed,
+                                                                      golden.run,
+                                                                      golden.frameId,
+                                                                      0.2,
+                                                                      0.5);
+            NS_TEST_ASSERT_MSG_EQ(assignment.rawDraw,
+                                  golden.rawDraw,
+                                  "SplitMix64 tuple fold changed");
+            NS_TEST_ASSERT_MSG_EQ_TOL(assignment.unitDraw,
+                                      golden.unitDraw,
+                                      0.0,
+                                      "Top-53-bit conversion changed");
+            NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(assignment.arm),
+                                  static_cast<uint8_t>(golden.arm),
+                                  "Golden vector selected the wrong arm");
+            NS_TEST_ASSERT_MSG_EQ_TOL(assignment.armProbability,
+                                      golden.armProbability,
+                                      1e-15,
+                                      "Golden vector reported the wrong propensity");
+        }
+    }
+};
+
+/**
+ * Verify half-open arm boundaries and probability validation.
+ */
+class RandomizedFrameAssignmentBoundaryTestCase : public TestCase
+{
+  public:
+    RandomizedFrameAssignmentBoundaryTestCase()
+        : TestCase("Randomized frame assignment validates probabilities and arm boundaries")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        const auto baseline = RandomizedFrameAssignment::Assign(0, 0, 0, 0, 0.0, 0.0);
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(baseline.arm),
+                              static_cast<uint8_t>(RandomizedExplorationArm::CONTROL),
+                              "Zero intervention probability did not select control");
+        NS_TEST_ASSERT_MSG_EQ(baseline.unitDraw >= 0.0 && baseline.unitDraw < 1.0,
+                              true,
+                              "Unit draw is outside [0, 1)");
+
+        auto boundary = RandomizedFrameAssignment::Assign(0,
+                                                           0,
+                                                           0,
+                                                           0,
+                                                           baseline.unitDraw,
+                                                           0.5);
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(boundary.arm),
+                              static_cast<uint8_t>(RandomizedExplorationArm::FULL_COPY_T4),
+                              "T2 upper boundary was not assigned to T4");
+
+        boundary = RandomizedFrameAssignment::Assign(0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      std::nextafter(baseline.unitDraw, 1.0),
+                                                      0.5);
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(boundary.arm),
+                              static_cast<uint8_t>(RandomizedExplorationArm::FULL_COPY_T2),
+                              "Draw immediately below the T2 boundary did not select T2");
+
+        boundary = RandomizedFrameAssignment::Assign(0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0.0,
+                                                      baseline.unitDraw);
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(boundary.arm),
+                              static_cast<uint8_t>(RandomizedExplorationArm::CONTROL),
+                              "T4 upper boundary was not assigned to control");
+
+        boundary = RandomizedFrameAssignment::Assign(0,
+                                                      0,
+                                                      0,
+                                                      0,
+                                                      0.0,
+                                                      std::nextafter(baseline.unitDraw, 1.0));
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(boundary.arm),
+                              static_cast<uint8_t>(RandomizedExplorationArm::FULL_COPY_T4),
+                              "Draw immediately below the T4 boundary did not select T4");
+
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint8_t>(RandomizedFrameAssignment::Assign(0, 0, 0, 0, 1.0, 0.0).arm),
+            static_cast<uint8_t>(RandomizedExplorationArm::FULL_COPY_T2),
+            "Probability-one T2 boundary was rejected");
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint8_t>(RandomizedFrameAssignment::Assign(0, 0, 0, 0, 0.0, 1.0).arm),
+            static_cast<uint8_t>(RandomizedExplorationArm::FULL_COPY_T4),
+            "Probability-one T4 boundary was rejected");
+
+        const double infinity = std::numeric_limits<double>::infinity();
+        const double nan = std::numeric_limits<double>::quiet_NaN();
+        const std::array<std::array<double, 2>, 10> invalidProbabilities{{
+            {{-0.1, 0.0}},
+            {{0.0, -0.1}},
+            {{0.8, 0.3}},
+            {{1.1, 0.0}},
+            {{0.0, 1.1}},
+            {{infinity, 0.0}},
+            {{0.0, infinity}},
+            {{nan, 0.0}},
+            {{0.0, nan}},
+            {{0.0, -infinity}},
+        }};
+        for (const auto& probabilities : invalidProbabilities)
+        {
+            bool rejected = false;
+            try
+            {
+                RandomizedFrameAssignment::Assign(0,
+                                                  0,
+                                                  0,
+                                                  0,
+                                                  probabilities[0],
+                                                  probabilities[1]);
+            }
+            catch (const std::invalid_argument&)
+            {
+                rejected = true;
+            }
+            NS_TEST_ASSERT_MSG_EQ(rejected, true, "Invalid exploration probabilities accepted");
+        }
+    }
+};
+
+/**
+ * Verify deterministic assignment without consuming ns-3 RNG streams.
+ */
+class RandomizedFrameAssignmentDeterminismTestCase : public TestCase
+{
+  public:
+    RandomizedFrameAssignmentDeterminismTestCase()
+        : TestCase("Randomized frame assignment is deterministic and stream-independent")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        const auto first =
+            RandomizedFrameAssignment::Assign(0x123456789abcdef0ULL, 9, 41, 73, 0.2, 0.5);
+        const auto repeated =
+            RandomizedFrameAssignment::Assign(0x123456789abcdef0ULL, 9, 41, 73, 0.2, 0.5);
+        NS_TEST_ASSERT_MSG_EQ(first.rawDraw, repeated.rawDraw, "Repeated assignment changed");
+        NS_TEST_ASSERT_MSG_EQ_TOL(first.unitDraw,
+                                  repeated.unitDraw,
+                                  0.0,
+                                  "Repeated unit draw changed");
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(first.arm),
+                              static_cast<uint8_t>(repeated.arm),
+                              "Repeated arm assignment changed");
+
+        auto observedStream = CreateObject<UniformRandomVariable>();
+        auto referenceStream = CreateObject<UniformRandomVariable>();
+        observedStream->SetStream(741);
+        referenceStream->SetStream(741);
+        NS_TEST_ASSERT_MSG_EQ_TOL(observedStream->GetValue(),
+                                  referenceStream->GetValue(),
+                                  0.0,
+                                  "Explicit RNG streams did not begin identically");
+        for (uint64_t frameId = 0; frameId < 1000; ++frameId)
+        {
+            const auto assignment =
+                RandomizedFrameAssignment::Assign(0x123456789abcdef0ULL,
+                                                  9,
+                                                  41,
+                                                  frameId,
+                                                  0.2,
+                                                  0.5);
+            NS_TEST_ASSERT_MSG_EQ(assignment.unitDraw >= 0.0 && assignment.unitDraw < 1.0,
+                                  true,
+                                  "Generated unit draw is outside [0, 1)");
+        }
+        NS_TEST_ASSERT_MSG_EQ_TOL(observedStream->GetValue(),
+                                  referenceStream->GetValue(),
+                                  0.0,
+                                  "Frame assignment consumed an ns-3 RNG stream");
+    }
+};
+
+/**
+ * Verify the distinct delayed-primary policy contract and provenance.
+ */
+class RandomizedFullCopyExplorationPolicyTestCase : public TestCase
+{
+  public:
+    RandomizedFullCopyExplorationPolicyTestCase()
+        : TestCase("Randomized full-copy exploration policy preserves delayed provenance")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        const FrameDescriptor frame{1, 0, 1200, 1, 10000, FrameType::P_FRAME};
+        LinkTelemetrySnapshot telemetry;
+        telemetry.pathScores.emplace(0, 7.25);
+
+        auto policy = CreateObject<RandomizedFullCopyExplorationPolicy>();
+        policy->SetPrimaryPath(0);
+        const auto decision = policy->Decide(frame, telemetry);
+        NS_TEST_ASSERT_MSG_EQ(decision.primaryPath, 0, "Exploration policy chose wrong primary");
+        NS_TEST_ASSERT_MSG_EQ(decision.duplicate,
+                              false,
+                              "Exploration policy duplicated before its assigned delay");
+        NS_TEST_ASSERT_MSG_EQ(decision.secondaryPath.has_value(),
+                              false,
+                              "Exploration policy selected an immediate secondary");
+        NS_TEST_ASSERT_MSG_EQ_TOL(decision.primaryScore,
+                                  7.25,
+                                  0.0,
+                                  "Exploration policy lost primary telemetry");
+        NS_TEST_ASSERT_MSG_EQ(decision.reason,
+                              "randomized delayed full-copy exploration primary",
+                              "Exploration decision provenance changed");
+        NS_TEST_ASSERT_MSG_EQ(policy->GetName(),
+                              "randomized_full_copy_exploration",
+                              "Exploration policy name changed");
+        NS_TEST_ASSERT_MSG_EQ(policy->GetInstanceTypeId().GetName(),
+                              "ns3::RandomizedFullCopyExplorationPolicy",
+                              "Exploration policy TypeId changed");
     }
 };
 
@@ -4109,6 +4431,11 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new CorrelatedLoadControllerTestCase, TestCase::Duration::QUICK);
         AddTestCase(new CorrelationSanityTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PolicyTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new RandomizedFrameAssignmentGoldenTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new RandomizedFrameAssignmentBoundaryTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new RandomizedFrameAssignmentDeterminismTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new RandomizedFullCopyExplorationPolicyTestCase,
+                    TestCase::Duration::QUICK);
         AddTestCase(new OutputStatisticsTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new DelayedSecondaryHoldTestCase, TestCase::Duration::QUICK);
