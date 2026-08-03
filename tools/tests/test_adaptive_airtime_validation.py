@@ -32,7 +32,7 @@ from plot_adaptive_airtime_duplication import (
     plot_adaptive_airtime,
     summarize_adaptive_runs,
 )
-from run_experiments import CLI_KEYS
+from run_experiments import CLI_KEYS, cli_arguments
 
 
 def adaptive_config() -> dict[str, object]:
@@ -239,6 +239,126 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             CLI_KEYS["adaptive_airtime_admission_uses_retry_inflation"],
             "adaptiveAirtimeAdmissionUsesRetryInflation",
         )
+        self.assertEqual(
+            CLI_KEYS["adaptive_airtime_decision_offset_shadow_prices"],
+            "adaptiveAirtimeDecisionOffsetShadowPrices",
+        )
+        self.assertEqual(
+            CLI_KEYS["adaptive_airtime_i_frame_only_decision_offsets_us"],
+            "adaptiveAirtimeIFrameOnlyDecisionOffsetsUs",
+        )
+        self.assertEqual(
+            cli_arguments({
+                "prediction": {
+                    "adaptive_airtime_decision_offset_shadow_prices": (
+                        "0:0.034,4000:0.059723"
+                    ),
+                    "adaptive_airtime_i_frame_only_decision_offsets_us": [0],
+                },
+            }, Path(".")),
+            [
+                "--adaptiveAirtimeDecisionOffsetShadowPrices="
+                "0:0.034,4000:0.059723",
+                "--adaptiveAirtimeIFrameOnlyDecisionOffsetsUs=0",
+            ],
+        )
+
+    def test_accepts_offset_prices_and_frame_type_restriction(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "shadow_price_mode": "offset_override_with_global_dual_fallback",
+            "decision_offset_shadow_prices": {"0": 0.034, "1000": 0.059723},
+            "i_frame_only_decision_offsets_us": [0],
+        })
+        rows = adaptive_rows()
+        rows[0].update({
+            "shadow_price": "0.034",
+            "dual_shadow_price": "0.2",
+            "shadow_price_source": "offset_override",
+            "net_utility": "0.066",
+            "decision": "frame_type_restricted",
+        })
+        rows[1].update({
+            "shadow_price": "0.059723",
+            "dual_shadow_price": "0.2",
+            "shadow_price_source": "offset_override",
+            "net_utility": "0.440277",
+        })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample["frame_type"] = "P_FRAME"
+        estimates = _validate_adaptive_decisions(
+            rows,
+            config,
+            [{"frame_id": "7", "generation_time_us": "1000"}],
+            samples,
+            "run",
+        )
+        self.assertEqual(estimates, {7: 100.0})
+
+    def test_rejects_invalid_offset_policy_metadata(self) -> None:
+        invalid = adaptive_config()
+        invalid.update({
+            "shadow_price_mode": "offset_override_with_global_dual_fallback",
+            "decision_offset_shadow_prices": {"2000": 0.1},
+            "i_frame_only_decision_offsets_us": [],
+        })
+        with self.assertRaisesRegex(ValidationError, "invalid adaptive offset price"):
+            _validate_adaptive_config(invalid)
+
+        invalid = adaptive_config()
+        invalid.update({
+            "shadow_price_mode": "global_dual",
+            "decision_offset_shadow_prices": {},
+            "i_frame_only_decision_offsets_us": [1000, 0],
+        })
+        with self.assertRaisesRegex(ValidationError, "invalid adaptive I-frame"):
+            _validate_adaptive_config(invalid)
+
+        invalid = adaptive_config()
+        invalid.update({
+            "shadow_price_mode": "global_dual",
+            "decision_offset_shadow_prices": {"0": 0.034},
+            "i_frame_only_decision_offsets_us": [],
+        })
+        with self.assertRaisesRegex(ValidationError, "shadow-price mode mismatch"):
+            _validate_adaptive_config(invalid)
+
+    def test_rejects_frame_type_restriction_after_prior_action(self) -> None:
+        config = adaptive_config()
+        config.update({
+            "shadow_price_mode": "global_dual",
+            "decision_offset_shadow_prices": {},
+            "i_frame_only_decision_offsets_us": [1000],
+        })
+        rows = adaptive_rows()
+        rows[0].update({
+            "calibrated_probability": "0.5",
+            "net_utility": "0.3",
+            "decision": "action",
+            "secondary_launched": "1",
+        })
+        rows[1].update({
+            "dual_shadow_price": "0.2",
+            "shadow_price_source": "global_dual",
+            "decision": "frame_type_restricted",
+            "secondary_launched": "0",
+        })
+        rows[0].update({
+            "dual_shadow_price": "0.2",
+            "shadow_price_source": "global_dual",
+        })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample["frame_type"] = "P_FRAME"
+        with self.assertRaisesRegex(ValidationError, "frame-type restriction"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                [{"frame_id": "7", "generation_time_us": "1000"}],
+                samples,
+                "run",
+            )
 
     def test_accepts_valid_nondefault_controller_parameters(self) -> None:
         config = adaptive_config()
@@ -511,14 +631,30 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         self.assertEqual(estimates, {7: 100.0})
 
     def test_accepts_exact_primary_deficit_packet_metadata(self) -> None:
-        config = adaptive_config()
+        config = explicit_cost_config(False)
         config.update({
             "admission_feature_set": "F0+F1-degraded",
             "packet_selection_feature_set": "F2-primary-frame-ack-state",
             "packet_selection": "primary_unacknowledged_reverse",
         })
+        stream_config = {"frame_size_bytes": 4000, "payload_size_bytes": 1000}
+        frame = {
+            "frame_id": "7",
+            "generation_time_us": "1000",
+            "frame_size_bytes": "3501",
+            "packet_count": "4",
+        }
+        reference = _adaptive_nominal_airtime_us(4000, 4, 1.4)
+        t0_cost = _adaptive_nominal_airtime_us(1501, 2, 1.4)
+        t1_cost = _adaptive_nominal_airtime_us(1000, 1, 1.4)
         rows = adaptive_rows()
         rows[0].update({
+            "calibrated_probability": "0.01",
+            "admission_airtime_us": str(t0_cost),
+            "estimated_airtime_us": str(t0_cost),
+            "reference_airtime_us": str(reference),
+            "normalized_cost": str(t0_cost / reference),
+            "net_utility": str(0.01 - 0.2 * t0_cost / reference),
             "frame_packet_count": "4",
             "primary_acked_packets": "2",
             "primary_acked_packet_indices": "0;2",
@@ -527,6 +663,11 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             "secondary_packet_order": "primary_unacknowledged_reverse",
         })
         rows[1].update({
+            "admission_airtime_us": str(t1_cost),
+            "estimated_airtime_us": str(t1_cost),
+            "reference_airtime_us": str(reference),
+            "normalized_cost": str(t1_cost / reference),
+            "net_utility": str(0.5 - 0.2 * t1_cost / reference),
             "frame_packet_count": "4",
             "primary_acked_packets": "3",
             "primary_acked_packet_indices": "0;2;3",
@@ -548,11 +689,30 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
         estimates = _validate_adaptive_decisions(
             rows,
             config,
-            [{"frame_id": "7", "generation_time_us": "1000"}],
+            [frame],
             samples,
             "run",
+            stream_config,
         )
-        self.assertEqual(estimates, {7: 100.0})
+        self.assertEqual(estimates, {7: t1_cost})
+
+        tampered = copy.deepcopy(rows)
+        wrong_cost = t1_cost + 1.0
+        tampered[1].update({
+            "admission_airtime_us": str(wrong_cost),
+            "estimated_airtime_us": str(wrong_cost),
+            "normalized_cost": str(wrong_cost / reference),
+            "net_utility": str(0.5 - 0.2 * wrong_cost / reference),
+        })
+        with self.assertRaisesRegex(ValidationError, "nominal admission estimator"):
+            _validate_adaptive_decisions(
+                tampered,
+                config,
+                [frame],
+                samples,
+                "run",
+                stream_config,
+            )
 
     def test_rejects_primary_deficit_packet_count_mutation(self) -> None:
         config = adaptive_config()

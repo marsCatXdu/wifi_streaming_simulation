@@ -125,6 +125,12 @@ CLI_KEYS = {
     "adaptive_airtime_cost_safety_factor": "adaptiveAirtimeCostSafetyFactor",
     "adaptive_airtime_cost_ewma_alpha": "adaptiveAirtimeCostEwmaAlpha",
     "adaptive_airtime_decision_offsets_us": "adaptiveAirtimeDecisionOffsetsUs",
+    "adaptive_airtime_decision_offset_shadow_prices": (
+        "adaptiveAirtimeDecisionOffsetShadowPrices"
+    ),
+    "adaptive_airtime_i_frame_only_decision_offsets_us": (
+        "adaptiveAirtimeIFrameOnlyDecisionOffsetsUs"
+    ),
     "full_duplication_primary_path": "fullDuplicationPrimaryPath",
 }
 

@@ -159,6 +159,8 @@ struct StreamingRunConfig
     double adaptiveAirtimeCostSafetyFactor{0};
     double adaptiveAirtimeCostEwmaAlpha{0};
     std::vector<uint64_t> adaptiveAirtimeDecisionOffsetsUs;
+    std::map<uint64_t, double> adaptiveAirtimeDecisionOffsetShadowPrices;
+    std::vector<uint64_t> adaptiveAirtimeIFrameOnlyDecisionOffsetsUs;
     uint32_t fullDuplicationPrimaryPath{0};
     double staticLink0Score{0};
     double staticLink1Score{0};

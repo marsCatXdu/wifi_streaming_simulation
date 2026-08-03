@@ -440,6 +440,16 @@ def _prediction_model_offsets_valid(
     return config.get("model_id") != PRIMARY_T0_MODEL_ID or offsets == [0]
 
 
+def _staged_adaptive_deficit_identity_valid(
+    _config: dict[str, Any], expected_selection: str
+) -> bool:
+    """Integration hook for the final audited staged-tail export identity."""
+    if expected_selection != "primary_unacknowledged_reverse":
+        return False
+    # Keep this closed until model_id, target_id, and target provenance are final.
+    return False
+
+
 def _adaptive_admission_cost_metadata(
     config: dict[str, Any], object_name: str
 ) -> tuple[bool, bool]:
@@ -542,16 +552,57 @@ def _adaptive_whole_copy_costs(
     return reference, costs
 
 
-def _validate_primary_t0_estimator_contract(
+def _adaptive_primary_deficit_cost(
+    frame: dict[str, str],
+    selected_indices: list[int],
+    stream_config: dict[str, Any],
+    cost_safety_factor: float,
+) -> float:
+    """Reconstruct nominal airtime for an exact primary-deficit packet set."""
+    payload_size = stream_config.get("payload_size_bytes")
+    _require(isinstance(payload_size, int) and not isinstance(payload_size, bool) and
+             payload_size > 0,
+             "resolved_config.json: invalid adaptive estimator payload size")
+    frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+    packet_count = _integer(frame, "packet_count", "frames.csv")
+    _require(packet_count == 1 + (frame_size - 1) // payload_size,
+             "frames.csv: adaptive estimator packet count mismatch")
+    _require(selected_indices,
+             "adaptive deficit estimator: selected packet set is empty")
+    final_packet_bytes = frame_size - payload_size * (packet_count - 1)
+    _require(0 < final_packet_bytes <= payload_size,
+             "adaptive deficit estimator: invalid final packet size")
+    application_bytes = sum(
+        final_packet_bytes if index == packet_count - 1 else payload_size
+        for index in selected_indices
+    )
+    return _adaptive_nominal_airtime_us(
+        application_bytes,
+        len(selected_indices),
+        cost_safety_factor,
+    )
+
+
+def _validate_calibrated_estimator_contract(
     config: dict[str, Any],
     stream_config: dict[str, Any],
     reference_airtime_us: float,
+    expected_selection: str,
 ) -> None:
-    """Pin the estimator inputs used to calibrate the primary T0 gate."""
-    if config.get("model_id") != PRIMARY_T0_MODEL_ID:
+    """Pin estimator inputs used by a calibrated controller gate."""
+    calibrated_identity = (
+        config.get("model_id") == PRIMARY_T0_MODEL_ID or
+        _staged_adaptive_deficit_identity_valid(config, expected_selection)
+    )
+    if not calibrated_identity:
         return
+    object_name = (
+        "adaptiveDeficitDuplication"
+        if expected_selection == "primary_unacknowledged_reverse"
+        else "adaptiveAirtimeDuplication"
+    )
     safety = _config_number(
-        config, "cost_safety_factor", "adaptiveAirtimeDuplication"
+        config, "cost_safety_factor", object_name
     )
     _require(
         _close(safety, PRIMARY_T0_ESTIMATOR_COST_SAFETY_FACTOR)
@@ -561,7 +612,7 @@ def _validate_primary_t0_estimator_contract(
             reference_airtime_us,
             PRIMARY_T0_ESTIMATOR_REFERENCE_AIRTIME_US,
         ),
-        "resolved_config.json: primary T0 estimator differs from calibration",
+        "resolved_config.json: calibrated adaptive estimator differs from calibration contract",
     )
 
 
@@ -578,11 +629,16 @@ def _validate_adaptive_config(
         if expected_selection == "primary_unacknowledged_reverse"
         else "adaptiveAirtimeDuplication"
     )
-    _require(
+    legacy_identity = (
         config.get("model_id") in {
             "commodity_polling_1ms_genuine_v1", PRIMARY_T0_MODEL_ID,
-        } and
-        _prediction_target_provenance_valid(config) and
+        } and _prediction_target_provenance_valid(config)
+    )
+    staged_identity = _staged_adaptive_deficit_identity_valid(
+        config, expected_selection
+    )
+    _require(
+        (legacy_identity or staged_identity) and
         isinstance(source_sha, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha) is not None and
         config.get("feature_set") == "F0+F1-degraded" and
         config.get("degradation_profile") == "polling_1ms" and
@@ -611,6 +667,45 @@ def _validate_adaptive_config(
              "resolved_config.json: primary T0 predictor only supports offset 0")
     _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
              "resolved_config.json: adaptive stages do not match decision offsets")
+
+    offset_policy_keys = {
+        "shadow_price_mode",
+        "decision_offset_shadow_prices",
+        "i_frame_only_decision_offsets_us",
+    }
+    present_offset_policy_keys = offset_policy_keys & config.keys()
+    _require(not present_offset_policy_keys or
+             present_offset_policy_keys == offset_policy_keys,
+             "resolved_config.json: incomplete adaptive offset-policy metadata")
+    raw_prices = config.get("decision_offset_shadow_prices", {})
+    _require(isinstance(raw_prices, dict),
+             "resolved_config.json: adaptive offset prices must be an object")
+    offset_prices: dict[int, float] = {}
+    for raw_offset, raw_price in raw_prices.items():
+        _require(isinstance(raw_offset, str) and re.fullmatch(r"0|[1-9][0-9]*", raw_offset),
+                 "resolved_config.json: invalid adaptive price offset")
+        offset = int(raw_offset)
+        _require(offset in offsets and offset not in offset_prices and
+                 isinstance(raw_price, (int, float)) and not isinstance(raw_price, bool) and
+                 math.isfinite(float(raw_price)) and 0 <= float(raw_price) <= 1,
+                 "resolved_config.json: invalid adaptive offset price")
+        offset_prices[offset] = float(raw_price)
+    expected_price_mode = (
+        "offset_override_with_global_dual_fallback"
+        if offset_prices else "global_dual"
+    )
+    if present_offset_policy_keys:
+        _require(config.get("shadow_price_mode") == expected_price_mode,
+                 "resolved_config.json: adaptive shadow-price mode mismatch")
+
+    restricted_offsets = config.get("i_frame_only_decision_offsets_us", [])
+    _require(isinstance(restricted_offsets, list) and
+             all(isinstance(item, int) and not isinstance(item, bool)
+                 for item in restricted_offsets) and
+             all(left < right for left, right in
+                 zip(restricted_offsets, restricted_offsets[1:])) and
+             set(restricted_offsets) <= set(offsets),
+             "resolved_config.json: invalid adaptive I-frame restrictions")
 
     fraction = _config_number(config, "budget_fraction", object_name)
     initial_price = _config_number(
@@ -735,9 +830,8 @@ def _validate_adaptive_decisions(
                  "adaptive decisions: explicit cost metadata requires admission airtime")
         _require(uses_retry_inflation or has_admission_airtime,
                  "adaptive decisions: nominal admission airtime is absent")
-    exact_estimator = (
-        not primary_deficit
-        and _requires_exact_adaptive_estimator(config, has_cost_metadata)
+    exact_estimator = _requires_exact_adaptive_estimator(
+        config, has_cost_metadata
     )
     expected_reference: float | None = None
     expected_whole_copy_costs: dict[int, float] = {}
@@ -749,12 +843,16 @@ def _validate_adaptive_decisions(
             stream_config,
             safety,
         )
-        _validate_primary_t0_estimator_contract(
-            config, stream_config, expected_reference
+        _validate_calibrated_estimator_contract(
+            config,
+            stream_config,
+            expected_reference,
+            packet_selection,
         )
     allowed_decisions = {
         "price_rejected", "airtime_deferred", "action", "already_resolved",
         "not_actionable", "launch_rejected", "no_primary_deficit",
+        "frame_type_restricted",
     }
     seen_samples: set[tuple[int, int]] = set()
     action_estimates: dict[int, float] = {}
@@ -764,9 +862,25 @@ def _validate_adaptive_decisions(
     saw_retry_inflated_descriptor = False
     last_t0_time: int | None = None
     last_t0_measured = 0.0
-    last_t0_shadow = initial_price
+    last_t0_dual_shadow = initial_price
+    raw_offset_prices = config.get("decision_offset_shadow_prices", {})
+    offset_prices = {int(offset): float(price)
+                     for offset, price in raw_offset_prices.items()}
+    restricted_offsets = set(config.get("i_frame_only_decision_offsets_us", []))
+    has_dual_shadow = bool(rows) and "dual_shadow_price" in rows[0]
+    has_shadow_source = bool(rows) and "shadow_price_source" in rows[0]
+    has_offset_policy_metadata = "shadow_price_mode" in config
+    if rows:
+        _require(all(("dual_shadow_price" in row) == has_dual_shadow and
+                     ("shadow_price_source" in row) == has_shadow_source
+                     for row in rows),
+                 "adaptive decisions: inconsistent shadow-price schema")
+        _require(not has_offset_policy_metadata or
+                 (has_dual_shadow and has_shadow_source),
+                 "adaptive decisions: offset policy lacks dual/source telemetry")
 
     for row in rows:
+        selected_indices_for_cost: list[int] | None = None
         frame_id = _integer(row, "frame_id", file_name)
         offset = _integer(row, "sample_offset_us", file_name)
         _require(frame_id in frame_generation_us and offset in offsets,
@@ -806,6 +920,10 @@ def _validate_adaptive_decisions(
         )
         reference = _number(row, "reference_airtime_us", file_name)
         shadow = _number(row, "shadow_price", file_name)
+        dual_shadow = (
+            _number(row, "dual_shadow_price", file_name)
+            if has_dual_shadow else shadow
+        )
         normalized = _number(row, "normalized_cost", file_name)
         utility = _adaptive_utility(row)
         row_fraction = _number(row, "airtime_budget_fraction", file_name)
@@ -815,8 +933,16 @@ def _validate_adaptive_decisions(
         reserved = _number(row, "reserved_airtime_us", file_name)
         available = _signed_number(row, "available_airtime_us", file_name)
         measured = _number(row, "measured_airtime_total_us", file_name)
-        _require(0 <= probability <= 1 and 0 <= shadow <= 1 and reference > 0,
+        _require(0 <= probability <= 1 and 0 <= shadow <= 1 and
+                 0 <= dual_shadow <= 1 and reference > 0,
                  "adaptive decisions: probability, price, or reference out of bounds")
+        expected_shadow = offset_prices.get(offset, dual_shadow)
+        _require(_close(shadow, expected_shadow),
+                 "adaptive decisions: effective shadow-price mismatch")
+        if has_shadow_source:
+            expected_source = "offset_override" if offset in offset_prices else "global_dual"
+            _require(row.get("shadow_price_source") == expected_source,
+                     "adaptive decisions: shadow-price source mismatch")
         _require(_close(row_fraction, fraction) and _close(row_capacity, capacity) and
                  _close(initial_capacity, initial_capacity_config),
                  "adaptive decisions: logged configuration mismatch")
@@ -840,6 +966,13 @@ def _validate_adaptive_decisions(
         launched = _flag(row, "secondary_launched", file_name)
         _require(launched == (decision == "action"),
                  "adaptive decisions: action/launch mismatch")
+        restriction_applies = (
+            offset in restricted_offsets and
+            prediction.get("frame_type") != "I_FRAME" and
+            frame_id not in action_estimates
+        )
+        _require(not restriction_applies or decision == "frame_type_restricted",
+                 "adaptive decisions: frame-type restriction was bypassed")
 
         if primary_deficit:
             frame_packet_count = _integer(row, "frame_packet_count", file_name)
@@ -867,12 +1000,16 @@ def _validate_adaptive_decisions(
             _require(all(re.fullmatch(r"[0-9]+", token) for token in index_tokens),
                      "adaptive deficit decisions: malformed selected packet indexes")
             selected_indices = [int(token) for token in index_tokens]
+            selected_indices_for_cost = selected_indices
             _require(len(selected_indices) == selected_count and
                      len(selected_indices) == len(set(selected_indices)) and
                      all(0 <= index < frame_packet_count for index in selected_indices),
                      "adaptive deficit decisions: invalid selected packet indexes")
             order = row.get("secondary_packet_order")
-            descriptor_absent = decision in {"already_resolved", "no_primary_deficit"}
+            descriptor_absent = (
+                decision in {"already_resolved", "no_primary_deficit"} or
+                (decision == "frame_type_restricted" and selected_count == 0)
+            )
             if descriptor_absent:
                 _require(selected_count == 0 and order == "none",
                          "adaptive deficit decisions: resolved row retains a packet set")
@@ -890,7 +1027,17 @@ def _validate_adaptive_decisions(
                          "adaptive deficit decisions: selected packet set is inconsistent")
 
         if exact_estimator and estimated > 0:
-            expected_nominal = expected_whole_copy_costs[frame_id]
+            if primary_deficit:
+                _require(selected_indices_for_cost is not None,
+                         "adaptive deficit estimator: packet set is absent")
+                expected_nominal = _adaptive_primary_deficit_cost(
+                    frames_by_id[frame_id],
+                    selected_indices_for_cost,
+                    stream_config,
+                    safety,
+                )
+            else:
+                expected_nominal = expected_whole_copy_costs[frame_id]
             _require(estimated >= expected_nominal or _close(estimated, expected_nominal),
                      "adaptive decisions: reservation below nominal estimator")
             if uses_retry_inflation:
@@ -935,6 +1082,11 @@ def _validate_adaptive_decisions(
         elif decision == "already_resolved":
             _require(frame_id in action_estimates and estimated == 0,
                      "adaptive decisions: invalid already-resolved predicate")
+        elif decision == "frame_type_restricted":
+            _require(offset in restricted_offsets and
+                     prediction.get("frame_type") != "I_FRAME" and
+                     frame_id not in action_estimates and not launched,
+                     "adaptive decisions: invalid frame-type restriction")
         else:
             _require(actionable and estimated > 0 and utility > 0 and
                      available + 1e-9 >= estimated,
@@ -942,26 +1094,27 @@ def _validate_adaptive_decisions(
 
         if offset == 0:
             if last_t0_time is None:
-                _require(_close(shadow, initial_price),
+                _require(_close(dual_shadow, initial_price),
                          "adaptive decisions: initial shadow price mismatch")
             else:
                 elapsed_us = (sample_time - last_t0_time) / 1000.0
                 measured_delta = measured - last_t0_measured
-                expected_shadow = min(
+                expected_dual_shadow = min(
                     1.0,
                     max(
                         0.0,
-                        last_t0_shadow +
+                        last_t0_dual_shadow +
                         dual_step * (measured_delta - fraction * elapsed_us) / reference,
                     ),
                 )
-                _require(_close(shadow, expected_shadow),
+                _require(_close(dual_shadow, expected_dual_shadow),
                          "adaptive decisions: shadow-price recurrence mismatch")
             last_t0_time = sample_time
             last_t0_measured = measured
-            last_t0_shadow = shadow
+            last_t0_dual_shadow = dual_shadow
         else:
-            _require(last_t0_time is not None and _close(shadow, last_t0_shadow),
+            _require(last_t0_time is not None and
+                     _close(dual_shadow, last_t0_dual_shadow),
                      "adaptive decisions: shadow price changed outside T0")
 
     return action_estimates

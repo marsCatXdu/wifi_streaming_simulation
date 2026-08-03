@@ -12,6 +12,7 @@ TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from plot_adaptive_airtime_duplication import (
+    _dual_shadow_price,
     _ordered_policy_labels,
     _paired_mlo_diagnostics,
     _unique_pair_index,
@@ -38,6 +39,13 @@ def treatment(
 
 
 class AdaptiveMloPlottingTest(unittest.TestCase):
+    def test_prefers_dual_shadow_price_with_legacy_fallback(self) -> None:
+        self.assertEqual(
+            _dual_shadow_price({"shadow_price": "0.034", "dual_shadow_price": "0.2"}),
+            0.2,
+        )
+        self.assertEqual(_dual_shadow_price({"shadow_price": "0.17"}), 0.17)
+
     def test_keeps_str_and_emlsr_in_labels_and_paired_series(self) -> None:
         adaptive = treatment(
             "dual_interface", "adaptive_airtime_duplication", 0.01, 8000, 120,

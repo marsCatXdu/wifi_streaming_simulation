@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <set>
@@ -42,6 +43,18 @@ IsPrimaryRiskT0Model()
     return PredictionModelEvaluator::GetModelId() ==
                "commodity_polling_1ms_obss_primary_t0_v1" &&
            PredictionModelEvaluator::GetTargetId() == "primary_copy_deadline_miss";
+}
+
+bool
+SupportsStagedAdaptiveDeficitPolicy(const std::string& policyName)
+{
+    if (policyName != "adaptive_deficit_duplication")
+    {
+        return false;
+    }
+    // Integration hook: admit multiple controller stages only after the
+    // staged-tail export has a final, audited model and target identity.
+    return false;
 }
 
 void
@@ -111,6 +124,58 @@ ParseStrictUintList(const std::string& value,
         {
             break;
         }
+        NS_ABORT_MSG_IF(comma + 1 == remaining.size(),
+                        name << " contains an empty item");
+        remaining.remove_prefix(comma + 1);
+    }
+    return result;
+}
+
+std::map<uint64_t, double>
+ParseStrictOffsetPriceMap(const std::string& value, const std::string& name)
+{
+    std::map<uint64_t, double> result;
+    if (value.empty())
+    {
+        return result;
+    }
+    std::string_view remaining(value);
+    while (!remaining.empty())
+    {
+        const auto comma = remaining.find(',');
+        const auto token = remaining.substr(0, comma);
+        const auto colon = token.find(':');
+        NS_ABORT_MSG_IF(token.empty() || colon == std::string_view::npos || colon == 0 ||
+                            colon + 1 == token.size() ||
+                            token.find(':', colon + 1) != std::string_view::npos,
+                        name << " items must have offset:price form");
+
+        const auto offsetToken = token.substr(0, colon);
+        const auto priceToken = token.substr(colon + 1);
+        uint64_t offsetUs = 0;
+        double price = 0;
+        const auto offsetConversion = std::from_chars(offsetToken.data(),
+                                                      offsetToken.data() + offsetToken.size(),
+                                                      offsetUs);
+        const auto priceConversion = std::from_chars(priceToken.data(),
+                                                     priceToken.data() + priceToken.size(),
+                                                     price);
+        NS_ABORT_MSG_IF(offsetConversion.ec != std::errc() ||
+                            offsetConversion.ptr != offsetToken.data() + offsetToken.size(),
+                        name << " contains a non-integer offset: " << offsetToken);
+        NS_ABORT_MSG_IF(priceConversion.ec != std::errc() ||
+                            priceConversion.ptr != priceToken.data() + priceToken.size() ||
+                            !std::isfinite(price) || price < 0 || price > 1,
+                        name << " prices must be finite and in [0,1]");
+        NS_ABORT_MSG_IF(!result.empty() && offsetUs <= result.rbegin()->first,
+                        name << " offsets must be strictly increasing and unique");
+        result.emplace(offsetUs, price);
+        if (comma == std::string_view::npos)
+        {
+            break;
+        }
+        NS_ABORT_MSG_IF(comma + 1 == remaining.size(),
+                        name << " contains an empty item");
         remaining.remove_prefix(comma + 1);
     }
     return result;
@@ -389,6 +454,8 @@ main(int argc, char* argv[])
     double adaptiveAirtimeCostSafetyFactor = 1.25;
     double adaptiveAirtimeCostEwmaAlpha = 0.10;
     std::string adaptiveAirtimeDecisionOffsetsUs = "0,1000,2000,4000";
+    std::string adaptiveAirtimeDecisionOffsetShadowPrices;
+    std::string adaptiveAirtimeIFrameOnlyDecisionOffsetsUs;
     uint32_t fullDuplicationPrimaryPath = 0;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
@@ -572,6 +639,12 @@ main(int argc, char* argv[])
     command.AddValue("adaptiveAirtimeDecisionOffsetsUs",
                      "Strict comma-separated offsets eligible for adaptive action",
                      adaptiveAirtimeDecisionOffsetsUs);
+    command.AddValue("adaptiveAirtimeDecisionOffsetShadowPrices",
+                     "Strict offset:price overrides for adaptive admission",
+                     adaptiveAirtimeDecisionOffsetShadowPrices);
+    command.AddValue("adaptiveAirtimeIFrameOnlyDecisionOffsetsUs",
+                     "Strict offsets at which adaptive action is limited to I-frames",
+                     adaptiveAirtimeIFrameOnlyDecisionOffsetsUs);
     command.AddValue("fullDuplicationPrimaryPath",
                      "Primary path for unconditional application duplication",
                      fullDuplicationPrimaryPath);
@@ -718,6 +791,8 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedPredictionHistoryWindowsUs;
     std::vector<uint64_t> resolvedSelectiveDecisionOffsetsUs;
     std::vector<uint64_t> resolvedAdaptiveDecisionOffsetsUs;
+    std::map<uint64_t, double> resolvedAdaptiveDecisionOffsetShadowPrices;
+    std::vector<uint64_t> resolvedAdaptiveIFrameOnlyDecisionOffsetsUs;
     const uint64_t resolvedAdaptiveAirtimeInitialBucketHorizonUs =
         adaptiveAirtimeInitialBucketHorizonUs == 0
             ? adaptiveAirtimeBucketHorizonUs
@@ -823,9 +898,20 @@ main(int argc, char* argv[])
                                 true);
         NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.front() != 0,
                         "Adaptive airtime decision offsets must start with zero");
-        NS_ABORT_MSG_IF(IsPrimaryRiskT0Model() &&
-                            resolvedAdaptiveDecisionOffsetsUs.size() != 1,
-                        "Primary-risk T0 model only supports decision offset 0");
+        NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.size() != 1 &&
+                            !SupportsStagedAdaptiveDeficitPolicy(policyName),
+                        "Multiple adaptive decision offsets require the exact audited "
+                        "staged-tail adaptive-deficit model identity");
+        resolvedAdaptiveDecisionOffsetShadowPrices = ParseStrictOffsetPriceMap(
+            adaptiveAirtimeDecisionOffsetShadowPrices,
+            "adaptiveAirtimeDecisionOffsetShadowPrices");
+        if (!adaptiveAirtimeIFrameOnlyDecisionOffsetsUs.empty())
+        {
+            resolvedAdaptiveIFrameOnlyDecisionOffsetsUs = ParseStrictUintList(
+                adaptiveAirtimeIFrameOnlyDecisionOffsetsUs,
+                "adaptiveAirtimeIFrameOnlyDecisionOffsetsUs",
+                true);
+        }
         for (const auto offset : resolvedAdaptiveDecisionOffsetsUs)
         {
             NS_ABORT_MSG_IF(std::find(resolvedPredictionSampleOffsetsUs.begin(),
@@ -834,6 +920,21 @@ main(int argc, char* argv[])
                             "Every adaptive decision offset must be a prediction sample offset");
             NS_ABORT_MSG_IF(offset != 0 && offset != 1000 && offset != 2000 && offset != 4000,
                             "Frozen adaptive predictor supports only T0, T1, T2, and T4");
+        }
+        for (const auto& [offset, price] : resolvedAdaptiveDecisionOffsetShadowPrices)
+        {
+            (void)price;
+            NS_ABORT_MSG_IF(std::find(resolvedAdaptiveDecisionOffsetsUs.begin(),
+                                      resolvedAdaptiveDecisionOffsetsUs.end(),
+                                      offset) == resolvedAdaptiveDecisionOffsetsUs.end(),
+                            "Every adaptive shadow-price override must be a decision offset");
+        }
+        for (const auto offset : resolvedAdaptiveIFrameOnlyDecisionOffsetsUs)
+        {
+            NS_ABORT_MSG_IF(std::find(resolvedAdaptiveDecisionOffsetsUs.begin(),
+                                      resolvedAdaptiveDecisionOffsetsUs.end(),
+                                      offset) == resolvedAdaptiveDecisionOffsetsUs.end(),
+                            "Every adaptive I-frame restriction must be a decision offset");
         }
     }
     RngSeedManager::SetSeed(seed);
@@ -2264,6 +2365,10 @@ main(int argc, char* argv[])
     resolved.adaptiveAirtimeCostSafetyFactor = adaptiveAirtimeCostSafetyFactor;
     resolved.adaptiveAirtimeCostEwmaAlpha = adaptiveAirtimeCostEwmaAlpha;
     resolved.adaptiveAirtimeDecisionOffsetsUs = resolvedAdaptiveDecisionOffsetsUs;
+    resolved.adaptiveAirtimeDecisionOffsetShadowPrices =
+        resolvedAdaptiveDecisionOffsetShadowPrices;
+    resolved.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs =
+        resolvedAdaptiveIFrameOnlyDecisionOffsetsUs;
     resolved.fullDuplicationPrimaryPath = fullDuplicationPrimaryPath;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
@@ -2550,6 +2655,10 @@ main(int argc, char* argv[])
         adaptiveController->SetCostSafetyFactor(adaptiveAirtimeCostSafetyFactor);
         adaptiveController->SetCostEwmaAlpha(adaptiveAirtimeCostEwmaAlpha);
         adaptiveController->SetDecisionOffsetsUs(resolvedAdaptiveDecisionOffsetsUs);
+        adaptiveController->SetDecisionOffsetShadowPrices(
+            resolvedAdaptiveDecisionOffsetShadowPrices);
+        adaptiveController->SetIFrameOnlyDecisionOffsetsUs(
+            resolvedAdaptiveIFrameOnlyDecisionOffsetsUs);
         const uint32_t referencePacketCount = 1 + (frameSize - 1) / payloadSize;
         const uint64_t referenceExpectedMacServiceBytes =
             static_cast<uint64_t>(frameSize) +

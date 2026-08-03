@@ -425,6 +425,39 @@ class AdaptiveAirtimeDuplicationControllerTestAccess
     }
 
     /**
+     * Resolve the effective admission price for one decision offset.
+     *
+     * @param controller Controller under test.
+     * @param offsetUs Decision offset in microseconds.
+     * @return Effective admission price.
+     */
+    static double ResolveDecisionShadowPrice(
+        Ptr<AdaptiveAirtimeDuplicationController> controller,
+        uint64_t offsetUs)
+    {
+        return controller->ResolveDecisionShadowPrice(offsetUs);
+    }
+
+    /**
+     * Check frame-type admission through the production restriction.
+     *
+     * @param controller Controller under test.
+     * @param offsetUs Decision offset in microseconds.
+     * @param frameType Candidate frame type.
+     * @return True when the frame type is eligible.
+     */
+    static bool IsFrameTypeEligible(
+        Ptr<AdaptiveAirtimeDuplicationController> controller,
+        uint64_t offsetUs,
+        FrameType frameType)
+    {
+        PredictionSample sample;
+        sample.sampleOffsetUs = offsetUs;
+        sample.frameType = frameType;
+        return controller->IsFrameTypeEligible(sample);
+    }
+
+    /**
      * Check one maximum/initial horizon pair using the production guard.
      *
      * @param bucketHorizonUs Maximum-balance horizon in microseconds.
@@ -1725,6 +1758,11 @@ class OutputStatisticsTestCase : public TestCase
         adaptiveConfig.adaptiveAirtimeInitialBucketHorizonUs = 100000;
         adaptiveConfig.adaptiveAirtimeAdmissionUsesRetryInflation = false;
         adaptiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 1500};
+        adaptiveConfig.adaptiveAirtimeDecisionOffsetShadowPrices = {
+            {0, 0.034},
+            {1500, 0.059723},
+        };
+        adaptiveConfig.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs = {0};
         ExperimentOutput::WriteResolvedConfig(adaptiveDirectory, adaptiveConfig);
         std::ifstream adaptiveResolved(adaptiveDirectory + "/resolved_config.json");
         std::ostringstream adaptiveText;
@@ -1757,6 +1795,20 @@ class OutputStatisticsTestCase : public TestCase
                 "\"retry_inflated_estimated_secondary_sender_phy_tx_airtime\""),
             std::string::npos,
             "Adaptive inflated reservation cost definition is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"shadow_price_mode\": \"offset_override_with_global_dual_fallback\""),
+            std::string::npos,
+            "Adaptive offset-price mode is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"decision_offset_shadow_prices\": {\"0\": 0.034, \"1500\": 0.059723}"),
+            std::string::npos,
+            "Adaptive offset prices are missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find("\"i_frame_only_decision_offsets_us\": [0]"),
+            std::string::npos,
+            "Adaptive frame-type restriction is missing");
 
         const std::string deficitDirectory = directory + "/deficit";
         ExperimentOutput::PrepareRunDirectory(deficitDirectory);
@@ -2396,8 +2448,12 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
     }
 
   private:
-    double Score(const PredictionSample&) const
+    double Score(const PredictionSample& sample) const
     {
+        if (sample.frameType == FrameType::P_FRAME && sample.sampleOffsetUs == 1000)
+        {
+            return 0.0;
+        }
         return 1.0;
     }
 
@@ -2405,18 +2461,38 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
     {
         if (sample.sampleOffsetUs != 0)
         {
+            PredictionSample coherentSample = sample;
+            const auto unacknowledged =
+                m_sender->GetUnacknowledgedPacketIndices(sample.key);
+            NS_TEST_ASSERT_MSG_EQ(unacknowledged.has_value(),
+                                  true,
+                                  "Late deficit snapshot lacks packet state");
+            coherentSample.framePacketsTxSucceeded =
+                sample.framePacketCount - unacknowledged->size();
+            if (sample.key.frameId == 1 && sample.sampleOffsetUs == 4000)
+            {
+                NS_TEST_ASSERT_MSG_EQ(unacknowledged->empty(),
+                                      false,
+                                      "T4 P-frame deficit unexpectedly vanished");
+                auto selection = *unacknowledged;
+                std::reverse(selection.begin(), selection.end());
+                m_lateDescriptor = m_sender->GetDelayedSecondaryPacketDescriptor(
+                    sample.key.frameId,
+                    selection);
+            }
+            m_controller->NotifySnapshot(coherentSample);
             return;
         }
         PredictionSample coherentSample = sample;
         if (sample.key.frameId != 0)
         {
-            for (uint32_t packetIndex = 0; packetIndex < sample.framePacketCount; ++packetIndex)
-            {
-                PredictionTelemetryCollectorTestAccess::AcknowledgePacket(m_prediction,
-                                                                           sample.key,
-                                                                           packetIndex);
-            }
-            coherentSample.framePacketsTxSucceeded = sample.framePacketCount;
+            const auto unacknowledged =
+                m_sender->GetUnacknowledgedPacketIndices(sample.key);
+            NS_TEST_ASSERT_MSG_EQ(unacknowledged.has_value(),
+                                  true,
+                                  "T0 deficit snapshot lacks packet state");
+            coherentSample.framePacketsTxSucceeded =
+                sample.framePacketCount - unacknowledged->size();
             m_controller->NotifySnapshot(coherentSample);
             return;
         }
@@ -2471,7 +2547,7 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
                               "adaptive_deficit_duplication",
                               "Primary-deficit policy name is wrong");
         auto prediction = CreateObject<PredictionTelemetryCollector>();
-        prediction->SetSampleOffsetsUs({0});
+        prediction->SetSampleOffsetsUs({0, 1000, 4000});
         m_prediction = prediction;
 
         auto meter = CreateObject<SecondaryAirtimeMeter>();
@@ -2484,13 +2560,20 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
         controller->SetPrimaryPath(0);
         controller->SetSecondaryPacketSelection(
             AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED);
-        controller->SetBudgetFraction(1.0);
+        controller->SetBudgetFraction(0.02);
         controller->SetBucketHorizonUs(100000);
-        controller->SetInitialShadowPrice(0.0);
-        controller->SetDecisionOffsetsUs({0});
+        controller->SetInitialShadowPrice(0.37);
+        controller->SetDualStep(0.10);
+        controller->SetDecisionOffsetsUs({0, 1000, 4000});
+        controller->SetDecisionOffsetShadowPrices({{0, 0.034}, {4000, 0.059723}});
+        controller->SetIFrameOnlyDecisionOffsetsUs({0});
         const std::string directory = "/tmp/ns3-wifi-streaming-deficit-controller-test";
         std::filesystem::remove_all(directory);
         std::filesystem::create_directories(directory);
+        meter->SetOutputFiles("deficit-test",
+                              directory + "/secondary_airtime_events.csv",
+                              directory + "/secondary_airtime_settlements.csv",
+                              directory + "/secondary_airtime_summary.json");
         controller->SetOutputFile("deficit-test",
                                   directory + "/adaptive_airtime_decisions.csv");
         prediction->SetSnapshotCallback(
@@ -2546,19 +2629,27 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(m_descriptor->expectedMacServiceBytes,
                               expectedServiceBytes,
                               "Explicit descriptor priced the wrong packets");
+        NS_TEST_ASSERT_MSG_EQ(m_lateDescriptor.has_value(),
+                              true,
+                              "T4 P-frame descriptor is missing");
+        NS_TEST_ASSERT_MSG_EQ(m_lateDescriptor->packetCount > 0,
+                              true,
+                              "T4 P-frame launched an empty deficit");
         NS_TEST_ASSERT_MSG_EQ(controller->GetActionCount(),
-                              1,
-                              "Primary-deficit controller did not launch exactly once");
+                              2,
+                              "Primary-deficit controller did not launch once per test frame");
         NS_TEST_ASSERT_MSG_EQ(m_repeatRejected,
                               true,
                               "Repeated explicit secondary launch was accepted");
         NS_TEST_ASSERT_MSG_EQ(sender->GetPacketsSent(),
-                              8,
+                              8 + m_lateDescriptor->packetCount,
                               "Explicit secondary launch sent the wrong packet count");
         constexpr uint64_t expectedRedundantBytes =
             501 + 1000 + 2 * StreamingHeader::SERIALIZED_SIZE;
         NS_TEST_ASSERT_MSG_EQ(sender->GetRedundantBytesSent(),
-                              expectedRedundantBytes,
+                              expectedRedundantBytes +
+                                  m_lateDescriptor->expectedMacServiceBytes -
+                                  36 * m_lateDescriptor->packetCount,
                               "Explicit secondary launch sent the wrong bytes");
         NS_TEST_ASSERT_MSG_EQ(metrics->GetFrameResults().size(),
                               2,
@@ -2566,6 +2657,17 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(metrics->GetFrameResults().front().duplicated,
                               true,
                               "Explicit secondary frame lacks duplication metadata");
+        const auto duplicatedFrames = std::count_if(
+            metrics->GetFrameResults().begin(),
+            metrics->GetFrameResults().end(),
+            [](const FrameResult& result) { return result.duplicated; });
+        NS_TEST_ASSERT_MSG_EQ(duplicatedFrames,
+                              2,
+                              "T4 P-frame action lacks duplication metadata");
+        NS_TEST_ASSERT_MSG_EQ_TOL(meter->GetReservedAirtimeUs(),
+                                  0.0,
+                                  1e-9,
+                                  "Adaptive deficit reservations did not settle");
 
         std::ifstream decisions(directory + "/adaptive_airtime_decisions.csv");
         std::string header;
@@ -2587,32 +2689,149 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
             return std::distance(columns.begin(), column);
         };
         const auto decisionColumn = columnFor("decision");
-        bool sawAction = false;
-        bool sawZeroDeficit = false;
+        bool sawEarlyAction = false;
+        bool sawLateAction = false;
+        bool sawGlobalFallback = false;
+        bool sawFrameTypeRestriction = false;
+        bool sawAlreadyResolved = false;
+        std::vector<double> t0DualPrices;
+        std::optional<double> frameOneFallbackPrice;
         std::string row;
         while (std::getline(decisions, row))
         {
             const auto values = split(row);
+            const uint64_t frameId = std::stoull(values.at(columnFor("frame_id")));
+            const uint64_t offsetUs =
+                std::stoull(values.at(columnFor("sample_offset_us")));
+            const double price = std::stod(values.at(columnFor("shadow_price")));
+            const double dualPrice =
+                std::stod(values.at(columnFor("dual_shadow_price")));
+            if (offsetUs == 1000)
+            {
+                NS_TEST_ASSERT_MSG_EQ_TOL(price,
+                                          dualPrice,
+                                          1e-12,
+                                          "Unspecified stage did not use the global dual price");
+                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("shadow_price_source")),
+                                      "global_dual",
+                                      "Unspecified stage did not identify its global price");
+                sawGlobalFallback =
+                    sawGlobalFallback ||
+                    (frameId == 1 && values.at(decisionColumn) == "price_rejected");
+                if (frameId == 1)
+                {
+                    frameOneFallbackPrice = price;
+                }
+            }
+            else
+            {
+                const double expectedPrice = offsetUs == 0 ? 0.034 : 0.059723;
+                NS_TEST_ASSERT_MSG_EQ_TOL(price,
+                                          expectedPrice,
+                                          1e-12,
+                                          "Decision did not use its offset price override");
+                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("shadow_price_source")),
+                                      "offset_override",
+                                      "Decision did not identify its fixed offset price");
+            }
+            if (offsetUs == 0)
+            {
+                t0DualPrices.push_back(dualPrice);
+            }
             if (values.at(decisionColumn) == "action")
             {
-                sawAction = true;
-                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("primary_acked_packet_indices")),
-                                      "1",
-                                      "Deficit decision omitted the exact primary ACK set");
-                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_indices")),
-                                      "2;0",
-                                      "Deficit controller did not reverse the exact complement");
+                if (frameId == 0)
+                {
+                    sawEarlyAction = offsetUs == 0;
+                    NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("primary_acked_packet_indices")),
+                                          "1",
+                                          "T0 action omitted the exact primary ACK set");
+                    NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_indices")),
+                                          "2;0",
+                                          "T0 action did not reverse the exact complement");
+                }
+                else
+                {
+                    sawLateAction = offsetUs == 4000;
+                    NS_TEST_ASSERT_MSG_EQ(
+                        std::stoul(values.at(columnFor("secondary_packet_count"))),
+                        m_lateDescriptor->packetCount,
+                        "T4 action changed its nonzero primary deficit");
+                    std::ostringstream expectedIndices;
+                    for (std::size_t index = 0;
+                         index < m_lateDescriptor->packetIndices.size();
+                         ++index)
+                    {
+                        expectedIndices << (index == 0 ? "" : ";")
+                                        << m_lateDescriptor->packetIndices[index];
+                    }
+                    NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_indices")),
+                                          expectedIndices.str(),
+                                          "T4 action changed its exact packet set");
+                }
                 NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_order")),
                                       "primary_unacknowledged_reverse",
                                       "Deficit decision recorded the wrong packet order");
             }
-            sawZeroDeficit = sawZeroDeficit ||
-                             values.at(decisionColumn) == "no_primary_deficit";
+            sawFrameTypeRestriction =
+                sawFrameTypeRestriction ||
+                (frameId == 1 && offsetUs == 0 &&
+                 values.at(decisionColumn) == "frame_type_restricted");
+            sawAlreadyResolved =
+                sawAlreadyResolved ||
+                (frameId == 0 && offsetUs == 1000 &&
+                 values.at(decisionColumn) == "already_resolved");
         }
-        NS_TEST_ASSERT_MSG_EQ(sawAction, true, "Deficit decision CSV omitted its action");
-        NS_TEST_ASSERT_MSG_EQ(sawZeroDeficit,
+        NS_TEST_ASSERT_MSG_EQ(sawEarlyAction,
                               true,
-                              "Deficit controller did not exercise its zero-deficit branch");
+                              "Deficit decision CSV omitted its T0 I-frame action");
+        NS_TEST_ASSERT_MSG_EQ(sawLateAction,
+                              true,
+                              "Restricted P-frame did not launch its nonzero T4 deficit");
+        NS_TEST_ASSERT_MSG_EQ(sawGlobalFallback,
+                              true,
+                              "Deficit controller did not exercise global-price fallback");
+        NS_TEST_ASSERT_MSG_EQ(sawFrameTypeRestriction,
+                              true,
+                              "T0 did not restrict a P-frame before admission");
+        NS_TEST_ASSERT_MSG_EQ(sawAlreadyResolved,
+                              true,
+                              "Later stage did not retain already-resolved behavior");
+        NS_TEST_ASSERT_MSG_EQ(t0DualPrices.size(),
+                              2,
+                              "Deficit test did not observe both T0 dual prices");
+        NS_TEST_ASSERT_MSG_EQ(t0DualPrices[1] < t0DualPrices[0],
+                              true,
+                              "Underlying dual price did not evolve under fixed T0 admission");
+        NS_TEST_ASSERT_MSG_EQ(frameOneFallbackPrice.has_value(),
+                              true,
+                              "P-frame did not reach its global-price fallback stage");
+        NS_TEST_ASSERT_MSG_EQ_TOL(*frameOneFallbackPrice,
+                                  t0DualPrices[1],
+                                  1e-12,
+                                  "Fallback stage did not retain the latest dual price");
+
+        std::ifstream settlements(directory + "/secondary_airtime_settlements.csv");
+        std::string settlementHeader;
+        std::getline(settlements, settlementHeader);
+        const auto settlementColumns = split(settlementHeader);
+        const auto settlementFrame = std::find(settlementColumns.begin(),
+                                               settlementColumns.end(),
+                                               "frame_id");
+        NS_TEST_ASSERT_MSG_EQ(settlementFrame != settlementColumns.end(),
+                              true,
+                              "Settlement output lacks frame_id");
+        const auto settlementFrameColumn =
+            std::distance(settlementColumns.begin(), settlementFrame);
+        std::map<uint64_t, uint32_t> settlementsByFrame;
+        while (std::getline(settlements, row))
+        {
+            const auto values = split(row);
+            ++settlementsByFrame[std::stoull(values.at(settlementFrameColumn))];
+        }
+        NS_TEST_ASSERT_MSG_EQ(settlementsByFrame[1],
+                              1,
+                              "T4 P-frame reservation did not settle exactly once");
         Simulator::Destroy();
         std::filesystem::remove_all(directory);
         m_sender = nullptr;
@@ -2624,6 +2843,7 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
     AdaptiveAirtimeDuplicationController* m_controller{nullptr};
     Ptr<PredictionTelemetryCollector> m_prediction;
     std::optional<DelayedCopyDescriptor> m_descriptor;
+    std::optional<DelayedCopyDescriptor> m_lateDescriptor;
     bool m_repeatRejected{false};
 };
 
@@ -2972,6 +3192,9 @@ class AdaptiveAirtimeBucketCreditTestCase : public TestCase
         auto fixedGate = CreateObject<AdaptiveAirtimeDuplicationController>();
         fixedGate->SetInitialShadowPrice(0.37);
         fixedGate->SetDualStep(0.0);
+        fixedGate->SetDecisionOffsetsUs({0, 4000});
+        fixedGate->SetDecisionOffsetShadowPrices({{0, 0.034}});
+        fixedGate->SetIFrameOnlyDecisionOffsetsUs({0});
         AdaptiveAirtimeDuplicationControllerTestAccess::Initialize(fixedGate,
                                                                    initializeTimeNs);
         AdaptiveAirtimeDuplicationControllerTestAccess::SetMeasuredSinceLastT0Us(
@@ -2984,6 +3207,41 @@ class AdaptiveAirtimeBucketCreditTestCase : public TestCase
                                   0.37,
                                   1e-12,
                                   "Zero dual step did not freeze the shadow price");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            AdaptiveAirtimeDuplicationControllerTestAccess::ResolveDecisionShadowPrice(
+                fixedGate,
+                0),
+            0.034,
+            1e-12,
+            "T0 did not use its fixed shadow-price override");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            AdaptiveAirtimeDuplicationControllerTestAccess::ResolveDecisionShadowPrice(
+                fixedGate,
+                4000),
+            0.37,
+            1e-12,
+            "Unspecified stage did not retain the global dual price");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::IsFrameTypeEligible(
+                fixedGate,
+                0,
+                FrameType::P_FRAME),
+            false,
+            "T0 admitted a P-frame despite its restriction");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::IsFrameTypeEligible(
+                fixedGate,
+                0,
+                FrameType::I_FRAME),
+            true,
+            "T0 rejected an I-frame despite its restriction");
+        NS_TEST_ASSERT_MSG_EQ(
+            AdaptiveAirtimeDuplicationControllerTestAccess::IsFrameTypeEligible(
+                fixedGate,
+                4000,
+                FrameType::P_FRAME),
+            true,
+            "Unrestricted later stage rejected a P-frame");
 
         NS_TEST_ASSERT_MSG_EQ(
             AdaptiveAirtimeDuplicationControllerTestAccess::AreHorizonsValid(
@@ -3197,6 +3455,13 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
             const bool launched = get("secondary_launched") == "1";
             const double admissionUs = std::stod(get("admission_airtime_us"));
             const double estimatedUs = std::stod(get("estimated_airtime_us"));
+            NS_TEST_ASSERT_MSG_EQ(get("shadow_price_source"),
+                                  "global_dual",
+                                  "Legacy controller unexpectedly selected an offset price");
+            NS_TEST_ASSERT_MSG_EQ_TOL(std::stod(get("shadow_price")),
+                                      std::stod(get("dual_shadow_price")),
+                                      1e-12,
+                                      "Legacy controller changed shadow-price semantics");
             if (estimatedUs > 0)
             {
                 const double referenceUs = std::stod(get("reference_airtime_us"));

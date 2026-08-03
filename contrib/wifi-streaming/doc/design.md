@@ -283,6 +283,19 @@ be positive and no larger than the maximum. A zero dual-update step freezes the
 initial shadow price, making it an explicit fixed risk-density gate while the
 measured-airtime token bucket remains the hard admission authority.
 
+Selected stages may instead use fixed admission prices through
+`adaptive_airtime_decision_offset_shadow_prices` (CLI
+`adaptiveAirtimeDecisionOffsetShadowPrices`), encoded as an ordered
+`offset_us:price` list. Stages without an override continue to use the global
+dual variable. `adaptive_airtime_i_frame_only_decision_offsets_us` (CLI
+`adaptiveAirtimeIFrameOnlyDecisionOffsetsUs`) restricts only the listed stages
+to I-frames. These controls do not alter packet selection, reservations,
+measured-airtime charging, or the one-launch-per-frame state. Decision output
+records both the effective admission price and the underlying dual price, and
+resolved configuration records every offset override and frame-type
+restriction. Multiple adaptive decision stages remain disabled unless the
+executable recognizes the exact audited staged-model and policy identity.
+
 By default, both utility and reservation accounting use the retry-inflated
 airtime estimate. `adaptive_airtime_admission_uses_retry_inflation = false`
 instead prices utility with nominal candidate airtime. Token availability,
@@ -335,6 +348,11 @@ secondary packet count and indexes, and packet order. Resolved configuration rec
 `packet_selection = primary_unacknowledged_reverse` and separates the
 `F0+F1-degraded` admission features from the `F2-primary-frame-ack-state`
 selection dependency.
+
+Output validation reconstructs nominal airtime from the selected indexes and
+their exact application payload sizes, including a partial final packet. For a
+calibrated controller identity it also pins payload size, reference-frame size,
+cost safety factor, and reference airtime to the model contract.
 
 This first policy is a causal current-deficit envelope, not the final learned
 packet-deficit predictor. It uses no secondary-link state and makes no claim

@@ -180,13 +180,59 @@ void
 AdaptiveAirtimeDuplicationController::SetDecisionOffsetsUs(
     const std::vector<uint64_t>& offsetsUs)
 {
+    NS_ABORT_MSG_IF(m_bucketInitialized,
+                    "Cannot change adaptive decision offsets after control starts");
     NS_ABORT_MSG_IF(offsetsUs.empty(), "Adaptive airtime requires a decision offset");
     std::set<uint64_t> resolved(offsetsUs.begin(), offsetsUs.end());
     NS_ABORT_MSG_IF(resolved.size() != offsetsUs.size(),
                     "Adaptive airtime decision offsets must be unique");
     NS_ABORT_MSG_IF(!resolved.contains(0),
                     "Adaptive airtime decision offsets must include T0");
+    for (const auto& [offsetUs, price] : m_decisionOffsetShadowPrices)
+    {
+        (void)price;
+        NS_ABORT_MSG_IF(!resolved.contains(offsetUs),
+                        "Adaptive shadow-price override is not a decision offset");
+    }
+    for (const auto offsetUs : m_iFrameOnlyDecisionOffsetsUs)
+    {
+        NS_ABORT_MSG_IF(!resolved.contains(offsetUs),
+                        "Adaptive I-frame restriction is not a decision offset");
+    }
     m_decisionOffsetsUs = std::move(resolved);
+}
+
+void
+AdaptiveAirtimeDuplicationController::SetDecisionOffsetShadowPrices(
+    const std::map<uint64_t, double>& prices)
+{
+    NS_ABORT_MSG_IF(m_bucketInitialized,
+                    "Cannot change adaptive shadow-price overrides after control starts");
+    for (const auto& [offsetUs, price] : prices)
+    {
+        NS_ABORT_MSG_IF(!m_decisionOffsetsUs.contains(offsetUs),
+                        "Adaptive shadow-price override is not a decision offset");
+        NS_ABORT_MSG_IF(!std::isfinite(price) || price < 0 || price > 1,
+                        "Adaptive shadow-price overrides must be in [0, 1]");
+    }
+    m_decisionOffsetShadowPrices = prices;
+}
+
+void
+AdaptiveAirtimeDuplicationController::SetIFrameOnlyDecisionOffsetsUs(
+    const std::vector<uint64_t>& offsetsUs)
+{
+    NS_ABORT_MSG_IF(m_bucketInitialized,
+                    "Cannot change adaptive frame-type restrictions after control starts");
+    std::set<uint64_t> resolved(offsetsUs.begin(), offsetsUs.end());
+    NS_ABORT_MSG_IF(resolved.size() != offsetsUs.size(),
+                    "Adaptive I-frame-only decision offsets must be unique");
+    for (const auto offsetUs : resolved)
+    {
+        NS_ABORT_MSG_IF(!m_decisionOffsetsUs.contains(offsetUs),
+                        "Adaptive I-frame restriction is not a decision offset");
+    }
+    m_iFrameOnlyDecisionOffsetsUs = std::move(resolved);
 }
 
 void
@@ -283,6 +329,22 @@ AdaptiveAirtimeDuplicationController::UpdateShadowPrice(uint64_t nowNs)
         1.0);
     m_measuredSinceLastT0Us = 0;
     m_lastPriceUpdateNs = nowNs;
+}
+
+double
+AdaptiveAirtimeDuplicationController::ResolveDecisionShadowPrice(uint64_t offsetUs) const
+{
+    const auto override = m_decisionOffsetShadowPrices.find(offsetUs);
+    return override == m_decisionOffsetShadowPrices.end() ? m_shadowPrice
+                                                          : override->second;
+}
+
+bool
+AdaptiveAirtimeDuplicationController::IsFrameTypeEligible(
+    const PredictionSample& sample) const
+{
+    return !m_iFrameOnlyDecisionOffsetsUs.contains(sample.sampleOffsetUs) ||
+           sample.frameType == FrameType::I_FRAME;
 }
 
 double
@@ -413,6 +475,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     double estimatedUs = 0;
     double normalizedCost = 0;
     double utility = std::numeric_limits<double>::quiet_NaN();
+    const double shadowPrice = ResolveDecisionShadowPrice(sample.sampleOffsetUs);
     if (descriptor)
     {
         nominalUs = EstimateSecondaryAirtimeUs(descriptor->packetCount,
@@ -423,7 +486,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                                                  m_retryInflation);
         admissionUs = m_admissionUsesRetryInflation ? estimatedUs : nominalUs;
         normalizedCost = admissionUs / referenceUs;
-        utility = probability - m_shadowPrice * normalizedCost;
+        utility = probability - shadowPrice * normalizedCost;
     }
 
     const double reservedUs = m_meter->GetReservedAirtimeUs();
@@ -437,12 +500,32 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
                       reservedUs,
                       availableUs,
                       "already_resolved",
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
+        return;
+    }
+    if (!IsFrameTypeEligible(sample))
+    {
+        WriteDecision(sample,
+                      probability,
+                      admissionUs,
+                      estimatedUs,
+                      referenceUs,
+                      shadowPrice,
+                      normalizedCost,
+                      utility,
+                      balanceUs,
+                      reservedUs,
+                      availableUs,
+                      "frame_type_restricted",
                       false,
                       descriptor ? &*descriptor : nullptr,
                       acknowledgedPacketIndices);
@@ -455,6 +538,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
@@ -473,6 +557,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
@@ -493,6 +578,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
@@ -515,6 +601,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
@@ -552,6 +639,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       admissionUs,
                       estimatedUs,
                       referenceUs,
+                      shadowPrice,
                       normalizedCost,
                       utility,
                       balanceUs,
@@ -573,6 +661,7 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                   admissionUs,
                   estimatedUs,
                   referenceUs,
+                  shadowPrice,
                   normalizedCost,
                   utility,
                   balanceUs,
@@ -648,7 +737,8 @@ AdaptiveAirtimeDuplicationController::WriteHeader()
     m_output << "run_id,frame_id,sample_stage,sample_offset_us,sample_time_ns,"
                 "actionable,calibrated_probability,admission_airtime_us,"
                 "estimated_airtime_us,"
-                "reference_airtime_us,shadow_price,normalized_cost,net_utility,"
+                "reference_airtime_us,shadow_price,dual_shadow_price,"
+                "shadow_price_source,normalized_cost,net_utility,"
                 "airtime_budget_fraction,bucket_capacity_us,bucket_balance_us,"
                 "initial_bucket_capacity_us,"
                 "reserved_airtime_us,available_airtime_us,measured_airtime_total_us,"
@@ -669,6 +759,7 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
                                                     double admissionUs,
                                                     double estimatedUs,
                                                     double referenceUs,
+                                                    double shadowPrice,
                                                     double normalizedCost,
                                                     double utility,
                                                     double balanceUs,
@@ -689,8 +780,12 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
     m_output << m_runId << ',' << sample.key.frameId << ',' << sample.sampleStage << ','
              << sample.sampleOffsetUs << ',' << sample.sampleTimeNs << ','
              << sample.actionable << ',' << probability << ',' << admissionUs << ','
-             << estimatedUs << ',' << referenceUs << ',' << m_shadowPrice << ','
-             << normalizedCost << ',' << utility << ',' << m_budgetFraction << ','
+             << estimatedUs << ',' << referenceUs << ',' << shadowPrice << ','
+             << m_shadowPrice << ','
+             << (m_decisionOffsetShadowPrices.contains(sample.sampleOffsetUs)
+                     ? "offset_override"
+                     : "global_dual")
+             << ',' << normalizedCost << ',' << utility << ',' << m_budgetFraction << ','
              << m_bucketCapacityUs << ',' << balanceUs << ',' << m_initialCapacityUs << ','
              << reservedUs << ',' << availableUs << ',' << measuredTotal << ',' << decision
              << ',' << launched;

@@ -55,6 +55,12 @@ def _burst_lengths(misses: list[bool]) -> list[int]:
     return lengths or [0]
 
 
+def _dual_shadow_price(row: dict[str, str]) -> float:
+    """Return the controller dual variable, with historical-schema fallback."""
+    value = row.get("dual_shadow_price", "")
+    return float(value if value != "" else row["shadow_price"])
+
+
 def _policy_label(policy: str, topology: str) -> str:
     if topology == "mlo_str":
         return "STR MLO"
@@ -719,13 +725,13 @@ def plot_adaptive_airtime(aggregate: dict[str, Any], result_root: Path) -> None:
                 decisions = _read_csv(first)
                 times = [float(row["sample_time_ns"]) / 1e9 for row in decisions
                          if row["sample_stage"] == "T0"]
-                prices = [float(row["shadow_price"]) for row in decisions
+                prices = [_dual_shadow_price(row) for row in decisions
                           if row["sample_stage"] == "T0"]
                 balances = [float(row["bucket_balance_us"]) for row in decisions
                             if row["sample_stage"] == "T0"]
                 if times:
                     fig, ax1 = plt.subplots(figsize=(8, 4.8))
-                    ax1.plot(times, prices, color="tab:blue", label="shadow price")
+                    ax1.plot(times, prices, color="tab:blue", label="dual shadow price")
                     ax1.set_xlabel("Simulation time (s)")
                     ax1.set_ylabel("Shadow price", color="tab:blue")
                     ax2 = ax1.twinx()

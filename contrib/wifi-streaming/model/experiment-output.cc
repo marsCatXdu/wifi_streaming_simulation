@@ -647,6 +647,29 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
             output << (index == 0 ? "" : ", ")
                    << config.adaptiveAirtimeDecisionOffsetsUs[index];
         }
+        output << "],\n"
+               << "    \"shadow_price_mode\": \""
+               << (config.adaptiveAirtimeDecisionOffsetShadowPrices.empty()
+                       ? "global_dual"
+                       : "offset_override_with_global_dual_fallback")
+               << "\",\n"
+               << "    \"decision_offset_shadow_prices\": {";
+        std::size_t priceIndex = 0;
+        for (const auto& [offsetUs, price] :
+             config.adaptiveAirtimeDecisionOffsetShadowPrices)
+        {
+            output << (priceIndex++ == 0 ? "" : ", ") << '"' << offsetUs << "\": "
+                   << price;
+        }
+        output << "},\n"
+               << "    \"i_frame_only_decision_offsets_us\": [";
+        for (std::size_t index = 0;
+             index < config.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs.size();
+             ++index)
+        {
+            output << (index == 0 ? "" : ", ")
+                   << config.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs[index];
+        }
         output << "]\n"
                << "  },\n";
     }

@@ -165,6 +165,24 @@ class AdaptiveAirtimeDuplicationController : public Object
     void SetDecisionOffsetsUs(const std::vector<uint64_t>& offsetsUs);
 
     /**
+     * Override the admission shadow price at selected decision offsets.
+     *
+     * Offsets without an override continue to use the global dual variable.
+     * Overrides are fixed while the global dual update and token meter continue
+     * unchanged.
+     *
+     * @param prices Fixed shadow price indexed by decision offset in microseconds.
+     */
+    void SetDecisionOffsetShadowPrices(const std::map<uint64_t, double>& prices);
+
+    /**
+     * Restrict selected decision offsets to I-frames.
+     *
+     * @param offsetsUs Decision offsets at which only I-frames may launch.
+     */
+    void SetIFrameOnlyDecisionOffsetsUs(const std::vector<uint64_t>& offsetsUs);
+
+    /**
      * Configure the copy used to normalize admission costs.
      *
      * @param packetCount Number of packets in the reference frame copy.
@@ -283,6 +301,22 @@ class AdaptiveAirtimeDuplicationController : public Object
     void UpdateShadowPrice(uint64_t nowNs);
 
     /**
+     * Resolve the admission price for a decision offset.
+     *
+     * @param offsetUs Decision offset in microseconds.
+     * @return Fixed offset override, or the current global dual variable.
+     */
+    double ResolveDecisionShadowPrice(uint64_t offsetUs) const;
+
+    /**
+     * Return whether the frame type is eligible at a decision offset.
+     *
+     * @param sample Current causal prediction sample.
+     * @return True when this stage permits the sample's frame type.
+     */
+    bool IsFrameTypeEligible(const PredictionSample& sample) const;
+
+    /**
      * Charge measured PPDU airtime to the controller balance.
      *
      * @param frameId Frame receiving the allocated airtime.
@@ -329,6 +363,7 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param admissionUs Airtime used to price admission in microseconds.
      * @param estimatedUs Retry-inflated reservation airtime in microseconds.
      * @param referenceUs Reference airtime in microseconds.
+     * @param shadowPrice Effective admission shadow price.
      * @param normalizedCost Estimated cost divided by reference cost.
      * @param utility Net admission utility.
      * @param balanceUs Pre-decision bucket balance.
@@ -344,6 +379,7 @@ class AdaptiveAirtimeDuplicationController : public Object
                        double admissionUs,
                        double estimatedUs,
                        double referenceUs,
+                       double shadowPrice,
                        double normalizedCost,
                        double utility,
                        double balanceUs,
@@ -380,6 +416,8 @@ class AdaptiveAirtimeDuplicationController : public Object
     double m_measuredSinceLastT0Us{0}; ///< Measured airtime since previous T0.
     bool m_bucketInitialized{false}; ///< Whether the bucket is live.
     std::set<uint64_t> m_decisionOffsetsUs{0, 1000, 2000, 4000}; ///< Enabled stages.
+    std::map<uint64_t, double> m_decisionOffsetShadowPrices; ///< Fixed stage prices.
+    std::set<uint64_t> m_iFrameOnlyDecisionOffsetsUs; ///< I-frame-only stages.
     std::map<uint64_t, FrameState> m_frames; ///< Per-frame launch state.
     std::string m_runId{"run"}; ///< Stable output run identifier.
     std::ofstream m_output; ///< Decision CSV.
