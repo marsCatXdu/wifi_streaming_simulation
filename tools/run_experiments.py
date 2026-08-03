@@ -122,6 +122,7 @@ CLI_KEYS = {
     "adaptive_airtime_admission_uses_retry_inflation": (
         "adaptiveAirtimeAdmissionUsesRetryInflation"
     ),
+    "adaptive_airtime_admission_packet_cost": "adaptiveAirtimeAdmissionPacketCost",
     "adaptive_airtime_cost_safety_factor": "adaptiveAirtimeCostSafetyFactor",
     "adaptive_airtime_cost_ewma_alpha": "adaptiveAirtimeCostEwmaAlpha",
     "adaptive_airtime_decision_offsets_us": "adaptiveAirtimeDecisionOffsetsUs",

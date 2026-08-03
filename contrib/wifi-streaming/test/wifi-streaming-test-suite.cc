@@ -1757,10 +1757,10 @@ class OutputStatisticsTestCase : public TestCase
         adaptiveConfig.adaptiveAirtimeBucketHorizonUs = 200000;
         adaptiveConfig.adaptiveAirtimeInitialBucketHorizonUs = 100000;
         adaptiveConfig.adaptiveAirtimeAdmissionUsesRetryInflation = false;
-        adaptiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 1500};
+        adaptiveConfig.adaptiveAirtimeDecisionOffsetsUs = {0, 4000};
         adaptiveConfig.adaptiveAirtimeDecisionOffsetShadowPrices = {
             {0, 0.034},
-            {1500, 0.059723},
+            {4000, 0.059723},
         };
         adaptiveConfig.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs = {0};
         ExperimentOutput::WriteResolvedConfig(adaptiveDirectory, adaptiveConfig);
@@ -1768,9 +1768,14 @@ class OutputStatisticsTestCase : public TestCase
         std::ostringstream adaptiveText;
         adaptiveText << adaptiveResolved.rdbuf();
         NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
-                                  "\"stages\": [\"T0\", \"offset_1500us\"]"),
+                                  "\"stages\": [\"T0\", \"T4\"]"),
                               std::string::npos,
                               "Adaptive resolved stages do not follow configured offsets");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"score_kind\": \"weighted_head_probability_admission_score\""),
+            std::string::npos,
+            "Adaptive T4 score semantics are missing");
         NS_TEST_ASSERT_MSG_NE(adaptiveText.str().find(
                                   "\"initial_bucket_horizon_us\": 100000"),
                               std::string::npos,
@@ -1786,15 +1791,21 @@ class OutputStatisticsTestCase : public TestCase
         NS_TEST_ASSERT_MSG_NE(
             adaptiveText.str().find(
                 "\"admission_cost_definition\": "
-                "\"nominal_estimated_secondary_sender_phy_tx_airtime\""),
+                "\"nominal_estimated_whole_copy_secondary_sender_phy_tx_airtime\""),
             std::string::npos,
             "Adaptive nominal admission cost definition is missing");
         NS_TEST_ASSERT_MSG_NE(
             adaptiveText.str().find(
                 "\"reservation_cost_definition\": "
-                "\"retry_inflated_estimated_secondary_sender_phy_tx_airtime\""),
+                "\"retry_inflated_estimated_launched_packet_set_"
+                "secondary_sender_phy_tx_airtime\""),
             std::string::npos,
             "Adaptive inflated reservation cost definition is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            adaptiveText.str().find(
+                "\"operating_profile\": \"full_forward+whole_copy_priced\""),
+            std::string::npos,
+            "Adaptive operating profile is missing");
         NS_TEST_ASSERT_MSG_NE(
             adaptiveText.str().find(
                 "\"shadow_price_mode\": \"offset_override_with_global_dual_fallback\""),
@@ -1802,7 +1813,7 @@ class OutputStatisticsTestCase : public TestCase
             "Adaptive offset-price mode is missing");
         NS_TEST_ASSERT_MSG_NE(
             adaptiveText.str().find(
-                "\"decision_offset_shadow_prices\": {\"0\": 0.034, \"1500\": 0.059723}"),
+                "\"decision_offset_shadow_prices\": {\"0\": 0.034, \"4000\": 0.059723}"),
             std::string::npos,
             "Adaptive offset prices are missing");
         NS_TEST_ASSERT_MSG_NE(
@@ -1815,6 +1826,7 @@ class OutputStatisticsTestCase : public TestCase
         StreamingRunConfig deficitConfig = adaptiveConfig;
         deficitConfig.runId = "adaptive-deficit-stages";
         deficitConfig.policy = "adaptive_deficit_duplication";
+        deficitConfig.adaptiveAirtimeAdmissionPacketCost = "whole_copy";
         ExperimentOutput::WriteResolvedConfig(deficitDirectory, deficitConfig);
         std::ifstream deficitResolved(deficitDirectory + "/resolved_config.json");
         std::ostringstream deficitText;
@@ -1833,6 +1845,12 @@ class OutputStatisticsTestCase : public TestCase
                                   "\"F2-primary-frame-ack-state\""),
                               std::string::npos,
                               "Primary-deficit F2 dependency is not recorded");
+        NS_TEST_ASSERT_MSG_NE(
+            deficitText.str().find(
+                "\"operating_profile\": "
+                "\"primary_unacknowledged+whole_copy_priced\""),
+            std::string::npos,
+            "Primary-deficit whole-copy-priced profile is missing");
 
         const std::string selectiveDirectory = directory + "/selective";
         ExperimentOutput::PrepareRunDirectory(selectiveDirectory);
@@ -2448,13 +2466,24 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
     }
 
   private:
-    double Score(const PredictionSample& sample) const
+    ClosedLoopRiskScore Score(const PredictionSample& sample) const
     {
-        if (sample.frameType == FrameType::P_FRAME && sample.sampleOffsetUs == 1000)
-        {
-            return 0.0;
-        }
-        return 1.0;
+        const double value =
+            sample.frameType == FrameType::P_FRAME && sample.sampleOffsetUs == 1000
+                ? 0.0
+                : 1.0;
+        return {
+            value,
+            ClosedLoopRiskScoreKind::WEIGHTED_HEAD_PROBABILITY_ADMISSION_SCORE,
+            "test_admission_score",
+            "test_staged_model",
+            "test_source_model_sha256",
+            "test_target_provenance_sha256",
+            "test_feature_contract_sha256",
+            "test_combiner_sha256",
+            value,
+            value,
+        };
     }
 
     void NotifySnapshot(const PredictionSample& sample)
@@ -2560,6 +2589,7 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
         controller->SetPrimaryPath(0);
         controller->SetSecondaryPacketSelection(
             AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED);
+        controller->SetAdmissionPacketCost(AdaptiveAdmissionPacketCost::WHOLE_COPY);
         controller->SetBudgetFraction(0.02);
         controller->SetBucketHorizonUs(100000);
         controller->SetInitialShadowPrice(0.37);
@@ -2689,6 +2719,9 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
             return std::distance(columns.begin(), column);
         };
         const auto decisionColumn = columnFor("decision");
+        const auto admissionPacketCountColumn = columnFor("admission_packet_count");
+        const auto admissionAirtimeColumn = columnFor("admission_airtime_us");
+        const auto estimatedAirtimeColumn = columnFor("estimated_airtime_us");
         bool sawEarlyAction = false;
         bool sawLateAction = false;
         bool sawGlobalFallback = false;
@@ -2743,6 +2776,23 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
                 if (frameId == 0)
                 {
                     sawEarlyAction = offsetUs == 0;
+                    NS_TEST_ASSERT_MSG_EQ(
+                        std::stoul(values.at(admissionPacketCountColumn)),
+                        3,
+                        "Whole-copy admission did not price the full frame");
+                    NS_TEST_ASSERT_MSG_EQ(
+                        values.at(columnFor("configured_admission_packet_cost")),
+                        "whole_copy",
+                        "Deficit ablation did not record whole-copy pricing");
+                    NS_TEST_ASSERT_MSG_EQ(
+                        values.at(columnFor("effective_admission_packet_cost")),
+                        "whole_copy",
+                        "Deficit ablation recorded the wrong effective cost basis");
+                    NS_TEST_ASSERT_MSG_EQ(
+                        std::stod(values.at(admissionAirtimeColumn)) >
+                            std::stod(values.at(estimatedAirtimeColumn)),
+                        true,
+                        "Whole-copy admission cost did not exceed the partial reservation");
                     NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("primary_acked_packet_indices")),
                                           "1",
                                           "T0 action omitted the exact primary ACK set");
@@ -2823,15 +2873,41 @@ class ExplicitSecondaryPacketSelectionTestCase : public TestCase
                               "Settlement output lacks frame_id");
         const auto settlementFrameColumn =
             std::distance(settlementColumns.begin(), settlementFrame);
+        const auto settlementNominal = std::find(settlementColumns.begin(),
+                                                 settlementColumns.end(),
+                                                 "nominal_airtime_us");
+        NS_TEST_ASSERT_MSG_EQ(settlementNominal != settlementColumns.end(),
+                              true,
+                              "Settlement output lacks nominal_airtime_us");
+        const auto settlementNominalColumn =
+            std::distance(settlementColumns.begin(), settlementNominal);
         std::map<uint64_t, uint32_t> settlementsByFrame;
+        std::map<uint64_t, double> settlementNominalsByFrame;
         while (std::getline(settlements, row))
         {
             const auto values = split(row);
-            ++settlementsByFrame[std::stoull(values.at(settlementFrameColumn))];
+            const auto frameId = std::stoull(values.at(settlementFrameColumn));
+            ++settlementsByFrame[frameId];
+            settlementNominalsByFrame[frameId] =
+                std::stod(values.at(settlementNominalColumn));
         }
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            settlementNominalsByFrame[0],
+            controller->EstimateSecondaryAirtimeUs(m_descriptor->packetCount,
+                                                    m_descriptor->expectedMacServiceBytes,
+                                                    1.0),
+            1e-9,
+            "T0 settlement nominal did not price its actual selected packet set");
         NS_TEST_ASSERT_MSG_EQ(settlementsByFrame[1],
                               1,
                               "T4 P-frame reservation did not settle exactly once");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            settlementNominalsByFrame[1],
+            controller->EstimateSecondaryAirtimeUs(m_lateDescriptor->packetCount,
+                                                    m_lateDescriptor->expectedMacServiceBytes,
+                                                    1.0),
+            1e-9,
+            "T4 settlement nominal did not price its actual selected packet set");
         Simulator::Destroy();
         std::filesystem::remove_all(directory);
         m_sender = nullptr;
@@ -3275,10 +3351,26 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
     }
 
   private:
-    double Score(const PredictionSample& sample)
+    ClosedLoopRiskScore Score(const PredictionSample& sample)
     {
         // Reject at T0, then become strongly actionable so a later stage may launch.
-        return sample.sampleOffsetUs == 0 ? 0.01 : 0.95;
+        const double value = sample.sampleOffsetUs == 0 ? 0.01 : 0.95;
+        return {
+            value,
+            sample.sampleOffsetUs == 0
+                ? ClosedLoopRiskScoreKind::CALIBRATED_PRIMARY_MISS_PROBABILITY
+                : ClosedLoopRiskScoreKind::WEIGHTED_HEAD_PROBABILITY_ADMISSION_SCORE,
+            sample.sampleOffsetUs == 0 ? "test_primary_miss_probability"
+                                       : "test_admission_score",
+            sample.sampleOffsetUs == 0 ? "test_t0_model" : "test_later_model",
+            "test_source_model_sha256",
+            "test_target_provenance_sha256",
+            "test_feature_contract_sha256",
+            sample.sampleOffsetUs == 0 ? "" : "test_combiner_sha256",
+            value,
+            sample.sampleOffsetUs == 0 ? std::nullopt
+                                       : std::optional<double>(value),
+        };
     }
 
     void DoRun() override
@@ -3419,8 +3511,14 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
                               true,
                               "Adaptive decision schema is missing admission airtime");
         NS_TEST_ASSERT_MSG_EQ(columns.contains("primary_acked_packet_indices"),
-                              false,
-                              "Whole-copy adaptive decision schema changed unexpectedly");
+                              true,
+                              "Unified adaptive decision schema lacks packet audit fields");
+        NS_TEST_ASSERT_MSG_EQ(columns.contains("admission_score"),
+                              true,
+                              "Adaptive decision schema lacks its truthful score field");
+        NS_TEST_ASSERT_MSG_EQ(columns.contains("score_kind"),
+                              true,
+                              "Adaptive decision schema lacks score semantics");
         std::map<uint64_t, uint32_t> actionsByFrame;
         std::map<uint64_t, bool> rejectedThenActed;
         std::vector<double> t0Prices;

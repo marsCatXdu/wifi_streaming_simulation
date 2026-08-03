@@ -48,7 +48,7 @@ SELECTIVE_DECISION_COLUMNS = {
 }
 ADAPTIVE_DECISION_COLUMNS = {
     "run_id", "frame_id", "sample_stage", "sample_offset_us", "sample_time_ns",
-    "actionable", "calibrated_probability", "estimated_airtime_us",
+    "actionable", "estimated_airtime_us",
     "reference_airtime_us", "shadow_price", "normalized_cost", "net_utility",
     "airtime_budget_fraction", "bucket_capacity_us", "bucket_balance_us",
     "initial_bucket_capacity_us", "reserved_airtime_us", "available_airtime_us",
@@ -127,8 +127,34 @@ PREDICTION_EVENT_SCHEMA_VERSION = 2
 PREDICTION_SUPPORT_MASK_VERSION = 2
 PRIMARY_T0_MODEL_ID = "commodity_polling_1ms_obss_primary_t0_v1"
 PRIMARY_TARGET_ID = "primary_copy_deadline_miss"
+PRIMARY_T0_SOURCE_MODEL_SHA256 = (
+    "735e69ea4ad0ce615b6f827aaa8e3362135cf3f18e4c727d69920af9898d73bf"
+)
 PRIMARY_TARGET_PROVENANCE_SHA256 = (
     "e3d62e814e13aaeb5e4aab495ba7222b2a910a8268fe6f8645299c3451756f84"
+)
+PRIMARY_TAIL_T4_MODEL_ID = "primary_tail_t4_obss_v1"
+PRIMARY_TAIL_T4_PRIMARY_TARGET_ID = "primary_miss_t4_v1"
+PRIMARY_TAIL_T4_COMPLETED_TARGET_ID = (
+    "completed_primary_latency_ge_12500us_t4_v1"
+)
+PRIMARY_TAIL_T4_SOURCE_MODEL_SHA256 = (
+    "1a9afc23452952d87c7b5845a22260321ba302f38f1c3fb1eeaafadb0a12856c"
+)
+PRIMARY_TAIL_T4_TARGET_PROVENANCE_SHA256 = (
+    "2b16b96bef68a32ec282e01b18a30506eaab933039c85e9bb1f6302da7b73be5"
+)
+PRIMARY_TAIL_T4_FEATURE_CONTRACT_SHA256 = (
+    "8ccf33d6af8dffb8da758016acbd809a7cc054be4a1abc070d129c788b9c7cb0"
+)
+PRIMARY_TAIL_T4_COMBINER_SHA256 = (
+    "3d47b994ef5fcf579c73fb74492e0293dfe3ba377911f72f7a6b5fe764e6d9e0"
+)
+PRIMARY_TAIL_T4_PRIMARY_MODEL_SHA256 = (
+    "8f8944a536166cb0f7dcc7c1a7bcf781f6a4d8fc25a995e3b8ed983b8886d98d"
+)
+PRIMARY_TAIL_T4_COMPLETED_MODEL_SHA256 = (
+    "ce787f6aaa9e2607c10bdb9227ae831eb6eb94e1499e9e1240e4d4ddc62a1fec"
 )
 PRIMARY_T0_ESTIMATOR_COST_SAFETY_FACTOR = 1.25
 PRIMARY_T0_ESTIMATOR_REFERENCE_FRAME_BYTES = 12_000
@@ -440,20 +466,56 @@ def _prediction_model_offsets_valid(
     return config.get("model_id") != PRIMARY_T0_MODEL_ID or offsets == [0]
 
 
-def _staged_adaptive_deficit_identity_valid(
-    _config: dict[str, Any], expected_selection: str
-) -> bool:
-    """Integration hook for the final audited staged-tail export identity."""
-    if expected_selection != "primary_unacknowledged_reverse":
+def _staged_adaptive_identity_valid(config: dict[str, Any]) -> bool:
+    """Check the exact frozen T0/T4 score identities and semantics."""
+    scorers = config.get("stage_scorers")
+    if config.get("score_contract") != "stage_specific" or not isinstance(scorers, dict):
         return False
-    # Keep this closed until model_id, target_id, and target provenance are final.
-    return False
+    expected = {
+        "T0": {
+            "sample_offset_us": 0,
+            "score_name": "primary_miss_calibrated_probability",
+            "score_kind": "calibrated_primary_miss_probability",
+            "model_id": PRIMARY_T0_MODEL_ID,
+            "primary_miss_target_id": PRIMARY_TARGET_ID,
+            "completed_tail_target_id": "",
+            "source_model_sha256": PRIMARY_T0_SOURCE_MODEL_SHA256,
+            "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+            "feature_contract_sha256": "",
+            "combiner_sha256": "",
+            "primary_miss_model_sha256": "",
+            "completed_tail_model_sha256": "",
+            "feature_count": 86,
+        },
+        "T4": {
+            "sample_offset_us": 4000,
+            "score_name": "admission_score",
+            "score_kind": "weighted_head_probability_admission_score",
+            "model_id": PRIMARY_TAIL_T4_MODEL_ID,
+            "primary_miss_target_id": PRIMARY_TAIL_T4_PRIMARY_TARGET_ID,
+            "completed_tail_target_id": PRIMARY_TAIL_T4_COMPLETED_TARGET_ID,
+            "source_model_sha256": PRIMARY_TAIL_T4_SOURCE_MODEL_SHA256,
+            "target_provenance_sha256": PRIMARY_TAIL_T4_TARGET_PROVENANCE_SHA256,
+            "feature_contract_sha256": PRIMARY_TAIL_T4_FEATURE_CONTRACT_SHA256,
+            "combiner_sha256": PRIMARY_TAIL_T4_COMBINER_SHA256,
+            "primary_miss_model_sha256": PRIMARY_TAIL_T4_PRIMARY_MODEL_SHA256,
+            "completed_tail_model_sha256": PRIMARY_TAIL_T4_COMPLETED_MODEL_SHA256,
+            "feature_count": 101,
+        },
+    }
+    offsets = config.get("decision_offsets_us")
+    expected_keys = {"T0"} if offsets == [0] else {"T0", "T4"}
+    return offsets in ([0], [0, 4000]) and scorers == {
+        key: expected[key] for key in expected_keys
+    }
 
 
 def _adaptive_admission_cost_metadata(
-    config: dict[str, Any], object_name: str
-) -> tuple[bool, bool]:
-    """Return retry-inflation use and whether the explicit schema is present."""
+    config: dict[str, Any],
+    object_name: str,
+    expected_selection: str = "full_forward",
+) -> tuple[bool, bool, str]:
+    """Return inflation mode, explicit-schema presence, and effective packet cost."""
     keys = {
         "admission_uses_retry_inflation",
         "admission_cost_definition",
@@ -463,23 +525,73 @@ def _adaptive_admission_cost_metadata(
     if not present:
         # Historical outputs priced and reserved the same retry-inflated
         # estimate, before this distinction was recorded explicitly.
-        return True, False
+        effective = (
+            "whole_copy"
+            if expected_selection == "full_forward"
+            else "primary_unacknowledged_packet_set"
+        )
+        return True, False, effective
     _require(present == keys,
              f"resolved_config.json: incomplete {object_name} cost metadata")
     uses_retry_inflation = config.get("admission_uses_retry_inflation")
     _require(isinstance(uses_retry_inflation, bool),
              f"resolved_config.json: invalid {object_name}."
              "admission_uses_retry_inflation")
-    expected_admission = (
-        ADAPTIVE_RETRY_INFLATED_COST_DEFINITION
-        if uses_retry_inflation
-        else ADAPTIVE_NOMINAL_COST_DEFINITION
+    packet_keys = {
+        "configured_admission_packet_cost",
+        "effective_admission_packet_cost",
+        "operating_profile",
+    }
+    present_packet_keys = packet_keys & config.keys()
+    if not present_packet_keys:
+        expected_admission = (
+            ADAPTIVE_RETRY_INFLATED_COST_DEFINITION
+            if uses_retry_inflation
+            else ADAPTIVE_NOMINAL_COST_DEFINITION
+        )
+        _require(config.get("admission_cost_definition") == expected_admission and
+                 config.get("reservation_cost_definition") ==
+                     ADAPTIVE_RETRY_INFLATED_COST_DEFINITION,
+                 f"resolved_config.json: invalid {object_name} cost definition")
+        effective = (
+            "whole_copy"
+            if expected_selection == "full_forward"
+            else "primary_unacknowledged_packet_set"
+        )
+        return uses_retry_inflation, True, effective
+
+    _require(present_packet_keys == packet_keys,
+             f"resolved_config.json: incomplete {object_name} packet-cost metadata")
+    configured = config.get("configured_admission_packet_cost")
+    _require(configured in {"launched_packet_set", "whole_copy"},
+             f"resolved_config.json: invalid {object_name} configured packet cost")
+    effective = (
+        "whole_copy"
+        if expected_selection == "full_forward" or configured == "whole_copy"
+        else "primary_unacknowledged_packet_set"
     )
-    _require(config.get("admission_cost_definition") == expected_admission and
-             config.get("reservation_cost_definition") ==
-                 ADAPTIVE_RETRY_INFLATED_COST_DEFINITION,
-             f"resolved_config.json: invalid {object_name} cost definition")
-    return uses_retry_inflation, True
+    expected_profile = (
+        "full_forward+whole_copy_priced"
+        if expected_selection == "full_forward"
+        else (
+            "primary_unacknowledged+whole_copy_priced"
+            if effective == "whole_copy"
+            else "primary_unacknowledged+selected_packet_set_priced"
+        )
+    )
+    expected_admission = (
+        f"{'retry_inflated' if uses_retry_inflation else 'nominal'}_estimated_"
+        f"{effective}_secondary_sender_phy_tx_airtime"
+    )
+    _require(
+        config.get("effective_admission_packet_cost") == effective
+        and config.get("operating_profile") == expected_profile
+        and config.get("admission_cost_definition") == expected_admission
+        and config.get("reservation_cost_definition") ==
+            "retry_inflated_estimated_launched_packet_set_secondary_sender_phy_tx_airtime",
+        f"resolved_config.json: invalid {object_name} cost definition",
+    )
+    return uses_retry_inflation, True, effective
 
 
 def _requires_exact_adaptive_estimator(
@@ -592,7 +704,7 @@ def _validate_calibrated_estimator_contract(
     """Pin estimator inputs used by a calibrated controller gate."""
     calibrated_identity = (
         config.get("model_id") == PRIMARY_T0_MODEL_ID or
-        _staged_adaptive_deficit_identity_valid(config, expected_selection)
+        _staged_adaptive_identity_valid(config)
     )
     if not calibrated_identity:
         return
@@ -623,7 +735,6 @@ def _validate_adaptive_config(
     """Validate adaptive controller provenance and return decision offsets."""
     _require(expected_selection in {"full_forward", "primary_unacknowledged_reverse"},
              "resolved_config.json: unknown adaptive packet selection")
-    source_sha = config.get("source_model_sha256")
     object_name = (
         "adaptiveDeficitDuplication"
         if expected_selection == "primary_unacknowledged_reverse"
@@ -634,19 +745,25 @@ def _validate_adaptive_config(
             "commodity_polling_1ms_genuine_v1", PRIMARY_T0_MODEL_ID,
         } and _prediction_target_provenance_valid(config)
     )
-    staged_identity = _staged_adaptive_deficit_identity_valid(
-        config, expected_selection
+    staged_identity = _staged_adaptive_identity_valid(config)
+    legacy_provenance = (
+        legacy_identity
+        and isinstance(config.get("source_model_sha256"), str)
+        and re.fullmatch(r"[0-9a-f]{64}", config["source_model_sha256"]) is not None
+        and config.get("feature_set") == "F0+F1-degraded"
+        and config.get("calibration") == "platt"
+        and config.get("admission_feature_set", "F0+F1-degraded") == "F0+F1-degraded"
+    )
+    staged_provenance = (
+        staged_identity
+        and config.get("admission_feature_set") == "stage_specific_compiled"
     )
     _require(
-        (legacy_identity or staged_identity) and
-        isinstance(source_sha, str) and re.fullmatch(r"[0-9a-f]{64}", source_sha) is not None and
-        config.get("feature_set") == "F0+F1-degraded" and
+        (legacy_provenance or staged_provenance) and
         config.get("degradation_profile") == "polling_1ms" and
-        config.get("calibration") == "platt" and
         config.get("budget_definition") == "secondary_sender_phy_tx_airtime" and
         config.get("primary_path") == 1 and config.get("secondary_path") == 0 and
         config.get("packet_selection", "full_forward") == expected_selection and
-        config.get("admission_feature_set", "F0+F1-degraded") == "F0+F1-degraded" and
         config.get("packet_selection_feature_set", "none") == (
             "F2-primary-frame-ack-state"
             if expected_selection == "primary_unacknowledged_reverse"
@@ -663,8 +780,10 @@ def _validate_adaptive_config(
              "resolved_config.json: adaptive decision offsets must include T0")
     _require(set(offsets) <= {0, 1000, 2000, 4000},
              "resolved_config.json: adaptive predictor has an unsupported stage")
-    _require(_prediction_model_offsets_valid(config, offsets),
+    _require(staged_identity or _prediction_model_offsets_valid(config, offsets),
              "resolved_config.json: primary T0 predictor only supports offset 0")
+    _require(not staged_identity or offsets in ([0], [0, 4000]),
+             "resolved_config.json: staged predictor supports exactly T0 or T0/T4")
     _require(config.get("stages") == [_stage_name(offset) for offset in offsets],
              "resolved_config.json: adaptive stages do not match decision offsets")
 
@@ -730,7 +849,7 @@ def _validate_adaptive_config(
     )
     _require(_close(initial_capacity, fraction * initial_horizon),
              "resolved_config.json: adaptive initial capacity mismatch")
-    _adaptive_admission_cost_metadata(config, object_name)
+    _adaptive_admission_cost_metadata(config, object_name, expected_selection)
     return offsets
 
 
@@ -780,11 +899,14 @@ def _validate_adaptive_decisions(
     prediction_samples: dict[tuple[int, int], dict[str, str]],
     run_id: str,
     stream_config: dict[str, Any] | None = None,
+    action_nominal_airtimes: dict[int, float] | None = None,
 ) -> dict[int, float]:
     """Validate controller arithmetic and decision semantics.
 
     The returned mapping contains the reservation estimate for every launched
-    frame and is used to reconcile the independent PHY-airtime ledger.
+    frame and is used to reconcile the independent PHY-airtime ledger. When
+    ``action_nominal_airtimes`` is supplied, exact-model actions also populate
+    it with the reconstructed nominal cost of the packet set actually launched.
     """
     packet_selection = config.get("packet_selection", "full_forward")
     offsets = _validate_adaptive_config(config, packet_selection)
@@ -818,14 +940,28 @@ def _validate_adaptive_decisions(
     )
     dual_step = _config_number(config, "dual_step", object_name)
     safety = _config_number(config, "cost_safety_factor", object_name)
-    uses_retry_inflation, has_cost_metadata = _adaptive_admission_cost_metadata(
-        config, object_name
+    uses_retry_inflation, has_cost_metadata, effective_packet_cost = (
+        _adaptive_admission_cost_metadata(config, object_name, packet_selection)
     )
+    typed_score_contract = config.get("score_contract") == "stage_specific"
+    stage_scorers = config.get("stage_scorers", {})
     has_admission_airtime = bool(rows) and "admission_airtime_us" in rows[0]
+    has_typed_score = bool(rows) and "admission_score" in rows[0]
+    has_packet_cost_audit = bool(rows) and "admission_packet_count" in rows[0]
+    has_packet_selection_audit = bool(rows) and "secondary_packet_count" in rows[0]
     if rows:
         _require(all(("admission_airtime_us" in row) == has_admission_airtime
                      for row in rows),
                  "adaptive decisions: inconsistent admission-airtime schema")
+        _require(all(("admission_score" in row) == has_typed_score and
+                     ("admission_packet_count" in row) == has_packet_cost_audit and
+                     ("secondary_packet_count" in row) == has_packet_selection_audit
+                     for row in rows),
+                 "adaptive decisions: inconsistent typed audit schema")
+        _require(not typed_score_contract or
+                 (has_typed_score and has_packet_cost_audit and
+                  has_packet_selection_audit),
+                 "adaptive decisions: staged score/cost audit fields are absent")
         _require(not has_cost_metadata or has_admission_airtime,
                  "adaptive decisions: explicit cost metadata requires admission airtime")
         _require(uses_retry_inflation or has_admission_airtime,
@@ -911,7 +1047,52 @@ def _validate_adaptive_decisions(
         _require(actionable == _flag(
             prediction, "actionable", "prediction_samples.csv"
         ), "adaptive decisions: actionability/telemetry mismatch")
-        probability = _number(row, "calibrated_probability", file_name)
+        score = _number(
+            row,
+            "admission_score" if has_typed_score else "calibrated_probability",
+            file_name,
+        )
+        if has_typed_score:
+            scorer = stage_scorers.get(_stage_name(offset))
+            _require(isinstance(scorer, dict),
+                     "adaptive decisions: stage scorer identity is absent")
+            for row_key, scorer_key in (
+                ("score_name", "score_name"),
+                ("score_kind", "score_kind"),
+                ("score_model_id", "model_id"),
+                ("score_source_model_sha256", "source_model_sha256"),
+                ("score_target_provenance_sha256", "target_provenance_sha256"),
+                ("score_feature_contract_sha256", "feature_contract_sha256"),
+                ("score_combiner_sha256", "combiner_sha256"),
+            ):
+                _require(row.get(row_key) == str(scorer.get(scorer_key, "")),
+                         "adaptive decisions: score provenance mismatch")
+            primary_probability = _optional_number(
+                row, "primary_miss_probability", file_name
+            )
+            tail_probability = _optional_number(
+                row, "completed_tail_probability", file_name
+            )
+            _require(
+                primary_probability is not None and
+                0 <= primary_probability <= 1 and
+                (tail_probability is None or 0 <= tail_probability <= 1),
+                "adaptive decisions: invalid head probability",
+            )
+            if scorer.get("score_kind") == "calibrated_primary_miss_probability":
+                _require(tail_probability is None and _close(score, primary_probability),
+                         "adaptive decisions: invalid calibrated probability score")
+            else:
+                _require(
+                    scorer.get("score_kind") ==
+                        "weighted_head_probability_admission_score"
+                    and tail_probability is not None
+                    and _close(
+                        score,
+                        (primary_probability + 0.2 * tail_probability) / 1.2,
+                    ),
+                    "adaptive decisions: invalid weighted admission score",
+                )
         estimated = _number(row, "estimated_airtime_us", file_name)
         admission = (
             _number(row, "admission_airtime_us", file_name)
@@ -933,9 +1114,9 @@ def _validate_adaptive_decisions(
         reserved = _number(row, "reserved_airtime_us", file_name)
         available = _signed_number(row, "available_airtime_us", file_name)
         measured = _number(row, "measured_airtime_total_us", file_name)
-        _require(0 <= probability <= 1 and 0 <= shadow <= 1 and
+        _require(0 <= score <= 1 and 0 <= shadow <= 1 and
                  0 <= dual_shadow <= 1 and reference > 0,
-                 "adaptive decisions: probability, price, or reference out of bounds")
+                 "adaptive decisions: score, price, or reference out of bounds")
         expected_shadow = offset_prices.get(offset, dual_shadow)
         _require(_close(shadow, expected_shadow),
                  "adaptive decisions: effective shadow-price mismatch")
@@ -974,8 +1155,30 @@ def _validate_adaptive_decisions(
         _require(not restriction_applies or decision == "frame_type_restricted",
                  "adaptive decisions: frame-type restriction was bypassed")
 
+        selected_count = 0
+        selected_indices: list[int] = []
+        frame_packet_count = 0
+        if has_packet_selection_audit or primary_deficit:
+            frame_packet_count = _integer(
+                prediction, "frame_packet_count", "prediction_samples.csv"
+            )
+        if has_packet_selection_audit:
+            logged_frame_packet_count = _integer(row, "frame_packet_count", file_name)
+            _require(logged_frame_packet_count == frame_packet_count,
+                     "adaptive decisions: frame packet count mismatch")
+            selected_count = _integer(row, "secondary_packet_count", file_name)
+            index_text = row.get("secondary_packet_indices", "")
+            index_tokens = [] if not index_text else index_text.split(";")
+            _require(all(re.fullmatch(r"[0-9]+", token) for token in index_tokens),
+                     "adaptive decisions: malformed selected packet indexes")
+            selected_indices = [int(token) for token in index_tokens]
+            selected_indices_for_cost = selected_indices
+            _require(len(selected_indices) == selected_count and
+                     len(selected_indices) == len(set(selected_indices)) and
+                     all(0 <= index < frame_packet_count for index in selected_indices),
+                     "adaptive decisions: invalid selected packet indexes")
+
         if primary_deficit:
-            frame_packet_count = _integer(row, "frame_packet_count", file_name)
             _require(frame_packet_count == _integer(
                 prediction, "frame_packet_count", "prediction_samples.csv"
             ), "adaptive deficit decisions: frame packet count mismatch")
@@ -994,17 +1197,6 @@ def _validate_adaptive_decisions(
                      all(0 <= index < frame_packet_count for index in acked_indices) and
                      acked_indices == sorted(acked_indices),
                      "adaptive deficit decisions: invalid ACKed packet indexes")
-            selected_count = _integer(row, "secondary_packet_count", file_name)
-            index_text = row.get("secondary_packet_indices", "")
-            index_tokens = [] if not index_text else index_text.split(";")
-            _require(all(re.fullmatch(r"[0-9]+", token) for token in index_tokens),
-                     "adaptive deficit decisions: malformed selected packet indexes")
-            selected_indices = [int(token) for token in index_tokens]
-            selected_indices_for_cost = selected_indices
-            _require(len(selected_indices) == selected_count and
-                     len(selected_indices) == len(set(selected_indices)) and
-                     all(0 <= index < frame_packet_count for index in selected_indices),
-                     "adaptive deficit decisions: invalid selected packet indexes")
             order = row.get("secondary_packet_order")
             descriptor_absent = (
                 decision in {"already_resolved", "no_primary_deficit"} or
@@ -1025,36 +1217,105 @@ def _validate_adaptive_decisions(
                          selected_indices == expected_indices and
                          order == "primary_unacknowledged_reverse",
                          "adaptive deficit decisions: selected packet set is inconsistent")
+        elif has_packet_selection_audit:
+            descriptor_absent = decision == "already_resolved"
+            if descriptor_absent:
+                _require(selected_count == 0 and
+                         row.get("secondary_packet_order") == "none",
+                         "adaptive decisions: resolved row retains a full-copy packet set")
+            else:
+                _require(selected_count == frame_packet_count and
+                         selected_indices == list(range(frame_packet_count)) and
+                         row.get("secondary_packet_order") == "full_forward",
+                         "adaptive decisions: full-copy packet set is inconsistent")
 
+        if has_packet_cost_audit:
+            configured_packet_cost = config.get(
+                "configured_admission_packet_cost", "launched_packet_set"
+            )
+            _require(
+                row.get("configured_admission_packet_cost") == configured_packet_cost
+                and row.get("effective_admission_packet_cost") == effective_packet_cost,
+                "adaptive decisions: packet-cost mode mismatch",
+            )
+            admission_packet_count = _integer(
+                row, "admission_packet_count", file_name
+            )
+            expected_admission_packet_count = (
+                frame_packet_count
+                if admission > 0 and effective_packet_cost == "whole_copy"
+                else selected_count
+            )
+            _require(admission_packet_count == expected_admission_packet_count,
+                     "adaptive decisions: admission packet count mismatch")
+
+        actual_descriptor_present = (
+            decision != "already_resolved"
+            and not (primary_deficit and selected_count == 0)
+        )
+        admission_descriptor_present = (
+            decision != "already_resolved"
+            and (
+                effective_packet_cost == "whole_copy"
+                or actual_descriptor_present
+            )
+        )
+        _require(
+            (estimated > 0) == actual_descriptor_present
+            and (admission > 0) == admission_descriptor_present,
+            "adaptive decisions: descriptor/cost presence mismatch",
+        )
+
+        expected_actual_nominal: float | None = None
+        expected_admission_nominal: float | None = None
         if exact_estimator and estimated > 0:
             if primary_deficit:
                 _require(selected_indices_for_cost is not None,
                          "adaptive deficit estimator: packet set is absent")
-                expected_nominal = _adaptive_primary_deficit_cost(
+                expected_actual_nominal = _adaptive_primary_deficit_cost(
                     frames_by_id[frame_id],
                     selected_indices_for_cost,
                     stream_config,
                     safety,
                 )
             else:
-                expected_nominal = expected_whole_copy_costs[frame_id]
-            _require(estimated >= expected_nominal or _close(estimated, expected_nominal),
+                expected_actual_nominal = expected_whole_copy_costs[frame_id]
+            _require(estimated >= expected_actual_nominal or
+                     _close(estimated, expected_actual_nominal),
                      "adaptive decisions: reservation below nominal estimator")
             if uses_retry_inflation:
                 if not saw_retry_inflated_descriptor:
-                    _require(_close(estimated, expected_nominal),
+                    _require(_close(estimated, expected_actual_nominal),
                              "adaptive decisions: initial retry estimate mismatch")
                 saw_retry_inflated_descriptor = True
+        if exact_estimator and admission > 0:
+            expected_admission_nominal = (
+                expected_whole_copy_costs[frame_id]
+                if effective_packet_cost == "whole_copy"
+                else expected_actual_nominal
+            )
+            _require(expected_admission_nominal is not None,
+                     "adaptive decisions: admission estimator packet set is absent")
+            if uses_retry_inflation:
+                _require(admission >= expected_admission_nominal or
+                         _close(admission, expected_admission_nominal),
+                         "adaptive decisions: admission below nominal estimator")
+                if expected_actual_nominal is not None:
+                    _require(
+                        _close(
+                            admission / expected_admission_nominal,
+                            estimated / expected_actual_nominal,
+                        ),
+                        "adaptive decisions: admission/reservation inflation mismatch",
+                    )
             else:
-                _require(_close(admission, expected_nominal),
+                _require(_close(admission, expected_admission_nominal),
                          "adaptive decisions: nominal admission estimator mismatch")
 
-        if estimated > 0:
-            _require(admission > 0 and admission <= estimated + 1e-9 and
-                     (not uses_retry_inflation or _close(admission, estimated)) and
-                     _close(normalized, admission / reference) and
+        if admission > 0:
+            _require(_close(normalized, admission / reference) and
                      math.isfinite(utility) and
-                     _close(utility, probability - shadow * normalized),
+                     _close(utility, score - shadow * normalized),
                      "adaptive decisions: cost or utility arithmetic mismatch")
         else:
             _require(_close(admission, 0) and _close(normalized, 0) and
@@ -1066,6 +1327,11 @@ def _validate_adaptive_decisions(
                      estimated > 0 and frame_id not in action_estimates,
                      "adaptive decisions: invalid action predicate")
             action_estimates[frame_id] = estimated
+            if exact_estimator:
+                _require(expected_actual_nominal is not None,
+                         "adaptive decisions: action nominal estimator is absent")
+                if action_nominal_airtimes is not None:
+                    action_nominal_airtimes[frame_id] = expected_actual_nominal
         elif decision == "price_rejected":
             _require(actionable and estimated > 0 and utility <= 0,
                      "adaptive decisions: invalid price rejection predicate")
@@ -1134,6 +1400,7 @@ def _validate_secondary_airtime(
     observed_budget_debt_us: float,
     frames: list[dict[str, str]] | None = None,
     stream_config: dict[str, Any] | None = None,
+    action_nominal_airtimes: dict[int, float] | None = None,
 ) -> None:
     """Reconcile secondary PHY events, reservations, and the run budget."""
     _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
@@ -1142,17 +1409,17 @@ def _validate_secondary_airtime(
         "selective_duplication", "adaptive_airtime_duplication",
         "adaptive_deficit_duplication", "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
-    expected_settlement_nominals: dict[int, float] = {}
+    expected_settlement_nominals = dict(action_nominal_airtimes or {})
     if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
-        _, has_cost_metadata = _adaptive_admission_cost_metadata(
-            adaptive_config, "adaptiveAirtimeDuplication"
+        _, has_cost_metadata, _ = _adaptive_admission_cost_metadata(
+            adaptive_config, "adaptiveAirtimeDuplication", "full_forward"
         )
         if _requires_exact_adaptive_estimator(
             adaptive_config, has_cost_metadata
         ):
             _require(frames is not None and isinstance(stream_config, dict),
                      "adaptive estimator: frame or stream metadata is absent")
-            _, expected_settlement_nominals = _adaptive_whole_copy_costs(
+            _, whole_copy_nominals = _adaptive_whole_copy_costs(
                 frames,
                 stream_config,
                 _config_number(
@@ -1161,6 +1428,13 @@ def _validate_secondary_airtime(
                     "adaptiveAirtimeDuplication",
                 ),
             )
+            expected_settlement_nominals = {
+                frame_id: whole_copy_nominals[frame_id]
+                for frame_id in action_estimates
+            }
+    if expected_settlement_nominals:
+        _require(set(expected_settlement_nominals) == set(action_estimates),
+                 "secondary airtime settlements: nominal action set mismatch")
     _require(meter_config.get("definition") == "secondary_sender_phy_tx_airtime" and
              meter_config.get("path_id") == 0 and meter_config.get("copy_id") == 1,
              "resolved_config.json: invalid secondary airtime meter definition")
@@ -2501,6 +2775,7 @@ def validate_run(
     }
     adaptive_config: dict[str, Any] | None = None
     action_estimates: dict[int, float] = {}
+    action_nominal_airtimes: dict[int, float] = {}
     observed_budget_debt_us = 0.0
     decision_samples: dict[tuple[int, int], dict[str, str]] = {}
     if config["policy"] in {
@@ -2632,6 +2907,7 @@ def validate_run(
             decision_samples,
             run_id,
             config["stream"],
+            action_nominal_airtimes,
         )
         observed_budget_debt_us = max(
             (max(0.0, -_signed_number(
@@ -2680,6 +2956,7 @@ def validate_run(
             observed_budget_debt_us,
             frames,
             config["stream"],
+            action_nominal_airtimes,
         )
     else:
         _require(not (run_dir / "secondary_airtime_events.csv").exists(),

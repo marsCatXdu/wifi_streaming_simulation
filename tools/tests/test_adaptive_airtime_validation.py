@@ -16,9 +16,19 @@ TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
 from validate_outputs import (
+    PRIMARY_T0_SOURCE_MODEL_SHA256,
     PRIMARY_T0_MODEL_ID,
     PRIMARY_TARGET_ID,
     PRIMARY_TARGET_PROVENANCE_SHA256,
+    PRIMARY_TAIL_T4_COMBINER_SHA256,
+    PRIMARY_TAIL_T4_COMPLETED_MODEL_SHA256,
+    PRIMARY_TAIL_T4_COMPLETED_TARGET_ID,
+    PRIMARY_TAIL_T4_FEATURE_CONTRACT_SHA256,
+    PRIMARY_TAIL_T4_MODEL_ID,
+    PRIMARY_TAIL_T4_PRIMARY_MODEL_SHA256,
+    PRIMARY_TAIL_T4_PRIMARY_TARGET_ID,
+    PRIMARY_TAIL_T4_SOURCE_MODEL_SHA256,
+    PRIMARY_TAIL_T4_TARGET_PROVENANCE_SHA256,
     ValidationError,
     _adaptive_nominal_airtime_us,
     _adaptive_whole_copy_costs,
@@ -55,6 +65,85 @@ def adaptive_config() -> dict[str, object]:
         "cost_ewma_alpha": 0.25,
         "decision_offsets_us": [0, 1000],
     }
+
+
+def staged_adaptive_config(
+    packet_selection: str = "full_forward",
+    admission_packet_cost: str = "launched_packet_set",
+) -> dict[str, object]:
+    config = adaptive_config()
+    effective_packet_cost = (
+        "whole_copy"
+        if packet_selection == "full_forward" or admission_packet_cost == "whole_copy"
+        else "primary_unacknowledged_packet_set"
+    )
+    operating_profile = (
+        "full_forward+whole_copy_priced"
+        if packet_selection == "full_forward"
+        else (
+            "primary_unacknowledged+whole_copy_priced"
+            if effective_packet_cost == "whole_copy"
+            else "primary_unacknowledged+selected_packet_set_priced"
+        )
+    )
+    config.update({
+        "score_contract": "stage_specific",
+        "stage_scorers": {
+            "T0": {
+                "sample_offset_us": 0,
+                "score_name": "primary_miss_calibrated_probability",
+                "score_kind": "calibrated_primary_miss_probability",
+                "model_id": PRIMARY_T0_MODEL_ID,
+                "primary_miss_target_id": PRIMARY_TARGET_ID,
+                "completed_tail_target_id": "",
+                "source_model_sha256": PRIMARY_T0_SOURCE_MODEL_SHA256,
+                "target_provenance_sha256": PRIMARY_TARGET_PROVENANCE_SHA256,
+                "feature_contract_sha256": "",
+                "combiner_sha256": "",
+                "primary_miss_model_sha256": "",
+                "completed_tail_model_sha256": "",
+                "feature_count": 86,
+            },
+            "T4": {
+                "sample_offset_us": 4000,
+                "score_name": "admission_score",
+                "score_kind": "weighted_head_probability_admission_score",
+                "model_id": PRIMARY_TAIL_T4_MODEL_ID,
+                "primary_miss_target_id": PRIMARY_TAIL_T4_PRIMARY_TARGET_ID,
+                "completed_tail_target_id": PRIMARY_TAIL_T4_COMPLETED_TARGET_ID,
+                "source_model_sha256": PRIMARY_TAIL_T4_SOURCE_MODEL_SHA256,
+                "target_provenance_sha256": PRIMARY_TAIL_T4_TARGET_PROVENANCE_SHA256,
+                "feature_contract_sha256": PRIMARY_TAIL_T4_FEATURE_CONTRACT_SHA256,
+                "combiner_sha256": PRIMARY_TAIL_T4_COMBINER_SHA256,
+                "primary_miss_model_sha256": PRIMARY_TAIL_T4_PRIMARY_MODEL_SHA256,
+                "completed_tail_model_sha256": PRIMARY_TAIL_T4_COMPLETED_MODEL_SHA256,
+                "feature_count": 101,
+            },
+        },
+        "admission_feature_set": "stage_specific_compiled",
+        "packet_selection": packet_selection,
+        "packet_selection_feature_set": (
+            "F2-primary-frame-ack-state"
+            if packet_selection == "primary_unacknowledged_reverse" else "none"
+        ),
+        "stages": ["T0", "T4"],
+        "decision_offsets_us": [0, 4000],
+        "admission_uses_retry_inflation": False,
+        "configured_admission_packet_cost": admission_packet_cost,
+        "effective_admission_packet_cost": effective_packet_cost,
+        "operating_profile": operating_profile,
+        "admission_cost_definition": (
+            f"nominal_estimated_{effective_packet_cost}_"
+            "secondary_sender_phy_tx_airtime"
+        ),
+        "reservation_cost_definition": (
+            "retry_inflated_estimated_launched_packet_set_"
+            "secondary_sender_phy_tx_airtime"
+        ),
+    })
+    for key in ("model_id", "source_model_sha256", "feature_set", "calibration"):
+        config.pop(key, None)
+    return config
 
 
 def adaptive_rows() -> list[dict[str, str]]:
@@ -240,6 +329,10 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             "adaptiveAirtimeAdmissionUsesRetryInflation",
         )
         self.assertEqual(
+            CLI_KEYS["adaptive_airtime_admission_packet_cost"],
+            "adaptiveAirtimeAdmissionPacketCost",
+        )
+        self.assertEqual(
             CLI_KEYS["adaptive_airtime_decision_offset_shadow_prices"],
             "adaptiveAirtimeDecisionOffsetShadowPrices",
         )
@@ -371,6 +464,140 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             "run",
         )
         self.assertEqual(estimates, {7: 100.0})
+
+    def test_accepts_exact_staged_identity_for_both_adaptive_policies(self) -> None:
+        self.assertEqual(
+            _validate_adaptive_config(staged_adaptive_config()),
+            [0, 4000],
+        )
+        deficit = staged_adaptive_config(
+            "primary_unacknowledged_reverse", "whole_copy"
+        )
+        self.assertEqual(
+            _validate_adaptive_config(
+                deficit, "primary_unacknowledged_reverse"
+            ),
+            [0, 4000],
+        )
+
+    def test_rejects_staged_identity_or_derived_cost_mode_drift(self) -> None:
+        invalid_identity = staged_adaptive_config()
+        invalid_identity["stage_scorers"]["T4"]["score_kind"] = (
+            "calibrated_primary_miss_probability"
+        )
+        with self.assertRaisesRegex(ValidationError, "provenance"):
+            _validate_adaptive_config(invalid_identity)
+
+        invalid_cost = staged_adaptive_config(
+            "primary_unacknowledged_reverse", "whole_copy"
+        )
+        invalid_cost["operating_profile"] = (
+            "primary_unacknowledged+selected_packet_set_priced"
+        )
+        with self.assertRaisesRegex(ValidationError, "cost definition"):
+            _validate_adaptive_config(
+                invalid_cost, "primary_unacknowledged_reverse"
+            )
+
+    def test_validates_typed_stage_scores_and_provenance(self) -> None:
+        config = staged_adaptive_config()
+        config["cost_safety_factor"] = 1.25
+        nominal = _adaptive_nominal_airtime_us(12_000, 10, 1.25)
+        packet_indices = ";".join(str(index) for index in range(10))
+        common = {
+            "run_id": "run",
+            "frame_id": "7",
+            "actionable": "1",
+            "admission_airtime_us": str(nominal),
+            "estimated_airtime_us": str(nominal),
+            "admission_packet_count": "10",
+            "configured_admission_packet_cost": "launched_packet_set",
+            "effective_admission_packet_cost": "whole_copy",
+            "reference_airtime_us": str(nominal),
+            "shadow_price": "0.2",
+            "normalized_cost": "1",
+            "airtime_budget_fraction": "0.05",
+            "bucket_capacity_us": "10000",
+            "bucket_balance_us": "10000",
+            "initial_bucket_capacity_us": "10000",
+            "reserved_airtime_us": "0",
+            "available_airtime_us": "10000",
+            "measured_airtime_total_us": "0",
+            "frame_packet_count": "10",
+            "primary_acked_packets": "",
+            "primary_acked_packet_indices": "",
+            "secondary_packet_count": "10",
+            "secondary_packet_indices": packet_indices,
+            "secondary_packet_order": "full_forward",
+        }
+        rows: list[dict[str, str]] = []
+        for offset, score, primary, tail, decision, launched in (
+            (0, 0.1, 0.1, None, "price_rejected", "0"),
+            (4000, 0.8, 0.9, 0.3, "action", "1"),
+        ):
+            scorer = config["stage_scorers"][f"T{offset // 1000}"]
+            rows.append({
+                **common,
+                "sample_stage": f"T{offset // 1000}",
+                "sample_offset_us": str(offset),
+                "sample_time_ns": str(1_000_000 + offset * 1000),
+                "admission_score": str(score),
+                "score_name": str(scorer["score_name"]),
+                "score_kind": str(scorer["score_kind"]),
+                "score_model_id": str(scorer["model_id"]),
+                "score_source_model_sha256": str(scorer["source_model_sha256"]),
+                "score_target_provenance_sha256": str(
+                    scorer["target_provenance_sha256"]
+                ),
+                "score_feature_contract_sha256": str(
+                    scorer["feature_contract_sha256"]
+                ),
+                "score_combiner_sha256": str(scorer["combiner_sha256"]),
+                "primary_miss_probability": str(primary),
+                "completed_tail_probability": "" if tail is None else str(tail),
+                "net_utility": str(score - 0.2),
+                "decision": decision,
+                "secondary_launched": launched,
+            })
+        samples = {
+            (7, offset): {
+                "run_id": "run",
+                "frame_id": "7",
+                "path_id": "1",
+                "copy_id": "0",
+                "sample_stage": f"T{offset // 1000}",
+                "sample_offset_us": str(offset),
+                "sample_time_ns": str(1_000_000 + offset * 1000),
+                "generation_time_ns": "1000000",
+                "deadline_time_ns": "34333000",
+                "actionable": "1",
+                "frame_packet_count": "10",
+                "frame_type": "I_FRAME",
+            }
+            for offset in (0, 4000)
+        }
+        self.assertEqual(
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                estimator_frames(),
+                samples,
+                "run",
+                estimator_stream_config(),
+            ),
+            {7: nominal},
+        )
+
+        rows[1]["admission_score"] = "0.81"
+        with self.assertRaisesRegex(ValidationError, "weighted admission score"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                estimator_frames(),
+                samples,
+                "run",
+                estimator_stream_config(),
+            )
 
     def test_accepts_limited_initial_credit_horizon(self) -> None:
         config = adaptive_config()
@@ -686,6 +913,7 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             _validate_adaptive_config(config, "primary_unacknowledged_reverse"),
             [0, 1000],
         )
+        action_nominals: dict[int, float] = {}
         estimates = _validate_adaptive_decisions(
             rows,
             config,
@@ -693,8 +921,10 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
             samples,
             "run",
             stream_config,
+            action_nominals,
         )
         self.assertEqual(estimates, {7: t1_cost})
+        self.assertEqual(action_nominals, {7: t1_cost})
 
         tampered = copy.deepcopy(rows)
         wrong_cost = t1_cost + 1.0
@@ -885,6 +1115,38 @@ class AdaptiveDecisionValidationTest(unittest.TestCase):
                 "run",
             )
 
+    def test_rejects_missing_descriptor_cost_on_restricted_row(self) -> None:
+        config = explicit_cost_config(False)
+        config.update({
+            "shadow_price_mode": "global_dual",
+            "decision_offset_shadow_prices": {},
+            "i_frame_only_decision_offsets_us": [0],
+        })
+        rows = nominal_admission_rows()
+        for row in rows:
+            row.update({
+                "dual_shadow_price": "0.2",
+                "shadow_price_source": "global_dual",
+            })
+        rows[0].update({
+            "admission_airtime_us": "0",
+            "normalized_cost": "0",
+            "net_utility": "nan",
+            "decision": "frame_type_restricted",
+        })
+        samples = prediction_samples()
+        for sample in samples.values():
+            sample["frame_type"] = "P_FRAME"
+        with self.assertRaisesRegex(ValidationError, "descriptor/cost presence"):
+            _validate_adaptive_decisions(
+                rows,
+                config,
+                estimator_frames(),
+                samples,
+                "run",
+                estimator_stream_config(),
+            )
+
     def test_rejects_action_with_insufficient_airtime(self) -> None:
         rows = adaptive_rows()
         rows[1]["bucket_balance_us"] = "50"
@@ -961,6 +1223,25 @@ class SecondaryAirtimeValidationTest(unittest.TestCase):
         settlements[0]["nominal_airtime_us"] = str(1.1 * nominal)
         with self.assertRaisesRegex(ValidationError, "nominal estimator"):
             self.validate_exact_estimator_fixture(settlements)
+
+    def test_rejects_deficit_actual_set_nominal_drift(self) -> None:
+        events, settlements, summary, meter, links = meter_fixture()
+        settlements[0]["nominal_airtime_us"] = "999999"
+        with self.assertRaisesRegex(ValidationError, "nominal estimator"):
+            _validate_secondary_airtime(
+                events,
+                settlements,
+                summary,
+                meter,
+                links,
+                "adaptive_deficit_duplication",
+                "run",
+                adaptive_config(),
+                {7: 100.0},
+                {7},
+                0.0,
+                action_nominal_airtimes={7: 75.0},
+            )
 
     def test_reconciles_valid_event_and_settlement_ledgers(self) -> None:
         self.validate_fixture(*meter_fixture())

@@ -5,7 +5,7 @@
 #ifndef ADAPTIVE_AIRTIME_DUPLICATION_CONTROLLER_H
 #define ADAPTIVE_AIRTIME_DUPLICATION_CONTROLLER_H
 
-#include "prediction-telemetry-collector.h"
+#include "closed-loop-risk-predictor.h"
 #include "secondary-airtime-meter.h"
 
 #include "ns3/callback.h"
@@ -38,6 +38,13 @@ enum class AdaptiveSecondaryPacketSelection
     PRIMARY_UNACKNOWLEDGED, ///< Send primary-unacknowledged indexes in reverse order.
 };
 
+/** Packet set used to price adaptive admission. */
+enum class AdaptiveAdmissionPacketCost
+{
+    LAUNCHED_PACKET_SET, ///< Price the packet set that would actually launch.
+    WHOLE_COPY,          ///< Price the canonical full secondary copy.
+};
+
 /**
  * Causal adaptive-airtime selective duplication controller.
  */
@@ -62,11 +69,11 @@ class AdaptiveAirtimeDuplicationController : public Object
     void SetSender(MultipathSender* sender);
 
     /**
-     * Set the causal calibrated-risk scorer.
+     * Set the causal stage-specific scorer.
      *
-     * @param scorer Callback returning a probability in [0, 1].
+     * @param scorer Callback returning a typed bounded admission score.
      */
-    void SetRiskScorer(Callback<double, const PredictionSample&> scorer);
+    void SetRiskScorer(Callback<ClosedLoopRiskScore, const PredictionSample&> scorer);
 
     /**
      * Attach the passive secondary airtime meter.
@@ -88,6 +95,18 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param selection Full forward copy or reverse primary deficit.
      */
     void SetSecondaryPacketSelection(AdaptiveSecondaryPacketSelection selection);
+
+    /**
+     * Set the packet set used only for admission pricing.
+     *
+     * Reservation and settlement always describe the packet set that actually
+     * launches. Whole-copy pricing therefore permits a controlled mechanism
+     * ablation without pretending that a partial launch consumed full-copy
+     * airtime.
+     *
+     * @param cost Packet-cost basis for the risk-density gate.
+     */
+    void SetAdmissionPacketCost(AdaptiveAdmissionPacketCost cost);
 
     /**
      * Set the long-run secondary-airtime budget fraction.
@@ -359,9 +378,10 @@ class AdaptiveAirtimeDuplicationController : public Object
      * Write one adaptive decision row.
      *
      * @param sample Causal prediction sample.
-     * @param probability Calibrated miss probability.
+     * @param score Typed stage-specific model output.
      * @param admissionUs Airtime used to price admission in microseconds.
      * @param estimatedUs Retry-inflated reservation airtime in microseconds.
+     * @param admissionPacketCount Packet count used for admission pricing.
      * @param referenceUs Reference airtime in microseconds.
      * @param shadowPrice Effective admission shadow price.
      * @param normalizedCost Estimated cost divided by reference cost.
@@ -375,9 +395,10 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param primaryAcknowledgedPacketIndices Exact acknowledged primary indexes, if queried.
      */
     void WriteDecision(const PredictionSample& sample,
-                       double probability,
+                       const ClosedLoopRiskScore& score,
                        double admissionUs,
                        double estimatedUs,
+                       uint32_t admissionPacketCount,
                        double referenceUs,
                        double shadowPrice,
                        double normalizedCost,
@@ -391,11 +412,13 @@ class AdaptiveAirtimeDuplicationController : public Object
                        const std::vector<uint32_t>* primaryAcknowledgedPacketIndices);
 
     MultipathSender* m_sender{nullptr}; ///< Non-owning sender pointer.
-    Callback<double, const PredictionSample&> m_scorer; ///< Frozen causal scorer.
+    Callback<ClosedLoopRiskScore, const PredictionSample&> m_scorer; ///< Frozen causal scorer.
     Ptr<SecondaryAirtimeMeter> m_meter; ///< Passive secondary airtime meter.
     uint8_t m_primaryPath{1}; ///< Prediction path (5 GHz by default).
     AdaptiveSecondaryPacketSelection m_secondaryPacketSelection{
         AdaptiveSecondaryPacketSelection::FULL_COPY}; ///< Admitted packet projection.
+    AdaptiveAdmissionPacketCost m_admissionPacketCost{
+        AdaptiveAdmissionPacketCost::LAUNCHED_PACKET_SET}; ///< Admission packet-cost basis.
     double m_budgetFraction{0.02}; ///< Long-run airtime fraction.
     uint64_t m_bucketHorizonUs{1000000}; ///< Maximum-balance horizon.
     std::optional<uint64_t> m_initialBucketHorizonUs; ///< Explicit startup-credit horizon.
@@ -415,7 +438,7 @@ class AdaptiveAirtimeDuplicationController : public Object
     uint64_t m_lastPriceUpdateNs{0}; ///< Last T0 shadow-price update.
     double m_measuredSinceLastT0Us{0}; ///< Measured airtime since previous T0.
     bool m_bucketInitialized{false}; ///< Whether the bucket is live.
-    std::set<uint64_t> m_decisionOffsetsUs{0, 1000, 2000, 4000}; ///< Enabled stages.
+    std::set<uint64_t> m_decisionOffsetsUs{0, 4000}; ///< Enabled stages.
     std::map<uint64_t, double> m_decisionOffsetShadowPrices; ///< Fixed stage prices.
     std::set<uint64_t> m_iFrameOnlyDecisionOffsetsUs; ///< I-frame-only stages.
     std::map<uint64_t, FrameState> m_frames; ///< Per-frame launch state.

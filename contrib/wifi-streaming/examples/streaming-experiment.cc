@@ -46,15 +46,14 @@ IsPrimaryRiskT0Model()
 }
 
 bool
-SupportsStagedAdaptiveDeficitPolicy(const std::string& policyName)
+SupportsStagedAdaptivePolicy(const std::string& policyName)
 {
-    if (policyName != "adaptive_deficit_duplication")
+    if (policyName != "adaptive_airtime_duplication" &&
+        policyName != "adaptive_deficit_duplication")
     {
         return false;
     }
-    // Integration hook: admit multiple controller stages only after the
-    // staged-tail export has a final, audited model and target identity.
-    return false;
+    return ClosedLoopRiskPredictor::HasExactStagedModelContract();
 }
 
 void
@@ -443,7 +442,7 @@ main(int argc, char* argv[])
     double selectiveDuplicationThreshold = 0.2;
     double selectiveDuplicationFrameBudget = 0.3;
     uint32_t selectiveDuplicationBurstHorizonFrames = 30;
-    std::string selectiveDuplicationDecisionOffsetsUs = "0,1000,2000,4000";
+    std::string selectiveDuplicationDecisionOffsetsUs = "0";
     bool secondaryAirtimeMeterEnabled = false;
     double adaptiveAirtimeBudgetFraction = 0.02;
     uint64_t adaptiveAirtimeBucketHorizonUs = 1000000;
@@ -451,9 +450,10 @@ main(int argc, char* argv[])
     double adaptiveAirtimeInitialShadowPrice = 0.20;
     double adaptiveAirtimeDualStep = 0.01;
     bool adaptiveAirtimeAdmissionUsesRetryInflation = true;
+    std::string adaptiveAirtimeAdmissionPacketCost = "launched_packet_set";
     double adaptiveAirtimeCostSafetyFactor = 1.25;
     double adaptiveAirtimeCostEwmaAlpha = 0.10;
-    std::string adaptiveAirtimeDecisionOffsetsUs = "0,1000,2000,4000";
+    std::string adaptiveAirtimeDecisionOffsetsUs = "0,4000";
     std::string adaptiveAirtimeDecisionOffsetShadowPrices;
     std::string adaptiveAirtimeIFrameOnlyDecisionOffsetsUs;
     uint32_t fullDuplicationPrimaryPath = 0;
@@ -630,6 +630,9 @@ main(int argc, char* argv[])
     command.AddValue("adaptiveAirtimeAdmissionUsesRetryInflation",
                      "Use retry-inflated airtime for admission pricing",
                      adaptiveAirtimeAdmissionUsesRetryInflation);
+    command.AddValue("adaptiveAirtimeAdmissionPacketCost",
+                     "Admission packet-cost basis: launched_packet_set or whole_copy",
+                     adaptiveAirtimeAdmissionPacketCost);
     command.AddValue("adaptiveAirtimeCostSafetyFactor",
                      "Pre-launch secondary airtime cost safety factor",
                      adaptiveAirtimeCostSafetyFactor);
@@ -793,6 +796,8 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedAdaptiveDecisionOffsetsUs;
     std::map<uint64_t, double> resolvedAdaptiveDecisionOffsetShadowPrices;
     std::vector<uint64_t> resolvedAdaptiveIFrameOnlyDecisionOffsetsUs;
+    AdaptiveAdmissionPacketCost resolvedAdaptiveAdmissionPacketCost =
+        AdaptiveAdmissionPacketCost::LAUNCHED_PACKET_SET;
     const uint64_t resolvedAdaptiveAirtimeInitialBucketHorizonUs =
         adaptiveAirtimeInitialBucketHorizonUs == 0
             ? adaptiveAirtimeBucketHorizonUs
@@ -898,10 +903,24 @@ main(int argc, char* argv[])
                                 true);
         NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.front() != 0,
                         "Adaptive airtime decision offsets must start with zero");
-        NS_ABORT_MSG_IF(resolvedAdaptiveDecisionOffsetsUs.size() != 1 &&
-                            !SupportsStagedAdaptiveDeficitPolicy(policyName),
-                        "Multiple adaptive decision offsets require the exact audited "
-                        "staged-tail adaptive-deficit model identity");
+        const bool stagedAdaptive = resolvedAdaptiveDecisionOffsetsUs.size() != 1;
+        NS_ABORT_MSG_IF(stagedAdaptive &&
+                            resolvedAdaptiveDecisionOffsetsUs !=
+                                std::vector<uint64_t>({0, 4000}),
+                        "Staged adaptive control requires exactly the T0 and T4 offsets");
+        NS_ABORT_MSG_IF(stagedAdaptive && !SupportsStagedAdaptivePolicy(policyName),
+                        "Staged adaptive control requires the exact audited T0/T4 "
+                        "compiled-model identities");
+        if (adaptiveAirtimeAdmissionPacketCost == "whole_copy")
+        {
+            resolvedAdaptiveAdmissionPacketCost = AdaptiveAdmissionPacketCost::WHOLE_COPY;
+        }
+        else
+        {
+            NS_ABORT_MSG_IF(adaptiveAirtimeAdmissionPacketCost != "launched_packet_set",
+                            "adaptiveAirtimeAdmissionPacketCost must be "
+                            "launched_packet_set or whole_copy");
+        }
         resolvedAdaptiveDecisionOffsetShadowPrices = ParseStrictOffsetPriceMap(
             adaptiveAirtimeDecisionOffsetShadowPrices,
             "adaptiveAirtimeDecisionOffsetShadowPrices");
@@ -2362,6 +2381,7 @@ main(int argc, char* argv[])
     resolved.adaptiveAirtimeDualStep = adaptiveAirtimeDualStep;
     resolved.adaptiveAirtimeAdmissionUsesRetryInflation =
         adaptiveAirtimeAdmissionUsesRetryInflation;
+    resolved.adaptiveAirtimeAdmissionPacketCost = adaptiveAirtimeAdmissionPacketCost;
     resolved.adaptiveAirtimeCostSafetyFactor = adaptiveAirtimeCostSafetyFactor;
     resolved.adaptiveAirtimeCostEwmaAlpha = adaptiveAirtimeCostEwmaAlpha;
     resolved.adaptiveAirtimeDecisionOffsetsUs = resolvedAdaptiveDecisionOffsetsUs;
@@ -2615,7 +2635,8 @@ main(int argc, char* argv[])
         selectiveController = CreateObject<SelectiveDuplicationController>();
         selectiveController->SetSender(PeekPointer(sender));
         selectiveController->SetRiskScorer(
-            MakeCallback(&ClosedLoopRiskPredictor::Score, PeekPointer(closedLoopPredictor)));
+            MakeCallback(&ClosedLoopRiskPredictor::ScorePrimaryMissProbability,
+                         PeekPointer(closedLoopPredictor)));
         selectiveController->SetPrimaryPath(1);
         selectiveController->SetProbabilityThreshold(selectiveDuplicationThreshold);
         selectiveController->SetFrameBudget(selectiveDuplicationFrameBudget);
@@ -2644,6 +2665,7 @@ main(int argc, char* argv[])
             adaptiveController->SetSecondaryPacketSelection(
                 AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED);
         }
+        adaptiveController->SetAdmissionPacketCost(resolvedAdaptiveAdmissionPacketCost);
         adaptiveController->SetBudgetFraction(adaptiveAirtimeBudgetFraction);
         adaptiveController->SetBucketHorizonUs(adaptiveAirtimeBucketHorizonUs);
         adaptiveController->SetInitialBucketHorizonUs(

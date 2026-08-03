@@ -156,6 +156,8 @@ struct StreamingRunConfig
     double adaptiveAirtimeInitialShadowPrice{0};
     double adaptiveAirtimeDualStep{0};
     bool adaptiveAirtimeAdmissionUsesRetryInflation{true}; ///< Admission cost mode.
+    std::string adaptiveAirtimeAdmissionPacketCost{
+        "launched_packet_set"}; ///< Packet set priced by admission.
     double adaptiveAirtimeCostSafetyFactor{0};
     double adaptiveAirtimeCostEwmaAlpha{0};
     std::vector<uint64_t> adaptiveAirtimeDecisionOffsetsUs;

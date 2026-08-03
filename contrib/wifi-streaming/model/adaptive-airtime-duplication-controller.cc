@@ -18,6 +18,7 @@
 #include <cmath>
 #include <iomanip>
 #include <limits>
+#include <string_view>
 
 namespace ns3
 {
@@ -40,6 +41,33 @@ MakeEstimatorTxVector()
                         0,
                         MHz_u{20},
                         false);
+}
+
+std::string_view
+PacketSelectionName(AdaptiveSecondaryPacketSelection selection)
+{
+    return selection == AdaptiveSecondaryPacketSelection::FULL_COPY
+               ? "full_forward"
+               : "primary_unacknowledged_reverse";
+}
+
+std::string_view
+ConfiguredAdmissionPacketCostName(AdaptiveAdmissionPacketCost cost)
+{
+    return cost == AdaptiveAdmissionPacketCost::WHOLE_COPY ? "whole_copy"
+                                                           : "launched_packet_set";
+}
+
+std::string_view
+EffectiveAdmissionPacketCostName(AdaptiveSecondaryPacketSelection selection,
+                                 AdaptiveAdmissionPacketCost cost)
+{
+    if (selection == AdaptiveSecondaryPacketSelection::FULL_COPY ||
+        cost == AdaptiveAdmissionPacketCost::WHOLE_COPY)
+    {
+        return "whole_copy";
+    }
+    return "primary_unacknowledged_packet_set";
 }
 
 } // namespace
@@ -72,7 +100,7 @@ AdaptiveAirtimeDuplicationController::SetSender(MultipathSender* sender)
 
 void
 AdaptiveAirtimeDuplicationController::SetRiskScorer(
-    Callback<double, const PredictionSample&> scorer)
+    Callback<ClosedLoopRiskScore, const PredictionSample&> scorer)
 {
     NS_ABORT_MSG_IF(scorer.IsNull(), "Adaptive airtime risk scorer cannot be null");
     m_scorer = std::move(scorer);
@@ -102,6 +130,15 @@ AdaptiveAirtimeDuplicationController::SetSecondaryPacketSelection(
     NS_ABORT_MSG_IF(m_bucketInitialized || m_output.is_open(),
                     "Cannot change secondary packet selection after control starts");
     m_secondaryPacketSelection = selection;
+}
+
+void
+AdaptiveAirtimeDuplicationController::SetAdmissionPacketCost(
+    AdaptiveAdmissionPacketCost cost)
+{
+    NS_ABORT_MSG_IF(m_bucketInitialized || m_output.is_open(),
+                    "Cannot change adaptive admission packet cost after control starts");
+    m_admissionPacketCost = cost;
 }
 
 void
@@ -429,9 +466,38 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     NS_ABORT_MSG_IF(frame == m_frames.end(),
                     "Adaptive airtime received a non-T0 snapshot before T0");
 
-    const double probability = m_scorer(sample);
-    NS_ABORT_MSG_IF(!std::isfinite(probability) || probability < 0 || probability > 1,
-                    "Adaptive airtime scorer returned an invalid probability");
+    const ClosedLoopRiskScore score = m_scorer(sample);
+    NS_ABORT_MSG_IF(!std::isfinite(score.admissionScore) || score.admissionScore < 0 ||
+                        score.admissionScore > 1,
+                    "Adaptive airtime scorer returned an invalid admission score");
+    NS_ABORT_MSG_IF(score.scoreName.empty() || score.modelId.empty() ||
+                        score.sourceModelSha256.empty() ||
+                        score.targetProvenanceSha256.empty(),
+                    "Adaptive airtime scorer returned incomplete score provenance");
+    const auto validProbability = [](const std::optional<double>& probability) {
+        return !probability || (std::isfinite(*probability) && *probability >= 0 &&
+                                *probability <= 1);
+    };
+    NS_ABORT_MSG_IF(!validProbability(score.primaryMissProbability) ||
+                        !validProbability(score.completedTailProbability),
+                    "Adaptive airtime scorer returned an invalid head probability");
+    if (score.scoreKind ==
+        ClosedLoopRiskScoreKind::CALIBRATED_PRIMARY_MISS_PROBABILITY)
+    {
+        NS_ABORT_MSG_IF(!score.primaryMissProbability ||
+                            score.completedTailProbability ||
+                            std::abs(score.admissionScore -
+                                     *score.primaryMissProbability) > 1e-12,
+                        "Adaptive calibrated-probability score has inconsistent heads");
+    }
+    else
+    {
+        NS_ABORT_MSG_IF(!score.primaryMissProbability ||
+                            !score.completedTailProbability ||
+                            score.featureContractSha256.empty() ||
+                            score.combinerSha256.empty(),
+                        "Adaptive weighted-head score has incomplete semantics");
+    }
 
     const auto selectedPacketIndices = ResolveSecondaryPacketIndices(sample);
     std::optional<std::vector<uint32_t>> primaryAcknowledgedPacketIndices;
@@ -469,6 +535,13 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
         descriptor = m_sender->GetDelayedSecondaryPacketDescriptor(sample.key.frameId,
                                                                     *selectedPacketIndices);
     }
+    std::optional<DelayedCopyDescriptor> wholeCopyDescriptor;
+    const DelayedCopyDescriptor* admissionDescriptor = descriptor ? &*descriptor : nullptr;
+    if (m_admissionPacketCost == AdaptiveAdmissionPacketCost::WHOLE_COPY)
+    {
+        wholeCopyDescriptor = m_sender->GetDelayedSecondaryCopyDescriptor(sample.key.frameId);
+        admissionDescriptor = wholeCopyDescriptor ? &*wholeCopyDescriptor : nullptr;
+    }
     const double referenceUs = GetReferenceAirtimeUs();
     double nominalUs = 0;
     double admissionUs = 0;
@@ -484,10 +557,24 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
         estimatedUs = EstimateSecondaryAirtimeUs(descriptor->packetCount,
                                                  descriptor->expectedMacServiceBytes,
                                                  m_retryInflation);
-        admissionUs = m_admissionUsesRetryInflation ? estimatedUs : nominalUs;
-        normalizedCost = admissionUs / referenceUs;
-        utility = probability - shadowPrice * normalizedCost;
     }
+    if (admissionDescriptor)
+    {
+        const double admissionNominalUs =
+            EstimateSecondaryAirtimeUs(admissionDescriptor->packetCount,
+                                       admissionDescriptor->expectedMacServiceBytes,
+                                       1.0);
+        const double admissionInflatedUs =
+            EstimateSecondaryAirtimeUs(admissionDescriptor->packetCount,
+                                       admissionDescriptor->expectedMacServiceBytes,
+                                       m_retryInflation);
+        admissionUs = m_admissionUsesRetryInflation ? admissionInflatedUs
+                                                    : admissionNominalUs;
+        normalizedCost = admissionUs / referenceUs;
+        utility = score.admissionScore - shadowPrice * normalizedCost;
+    }
+    const uint32_t admissionPacketCount =
+        admissionDescriptor ? admissionDescriptor->packetCount : 0;
 
     const double reservedUs = m_meter->GetReservedAirtimeUs();
     const double availableUs = m_bucketBalanceUs - reservedUs;
@@ -496,9 +583,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (frame->second.launched)
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -515,9 +603,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (!IsFrameTypeEligible(sample))
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -534,9 +623,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (selectedPacketIndices && selectedPacketIndices->empty())
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -553,9 +643,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (!sample.actionable)
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -574,9 +665,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (!(utility > 0))
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -597,9 +689,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
             m_meter->ObserveBudgetDebt(-availableUs);
         }
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -635,9 +728,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     if (!launched)
     {
         WriteDecision(sample,
-                      probability,
+                      score,
                       admissionUs,
                       estimatedUs,
+                      admissionPacketCount,
                       referenceUs,
                       shadowPrice,
                       normalizedCost,
@@ -657,9 +751,10 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     frame->second.launched = true;
     ++m_actions;
     WriteDecision(sample,
-                  probability,
+                  score,
                   admissionUs,
                   estimatedUs,
+                  admissionPacketCount,
                   referenceUs,
                   shadowPrice,
                   normalizedCost,
@@ -735,29 +830,28 @@ void
 AdaptiveAirtimeDuplicationController::WriteHeader()
 {
     m_output << "run_id,frame_id,sample_stage,sample_offset_us,sample_time_ns,"
-                "actionable,calibrated_probability,admission_airtime_us,"
-                "estimated_airtime_us,"
+                "actionable,admission_score,score_name,score_kind,score_model_id,"
+                "score_source_model_sha256,score_target_provenance_sha256,"
+                "score_feature_contract_sha256,score_combiner_sha256,"
+                "primary_miss_probability,completed_tail_probability,"
+                "admission_airtime_us,estimated_airtime_us,admission_packet_count,"
+                "configured_admission_packet_cost,effective_admission_packet_cost,"
                 "reference_airtime_us,shadow_price,dual_shadow_price,"
                 "shadow_price_source,normalized_cost,net_utility,"
                 "airtime_budget_fraction,bucket_capacity_us,bucket_balance_us,"
                 "initial_bucket_capacity_us,"
                 "reserved_airtime_us,available_airtime_us,measured_airtime_total_us,"
-                "decision,secondary_launched";
-    if (m_secondaryPacketSelection ==
-        AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED)
-    {
-        m_output << ",frame_packet_count,primary_acked_packets,"
-                    "primary_acked_packet_indices,secondary_packet_count,"
-                    "secondary_packet_indices,secondary_packet_order";
-    }
-    m_output << '\n';
+                "decision,secondary_launched,frame_packet_count,primary_acked_packets,"
+                "primary_acked_packet_indices,secondary_packet_count,"
+                "secondary_packet_indices,secondary_packet_order\n";
 }
 
 void
 AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& sample,
-                                                    double probability,
+                                                    const ClosedLoopRiskScore& score,
                                                     double admissionUs,
                                                     double estimatedUs,
+                                                    uint32_t admissionPacketCount,
                                                     double referenceUs,
                                                     double shadowPrice,
                                                     double normalizedCost,
@@ -779,8 +873,25 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
         m_meter ? m_meter->GetMeasuredAirtimeTotalUs() : 0.0;
     m_output << m_runId << ',' << sample.key.frameId << ',' << sample.sampleStage << ','
              << sample.sampleOffsetUs << ',' << sample.sampleTimeNs << ','
-             << sample.actionable << ',' << probability << ',' << admissionUs << ','
-             << estimatedUs << ',' << referenceUs << ',' << shadowPrice << ','
+             << sample.actionable << ',' << score.admissionScore << ',' << score.scoreName << ','
+             << ClosedLoopRiskPredictor::GetScoreKindName(score.scoreKind) << ','
+             << score.modelId << ',' << score.sourceModelSha256 << ','
+             << score.targetProvenanceSha256 << ',' << score.featureContractSha256 << ','
+             << score.combinerSha256 << ',';
+    if (score.primaryMissProbability)
+    {
+        m_output << *score.primaryMissProbability;
+    }
+    m_output << ',';
+    if (score.completedTailProbability)
+    {
+        m_output << *score.completedTailProbability;
+    }
+    m_output << ',' << admissionUs << ',' << estimatedUs << ',' << admissionPacketCount << ','
+             << ConfiguredAdmissionPacketCostName(m_admissionPacketCost) << ','
+             << EffectiveAdmissionPacketCostName(m_secondaryPacketSelection,
+                                                 m_admissionPacketCost)
+             << ',' << referenceUs << ',' << shadowPrice << ','
              << m_shadowPrice << ','
              << (m_decisionOffsetShadowPrices.contains(sample.sampleOffsetUs)
                      ? "offset_override"
@@ -788,37 +899,32 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
              << ',' << normalizedCost << ',' << utility << ',' << m_budgetFraction << ','
              << m_bucketCapacityUs << ',' << balanceUs << ',' << m_initialCapacityUs << ','
              << reservedUs << ',' << availableUs << ',' << measuredTotal << ',' << decision
-             << ',' << launched;
-    if (m_secondaryPacketSelection ==
-        AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED)
+             << ',' << launched << ',' << sample.framePacketCount << ',';
+    if (sample.framePacketsTxSucceeded)
     {
-        m_output << ',' << sample.framePacketCount << ',';
-        if (sample.framePacketsTxSucceeded)
-        {
-            m_output << *sample.framePacketsTxSucceeded;
-        }
-        m_output << ',';
-        if (primaryAcknowledgedPacketIndices)
-        {
-            for (std::size_t index = 0;
-                 index < primaryAcknowledgedPacketIndices->size();
-                 ++index)
-            {
-                m_output << (index == 0 ? "" : ";")
-                         << (*primaryAcknowledgedPacketIndices)[index];
-            }
-        }
-        m_output << ',' << (descriptor ? descriptor->packetCount : 0) << ',';
-        if (descriptor)
-        {
-            for (std::size_t index = 0; index < descriptor->packetIndices.size(); ++index)
-            {
-                m_output << (index == 0 ? "" : ";") << descriptor->packetIndices[index];
-            }
-        }
-        m_output << ',' << (descriptor ? "primary_unacknowledged_reverse" : "none");
+        m_output << *sample.framePacketsTxSucceeded;
     }
-    m_output << '\n';
+    m_output << ',';
+    if (primaryAcknowledgedPacketIndices)
+    {
+        for (std::size_t index = 0;
+             index < primaryAcknowledgedPacketIndices->size();
+             ++index)
+        {
+            m_output << (index == 0 ? "" : ";")
+                     << (*primaryAcknowledgedPacketIndices)[index];
+        }
+    }
+    m_output << ',' << (descriptor ? descriptor->packetCount : 0) << ',';
+    if (descriptor)
+    {
+        for (std::size_t index = 0; index < descriptor->packetIndices.size(); ++index)
+        {
+            m_output << (index == 0 ? "" : ";") << descriptor->packetIndices[index];
+        }
+    }
+    m_output << ',' << (descriptor ? PacketSelectionName(m_secondaryPacketSelection) : "none")
+             << '\n';
     m_output.flush();
 }
 
@@ -826,7 +932,7 @@ void
 AdaptiveAirtimeDuplicationController::DoDispose()
 {
     m_sender = nullptr;
-    m_scorer = Callback<double, const PredictionSample&>();
+    m_scorer = Callback<ClosedLoopRiskScore, const PredictionSample&>();
     if (m_meter)
     {
         m_meter->SetMeasuredAirtimeCallback(SecondaryAirtimeMeter::MeasuredAirtimeCallback());

@@ -3,6 +3,7 @@
  */
 
 #include "experiment-output.h"
+#include "closed-loop-risk-predictor.h"
 #include "prediction-model-evaluator.h"
 #include "prediction-telemetry-collector.h"
 
@@ -586,25 +587,74 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
         config.policy == "adaptive_deficit_duplication")
     {
         const bool primaryDeficit = config.policy == "adaptive_deficit_duplication";
+        NS_ABORT_MSG_IF(config.adaptiveAirtimeAdmissionPacketCost != "launched_packet_set" &&
+                            config.adaptiveAirtimeAdmissionPacketCost != "whole_copy",
+                        "Unknown adaptive admission packet-cost basis");
+        const bool wholeCopyAdmission =
+            !primaryDeficit || config.adaptiveAirtimeAdmissionPacketCost == "whole_copy";
+        const std::string effectiveAdmissionPacketCost =
+            wholeCopyAdmission ? "whole_copy" : "primary_unacknowledged_packet_set";
+        const std::string operatingProfile =
+            primaryDeficit
+                ? (wholeCopyAdmission
+                       ? "primary_unacknowledged+whole_copy_priced"
+                       : "primary_unacknowledged+selected_packet_set_priced")
+                : "full_forward+whole_copy_priced";
+        const std::string admissionInflation =
+            config.adaptiveAirtimeAdmissionUsesRetryInflation ? "retry_inflated"
+                                                              : "nominal";
         output << "  \""
                << (primaryDeficit ? "adaptiveDeficitDuplication"
                                   : "adaptiveAirtimeDuplication")
                << "\": {\n"
-               << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
-               << "    \"target_id\": \"" << PredictionModelEvaluator::GetTargetId() << "\",\n"
-               << "    \"target_provenance_sha256\": \""
-               << PredictionModelEvaluator::GetTargetProvenanceSha256() << "\",\n"
-               << "    \"source_model_sha256\": \""
-               << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
-               << "    \"feature_set\": \"F0+F1-degraded\",\n"
-               << "    \"admission_feature_set\": \"F0+F1-degraded\",\n"
+               << "    \"score_contract\": \"stage_specific\",\n"
+               << "    \"stage_scorers\": {\n";
+        for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
+             ++index)
+        {
+            const auto offsetUs = config.adaptiveAirtimeDecisionOffsetsUs[index];
+            const auto& identity = ClosedLoopRiskPredictor::GetModelIdentity(offsetUs);
+            output << "      \"" << DecisionStageName(offsetUs) << "\": {\n"
+                   << "        \"sample_offset_us\": " << offsetUs << ",\n"
+                   << "        \"score_name\": \"" << identity.scoreName << "\",\n"
+                   << "        \"score_kind\": \""
+                   << ClosedLoopRiskPredictor::GetScoreKindName(identity.scoreKind)
+                   << "\",\n"
+                   << "        \"model_id\": \"" << identity.modelId << "\",\n"
+                   << "        \"primary_miss_target_id\": \""
+                   << identity.primaryMissTargetId << "\",\n"
+                   << "        \"completed_tail_target_id\": \""
+                   << identity.completedTailTargetId << "\",\n"
+                   << "        \"source_model_sha256\": \""
+                   << identity.sourceModelSha256 << "\",\n"
+                   << "        \"target_provenance_sha256\": \""
+                   << identity.targetProvenanceSha256 << "\",\n"
+                   << "        \"feature_contract_sha256\": \""
+                   << identity.featureContractSha256 << "\",\n"
+                   << "        \"combiner_sha256\": \"" << identity.combinerSha256
+                   << "\",\n"
+                   << "        \"primary_miss_model_sha256\": \""
+                   << identity.primaryMissModelSha256 << "\",\n"
+                   << "        \"completed_tail_model_sha256\": \""
+                   << identity.completedTailModelSha256 << "\",\n"
+                   << "        \"feature_count\": " << identity.featureCount << "\n"
+                   << "      }"
+                   << (index + 1 == config.adaptiveAirtimeDecisionOffsetsUs.size() ? "\n"
+                                                                                   : ",\n");
+        }
+        output << "    },\n"
+               << "    \"admission_feature_set\": \"stage_specific_compiled\",\n"
                << "    \"packet_selection_feature_set\": \""
                << (primaryDeficit ? "F2-primary-frame-ack-state" : "none") << "\",\n"
                << "    \"packet_selection\": \""
                << (primaryDeficit ? "primary_unacknowledged_reverse" : "full_forward")
                << "\",\n"
                << "    \"degradation_profile\": \"polling_1ms\",\n"
-               << "    \"calibration\": \"platt\",\n"
+               << "    \"configured_admission_packet_cost\": \""
+               << config.adaptiveAirtimeAdmissionPacketCost << "\",\n"
+               << "    \"effective_admission_packet_cost\": \""
+               << effectiveAdmissionPacketCost << "\",\n"
+               << "    \"operating_profile\": \"" << operatingProfile << "\",\n"
                << "    \"stages\": [";
         for (std::size_t index = 0; index < config.adaptiveAirtimeDecisionOffsetsUs.size();
              ++index)
@@ -631,12 +681,12 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"admission_uses_retry_inflation\": "
                << config.adaptiveAirtimeAdmissionUsesRetryInflation << ",\n"
                << "    \"admission_cost_definition\": \""
-               << (config.adaptiveAirtimeAdmissionUsesRetryInflation
-                       ? "retry_inflated_estimated_secondary_sender_phy_tx_airtime"
-                       : "nominal_estimated_secondary_sender_phy_tx_airtime")
+               << admissionInflation << "_estimated_" << effectiveAdmissionPacketCost
+               << "_secondary_sender_phy_tx_airtime"
                << "\",\n"
                << "    \"reservation_cost_definition\": "
-                  "\"retry_inflated_estimated_secondary_sender_phy_tx_airtime\",\n"
+                  "\"retry_inflated_estimated_launched_packet_set_"
+                  "secondary_sender_phy_tx_airtime\",\n"
                << "    \"cost_safety_factor\": " << config.adaptiveAirtimeCostSafetyFactor
                << ",\n"
                << "    \"cost_ewma_alpha\": " << config.adaptiveAirtimeCostEwmaAlpha << ",\n"
