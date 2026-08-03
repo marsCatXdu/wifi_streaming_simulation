@@ -1657,6 +1657,7 @@ def _validate_prediction(
     _require(config.get("policy") in {
         "fixed_link_0", "fixed_link_1", "selective_duplication",
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
+        "randomized_full_copy_exploration",
     }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
@@ -1701,6 +1702,9 @@ def _validate_prediction(
              "resolved_config.json: invalid prediction event flag")
     _require(isinstance(oracle_enabled, bool),
              "resolved_config.json: invalid prediction oracle flag")
+    randomized_policy = config["policy"] == "randomized_full_copy_exploration"
+    _require(not randomized_policy or event_enabled is False,
+             "randomized paired-link telemetry requires disabled raw event logging")
     _require(samples_path.is_file(), "missing core file: prediction_samples.csv")
     _require(polling_path.is_file(), "missing core file: prediction_polling_samples.csv")
     _require(events_path.is_file() == event_enabled,
@@ -1716,14 +1720,19 @@ def _validate_prediction(
     _require(samples, "prediction_samples.csv: no rows")
     _require(all(None not in row for row in samples),
              "prediction_samples.csv: rows exceed the declared schema")
-    _require(len(samples) == len(frames) * len(offsets),
+    copies_per_frame = 2 if randomized_policy else 1
+    _require(len(samples) == len(frames) * len(offsets) * copies_per_frame,
              "prediction_samples.csv: receiver-independent cardinality mismatch")
 
     selected_path = 0 if config["policy"] == "fixed_link_0" else 1
+    expected_identities = (
+        {(1, 0), (0, 1)} if randomized_policy else {(selected_path, 0)}
+    )
     frames_by_id = {int(row["frame_id"]): row for row in frames}
     sample_keys: set[tuple[int, int, int, int]] = set()
     observed_order: list[tuple[int, int, int, int, int]] = []
-    by_frame: dict[int, list[dict[str, str]]] = {}
+    by_frame_copy: dict[tuple[int, int, int], list[dict[str, str]]] = {}
+    paired_samples: dict[tuple[int, int], list[dict[str, str]]] = {}
     cumulative_fields = (
         "packets_submitted", "application_socket_packet_bytes_submitted",
         "mpdu_tx_attempts_total", "mpdu_positive_acks_total",
@@ -1764,8 +1773,8 @@ def _validate_prediction(
         copy_id = _integer(row, "copy_id", file_name)
         offset = _integer(row, "sample_offset_us", file_name)
         _require(frame_id in frames_by_id, f"{file_name}: unknown frame")
-        _require(path_id == selected_path and copy_id == 0,
-                 f"{file_name}: fixed-path isolation failed")
+        _require((path_id, copy_id) in expected_identities,
+                 f"{file_name}: path/copy isolation failed")
         _require(offset in offsets, f"{file_name}: unconfigured sample offset")
         key = (frame_id, path_id, copy_id, offset)
         _require(key not in sample_keys, f"{file_name}: duplicate sample key")
@@ -1998,13 +2007,19 @@ def _validate_prediction(
                          f"{file_name}: positive ACK has no acknowledged service bytes")
 
         observed_order.append((sample_time, frame_id, path_id, offset, copy_id))
-        by_frame.setdefault(frame_id, []).append(row)
+        by_frame_copy.setdefault((frame_id, path_id, copy_id), []).append(row)
+        paired_samples.setdefault((frame_id, offset), []).append(row)
 
     _require(observed_order == sorted(observed_order),
              "prediction_samples.csv: rows are not deterministically ordered")
-    for frame_id, rows in by_frame.items():
+    _require(set(by_frame_copy) == {
+        (frame_id, path_id, copy_id)
+        for frame_id in frames_by_id
+        for path_id, copy_id in expected_identities
+    }, "prediction_samples.csv: frame-copy coverage mismatch")
+    for (_frame_id, _path_id, _copy_id), rows in by_frame_copy.items():
         _require({int(row["sample_offset_us"]) for row in rows} == set(offsets),
-                 "prediction_samples.csv: frame is missing a configured stage")
+                 "prediction_samples.csv: frame copy is missing a configured stage")
         rows.sort(key=lambda row: int(row["sample_offset_us"]))
         previous_values: dict[str, int] = {}
         previous_complete = False
@@ -2029,6 +2044,27 @@ def _validate_prediction(
                  int(t0["packets_submitted"]) == 0 and
                  int(t0["frame_packets_mac_enqueued"]) == 0,
                  "prediction_samples.csv: T0 contains frame-caused sender state")
+
+    expected_pair_size = len(expected_identities)
+    _require(set(paired_samples) == {
+        (frame_id, offset) for frame_id in frames_by_id for offset in offsets
+    }, "prediction_samples.csv: frame-stage coverage mismatch")
+    for rows in paired_samples.values():
+        _require(len(rows) == expected_pair_size and {
+            (int(row["path_id"]), int(row["copy_id"])) for row in rows
+        } == expected_identities,
+                 "prediction_samples.csv: incomplete paired path/copy sample")
+        if randomized_policy:
+            primary = next(row for row in rows if row["path_id"] == "1")
+            secondary = next(row for row in rows if row["path_id"] == "0")
+            for field in (
+                "frame_id", "sample_stage", "sample_offset_us", "sample_time_ns",
+                "generation_time_ns", "deadline_time_ns", "frame_age_us",
+                "deadline_slack_us", "frame_size_bytes", "frame_packet_count",
+                "frame_type",
+            ):
+                _require(primary[field] == secondary[field],
+                         f"prediction_samples.csv: paired {field} mismatch")
 
     polling_required = PREDICTION_POLLING_BASE_COLUMNS | rolling_columns
     polling_rows = _csv(polling_path, polling_required)
