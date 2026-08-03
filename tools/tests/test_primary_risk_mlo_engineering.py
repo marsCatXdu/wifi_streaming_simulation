@@ -145,6 +145,33 @@ class PrimaryRiskMloEngineeringConfigTest(unittest.TestCase):
                 prediction["adaptive_airtime_admission_uses_retry_inflation"]
             )
 
+    def test_station_manager_sensitivity_is_adaptive_only(self) -> None:
+        document = load_yaml(
+            ROOT
+            / "experiments/configs/closed_loop_primary_risk_station_manager_sensitivity.yaml"
+        )
+        specs = expand_config(document)
+
+        self.assertEqual(
+            document["name"],
+            "closed-loop-primary-risk-station-manager-sensitivity-v1",
+        )
+        self.assertEqual(document["workers"], 12)
+        self.assertEqual(len(specs), 12)
+        self.assertEqual({spec["seed"] for spec in specs}, set(range(43, 55)))
+        self.assertEqual(
+            {
+                (spec["config"]["topology"], spec["config"]["policy"])
+                for spec in specs
+            },
+            {("dual_interface", "adaptive_airtime_duplication")},
+        )
+        for spec in specs:
+            prediction = spec["config"]["prediction"]
+            self.assertEqual(prediction["adaptive_airtime_initial_shadow_price"], 0.034)
+            self.assertEqual(prediction["adaptive_airtime_budget_fraction"], 0.02)
+            self.assertEqual(prediction["adaptive_airtime_dual_step"], 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()

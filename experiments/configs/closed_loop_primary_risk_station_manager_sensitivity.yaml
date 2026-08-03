@@ -1,0 +1,34 @@
+extends: closed_loop_primary_risk_mlo_frontier.yaml
+name: closed-loop-primary-risk-station-manager-sensitivity-v1
+output_root: results/primary_risk_station_manager_sensitivity_v1/runs
+workers: 12
+
+# Development-only replay after the per-link station-manager installation fix.
+# Compare these adaptive runs with the earlier adaptive frontier runs to decide
+# whether the predictor and gate require corrected treatment-free retraining.
+# Native MLO is deliberately omitted from this sensitivity; every headline
+# comparison will still rerun all three treatments from one later frozen commit.
+topologies:
+  - name: dual_interface
+
+policies:
+  - name: adaptive_airtime_duplication
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.adaptive_airtime_admission_uses_retry_inflation: false
+      prediction.adaptive_airtime_budget_fraction: 0.02
+      prediction.adaptive_airtime_bucket_horizon_us: 10000000
+      prediction.adaptive_airtime_initial_bucket_horizon_us: 2000000
+      prediction.adaptive_airtime_initial_shadow_price: 0.034
+      prediction.adaptive_airtime_dual_step: 0.0
+      prediction.adaptive_airtime_cost_safety_factor: 1.25
+      prediction.adaptive_airtime_cost_ewma_alpha: 0.10
+      prediction.adaptive_airtime_decision_offsets_us: [0]
