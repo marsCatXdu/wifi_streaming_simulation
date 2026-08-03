@@ -68,7 +68,7 @@ which cannot query a single channel from a multi-channel MLD.
 Native EMLSR mode reuses that two-link MLD and one-copy application path, with
 `NMaxInflights=1`. Static setup is deliberately ordered as association, EMLSR
 activation, then bidirectional Block Ack. The predeclared
-`advanced_sta_ap_fixed_aux_v3` practical profile uses
+`advanced_sta_ap_fixed_aux_v4` practical profile uses
 `AdvancedEmlsrManager` at the STA and `AdvancedApEmlsrManager` at the AP.
 It enables EMLSR links `{0,1}`, places PHY 1 initially on the 5 GHz link as
 the main PHY, advertises 128 us padding and transition delays, and uses a
@@ -77,12 +77,12 @@ capable, does not switch bands, is not put to sleep, and models no in-device
 interference. The profile explicitly pins the inherited and advanced STA/AP
 manager controls, the EHT transition and medium-sync controls, the PHY
 MAC-header notification, and the channel-access-manager controls that affect
-switch decisions. In particular, a TXOP released without a transmission while
-frames remain queued generates a new backoff. This IEEE 802.11be-permitted
-behavior prevents an EMLSR switch refusal from immediately reacquiring and
-releasing the same TXOP indefinitely at one simulation timestamp. The main PHY
-has spectrum interfaces for both bands, which is required for an actual
-cross-band switch.
+switch decisions. A TXOP released without a transmission retains its zero
+backoff, which is the more aggressive standard-permitted behavior. The
+advanced manager defers a same-boundary retry by one simulator timestep so a
+switch refusal cannot immediately reacquire and release the same TXOP
+indefinitely at one simulation timestamp. The main PHY has spectrum interfaces
+for both bands, which is required for an actual cross-band switch.
 
 An earlier literal `DefaultEmlsrManager` reference profile (32 us padding,
 128 us transition, TX-capable switching auxiliary PHY) activated EMLSR in both

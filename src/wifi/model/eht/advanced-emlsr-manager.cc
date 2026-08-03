@@ -986,7 +986,10 @@ AdvancedEmlsrManager::SwitchMainPhyIfTxopGainedByAuxPhy(uint8_t linkId, AcIndex 
                  {WifiPhyState::SWITCHING, WifiPhyState::CCA_BUSY, WifiPhyState::RX}) ==
              Simulator::Now())
     {
-        delay = mainPhy->GetDelayUntilIdle();
+        // If the PHY became idle at the current time, defer the retry by one timestep. This lets
+        // all events at the state boundary complete and prevents a refused TXOP from releasing and
+        // immediately reacquiring the channel indefinitely at the same simulation time.
+        delay = Max(mainPhy->GetDelayUntilIdle(), TimeStep(1));
     }
 
     NS_LOG_DEBUG("Main PHY state is " << mainPhy->GetState()->GetState());

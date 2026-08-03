@@ -55,7 +55,7 @@ def main() -> None:
         assert wifi["application_duplication"] is False
         assert wifi["emlsr"] == {
             "activated": True,
-            "profile": "advanced_sta_ap_fixed_aux_v3",
+            "profile": "advanced_sta_ap_fixed_aux_v4",
             "manager": "ns3::AdvancedEmlsrManager",
             "ap_manager": "ns3::AdvancedApEmlsrManager",
             "link_ids": [0, 1],
@@ -87,7 +87,7 @@ def main() -> None:
             "ap_wait_trans_delay_on_psdu_rx_error": True,
             "ap_update_cw_after_failed_icf": True,
             "ap_report_failed_icf": True,
-            "cam_generate_backoff_without_tx": True,
+            "cam_generate_backoff_without_tx": False,
             "cam_proactive_backoff": False,
             "cam_reset_backoff_threshold_us": 0,
             "cam_n_slots_left": 0,
@@ -101,7 +101,7 @@ def main() -> None:
 
         runtime = json.loads((output / "mlo_runtime.json").read_text())
         assert runtime["mode"] == "EMLSR"
-        assert runtime["profile"] == "advanced_sta_ap_fixed_aux_v3"
+        assert runtime["profile"] == "advanced_sta_ap_fixed_aux_v4"
         assert runtime["emlsr_manager"] == "ns3::AdvancedEmlsrManager"
         assert runtime["ap_emlsr_manager"] == "ns3::AdvancedApEmlsrManager"
         assert runtime["emlsr_link_ids"] == [0, 1]
@@ -128,6 +128,7 @@ def main() -> None:
 
         result = validate_run(output)
         assert result["valid"] is True
+        assert result["frame_count"] == 60
         tampered = dict(runtime)
         tampered["successful_mpdus_per_link"] = list(
             runtime["successful_mpdus_per_link"]

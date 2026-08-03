@@ -2092,7 +2092,7 @@ def validate_run(
                  "resolved_config.json: invalid EMLSR MLD/application setup")
         expected_emlsr = {
             "activated": True,
-            "profile": "advanced_sta_ap_fixed_aux_v3",
+            "profile": "advanced_sta_ap_fixed_aux_v4",
             "manager": "ns3::AdvancedEmlsrManager",
             "ap_manager": "ns3::AdvancedApEmlsrManager",
             "link_ids": [0, 1],
@@ -2124,7 +2124,7 @@ def validate_run(
             "ap_wait_trans_delay_on_psdu_rx_error": True,
             "ap_update_cw_after_failed_icf": True,
             "ap_report_failed_icf": True,
-            "cam_generate_backoff_without_tx": True,
+            "cam_generate_backoff_without_tx": False,
             "cam_proactive_backoff": False,
             "cam_reset_backoff_threshold_us": 0,
             "cam_n_slots_left": 0,
@@ -2140,7 +2140,7 @@ def validate_run(
         mlo_runtime = _json(mlo_runtime_path)
         expected_runtime = {
             "mode": "EMLSR",
-            "profile": "advanced_sta_ap_fixed_aux_v3",
+            "profile": "advanced_sta_ap_fixed_aux_v4",
             "station_emlsr_activated": True,
             "ap_emlsr_activated": True,
             "emlsr_manager": "ns3::AdvancedEmlsrManager",

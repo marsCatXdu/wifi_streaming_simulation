@@ -1683,7 +1683,7 @@ class OutputStatisticsTestCase : public TestCase
 
         MloRuntimeInfo mloRuntime;
         mloRuntime.mode = "EMLSR";
-        mloRuntime.profile = "advanced_sta_ap_fixed_aux_v3";
+        mloRuntime.profile = "advanced_sta_ap_fixed_aux_v4";
         mloRuntime.stationEmlsrActivated = true;
         mloRuntime.apEmlsrActivated = true;
         mloRuntime.emlsrManager = "ns3::AdvancedEmlsrManager";
