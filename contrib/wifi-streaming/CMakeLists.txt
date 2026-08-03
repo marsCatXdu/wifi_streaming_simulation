@@ -17,6 +17,7 @@ build_lib(
     model/metrics-collector.cc
     model/experiment-output.cc
     model/randomized-frame-assignment.cc
+    model/randomized-intervention-controller.cc
     model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
@@ -40,6 +41,7 @@ build_lib(
     model/metrics-collector.h
     model/experiment-output.h
     model/randomized-frame-assignment.h
+    model/randomized-intervention-controller.h
     model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h
@@ -53,5 +55,6 @@ build_lib(
     ${libwifi}
   TEST_SOURCES
     test/primary-tail-t4-model-evaluator-test.cc
+    test/randomized-intervention-controller-test.cc
     test/wifi-streaming-test-suite.cc
 )
