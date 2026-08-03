@@ -132,8 +132,11 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
         const Time deadline = generation + MicroSeconds(header.deadlineUs);
         if (header.deadlineUs > 0)
         {
+            // Finalize one nanosecond after the inclusive deadline so packets
+            // arriving exactly at the deadline can still complete the frame.
+            const Time finalizeAt = deadline + NanoSeconds(1);
             state.deadlineEvent =
-                Simulator::Schedule(std::max(Time(), deadline - Simulator::Now()),
+                Simulator::Schedule(std::max(Time(), finalizeAt - Simulator::Now()),
                                     &FrameReceiver::Finalize,
                                     this,
                                     header.frameId,
@@ -181,6 +184,7 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
     if (!state.completionUs && state.unionPackets.size() == state.frame.packetCount)
     {
         state.completionUs = nowUs;
+        state.completionTime = Simulator::Now();
     }
     const bool allCopiesComplete =
         state.copyPackets[0].size() == state.frame.packetCount &&
@@ -228,11 +232,11 @@ FrameReceiver::Finalize(uint64_t frameId, bool expired)
     result.uniquePacketsReceived = state.unionPackets.size();
     result.duplicatePacketsReceived = state.duplicates;
     result.incomplete = !state.completionUs.has_value();
-    const uint64_t absoluteDeadlineUs =
-        state.frame.generationTimeNs / 1000 + state.frame.deadlineUs;
+    const Time absoluteDeadline = NanoSeconds(state.frame.generationTimeNs) +
+                                  MicroSeconds(state.frame.deadlineUs);
     result.deadlineMiss =
         state.frame.deadlineUs > 0 &&
-        (!state.completionUs || *state.completionUs > absoluteDeadlineUs);
+        (!state.completionTime || *state.completionTime > absoluteDeadline);
 
     std::set<uint8_t> contributingLinks;
     for (const auto& entry : state.firstLinkForPacket)

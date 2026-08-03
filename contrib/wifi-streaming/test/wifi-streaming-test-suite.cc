@@ -1834,11 +1834,11 @@ class DelayedSecondaryHoldTestCase : public TestCase
             NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
                                   0,
                                   "Held frame finalized before the deadline");
-            Simulator::Stop(MicroSeconds(1000));
+            Simulator::Stop(MicroSeconds(1000) + NanoSeconds(1));
             Simulator::Run();
             NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
                                   1,
-                                  "Held frame did not finalize at the deadline");
+                                  "Held frame did not finalize after the deadline boundary");
             NS_TEST_ASSERT_MSG_EQ(
                 collector->GetFrameResults().front().copy1CompletionUs.has_value(),
                 false,
@@ -1878,8 +1878,50 @@ class FinalizationTestCase : public TestCase
         collector = CreateObject<MetricsCollector>();
         receiver = CreateObject<FrameReceiver>();
         receiver->SetMetricsCollector(collector);
+        Simulator::Schedule(MicroSeconds(100),
+                            &FrameReceiver::ProcessPacket,
+                            PeekPointer(receiver),
+                            MakeStreamingPacket(2, 1, 2, 0, 0, 100));
+        receiver->ProcessPacket(MakeStreamingPacket(2, 0, 2, 0, 0, 100));
+        Simulator::Stop(MicroSeconds(101));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                              1,
+                              "Exact-deadline frame did not finalize");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults()[0].incomplete,
+                              false,
+                              "Exact-deadline packet was discarded");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults()[0].deadlineMiss,
+                              false,
+                              "Exact-deadline completion was marked late");
+        Simulator::Destroy();
+
+        collector = CreateObject<MetricsCollector>();
+        receiver = CreateObject<FrameReceiver>();
+        receiver->SetMetricsCollector(collector);
+        Simulator::Schedule(MicroSeconds(100) + NanoSeconds(1),
+                            &FrameReceiver::ProcessPacket,
+                            PeekPointer(receiver),
+                            MakeStreamingPacket(3, 1, 2, 0, 0, 100));
+        receiver->ProcessPacket(MakeStreamingPacket(3, 0, 2, 0, 0, 100));
+        Simulator::Stop(MicroSeconds(101));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                              1,
+                              "Post-deadline frame did not finalize");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults()[0].incomplete,
+                              false,
+                              "Post-deadline completion was lost before classification");
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults()[0].deadlineMiss,
+                              true,
+                              "Sub-microsecond-late completion was marked on time");
+        Simulator::Destroy();
+
+        collector = CreateObject<MetricsCollector>();
+        receiver = CreateObject<FrameReceiver>();
+        receiver->SetMetricsCollector(collector);
         receiver->SetCleanupTimeout(MilliSeconds(1));
-        receiver->ProcessPacket(MakeStreamingPacket(2, 0, 2, 0, 0, 0));
+        receiver->ProcessPacket(MakeStreamingPacket(4, 0, 2, 0, 0, 0));
         Simulator::Stop(MilliSeconds(2));
         Simulator::Run();
         NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(), 1, "Cleanup did not finalize");

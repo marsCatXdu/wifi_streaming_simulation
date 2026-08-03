@@ -64,6 +64,7 @@ class FrameReceiver : public Application
         uint32_t duplicates{0};
         std::optional<uint64_t> firstArrivalUs;
         std::optional<uint64_t> completionUs;
+        std::optional<Time> completionTime; ///< Exact completion time for deadline comparison.
         std::map<uint8_t, uint64_t> copyCompletionUs;
         EventId deadlineEvent;
         EventId cleanupEvent;
