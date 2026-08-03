@@ -23,11 +23,12 @@ from plot_results import plot
 from plot_ofdma_comparison import plot_ofdma_comparison
 from plot_selective_duplication import plot_selective_control
 from plot_adaptive_airtime_duplication import plot_adaptive_airtime
-from summarize_runs import discover, summarize, write_outputs
+from summarize_runs import summarize, write_outputs
 from validate_outputs import validate_run
 
 ROOT = Path(__file__).resolve().parents[1]
 NS3_UPSTREAM_COMMIT = "d2add90b452d600cfb4859baed8e9ea633519447"
+MANIFEST_SCHEMA_VERSION = 2
 PREDICTION_SCHEMA_VERSIONS = {
     "telemetry_schema_version": 3,
     "polling_schema_version": 1,
@@ -125,11 +126,67 @@ CLI_KEYS = {
 
 
 def project_commit(root: Path = ROOT) -> str:
+    status = subprocess.check_output(
+        ["git", "status", "--porcelain", "--untracked-files=no"],
+        cwd=root,
+        text=True,
+    ).strip()
+    if status:
+        raise RuntimeError(
+            "tracked project changes are uncommitted; commit them before running experiments"
+        )
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
 
 
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+
+
+def matrix_sha256(document: dict[str, Any]) -> str:
+    return hashlib.sha256(canonical_json(document).encode()).hexdigest()
+
+
+def validate_existing_manifest(
+    path: Path,
+    experiment: str,
+    matrix_sha: str,
+    project_git_commit: str,
+    expected_run_ids: set[str],
+) -> None:
+    """Reject resume roots belonging to different code or matrix content."""
+    if not path.exists():
+        return
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"cannot resume from invalid manifest {path}: {error}") from error
+    expected_identity = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "experiment": experiment,
+        "matrix_sha256": matrix_sha,
+        "project_commit": project_git_commit,
+        "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
+    }
+    mismatches = [
+        key for key, expected in expected_identity.items()
+        if manifest.get(key) != expected
+    ]
+    if mismatches:
+        raise ValueError(
+            f"output root belongs to a different experiment identity "
+            f"({', '.join(mismatches)}); choose a new output root"
+        )
+    runs = manifest.get("runs")
+    if not isinstance(runs, list):
+        raise ValueError("experiment manifest has an invalid runs list")
+    recorded = {
+        item.get("run_id") for item in runs if isinstance(item, dict)
+    }
+    if None in recorded or not recorded <= expected_run_ids:
+        raise ValueError(
+            "experiment manifest contains runs outside the current matrix; "
+            "choose a new output root"
+        )
 
 
 def _nested_leaf(value: Any, leaf: str) -> Any:
@@ -619,7 +676,6 @@ def main() -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     commit = project_commit()
     specs = expand_config(document)
-    write_experiment_description(document, specs, output_root)
     seen = set()
     for spec in specs:
         spec["run_id"] = derive_run_id(spec["config"], spec["seed"], spec["run"],
@@ -633,11 +689,24 @@ def main() -> None:
             if not args.resume:
                 raise FileExistsError(f"completed duplicate rejected: {spec['run_id']}")
             spec["completed"] = True
+    experiment = str(document.get("name", args.config.stem))
+    resolved_matrix_sha = matrix_sha256(document)
+    manifest_path = output_root / "experiment_manifest.json"
+    validate_existing_manifest(
+        manifest_path,
+        experiment,
+        resolved_matrix_sha,
+        commit,
+        seen,
+    )
+    write_experiment_description(document, specs, output_root)
     if not args.no_build:
         subprocess.run([str(ROOT / "ns3"), "build", "streaming-experiment"],
                        cwd=ROOT, check=True)
     manifest = {
-        "schema_version": 1, "experiment": document.get("name", args.config.stem),
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "experiment": experiment,
+        "matrix_sha256": resolved_matrix_sha,
         "config_file": str(args.config.resolve()), "project_commit": commit,
         "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
         "runs": [
@@ -654,7 +723,6 @@ def main() -> None:
             if spec.get("completed")
         ],
     }
-    manifest_path = output_root / "experiment_manifest.json"
     atomic_json(manifest_path, manifest)
     failures = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
@@ -676,7 +744,7 @@ def main() -> None:
     if failures:
         raise SystemExit("\n".join(failures))
     if not args.no_analysis:
-        aggregate = summarize(discover(output_root))
+        aggregate = summarize([output_root / spec["run_id"] for spec in specs])
         aggregate_json = output_root / "aggregate.json"
         aggregate_csv = output_root / "aggregate.csv"
         write_outputs(aggregate, aggregate_json, aggregate_csv)

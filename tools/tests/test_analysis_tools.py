@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 TOOLS = Path(__file__).resolve().parents[1]
 ROOT = TOOLS.parent
@@ -18,6 +19,9 @@ from run_experiments import (
     derive_run_id,
     expand_config,
     load_yaml,
+    matrix_sha256,
+    project_commit,
+    validate_existing_manifest,
     write_experiment_description,
 )
 from benchmark_prediction_telemetry import _overhead_classification
@@ -519,6 +523,42 @@ class MatrixTests(unittest.TestCase):
         ).hexdigest()[:20]
         self.assertEqual(derive_run_id(disabled, 1, 2, "n", "p"), historical)
 
+    def test_project_commit_rejects_tracked_dirty_state(self) -> None:
+        with mock.patch(
+            "run_experiments.subprocess.check_output",
+            return_value=" M tools/run_experiments.py\n",
+        ):
+            with self.assertRaisesRegex(RuntimeError, "uncommitted"):
+                project_commit(ROOT)
+        with mock.patch(
+            "run_experiments.subprocess.check_output",
+            side_effect=["", "abc123\n"],
+        ):
+            self.assertEqual(project_commit(ROOT), "abc123")
+
+    def test_resume_manifest_requires_exact_matrix_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "experiment_manifest.json"
+            document = {"name": "matrix", "seeds": [1]}
+            identity = {
+                "schema_version": 2,
+                "experiment": "matrix",
+                "matrix_sha256": matrix_sha256(document),
+                "project_commit": "project",
+                "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+                "runs": [{"run_id": "expected"}],
+            }
+            path.write_text(json.dumps(identity), encoding="utf-8")
+            validate_existing_manifest(
+                path, "matrix", matrix_sha256(document), "project", {"expected"}
+            )
+            identity["project_commit"] = "stale"
+            path.write_text(json.dumps(identity), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "different experiment identity"):
+                validate_existing_manifest(
+                    path, "matrix", matrix_sha256(document), "project", {"expected"}
+                )
+
     def test_legacy_profile_cli_translation(self) -> None:
         arguments = cli_arguments({
             "topology": "mlo_str",
@@ -726,6 +766,14 @@ class MatrixTests(unittest.TestCase):
         }
         self.assertEqual(_approach_label(link_24), "Single 2.4 GHz interface")
         self.assertEqual(_approach_label(link_5), "Single 5 GHz interface")
+
+    def test_adaptive_airtime_has_a_distinct_plot_label(self) -> None:
+        adaptive = {
+            "topology": "dual_interface",
+            "policy": "adaptive_airtime_duplication",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        self.assertEqual(_approach_label(adaptive), "Adaptive airtime duplication")
 
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({
