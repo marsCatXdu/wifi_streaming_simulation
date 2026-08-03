@@ -10,6 +10,12 @@ STR MLO and EMLSR MLO, while paying a bounded and explicitly reported airtime
 cost.  Miss-burst measurements remain supporting evidence, but a reduction in
 burst length alone is not sufficient.
 
+The ideal Pareto operating point uses less than 20 percent additional summed
+target PHY TX airtime relative to the matched MLO treatment while reducing
+both deadline-miss ratio and P99 latency by more than 50 percent.  Treat these
+as separate per-metric ambitions rather than combining them into one score;
+progress toward one target must not conceal regression in the other.
+
 The final comparison must use paired runs.  A result counts as a defeat of an
 MLO treatment only when the paired confidence intervals for both the
 deadline-miss-ratio difference and the P99-latency difference lie below zero
