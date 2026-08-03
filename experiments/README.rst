@@ -1,6 +1,9 @@
 Wi-Fi streaming experiment workflow
 ===================================
 
+The current research priorities, comparison criteria, and deferred robustness
+work are tracked in ``experiments/TODO.rst``.
+
 Workflow
 --------
 
