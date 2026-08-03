@@ -28,16 +28,20 @@ def main() -> None:
                 "--",
                 "--topology=mlo_emlsr",
                 "--wifiStandard=eht",
-                "--duration=1",
-                "--fps=120",
-                "--frameSize=50000",
-                "--deadlineUs=100000",
+                "--seed=43",
+                "--duration=2",
+                "--fps=30",
+                "--frameSize=12000",
+                "--deadlineUs=33333",
+                "--propagationModel=log_distance_nakagami",
+                "--obssProfile=mixed4x4",
                 f"--outputDir={output}",
             ],
             cwd=ROOT,
             check=True,
             capture_output=True,
             text=True,
+            timeout=60,
         )
         (output / "stdout.log").write_text(completed.stdout, encoding="utf-8")
 
@@ -51,7 +55,7 @@ def main() -> None:
         assert wifi["application_duplication"] is False
         assert wifi["emlsr"] == {
             "activated": True,
-            "profile": "advanced_sta_ap_fixed_aux_v2",
+            "profile": "advanced_sta_ap_fixed_aux_v3",
             "manager": "ns3::AdvancedEmlsrManager",
             "ap_manager": "ns3::AdvancedApEmlsrManager",
             "link_ids": [0, 1],
@@ -83,7 +87,7 @@ def main() -> None:
             "ap_wait_trans_delay_on_psdu_rx_error": True,
             "ap_update_cw_after_failed_icf": True,
             "ap_report_failed_icf": True,
-            "cam_generate_backoff_without_tx": False,
+            "cam_generate_backoff_without_tx": True,
             "cam_proactive_backoff": False,
             "cam_reset_backoff_threshold_us": 0,
             "cam_n_slots_left": 0,
@@ -97,7 +101,7 @@ def main() -> None:
 
         runtime = json.loads((output / "mlo_runtime.json").read_text())
         assert runtime["mode"] == "EMLSR"
-        assert runtime["profile"] == "advanced_sta_ap_fixed_aux_v2"
+        assert runtime["profile"] == "advanced_sta_ap_fixed_aux_v3"
         assert runtime["emlsr_manager"] == "ns3::AdvancedEmlsrManager"
         assert runtime["ap_emlsr_manager"] == "ns3::AdvancedApEmlsrManager"
         assert runtime["emlsr_link_ids"] == [0, 1]

@@ -1356,7 +1356,7 @@ main(int argc, char* argv[])
         {
             mac.SetChannelAccessManager(
                 "GenerateBackoffIfTxopWithoutTx",
-                BooleanValue(false),
+                BooleanValue(true),
                 "ProactiveBackoff",
                 BooleanValue(false),
                 "ResetBackoffThreshold",
@@ -1511,7 +1511,7 @@ main(int argc, char* argv[])
                                                 "EMLSR runtime link set is not {0,1}");
 
                                 mloRuntime.mode = "EMLSR";
-                                mloRuntime.profile = "advanced_sta_ap_fixed_aux_v2";
+                                mloRuntime.profile = "advanced_sta_ap_fixed_aux_v3";
                                 mloRuntime.stationEmlsrActivated =
                                     targetStaMld->IsEmlsrActivated();
                                 mloRuntime.apEmlsrActivated = targetApMld->IsEmlsrActivated();
@@ -1709,7 +1709,7 @@ main(int argc, char* argv[])
                                         cam->GetAttribute("NSlotsLeft", nSlotsLeft);
                                         cam->GetAttribute("NSlotsLeftMinDelay",
                                                           nSlotsLeftMinDelay);
-                                        if (generateBackoffWithoutTx.Get() ||
+                                        if (!generateBackoffWithoutTx.Get() ||
                                             proactiveBackoff.Get() ||
                                             resetBackoffThreshold.Get() != MicroSeconds(0) ||
                                             nSlotsLeft.Get() != 0 ||
@@ -2166,7 +2166,7 @@ main(int argc, char* argv[])
         nativeMlo ? (emlsrMlo ? "EMLSR" : "STR") : "not_applicable";
     resolved.emlsrActivated = emlsrMlo;
     resolved.emlsrProfile =
-        emlsrMlo ? "advanced_sta_ap_fixed_aux_v2" : "not_applicable";
+        emlsrMlo ? "advanced_sta_ap_fixed_aux_v3" : "not_applicable";
     resolved.emlsrManager = emlsrMlo ? "ns3::AdvancedEmlsrManager" : "not_applicable";
     resolved.emlsrApManager =
         emlsrMlo ? "ns3::AdvancedApEmlsrManager" : "not_applicable";
@@ -2203,7 +2203,7 @@ main(int argc, char* argv[])
     resolved.emlsrApWaitTransDelayOnPsduRxError = emlsrMlo;
     resolved.emlsrApUpdateCwAfterFailedIcf = emlsrMlo;
     resolved.emlsrApReportFailedIcf = emlsrMlo;
-    resolved.emlsrCamGenerateBackoffWithoutTx = false;
+    resolved.emlsrCamGenerateBackoffWithoutTx = emlsrMlo;
     resolved.emlsrCamProactiveBackoff = false;
     resolved.emlsrCamResetBackoffThresholdUs =
         emlsrMlo ? emlsrCamResetBackoffThresholdUs : 0;
