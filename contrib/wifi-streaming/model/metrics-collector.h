@@ -73,8 +73,8 @@ class MetricsCollector : public Object
     /**
      * Mark a previously registered frame decision as causally duplicated.
      *
-     * This updates the frame-result projection without appending a second row
-     * to the one-decision-per-frame policy CSV.
+     * The one-decision-per-frame policy CSV is emitted when the corresponding
+     * frame finalizes, so it records this final causal action state.
      *
      * @param frameId Application frame identifier.
      * @param decisionTimeUs Delayed action time.
@@ -90,8 +90,18 @@ class MetricsCollector : public Object
     const std::vector<FrameResult>& GetFrameResults() const;
 
   private:
+    /** Write the frame-result CSV header. */
     void WriteFrameHeader();
+
+    /** Write the final policy-decision CSV header. */
     void WriteDecisionHeader();
+
+    /**
+     * Write one final policy decision.
+     *
+     * @param decision Final decision state for a finalized frame.
+     */
+    void WritePolicyDecision(const PolicyDecisionRecord& decision);
 
     std::string m_runId{"run"};
     std::ofstream m_frames;

@@ -95,8 +95,8 @@ void
 MetricsCollector::RecordFrame(const FrameResult& result)
 {
     FrameResult stored = result;
-    if (auto decision = m_policyDecisions.find(stored.frame.frameId);
-        decision != m_policyDecisions.end())
+    const auto decision = m_policyDecisions.find(stored.frame.frameId);
+    if (decision != m_policyDecisions.end())
     {
         stored.policy = decision->second.policy;
         stored.primaryLink = decision->second.primaryLink;
@@ -107,37 +107,48 @@ MetricsCollector::RecordFrame(const FrameResult& result)
     }
     m_expectedFrames.erase(stored.frame.frameId);
     m_results.push_back(stored);
-    if (!m_frames)
+    if (m_frames)
     {
-        return;
+        m_frames << stored.runId << ',' << stored.frame.frameId << ','
+                 << stored.frame.generationTimeNs / 1000 << ',' << stored.frame.frameSizeBytes
+                 << ',' << stored.frame.packetCount << ','
+                 << FrameTypeToString(stored.frame.frameType) << ',' << stored.frame.deadlineUs
+                 << ',' << stored.policy << ',' << +stored.primaryLink << ',' << stored.duplicated
+                 << ',' << stored.decisionTimeUs << ',' << std::setprecision(10)
+                 << stored.predictedDelayLink0 << ',' << stored.predictedDelayLink1 << ',';
+        WriteOptional(m_frames, stored.unionFirstPacketUs);
+        m_frames << ',';
+        WriteOptional(m_frames, stored.unionCompletionUs);
+        m_frames << ',';
+        if (stored.unionCompletionUs)
+        {
+            m_frames << (*stored.unionCompletionUs - stored.frame.generationTimeNs / 1000);
+        }
+        m_frames << ',';
+        WriteOptional(m_frames, stored.copy0CompletionUs);
+        m_frames << ',';
+        WriteOptional(m_frames, stored.copy1CompletionUs);
+        m_frames << ',' << stored.uniquePacketsReceived << ','
+                 << stored.duplicatePacketsReceived << ',' << stored.deadlineMiss << ','
+                 << stored.incomplete << ',' << stored.completionMode << '\n';
+        m_frames.flush();
     }
-    m_frames << stored.runId << ',' << stored.frame.frameId << ','
-             << stored.frame.generationTimeNs / 1000 << ',' << stored.frame.frameSizeBytes << ','
-             << stored.frame.packetCount << ',' << FrameTypeToString(stored.frame.frameType) << ','
-             << stored.frame.deadlineUs << ',' << stored.policy << ',' << +stored.primaryLink << ','
-             << stored.duplicated << ',' << stored.decisionTimeUs << ',' << std::setprecision(10)
-             << stored.predictedDelayLink0 << ',' << stored.predictedDelayLink1 << ',';
-    WriteOptional(m_frames, stored.unionFirstPacketUs);
-    m_frames << ',';
-    WriteOptional(m_frames, stored.unionCompletionUs);
-    m_frames << ',';
-    if (stored.unionCompletionUs)
+    if (decision != m_policyDecisions.end())
     {
-        m_frames << (*stored.unionCompletionUs - stored.frame.generationTimeNs / 1000);
+        WritePolicyDecision(decision->second);
     }
-    m_frames << ',';
-    WriteOptional(m_frames, stored.copy0CompletionUs);
-    m_frames << ',';
-    WriteOptional(m_frames, stored.copy1CompletionUs);
-    m_frames << ',' << stored.uniquePacketsReceived << ',' << stored.duplicatePacketsReceived << ','
-             << stored.deadlineMiss << ',' << stored.incomplete << ',' << stored.completionMode << '\n';
-    m_frames.flush();
 }
 
 void
 MetricsCollector::RecordPolicyDecision(const PolicyDecisionRecord& decision)
 {
-    m_policyDecisions[decision.frameId] = decision;
+    const bool inserted = m_policyDecisions.emplace(decision.frameId, decision).second;
+    NS_ABORT_MSG_IF(!inserted, "Duplicate policy decision for frame " << decision.frameId);
+}
+
+void
+MetricsCollector::WritePolicyDecision(const PolicyDecisionRecord& decision)
+{
     if (!m_decisions)
     {
         return;
