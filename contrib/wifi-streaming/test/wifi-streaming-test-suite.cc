@@ -2174,6 +2174,69 @@ class OutputStatisticsTestCase : public TestCase
             std::string::npos,
             "Primary-deficit whole-copy-priced profile is missing");
 
+        const std::string randomizedDirectory = directory + "/randomized";
+        ExperimentOutput::PrepareRunDirectory(randomizedDirectory);
+        StreamingRunConfig randomizedConfig;
+        randomizedConfig.runId = "randomized-intervention";
+        randomizedConfig.policy = "randomized_full_copy_exploration";
+        randomizedConfig.durationSeconds = 60;
+        randomizedConfig.warmupSeconds = 1;
+        randomizedConfig.predictionTelemetryEnabled = true;
+        randomizedConfig.predictionSampleOffsetsUs = {0, 2000, 4000};
+        randomizedConfig.predictionHistoryWindowsUs = {1000, 5000, 20000};
+        randomizedConfig.secondaryAirtimeMeterEnabled = true;
+        randomizedConfig.randomizedAssignmentAlgorithm = "splitmix64_v1";
+        randomizedConfig.randomizedAssignmentSalt = 5927104639973545521ULL;
+        randomizedConfig.randomizedT2Probability = 0.08;
+        randomizedConfig.randomizedT4Probability = 0.12;
+        randomizedConfig.randomizedAssignmentStopGuardUs = 534000;
+        randomizedConfig.randomizedAssignmentWindowStartNs = 1000000000;
+        randomizedConfig.randomizedAssignmentWindowStopNs = 60466000000ULL;
+        randomizedConfig.randomizedCostEstimator =
+            "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1";
+        ExperimentOutput::WriteResolvedConfig(randomizedDirectory, randomizedConfig);
+        std::ifstream randomizedResolved(randomizedDirectory + "/resolved_config.json");
+        std::ostringstream randomizedText;
+        randomizedText << randomizedResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(randomizedText.str().find(
+                                  "\"csv_schema_version\": 1"),
+                              std::string::npos,
+                              "Randomized CSV schema version is missing");
+        NS_TEST_ASSERT_MSG_NE(randomizedText.str().find(
+                                  "\"assignment_algorithm\": \"splitmix64_v1\""),
+                              std::string::npos,
+                              "Randomized assignment algorithm is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            randomizedText.str().find(
+                "\"arm_probabilities\": {\"FULL_COPY_T2\": 0.08, "
+                "\"FULL_COPY_T4\": 0.12, \"CONTROL\": 0.8}"),
+            std::string::npos,
+            "Randomized arm probabilities are missing");
+        NS_TEST_ASSERT_MSG_NE(randomizedText.str().find(
+                                  "\"stage_offsets_us\": [2000, 4000]"),
+                              std::string::npos,
+                              "Randomized stage offsets are missing");
+        NS_TEST_ASSERT_MSG_NE(
+            randomizedText.str().find(
+                "\"assignment_salt\": 5927104639973545521"),
+            std::string::npos,
+            "Randomized assignment salt is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            randomizedText.str().find(
+                "\"assignment_window_stop_ns\": 60466000000"),
+            std::string::npos,
+            "Randomized assignment window is missing");
+        NS_TEST_ASSERT_MSG_NE(randomizedText.str().find(
+                                  "\"token_gate_enabled\": false"),
+                              std::string::npos,
+                              "Randomized no-token-gate contract is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            randomizedText.str().find(
+                "\"cost_estimator_id\": "
+                "\"eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1\""),
+            std::string::npos,
+            "Randomized cost estimator is missing");
+
         const std::string selectiveDirectory = directory + "/selective";
         ExperimentOutput::PrepareRunDirectory(selectiveDirectory);
         StreamingRunConfig selectiveConfig;

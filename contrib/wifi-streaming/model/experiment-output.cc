@@ -6,6 +6,7 @@
 #include "closed-loop-risk-predictor.h"
 #include "prediction-model-evaluator.h"
 #include "prediction-telemetry-collector.h"
+#include "randomized-intervention-controller.h"
 
 #include "ns3/abort.h"
 
@@ -721,6 +722,42 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                    << config.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs[index];
         }
         output << "]\n"
+               << "  },\n";
+    }
+    if (config.policy == "randomized_full_copy_exploration")
+    {
+        output << "  \"randomizedIntervention\": {\n"
+               << "    \"csv_schema_version\": "
+               << RandomizedInterventionController::CSV_SCHEMA_VERSION << ",\n"
+               << "    \"assignment_algorithm\": \""
+               << JsonEscape(config.randomizedAssignmentAlgorithm) << "\",\n"
+               << "    \"assignment_salt\": " << config.randomizedAssignmentSalt << ",\n"
+               << "    \"randomization_consumes_ns3_rng\": false,\n"
+               << "    \"arm_probabilities\": {\"FULL_COPY_T2\": "
+               << config.randomizedT2Probability << ", \"FULL_COPY_T4\": "
+               << config.randomizedT4Probability << ", \"CONTROL\": "
+               << (1.0 - config.randomizedT2Probability -
+                   config.randomizedT4Probability)
+               << "},\n"
+               << "    \"stages\": [\"T2\", \"T4\"],\n"
+               << "    \"stage_offsets_us\": [2000, 4000],\n"
+               << "    \"primary_path\": 1,\n"
+               << "    \"primary_copy_id\": 0,\n"
+               << "    \"secondary_path\": 0,\n"
+               << "    \"secondary_copy_id\": 1,\n"
+               << "    \"assignment_window_start_ns\": "
+               << config.randomizedAssignmentWindowStartNs << ",\n"
+               << "    \"assignment_window_stop_ns\": "
+               << config.randomizedAssignmentWindowStopNs << ",\n"
+               << "    \"assignment_stop_guard_us\": "
+               << config.randomizedAssignmentStopGuardUs << ",\n"
+               << "    \"common_eligibility_rule\": "
+                  "\"T2_at_or_after_start_and_prospective_T4_before_stop_and_"
+                  "primary_actionable_and_canonical_secondary_descriptor_available\",\n"
+               << "    \"intervention\": \"canonical_full_secondary_copy\",\n"
+               << "    \"token_gate_enabled\": false,\n"
+               << "    \"cost_estimator_id\": \""
+               << JsonEscape(config.randomizedCostEstimator) << "\"\n"
                << "  },\n";
     }
     if (config.secondaryAirtimeMeterEnabled)

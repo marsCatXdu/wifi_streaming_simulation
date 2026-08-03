@@ -163,6 +163,16 @@ struct StreamingRunConfig
     std::vector<uint64_t> adaptiveAirtimeDecisionOffsetsUs;
     std::map<uint64_t, double> adaptiveAirtimeDecisionOffsetShadowPrices;
     std::vector<uint64_t> adaptiveAirtimeIFrameOnlyDecisionOffsetsUs;
+    std::string randomizedAssignmentAlgorithm{
+        "not_applicable"}; ///< Stable frame-assignment algorithm.
+    uint64_t randomizedAssignmentSalt{0}; ///< Explicit frame-assignment salt.
+    double randomizedT2Probability{0};    ///< Probability of a T2 full-copy assignment.
+    double randomizedT4Probability{0};    ///< Probability of a T4 full-copy assignment.
+    uint64_t randomizedAssignmentStopGuardUs{0}; ///< Guard before measurement stop.
+    uint64_t randomizedAssignmentWindowStartNs{0}; ///< Inclusive assignment-window start.
+    uint64_t randomizedAssignmentWindowStopNs{0};  ///< Exclusive assignment-window stop.
+    std::string randomizedCostEstimator{
+        "not_applicable"}; ///< Frozen full-copy airtime cost estimator.
     uint32_t fullDuplicationPrimaryPath{0};
     double staticLink0Score{0};
     double staticLink1Score{0};

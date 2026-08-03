@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -456,6 +457,10 @@ main(int argc, char* argv[])
     std::string adaptiveAirtimeDecisionOffsetsUs = "0,4000";
     std::string adaptiveAirtimeDecisionOffsetShadowPrices;
     std::string adaptiveAirtimeIFrameOnlyDecisionOffsetsUs;
+    uint64_t randomizedAssignmentSalt{0};
+    double randomizedT2Probability{0.08};
+    double randomizedT4Probability{0.12};
+    uint64_t randomizedAssignmentStopGuardUs{534000};
     uint32_t fullDuplicationPrimaryPath = 0;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
@@ -560,8 +565,8 @@ main(int argc, char* argv[])
                      topology);
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, full_duplication, "
-                     "selective_duplication, adaptive_airtime_duplication, or "
-                     "adaptive_deficit_duplication",
+                     "selective_duplication, adaptive_airtime_duplication, "
+                     "adaptive_deficit_duplication, or randomized_full_copy_exploration",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -648,6 +653,18 @@ main(int argc, char* argv[])
     command.AddValue("adaptiveAirtimeIFrameOnlyDecisionOffsetsUs",
                      "Strict offsets at which adaptive action is limited to I-frames",
                      adaptiveAirtimeIFrameOnlyDecisionOffsetsUs);
+    command.AddValue("randomizedAssignmentSalt",
+                     "Explicit deterministic randomized-intervention salt",
+                     randomizedAssignmentSalt);
+    command.AddValue("randomizedT2Probability",
+                     "Frame probability for randomized full-copy T2",
+                     randomizedT2Probability);
+    command.AddValue("randomizedT4Probability",
+                     "Frame probability for randomized full-copy T4",
+                     randomizedT4Probability);
+    command.AddValue("randomizedAssignmentStopGuardUs",
+                     "Guard before measurement stop for randomized assignment",
+                     randomizedAssignmentStopGuardUs);
     command.AddValue("fullDuplicationPrimaryPath",
                      "Primary path for unconditional application duplication",
                      fullDuplicationPrimaryPath);
@@ -822,11 +839,12 @@ main(int argc, char* argv[])
                             (policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                              policyName != "selective_duplication" &&
                              policyName != "adaptive_airtime_duplication" &&
-                             policyName != "adaptive_deficit_duplication") ||
+                             policyName != "adaptive_deficit_duplication" &&
+                             policyName != "randomized_full_copy_exploration") ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
                         "Prediction telemetry requires dual_interface, a fixed-link or "
-                        "selective/adaptive policy, EHT, disabled UL OFDMA/A-MSDU, and "
+                        "selective/adaptive/randomized policy, EHT, disabled UL OFDMA/A-MSDU, and "
                         "disabled fragmentation");
     }
     if (policyName == "selective_duplication")
@@ -956,6 +974,67 @@ main(int argc, char* argv[])
                             "Every adaptive I-frame restriction must be a decision offset");
         }
     }
+    if (policyName == "randomized_full_copy_exploration")
+    {
+        const uint64_t minimumStopGuardUs =
+            static_cast<uint64_t>(queueMaxDelayMs) * 1000 + 1000 + deadlineUs -
+            RandomizedInterventionController::T4_OFFSET_US;
+        const double largestFrameSize = frameSize * keyframeSizeMultiplier;
+        NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
+                        "Randomized intervention requires prediction telemetry");
+        NS_ABORT_MSG_IF(!secondaryAirtimeMeterEnabled,
+                        "Randomized intervention requires the secondary airtime meter");
+        NS_ABORT_MSG_IF(emissionMode != "burst",
+                        "Randomized intervention currently requires burst emission");
+        NS_ABORT_MSG_IF(predictionEventLogEnabled || predictionOracleFeaturesEnabled,
+                        "Randomized intervention requires commodity telemetry without raw "
+                        "events or oracle fields");
+        NS_ABORT_MSG_IF(predictionPollingIntervalUs != 1000 ||
+                            predictionPollingReportDelayUs != 1000,
+                        "Randomized intervention requires genuine delayed 1 ms polling");
+        NS_ABORT_MSG_IF(guardIntervalNs != 800,
+                        "Randomized intervention cost provenance requires an 800 ns guard "
+                        "interval");
+        NS_ABORT_MSG_IF(maxAmpduSize != 65535 || txopLimitUs != 0,
+                        "Randomized intervention cost provenance requires the audited 65535-byte "
+                        "A-MPDU limit and zero TXOP limit");
+        NS_ABORT_MSG_IF(rtsCtsThreshold != 4692480,
+                        "Randomized intervention cost provenance requires disabled RTS/CTS");
+        NS_ABORT_MSG_IF(sourceName != "synthetic" || payloadSize == 0 ||
+                            !std::isfinite(largestFrameSize) || largestFrameSize < 1 ||
+                            largestFrameSize > std::numeric_limits<uint32_t>::max(),
+                        "Randomized intervention requires a bounded synthetic frame profile");
+        const uint64_t largestFrameBytes = std::llround(largestFrameSize);
+        const uint64_t largestFramePackets =
+            1 + (largestFrameBytes - 1) / payloadSize;
+        const uint64_t largestEstimatedAggregateBytes =
+            largestFrameBytes +
+            largestFramePackets *
+                (StreamingHeader::SERIALIZED_SIZE + expectedMacServiceOverheadBytes + 38);
+        NS_ABORT_MSG_IF(largestEstimatedAggregateBytes > maxAmpduSize,
+                        "Randomized nominal one-PPDU estimator requires every synthetic frame "
+                        "to fit the configured A-MPDU limit");
+        NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs !=
+                            std::vector<uint64_t>({0, 2000, 4000}),
+                        "Randomized intervention requires exactly the T0, T2, and T4 samples");
+        NS_ABORT_MSG_IF(!std::isfinite(randomizedT2Probability) ||
+                            !std::isfinite(randomizedT4Probability) ||
+                            randomizedT2Probability <= 0 ||
+                            randomizedT4Probability <= 0 ||
+                            randomizedT2Probability + randomizedT4Probability >= 1,
+                        "Randomized T2 and T4 probabilities must be positive and leave a "
+                        "positive control probability");
+        NS_ABORT_MSG_IF(
+            randomizedAssignmentStopGuardUs == 0 || !std::isfinite(durationSeconds) ||
+                randomizedAssignmentStopGuardUs < minimumStopGuardUs ||
+                randomizedAssignmentStopGuardUs >
+                    static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) / 1000 ||
+                durationSeconds * 1e6 <=
+                    static_cast<double>(randomizedAssignmentStopGuardUs) +
+                        RandomizedInterventionController::T4_OFFSET_US,
+            "Randomized assignment stop guard must cover deadline/queue settlement and leave "
+            "a common intervention window");
+    }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
     NS_ABORT_MSG_IF(ulOfdmaScope != "target_aps" && ulOfdmaScope != "all_he_eht_aps",
@@ -1049,7 +1128,8 @@ main(int argc, char* argv[])
                         policyName != "static_best" && policyName != "full_duplication" &&
                         policyName != "selective_duplication" &&
                         policyName != "adaptive_airtime_duplication" &&
-                        policyName != "adaptive_deficit_duplication",
+                        policyName != "adaptive_deficit_duplication" &&
+                        policyName != "randomized_full_copy_exploration",
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
                     "fullDuplicationPrimaryPath must be 0 or 1");
@@ -1066,9 +1146,10 @@ main(int argc, char* argv[])
                         policyName != "selective_duplication" &&
                         policyName != "adaptive_airtime_duplication" &&
                         policyName != "adaptive_deficit_duplication" &&
+                        policyName != "randomized_full_copy_exploration" &&
                         policyName != "full_duplication",
-                    "Secondary airtime metering supports only selective, adaptive, or full "
-                    "duplication policies");
+                    "Secondary airtime metering supports only selective, adaptive, randomized, "
+                    "or full duplication policies");
     NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
                         policyName == "full_duplication" &&
                         fullDuplicationPrimaryPath != 1,
@@ -2234,6 +2315,19 @@ main(int argc, char* argv[])
 
     const Time warmup = Seconds(1);
     const Time measurementStop = warmup + Seconds(durationSeconds);
+    uint64_t randomizedAssignmentWindowStartNs = 0;
+    uint64_t randomizedAssignmentWindowStopNs = 0;
+    if (policyName == "randomized_full_copy_exploration")
+    {
+        const Time assignmentStop =
+            measurementStop - MicroSeconds(randomizedAssignmentStopGuardUs);
+        NS_ABORT_MSG_IF(assignmentStop <=
+                            warmup +
+                                MicroSeconds(RandomizedInterventionController::T4_OFFSET_US),
+                        "Randomized assignment window cannot contain a paired T2/T4 frame");
+        randomizedAssignmentWindowStartNs = warmup.GetNanoSeconds();
+        randomizedAssignmentWindowStopNs = assignmentStop.GetNanoSeconds();
+    }
 
     StreamingRunConfig resolved;
     resolved.runId = runId;
@@ -2389,6 +2483,19 @@ main(int argc, char* argv[])
         resolvedAdaptiveDecisionOffsetShadowPrices;
     resolved.adaptiveAirtimeIFrameOnlyDecisionOffsetsUs =
         resolvedAdaptiveIFrameOnlyDecisionOffsetsUs;
+    if (policyName == "randomized_full_copy_exploration")
+    {
+        resolved.randomizedAssignmentAlgorithm =
+            std::string(RandomizedFrameAssignment::GetAlgorithmId());
+        resolved.randomizedAssignmentSalt = randomizedAssignmentSalt;
+        resolved.randomizedT2Probability = randomizedT2Probability;
+        resolved.randomizedT4Probability = randomizedT4Probability;
+        resolved.randomizedAssignmentStopGuardUs = randomizedAssignmentStopGuardUs;
+        resolved.randomizedAssignmentWindowStartNs = randomizedAssignmentWindowStartNs;
+        resolved.randomizedAssignmentWindowStopNs = randomizedAssignmentWindowStopNs;
+        resolved.randomizedCostEstimator =
+            std::string(RandomizedInterventionController::GetCostEstimatorId());
+    }
     resolved.fullDuplicationPrimaryPath = fullDuplicationPrimaryPath;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
@@ -2498,6 +2605,13 @@ main(int argc, char* argv[])
                                           stationDevices.Get(selectedPath),
                                           0,
                                           AC_BE);
+        if (policyName == "randomized_full_copy_exploration")
+        {
+            // Bind the hypothetical secondary after the primary so T0 path
+            // history is initialized in the same explicit causal order used
+            // for frame-copy registration and snapshot callbacks.
+            predictionTelemetry->BindWifiPath(0, stationDevices.Get(0), 0, AC_BE);
+        }
     }
 
     constexpr uint16_t port = 5000;
@@ -2507,7 +2621,8 @@ main(int argc, char* argv[])
     receiver->SetCleanupTimeout(Seconds(1));
     if (policyName == "selective_duplication" ||
         policyName == "adaptive_airtime_duplication" ||
-        policyName == "adaptive_deficit_duplication")
+        policyName == "adaptive_deficit_duplication" ||
+        policyName == "randomized_full_copy_exploration")
     {
         // Keep primary-only frames open so a causal delayed secondary launch
         // can still be accepted before the deadline.
@@ -2598,6 +2713,14 @@ main(int argc, char* argv[])
         sender->SetPolicy(policy);
         sender->SetDelayedSecondaryPath(0);
     }
+    else if (policyName == "randomized_full_copy_exploration")
+    {
+        auto policy = CreateObject<RandomizedFullCopyExplorationPolicy>();
+        policy->SetPrimaryPath(1);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(0);
+        sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
+    }
     else
     {
         auto policy = CreateObject<FullDuplicationPolicy>();
@@ -2607,12 +2730,14 @@ main(int argc, char* argv[])
     Ptr<ClosedLoopRiskPredictor> closedLoopPredictor;
     Ptr<SelectiveDuplicationController> selectiveController;
     Ptr<AdaptiveAirtimeDuplicationController> adaptiveController;
+    Ptr<RandomizedInterventionController> randomizedController;
     Ptr<SecondaryAirtimeMeter> secondaryAirtimeMeter;
     const bool meterWanted =
         secondaryAirtimeMeterEnabled &&
         (policyName == "selective_duplication" ||
          policyName == "adaptive_airtime_duplication" ||
          policyName == "adaptive_deficit_duplication" ||
+         policyName == "randomized_full_copy_exploration" ||
          policyName == "full_duplication");
     if (meterWanted)
     {
@@ -2628,6 +2753,28 @@ main(int argc, char* argv[])
             (std::filesystem::path(outputDir) / "secondary_airtime_events.csv").string(),
             (std::filesystem::path(outputDir) / "secondary_airtime_settlements.csv").string(),
             (std::filesystem::path(outputDir) / "secondary_airtime_summary.json").string());
+    }
+    if (policyName == "randomized_full_copy_exploration")
+    {
+        randomizedController = CreateObject<RandomizedInterventionController>();
+        randomizedController->SetSender(PeekPointer(sender));
+        randomizedController->SetAirtimeMeter(secondaryAirtimeMeter);
+        randomizedController->SetAssignmentParameters(randomizedAssignmentSalt,
+                                                       seed,
+                                                       run,
+                                                       randomizedT2Probability,
+                                                       randomizedT4Probability);
+        randomizedController->SetAssignmentWindow(randomizedAssignmentWindowStartNs,
+                                                  randomizedAssignmentWindowStopNs);
+        randomizedController->SetOutputFiles(
+            runId,
+            (std::filesystem::path(outputDir) / "randomized_intervention_assignments.csv")
+                .string(),
+            (std::filesystem::path(outputDir) / "randomized_intervention_executions.csv")
+                .string());
+        predictionTelemetry->SetSnapshotCallback(
+            MakeCallback(&RandomizedInterventionController::NotifySnapshot,
+                         PeekPointer(randomizedController)));
     }
     if (policyName == "selective_duplication")
     {
@@ -2936,6 +3083,25 @@ main(int argc, char* argv[])
     if (secondaryAirtimeMeter)
     {
         secondaryAirtimeMeter->WriteSummary();
+    }
+    if (randomizedController)
+    {
+        NS_ABORT_MSG_IF(
+            randomizedController->GetAssignmentCount() !=
+                randomizedController->GetExecutionCount(),
+            "Randomized intervention did not emit one execution for every assignment");
+        NS_ABORT_MSG_IF(
+            randomizedController->GetAssignmentCount() !=
+                randomizedController->GetT2ArmCount() +
+                    randomizedController->GetT4ArmCount() +
+                    randomizedController->GetControlArmCount(),
+            "Randomized intervention arm counts do not reconcile");
+        NS_ABORT_MSG_IF(randomizedController->GetLaunchCount() !=
+                            randomizedController->GetSettlementCount(),
+                        "Randomized intervention launch/settlement counts do not reconcile");
+        NS_ABORT_MSG_IF(randomizedController->GetLaunchCount() >
+                            randomizedController->GetLaunchAttemptCount(),
+                        "Randomized intervention accepted more launches than it attempted");
     }
     metrics->FinalizeMissingFrames();
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)
