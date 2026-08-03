@@ -111,6 +111,28 @@ report per-run scatter, high-airtime tails, bucket deferrals, debt, and any
 budget excess.  Seeds 43--54 are reserved for this engineering comparison; do
 not reuse them as final confirmation evidence.
 
+The first execution completed all adaptive and STR runs before exposing a
+same-timestamp EMLSR channel-access loop.  These partial results are development
+evidence only because the three treatments do not share the eventual corrected
+build identity.  Against matched STR, the 0.50-percent gate reduced the mean
+deadline-miss ratio by 42.1 percent and completed-frame P99 by 12.8 percent at a
+13.9-percent ratio-of-means summed-airtime increase.  The 0.70-percent gate
+reduced them by 59.1 percent and 16.6 percent, respectively, at 17.4 percent
+extra airtime.  Both paired miss and P99 differences had two-sided 95-percent
+Student-t intervals below zero; the loose gate exceeded 20 percent extra
+airtime in six of twelve individual runs.
+
+A retrospective nested-action sweep of the loose run selected a fixed shadow
+price of 0.034 as the next engineering point.  It estimated a 56.7-percent miss
+reduction, 15.3-percent P99 reduction, and 16.4-percent ratio-of-means airtime
+increase.  This sweep is useful for choosing a candidate, but it is not an
+independent result: secondary actions can perturb later random outcomes, and
+the same seeds selected the point.  Run
+``closed_loop_primary_risk_mlo_frontier.yaml`` to execute adaptive, STR, and the
+strong no-extra-backoff EMLSR comparator from one corrected commit.  Freeze or
+replace the controller only after analyzing that complete engineering matrix;
+use a new seed block for confirmation.
+
 Deadline-aware frame abandonment
 --------------------------------
 

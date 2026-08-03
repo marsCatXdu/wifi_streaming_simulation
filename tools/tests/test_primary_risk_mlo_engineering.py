@@ -109,6 +109,42 @@ class PrimaryRiskMloEngineeringConfigTest(unittest.TestCase):
             )
             self.assertEqual(prediction["adaptive_airtime_dual_step"], 0.0)
 
+    def test_frontier_matrix_reruns_all_treatments_at_selected_gate(self) -> None:
+        document = load_yaml(
+            ROOT / "experiments/configs/closed_loop_primary_risk_mlo_frontier.yaml"
+        )
+        specs = expand_config(document)
+
+        self.assertEqual(document["name"], "closed-loop-primary-risk-mlo-frontier-v1")
+        self.assertEqual(document["workers"], 36)
+        self.assertEqual(len(specs), 36)
+        self.assertEqual({spec["seed"] for spec in specs}, set(range(43, 55)))
+        self.assertEqual(
+            {
+                (spec["config"]["topology"], spec["config"]["policy"])
+                for spec in specs
+            },
+            {
+                ("dual_interface", "adaptive_airtime_duplication"),
+                ("mlo_str", "fixed_link_0"),
+                ("mlo_emlsr", "fixed_link_0"),
+            },
+        )
+        adaptive = [
+            spec
+            for spec in specs
+            if spec["config"]["policy"] == "adaptive_airtime_duplication"
+        ]
+        self.assertEqual(len(adaptive), 12)
+        for spec in adaptive:
+            prediction = spec["config"]["prediction"]
+            self.assertEqual(prediction["adaptive_airtime_initial_shadow_price"], 0.034)
+            self.assertEqual(prediction["adaptive_airtime_budget_fraction"], 0.02)
+            self.assertEqual(prediction["adaptive_airtime_dual_step"], 0.0)
+            self.assertFalse(
+                prediction["adaptive_airtime_admission_uses_retry_inflation"]
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
