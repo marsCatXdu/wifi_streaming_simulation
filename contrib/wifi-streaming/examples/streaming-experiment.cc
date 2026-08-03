@@ -912,6 +912,10 @@ main(int argc, char* argv[])
                         fullDuplicationPrimaryPath != 1,
                     "V1 full-duplication airtime metering requires primary path 1 so copy 1 "
                     "uses secondary path 0");
+    NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
+                        (maxAmsduSize != 0 || fragmentationThreshold != 65535),
+                    "Secondary airtime metering requires disabled A-MSDU and fragmentation "
+                    "so packet-terminal settlement remains unambiguous");
     NS_ABORT_MSG_IF(mloStaMaxInflights < 1 || mloStaMaxInflights > 15,
                     "mloStaMaxInflights must be in [1,15]");
     NS_ABORT_MSG_IF(topology == "dual_interface" && wifiStandard != "eht",

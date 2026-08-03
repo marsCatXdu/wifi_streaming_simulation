@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 namespace ns3
@@ -136,6 +137,8 @@ SecondaryAirtimeMeter::SetBudgetMetadata(double fraction, double initialCapacity
                     "Secondary airtime budget fraction must be in (0, 1]");
     NS_ABORT_MSG_IF(!std::isfinite(initialCapacityUs) || initialCapacityUs <= 0,
                     "Secondary airtime initial capacity must be positive");
+    NS_ABORT_MSG_IF(m_budgetFraction || m_initialCapacityUs,
+                    "Secondary airtime budget metadata was configured twice");
     m_budgetFraction = fraction;
     m_initialCapacityUs = initialCapacityUs;
 }
@@ -162,18 +165,28 @@ SecondaryAirtimeMeter::SetSettlementCallback(SettlementCallback callback)
 void
 SecondaryAirtimeMeter::RegisterLaunchedCopy(SecondaryAirtimeReservation reservation)
 {
-    NS_ABORT_MSG_IF(reservation.frameId == 0 && reservation.packetCount == 0,
-                    "Secondary airtime reservation is empty");
     NS_ABORT_MSG_IF(reservation.packetCount == 0,
                     "Secondary airtime reservation requires packets");
+    NS_ABORT_MSG_IF(!std::isfinite(reservation.reservedAirtimeUs) ||
+                        reservation.reservedAirtimeUs < 0 ||
+                        !std::isfinite(reservation.estimatedAirtimeUs) ||
+                        reservation.estimatedAirtimeUs <= 0 ||
+                        !std::isfinite(reservation.nominalAirtimeUs) ||
+                        reservation.nominalAirtimeUs <= 0,
+                    "Secondary airtime reservation contains invalid costs");
+    NS_ABORT_MSG_IF(reservation.reservedAirtimeUs > reservation.estimatedAirtimeUs,
+                    "Secondary airtime reservation exceeds its original estimate");
     NS_ABORT_MSG_IF(m_reservations.contains(reservation.frameId),
                     "Duplicate secondary airtime reservation for frame "
                         << reservation.frameId);
     m_reservedAirtimeUs += reservation.reservedAirtimeUs;
     m_estimatedActionAirtimeUs += reservation.estimatedAirtimeUs;
-    const uint64_t settleAtNs =
-        reservation.deadlineTimeNs +
+    const uint64_t fallbackDelayNs =
         static_cast<uint64_t>(m_queueMaxDelayMs) * 1000000ULL + 1000000ULL;
+    NS_ABORT_MSG_IF(reservation.deadlineTimeNs >
+                        std::numeric_limits<uint64_t>::max() - fallbackDelayNs,
+                    "Secondary airtime fallback timestamp overflows");
+    const uint64_t settleAtNs = reservation.deadlineTimeNs + fallbackDelayNs;
     const int64_t nowNs = Simulator::Now().GetNanoSeconds();
     const uint64_t delayNs =
         settleAtNs > static_cast<uint64_t>(std::max<int64_t>(0, nowNs))

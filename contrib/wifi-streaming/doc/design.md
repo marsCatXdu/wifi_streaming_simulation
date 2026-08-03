@@ -247,7 +247,8 @@ until a tagged PPDU actually transmits.
 `SecondaryAirtimeMeter` observes path-0 sender `PhyTxPsduBegin` events in the
 half-open measurement interval. It counts a tagged data PPDU once, allocates a
 multi-frame PPDU in proportion to tagged MPDU bytes, and counts retransmissions
-again. Reservations settle only after every distinct packet is ACKed or
+again. A-MSDU and fragmentation are disabled so one terminal packet index is
+unambiguous. Reservations settle only after every distinct packet is ACKed or
 terminally dropped, with a logged deadline-plus-queue-delay fallback. The
 run-level contract consists of `adaptive_airtime_decisions.csv`,
 `secondary_airtime_events.csv`, `secondary_airtime_settlements.csv`, and

@@ -250,6 +250,10 @@ AdaptiveAirtimeDuplicationController::EstimateSecondaryAirtimeUs(
     double inflation) const
 {
     NS_ABORT_MSG_IF(packetCount == 0, "Secondary airtime estimate requires packets");
+    NS_ABORT_MSG_IF(expectedMacServiceBytes == 0,
+                    "Secondary airtime estimate requires MAC service bytes");
+    NS_ABORT_MSG_IF(!std::isfinite(inflation) || inflation < 1,
+                    "Secondary airtime inflation must be finite and >= 1");
     const auto txVector = MakeEstimatorTxVector();
     const uint64_t rateBps =
         EhtPhy::GetEhtMcs5().GetDataRate(MHz_u{20}, NanoSeconds(800), 1);

@@ -1926,6 +1926,10 @@ def validate_run(
 
     meter = config.get("secondaryAirtimeMeter")
     if isinstance(meter, dict) and meter.get("enabled") is True:
+        _require(wifi.get("max_amsdu_size_bytes") == 0 and
+                 wifi.get("fragmentation_threshold_bytes") == 65535,
+                 "resolved_config.json: secondary airtime metering requires "
+                 "disabled A-MSDU and fragmentation")
         events_path = run_dir / "secondary_airtime_events.csv"
         settlements_path = run_dir / "secondary_airtime_settlements.csv"
         summary_path = run_dir / "secondary_airtime_summary.json"
