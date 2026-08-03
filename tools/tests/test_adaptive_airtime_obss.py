@@ -11,15 +11,19 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS = Path(__file__).resolve().parents[1]
 import sys
+from unittest import mock
 
 sys.path.insert(0, str(TOOLS))
 from run_experiments import expand_config
+from run_adaptive_airtime_obss import main as run_matrix
 
 
 class AdaptiveAirtimeObssConfigTest(unittest.TestCase):
     def test_matrix_has_paired_five_way_runs(self) -> None:
         path = ROOT / "experiments/configs/closed_loop_adaptive_airtime_obss.yaml"
         document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        self.assertEqual(document["name"], "closed-loop-adaptive-airtime-obss-v2")
+        self.assertEqual(document["output_root"], "results/adaptive_airtime_obss_v2/runs")
         specs = expand_config(document)
         expected = {
             ("dual_interface", "fixed_link_1"),
@@ -67,6 +71,22 @@ class AdaptiveAirtimeObssConfigTest(unittest.TestCase):
 
         self.assertFalse(
             any("combined" in str(item["config"]).lower() for item in specs)
+        )
+
+    @mock.patch("run_adaptive_airtime_obss.subprocess.run")
+    def test_runner_uses_matrix_worker_limit_and_single_analysis_pass(
+        self,
+        run: mock.Mock,
+    ) -> None:
+        self.assertEqual(run_matrix(), 0)
+        self.assertEqual(run.call_count, 2)
+        experiment_command = run.call_args_list[1].args[0]
+        self.assertNotIn("--workers", experiment_command)
+        self.assertTrue(
+            any(
+                str(argument).endswith("results/adaptive_airtime_obss_v2/runs")
+                for argument in experiment_command
+            )
         )
 
 

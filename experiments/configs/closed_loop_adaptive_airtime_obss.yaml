@@ -1,5 +1,5 @@
-name: closed-loop-adaptive-airtime-obss
-output_root: results/adaptive_airtime_obss_v1/runs
+name: closed-loop-adaptive-airtime-obss-v2
+output_root: results/adaptive_airtime_obss_v2/runs
 workers: 10
 
 base:
