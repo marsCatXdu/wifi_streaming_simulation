@@ -256,6 +256,44 @@ run-level contract consists of `adaptive_airtime_decisions.csv`,
 arithmetic, action frame IDs, event total, per-frame settlements, link-0 PHY TX
 occupancy, and finite-run budget.
 
+### Adaptive primary-deficit duplication
+
+`adaptive_deficit_duplication` preserves the adaptive-airtime admission and
+budget controller, but changes the admitted action from a forward whole-frame
+copy to the current primary packet deficit. At each synchronous prediction
+snapshot, the controller reads the primary copy's per-packet MAC ACK state.
+Every original packet index without a positive ACK is selected, including an
+index that has already reached a terminal-drop state on the primary. The
+selected indexes are sent on path 0 in descending order. Missing or
+inconsistent per-packet state aborts the run because silently falling back to
+a whole copy would change the experiment treatment.
+
+The secondary projection retains the original frame packet count, packet
+indexes, payload sizes, and streaming metadata. The receiver therefore needs
+no policy-specific behavior: completion still occurs when the union of unique
+packet indexes received on both links reaches the original packet count. A
+partial secondary is not itself a complete copy, so duplicated-frame
+accounting remains open until the frame deadline while preserving the earlier
+union-completion timestamp.
+
+Admission prices only the selected packets' expected MAC service bytes. The
+token reservation records the exact selected index set and settles after each
+of those indexes is ACKed or terminally dropped on the secondary. Decision
+output appends total frame packets, the exact primary-ACKed index set, selected
+secondary packet count and indexes, and packet order. Resolved configuration records
+`packet_selection = primary_unacknowledged_reverse` and separates the
+`F0+F1-degraded` admission features from the `F2-primary-frame-ack-state`
+selection dependency.
+
+This first policy is a causal current-deficit envelope, not the final learned
+packet-deficit predictor. It uses no secondary-link state and makes no claim
+that every packet still unacknowledged at a decision would remain missing at
+the deadline. Primary packets may complete after selection, so some secondary
+work can still become redundant. There is one secondary launch per frame; the
+controller does not top up, cancel, or revise an admitted packet set. The
+whole-copy `adaptive_airtime_duplication` policy remains unchanged for paired
+comparison and reproduction of earlier results.
+
 Controller behavior is covered by deterministic, common-versus-local, trace,
 and independent-versus-common tests in the module suite. The controlled
 end-to-end check
@@ -282,10 +320,11 @@ values in the frame, final policy-decision, and selective-controller CSV rows.
   failure totals are placed on MLO link row 0 to avoid double-counting;
   successful retransmissions are summed from per-link success records.
 - Prediction telemetry remains receiver-independent and is restricted to
-  fixed-link, selective-duplication, and adaptive-airtime dual-interface runs.
-  The selective and adaptive policies use the frozen commodity-polling model;
-  `StaticBestLinkPolicy` uses configured initialization scores and does not
-  switch during a run.
+  fixed-link, selective-duplication, adaptive-airtime, and adaptive-deficit
+  dual-interface runs. All three causal policies use the frozen
+  commodity-polling admission model; adaptive-deficit packet selection also
+  depends on primary per-frame F2 ACK state. `StaticBestLinkPolicy` uses
+  configured initialization scores and does not switch during a run.
 - A duplicated frame retains its union-completion timestamp while the receiver
   waits for both complete copy states or a finalization timeout. This permits
   independent copy-completion and duplicate accounting without changing the

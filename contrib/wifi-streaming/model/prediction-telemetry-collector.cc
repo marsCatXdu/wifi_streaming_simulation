@@ -2278,6 +2278,28 @@ PredictionTelemetryCollector::GetSamples() const
     return m_samples;
 }
 
+std::optional<std::vector<uint32_t>>
+PredictionTelemetryCollector::GetUnacknowledgedPacketIndices(
+    const PredictionFrameKey& key) const
+{
+    auto frame = m_frames.find(key);
+    if (frame == m_frames.end())
+    {
+        return std::nullopt;
+    }
+    std::vector<uint32_t> packetIndices;
+    packetIndices.reserve(frame->second.packets.size() -
+                          frame->second.packetsTxSucceeded);
+    for (std::size_t index = 0; index < frame->second.packets.size(); ++index)
+    {
+        if (!frame->second.packets[index].acknowledged)
+        {
+            packetIndices.push_back(static_cast<uint32_t>(index));
+        }
+    }
+    return packetIndices;
+}
+
 std::size_t
 PredictionTelemetryCollector::GetRegisteredFrameCount() const
 {

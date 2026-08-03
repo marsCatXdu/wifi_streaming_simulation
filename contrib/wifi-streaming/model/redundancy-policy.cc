@@ -16,6 +16,7 @@ NS_OBJECT_ENSURE_REGISTERED(StaticBestLinkPolicy);
 NS_OBJECT_ENSURE_REGISTERED(FullDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(SelectiveDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationPolicy);
+NS_OBJECT_ENSURE_REGISTERED(AdaptiveDeficitDuplicationPolicy);
 
 TypeId
 RedundancyPolicy::GetTypeId()
@@ -256,6 +257,34 @@ std::string
 AdaptiveAirtimeDuplicationPolicy::GetName() const
 {
     return "adaptive_airtime_duplication";
+}
+
+TypeId
+AdaptiveDeficitDuplicationPolicy::GetTypeId()
+{
+    static TypeId tid =
+        TypeId("ns3::AdaptiveDeficitDuplicationPolicy")
+            .SetParent<AdaptiveAirtimeDuplicationPolicy>()
+            .SetGroupName("WifiStreaming")
+            .AddConstructor<AdaptiveDeficitDuplicationPolicy>();
+    return tid;
+}
+
+AdaptiveDeficitDuplicationPolicy::AdaptiveDeficitDuplicationPolicy() = default;
+
+PolicyDecision
+AdaptiveDeficitDuplicationPolicy::Decide(const FrameDescriptor& frame,
+                                         const LinkTelemetrySnapshot& telemetry)
+{
+    auto decision = AdaptiveAirtimeDuplicationPolicy::Decide(frame, telemetry);
+    decision.reason = "causal adaptive primary-deficit duplication";
+    return decision;
+}
+
+std::string
+AdaptiveDeficitDuplicationPolicy::GetName() const
+{
+    return "adaptive_deficit_duplication";
 }
 
 } // namespace ns3

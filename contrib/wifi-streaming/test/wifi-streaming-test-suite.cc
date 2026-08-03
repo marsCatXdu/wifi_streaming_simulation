@@ -31,6 +31,7 @@
 
 #include "prediction-model-golden-v1.h"
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <filesystem>
@@ -156,6 +157,20 @@ class PredictionTelemetryCollectorTestAccess
                 frame.packetsTxSucceeded,
                 frame.packetsTerminallyDropped,
                 path.queueEntries.size()};
+    }
+
+    static void AcknowledgePacket(Ptr<PredictionTelemetryCollector> collector,
+                                  const PredictionFrameKey& key,
+                                  uint32_t packetIndex)
+    {
+        auto& frame = collector->m_frames.at(key);
+        auto& packet = frame.packets.at(packetIndex);
+        if (!packet.acknowledged)
+        {
+            packet.acknowledged = true;
+            ++frame.packetsTxSucceeded;
+            frame.senderMacComplete = frame.packetsTxSucceeded == frame.packets.size();
+        }
     }
 
     static std::array<uint64_t, 4> GetAttemptLedger(
@@ -643,6 +658,31 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(tailHeader.packetCount,
                               3,
                               "Projected packet lost total frame cardinality");
+        NS_TEST_ASSERT_MSG_EQ(reverseTail.packets[0].applicationPayloadBytes,
+                              501,
+                              "Reverse tail detached the short final payload");
+        NS_TEST_ASSERT_MSG_EQ(*reverseTail.packets[0].expectedMacServiceBytes,
+                              587,
+                              "Reverse tail detached final-packet service bytes");
+
+        const auto fullReverse = FramePacketizer::SelectReverseTail(plan, 3);
+        NS_TEST_ASSERT_MSG_EQ(fullReverse.packets[0].packetIndex,
+                              2,
+                              "Full reverse plan has the wrong first packet");
+        NS_TEST_ASSERT_MSG_EQ(fullReverse.packets[2].packetIndex,
+                              0,
+                              "Full reverse plan has the wrong final packet");
+        const auto explicitSelection =
+            FramePacketizer::SelectPackets(plan, std::vector<uint32_t>{2, 0});
+        NS_TEST_ASSERT_MSG_EQ(explicitSelection.packets.size(),
+                              2,
+                              "Explicit projection selected the wrong count");
+        NS_TEST_ASSERT_MSG_EQ(explicitSelection.packets[0].packetIndex,
+                              2,
+                              "Explicit projection changed launch order");
+        NS_TEST_ASSERT_MSG_EQ(explicitSelection.packets[1].packetIndex,
+                              0,
+                              "Explicit projection changed a noncontiguous index");
     }
 };
 
@@ -1222,6 +1262,17 @@ class PredictionMpduAccountingTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(pending[2],
                               0,
                               "Primary-pending bytes included the terminal drop");
+        const auto unacknowledged = collector->GetUnacknowledgedPacketIndices(
+            PredictionFrameKey{frame.frameId, plan.pathId, plan.copyId});
+        NS_TEST_ASSERT_MSG_EQ(unacknowledged.has_value(),
+                              true,
+                              "Registered frame has no unacknowledged-index view");
+        NS_TEST_ASSERT_MSG_EQ(unacknowledged->size(),
+                              1,
+                              "Unacknowledged-index view has the wrong cardinality");
+        NS_TEST_ASSERT_MSG_EQ(unacknowledged->front(),
+                              2,
+                              "Terminally dropped packet disappeared from the deficit");
         NS_TEST_ASSERT_MSG_EQ_TOL(
             PredictionTelemetryCollectorTestAccess::Percentile({0, 10, 20, 30}, 0.95),
             28.5,
@@ -1554,6 +1605,30 @@ class OutputStatisticsTestCase : public TestCase
                               std::string::npos,
                               "Adaptive resolved stages do not follow configured offsets");
 
+        const std::string deficitDirectory = directory + "/deficit";
+        ExperimentOutput::PrepareRunDirectory(deficitDirectory);
+        StreamingRunConfig deficitConfig = adaptiveConfig;
+        deficitConfig.runId = "adaptive-deficit-stages";
+        deficitConfig.policy = "adaptive_deficit_duplication";
+        ExperimentOutput::WriteResolvedConfig(deficitDirectory, deficitConfig);
+        std::ifstream deficitResolved(deficitDirectory + "/resolved_config.json");
+        std::ostringstream deficitText;
+        deficitText << deficitResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(deficitText.str().find(
+                                  "\"adaptiveDeficitDuplication\": {"),
+                              std::string::npos,
+                              "Primary-deficit resolved object is missing");
+        NS_TEST_ASSERT_MSG_NE(deficitText.str().find(
+                                  "\"packet_selection\": "
+                                  "\"primary_unacknowledged_reverse\""),
+                              std::string::npos,
+                              "Primary-deficit packet selection is not recorded");
+        NS_TEST_ASSERT_MSG_NE(deficitText.str().find(
+                                  "\"packet_selection_feature_set\": "
+                                  "\"F2-primary-frame-ack-state\""),
+                              std::string::npos,
+                              "Primary-deficit F2 dependency is not recorded");
+
         const std::string selectiveDirectory = directory + "/selective";
         ExperimentOutput::PrepareRunDirectory(selectiveDirectory);
         StreamingRunConfig selectiveConfig;
@@ -1751,6 +1826,15 @@ class ReassemblyTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(partialResult.incomplete,
                               false,
                               "Complementary packet union was marked incomplete");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.unionCompletionUs.has_value(),
+                              true,
+                              "Complementary packet union has no completion timestamp");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.deadlineMiss,
+                              false,
+                              "Complementary packet union missed its deadline");
+        NS_TEST_ASSERT_MSG_EQ(partialResult.uniquePacketsReceived,
+                              4,
+                              "Complementary packet union lost a packet index");
         NS_TEST_ASSERT_MSG_EQ(partialResult.copy0CompletionUs.has_value(),
                               false,
                               "Partial primary was marked as a complete copy");
@@ -2148,6 +2232,246 @@ class SelectiveDuplicationControllerTestCase : public TestCase
                               "Frame results do not identify the selective action");
         Simulator::Destroy();
     }
+};
+
+class ExplicitSecondaryPacketSelectionTestCase : public TestCase
+{
+  public:
+    ExplicitSecondaryPacketSelectionTestCase()
+        : TestCase("Adaptive deficit controller launches the exact primary complement")
+    {
+    }
+
+  private:
+    double Score(const PredictionSample&) const
+    {
+        return 1.0;
+    }
+
+    void NotifySnapshot(const PredictionSample& sample)
+    {
+        if (sample.sampleOffsetUs != 0)
+        {
+            return;
+        }
+        PredictionSample coherentSample = sample;
+        if (sample.key.frameId != 0)
+        {
+            for (uint32_t packetIndex = 0; packetIndex < sample.framePacketCount; ++packetIndex)
+            {
+                PredictionTelemetryCollectorTestAccess::AcknowledgePacket(m_prediction,
+                                                                           sample.key,
+                                                                           packetIndex);
+            }
+            coherentSample.framePacketsTxSucceeded = sample.framePacketCount;
+            m_controller->NotifySnapshot(coherentSample);
+            return;
+        }
+        PredictionTelemetryCollectorTestAccess::AcknowledgePacket(m_prediction,
+                                                                   sample.key,
+                                                                   1);
+        coherentSample.framePacketsTxSucceeded = 1;
+        const std::vector<uint32_t> selection{2, 0};
+        m_descriptor = m_sender->GetDelayedSecondaryPacketDescriptor(sample.key.frameId,
+                                                                      selection);
+        m_controller->NotifySnapshot(coherentSample);
+        m_repeatRejected = !m_sender->RequestSecondaryPackets(
+            sample.key.frameId,
+            selection,
+            "test repeated packet selection");
+    }
+
+    void DoRun() override
+    {
+        NodeContainer nodes;
+        nodes.Create(2);
+        InternetStackHelper internet;
+        internet.Install(nodes);
+        CsmaHelper csma;
+        csma.SetChannelAttribute("DataRate", StringValue("100Mbps"));
+        csma.SetChannelAttribute("Delay", TimeValue(MicroSeconds(10)));
+        const auto devices = csma.Install(nodes);
+        Ipv4AddressHelper address;
+        address.SetBase("10.20.0.0", "255.255.255.0");
+        const auto interfaces = address.Assign(devices);
+
+        auto metrics = CreateObject<MetricsCollector>();
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetLocal(InetSocketAddress(Ipv4Address::GetAny(), 9022));
+        receiver->SetMetricsCollector(metrics);
+        receiver->SetHoldForDelayedSecondary(true);
+        nodes.Get(1)->AddApplication(receiver);
+        receiver->SetStartTime(Time());
+        receiver->SetStopTime(Seconds(1));
+
+        auto source = CreateObject<SyntheticFrameSource>();
+        source->SetFps(30);
+        source->SetDuration(MilliSeconds(40));
+        source->SetConstantFrameSize(2501);
+        source->SetDeadline(100000);
+
+        auto sender = CreateObject<MultipathSender>();
+        m_sender = PeekPointer(sender);
+        auto policy = CreateObject<AdaptiveDeficitDuplicationPolicy>();
+        policy->SetPrimaryPath(0);
+        NS_TEST_ASSERT_MSG_EQ(policy->GetName(),
+                              "adaptive_deficit_duplication",
+                              "Primary-deficit policy name is wrong");
+        auto prediction = CreateObject<PredictionTelemetryCollector>();
+        prediction->SetSampleOffsetsUs({0});
+        m_prediction = prediction;
+
+        auto meter = CreateObject<SecondaryAirtimeMeter>();
+        auto controller = CreateObject<AdaptiveAirtimeDuplicationController>();
+        m_controller = PeekPointer(controller);
+        controller->SetSender(PeekPointer(sender));
+        controller->SetRiskScorer(
+            MakeCallback(&ExplicitSecondaryPacketSelectionTestCase::Score, this));
+        controller->SetAirtimeMeter(meter);
+        controller->SetPrimaryPath(0);
+        controller->SetSecondaryPacketSelection(
+            AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED);
+        controller->SetBudgetFraction(1.0);
+        controller->SetBucketHorizonUs(100000);
+        controller->SetInitialShadowPrice(0.0);
+        controller->SetDecisionOffsetsUs({0});
+        const std::string directory = "/tmp/ns3-wifi-streaming-deficit-controller-test";
+        std::filesystem::remove_all(directory);
+        std::filesystem::create_directories(directory);
+        controller->SetOutputFile("deficit-test",
+                                  directory + "/adaptive_airtime_decisions.csv");
+        prediction->SetSnapshotCallback(
+            MakeCallback(&ExplicitSecondaryPacketSelectionTestCase::NotifySnapshot, this));
+
+        sender->SetFrameSource(source);
+        sender->SetMetricsCollector(metrics);
+        sender->SetPredictionTelemetryCollector(prediction);
+        sender->SetPacketPayloadSize(1000);
+        sender->SetExpectedMacServiceOverhead(36);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(1);
+        for (uint8_t path = 0; path < 2; ++path)
+        {
+            auto socket = Socket::CreateSocket(nodes.Get(0), UdpSocketFactory::GetTypeId());
+            NS_TEST_ASSERT_MSG_EQ(socket->Bind(InetSocketAddress(interfaces.GetAddress(0), 0)),
+                                  0,
+                                  "Explicit-selection sender bind failed");
+            NS_TEST_ASSERT_MSG_EQ(
+                socket->Connect(InetSocketAddress(interfaces.GetAddress(1), 9022)),
+                0,
+                "Explicit-selection sender connect failed");
+            sender->AddPath(path, socket, devices.Get(0));
+        }
+        nodes.Get(0)->AddApplication(sender);
+        sender->SetStartTime(MilliSeconds(10));
+        sender->SetStopTime(MilliSeconds(500));
+
+        Simulator::Stop(Seconds(1));
+        Simulator::Run();
+
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor.has_value(),
+                              true,
+                              "Explicit secondary descriptor is missing");
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->framePacketCount,
+                              3,
+                              "Explicit descriptor changed total frame cardinality");
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->packetCount,
+                              2,
+                              "Explicit descriptor has the wrong selected count");
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->packetIndices.size(),
+                              2,
+                              "Explicit descriptor omitted packet indexes");
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->packetIndices[0],
+                              2,
+                              "Explicit descriptor changed its first packet");
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->packetIndices[1],
+                              0,
+                              "Explicit descriptor changed its second packet");
+        constexpr uint64_t expectedServiceBytes =
+            (501 + StreamingHeader::SERIALIZED_SIZE + 36) +
+            (1000 + StreamingHeader::SERIALIZED_SIZE + 36);
+        NS_TEST_ASSERT_MSG_EQ(m_descriptor->expectedMacServiceBytes,
+                              expectedServiceBytes,
+                              "Explicit descriptor priced the wrong packets");
+        NS_TEST_ASSERT_MSG_EQ(controller->GetActionCount(),
+                              1,
+                              "Primary-deficit controller did not launch exactly once");
+        NS_TEST_ASSERT_MSG_EQ(m_repeatRejected,
+                              true,
+                              "Repeated explicit secondary launch was accepted");
+        NS_TEST_ASSERT_MSG_EQ(sender->GetPacketsSent(),
+                              8,
+                              "Explicit secondary launch sent the wrong packet count");
+        constexpr uint64_t expectedRedundantBytes =
+            501 + 1000 + 2 * StreamingHeader::SERIALIZED_SIZE;
+        NS_TEST_ASSERT_MSG_EQ(sender->GetRedundantBytesSent(),
+                              expectedRedundantBytes,
+                              "Explicit secondary launch sent the wrong bytes");
+        NS_TEST_ASSERT_MSG_EQ(metrics->GetFrameResults().size(),
+                              2,
+                              "Explicit secondary frame did not finalize");
+        NS_TEST_ASSERT_MSG_EQ(metrics->GetFrameResults().front().duplicated,
+                              true,
+                              "Explicit secondary frame lacks duplication metadata");
+
+        std::ifstream decisions(directory + "/adaptive_airtime_decisions.csv");
+        std::string header;
+        std::getline(decisions, header);
+        const auto split = [](const std::string& value) {
+            std::vector<std::string> fields;
+            std::stringstream stream(value);
+            std::string field;
+            while (std::getline(stream, field, ','))
+            {
+                fields.push_back(field);
+            }
+            return fields;
+        };
+        const auto columns = split(header);
+        const auto columnFor = [&columns](const std::string& name) {
+            const auto column = std::find(columns.begin(), columns.end(), name);
+            NS_ABORT_MSG_IF(column == columns.end(), "Missing deficit decision column " << name);
+            return std::distance(columns.begin(), column);
+        };
+        const auto decisionColumn = columnFor("decision");
+        bool sawAction = false;
+        bool sawZeroDeficit = false;
+        std::string row;
+        while (std::getline(decisions, row))
+        {
+            const auto values = split(row);
+            if (values.at(decisionColumn) == "action")
+            {
+                sawAction = true;
+                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("primary_acked_packet_indices")),
+                                      "1",
+                                      "Deficit decision omitted the exact primary ACK set");
+                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_indices")),
+                                      "2;0",
+                                      "Deficit controller did not reverse the exact complement");
+                NS_TEST_ASSERT_MSG_EQ(values.at(columnFor("secondary_packet_order")),
+                                      "primary_unacknowledged_reverse",
+                                      "Deficit decision recorded the wrong packet order");
+            }
+            sawZeroDeficit = sawZeroDeficit ||
+                             values.at(decisionColumn) == "no_primary_deficit";
+        }
+        NS_TEST_ASSERT_MSG_EQ(sawAction, true, "Deficit decision CSV omitted its action");
+        NS_TEST_ASSERT_MSG_EQ(sawZeroDeficit,
+                              true,
+                              "Deficit controller did not exercise its zero-deficit branch");
+        Simulator::Destroy();
+        std::filesystem::remove_all(directory);
+        m_sender = nullptr;
+        m_controller = nullptr;
+        m_prediction = nullptr;
+    }
+
+    MultipathSender* m_sender{nullptr};
+    AdaptiveAirtimeDuplicationController* m_controller{nullptr};
+    Ptr<PredictionTelemetryCollector> m_prediction;
+    std::optional<DelayedCopyDescriptor> m_descriptor;
+    bool m_repeatRejected{false};
 };
 
 class SecondaryAirtimeMeterTestCase : public TestCase
@@ -2567,6 +2891,9 @@ class AdaptiveAirtimeDuplicationControllerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(header.find("shadow_price") != std::string::npos,
                               true,
                               "Adaptive decision schema is missing shadow_price");
+        NS_TEST_ASSERT_MSG_EQ(header.find("primary_acked_packet_indices"),
+                              std::string::npos,
+                              "Whole-copy adaptive decision schema changed unexpectedly");
         std::map<uint64_t, uint32_t> actionsByFrame;
         std::map<uint64_t, bool> rejectedThenActed;
         std::vector<double> t0Prices;
@@ -3122,6 +3449,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new FinalizationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new IntegrationDeliveryTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SelectiveDuplicationControllerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new ExplicitSecondaryPacketSelectionTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterTestCase, TestCase::Duration::QUICK);
         AddTestCase(new SecondaryAirtimeMeterWifiTraceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new AdaptiveAirtimeDuplicationControllerTestCase, TestCase::Duration::QUICK);

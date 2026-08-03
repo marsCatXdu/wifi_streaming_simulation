@@ -136,6 +136,30 @@ MultipathSender::GetDelayedSecondaryReverseTailDescriptor(uint64_t frameId,
         FramePacketizer::SelectReverseTail(frame->second.secondaryPlan, packetCount));
 }
 
+std::optional<DelayedCopyDescriptor>
+MultipathSender::GetDelayedSecondaryPacketDescriptor(
+    uint64_t frameId,
+    const std::vector<uint32_t>& packetIndices) const
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return std::nullopt;
+    }
+    return DescribeDelayedPlan(
+        FramePacketizer::SelectPackets(frame->second.secondaryPlan, packetIndices));
+}
+
+std::optional<std::vector<uint32_t>>
+MultipathSender::GetUnacknowledgedPacketIndices(const PredictionFrameKey& key) const
+{
+    if (!m_predictionCollector)
+    {
+        return std::nullopt;
+    }
+    return m_predictionCollector->GetUnacknowledgedPacketIndices(key);
+}
+
 DelayedCopyDescriptor
 MultipathSender::DescribeDelayedPlan(const PacketizationPlan& plan)
 {
@@ -169,13 +193,34 @@ MultipathSender::RequestSecondaryReverseTail(uint64_t frameId,
                                              uint32_t packetCount,
                                              const std::string& reason)
 {
-    return RequestSecondaryCopyInternal(frameId, packetCount, reason);
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return false;
+    }
+    const auto plan = FramePacketizer::SelectReverseTail(frame->second.secondaryPlan,
+                                                        packetCount);
+    std::vector<uint32_t> packetIndices;
+    packetIndices.reserve(plan.packets.size());
+    for (const auto& packet : plan.packets)
+    {
+        packetIndices.push_back(packet.packetIndex);
+    }
+    return RequestSecondaryCopyInternal(frameId, packetIndices, reason);
+}
+
+bool
+MultipathSender::RequestSecondaryPackets(uint64_t frameId,
+                                         const std::vector<uint32_t>& packetIndices,
+                                         const std::string& reason)
+{
+    return RequestSecondaryCopyInternal(frameId, packetIndices, reason);
 }
 
 bool
 MultipathSender::RequestSecondaryCopyInternal(
     uint64_t frameId,
-    std::optional<uint32_t> reverseTailPacketCount,
+    const std::optional<std::vector<uint32_t>>& packetIndices,
     const std::string& reason)
 {
     auto frame = m_delayedFrames.find(frameId);
@@ -192,9 +237,9 @@ MultipathSender::RequestSecondaryCopyInternal(
     {
         return false;
     }
-    const auto launchPlan = reverseTailPacketCount
-                                ? FramePacketizer::SelectReverseTail(canonicalPlan,
-                                                                   *reverseTailPacketCount)
+    const auto launchPlan = packetIndices
+                                ? FramePacketizer::SelectPackets(canonicalPlan,
+                                                                 *packetIndices)
                                 : canonicalPlan;
     frame->second.launched = true;
     ScheduleCopy(launchPlan, true, false);

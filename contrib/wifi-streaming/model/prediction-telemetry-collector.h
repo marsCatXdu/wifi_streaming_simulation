@@ -439,6 +439,19 @@ class PredictionTelemetryCollector : public Object
     const std::vector<PredictionSample>& GetSamples() const;
 
     /**
+     * Return original packet indexes not yet positively acknowledged.
+     *
+     * Terminally dropped packets remain unacknowledged and are included. The
+     * query is read-only and is intended for a synchronous snapshot callback.
+     *
+     * @param key Registered primary frame-copy identity.
+     * @return Unacknowledged packet indexes in ascending order, or an empty
+     * optional when the frame is unknown.
+     */
+    std::optional<std::vector<uint32_t>> GetUnacknowledgedPacketIndices(
+        const PredictionFrameKey& key) const;
+
+    /**
      * Return the number of registered frame copies.
      *
      * @return Registered frame-copy count.

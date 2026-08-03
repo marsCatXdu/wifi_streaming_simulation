@@ -96,6 +96,15 @@ AdaptiveAirtimeDuplicationController::SetPrimaryPath(uint8_t pathId)
 }
 
 void
+AdaptiveAirtimeDuplicationController::SetSecondaryPacketSelection(
+    AdaptiveSecondaryPacketSelection selection)
+{
+    NS_ABORT_MSG_IF(m_bucketInitialized || m_output.is_open(),
+                    "Cannot change secondary packet selection after control starts");
+    m_secondaryPacketSelection = selection;
+}
+
+void
 AdaptiveAirtimeDuplicationController::SetBudgetFraction(double fraction)
 {
     NS_ABORT_MSG_IF(!std::isfinite(fraction) || fraction <= 0 || fraction > 1,
@@ -276,6 +285,29 @@ AdaptiveAirtimeDuplicationController::GetReferenceAirtimeUs() const
                                       1.0);
 }
 
+std::optional<std::vector<uint32_t>>
+AdaptiveAirtimeDuplicationController::ResolveSecondaryPacketIndices(
+    const PredictionSample& sample) const
+{
+    if (m_secondaryPacketSelection == AdaptiveSecondaryPacketSelection::FULL_COPY)
+    {
+        return std::nullopt;
+    }
+    NS_ABORT_MSG_IF(!m_sender, "Primary-deficit packet selection requires a sender");
+    auto packetIndices = m_sender->GetUnacknowledgedPacketIndices(sample.key);
+    NS_ABORT_MSG_IF(!packetIndices,
+                    "Primary-deficit packet selection requires registered F2 packet state");
+    NS_ABORT_MSG_IF(packetIndices->size() > sample.framePacketCount,
+                    "Primary packet deficit exceeds the frame plan");
+    for (const auto index : *packetIndices)
+    {
+        NS_ABORT_MSG_IF(index >= sample.framePacketCount,
+                        "Primary packet deficit contains an invalid index");
+    }
+    std::reverse(packetIndices->begin(), packetIndices->end());
+    return packetIndices;
+}
+
 void
 AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sample)
 {
@@ -306,7 +338,42 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
     NS_ABORT_MSG_IF(!std::isfinite(probability) || probability < 0 || probability > 1,
                     "Adaptive airtime scorer returned an invalid probability");
 
-    const auto descriptor = m_sender->GetDelayedSecondaryCopyDescriptor(sample.key.frameId);
+    const auto selectedPacketIndices = ResolveSecondaryPacketIndices(sample);
+    std::optional<std::vector<uint32_t>> primaryAcknowledgedPacketIndices;
+    if (selectedPacketIndices)
+    {
+        std::vector<bool> unacknowledged(sample.framePacketCount, false);
+        for (const auto index : *selectedPacketIndices)
+        {
+            unacknowledged[index] = true;
+        }
+        primaryAcknowledgedPacketIndices.emplace();
+        primaryAcknowledgedPacketIndices->reserve(sample.framePacketCount -
+                                                   selectedPacketIndices->size());
+        for (uint32_t index = 0; index < sample.framePacketCount; ++index)
+        {
+            if (!unacknowledged[index])
+            {
+                primaryAcknowledgedPacketIndices->push_back(index);
+            }
+        }
+        NS_ABORT_MSG_IF(!sample.framePacketsTxSucceeded ||
+                            *sample.framePacketsTxSucceeded !=
+                                primaryAcknowledgedPacketIndices->size(),
+                        "Primary-deficit packet state disagrees with its synchronous snapshot");
+    }
+    const auto* acknowledgedPacketIndices =
+        primaryAcknowledgedPacketIndices ? &*primaryAcknowledgedPacketIndices : nullptr;
+    std::optional<DelayedCopyDescriptor> descriptor;
+    if (!selectedPacketIndices)
+    {
+        descriptor = m_sender->GetDelayedSecondaryCopyDescriptor(sample.key.frameId);
+    }
+    else if (!selectedPacketIndices->empty())
+    {
+        descriptor = m_sender->GetDelayedSecondaryPacketDescriptor(sample.key.frameId,
+                                                                    *selectedPacketIndices);
+    }
     const double referenceUs = GetReferenceAirtimeUs();
     double estimatedUs = 0;
     double normalizedCost = 0;
@@ -336,7 +403,26 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       reservedUs,
                       availableUs,
                       "already_resolved",
-                      false);
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
+        return;
+    }
+    if (selectedPacketIndices && selectedPacketIndices->empty())
+    {
+        WriteDecision(sample,
+                      probability,
+                      estimatedUs,
+                      referenceUs,
+                      normalizedCost,
+                      utility,
+                      balanceUs,
+                      reservedUs,
+                      availableUs,
+                      "no_primary_deficit",
+                      false,
+                      nullptr,
+                      acknowledgedPacketIndices);
         return;
     }
     if (!sample.actionable)
@@ -351,7 +437,9 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       reservedUs,
                       availableUs,
                       "not_actionable",
-                      false);
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
         return;
     }
     NS_ABORT_MSG_IF(!descriptor,
@@ -368,7 +456,9 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       reservedUs,
                       availableUs,
                       "price_rejected",
-                      false);
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
         return;
     }
     if (!(availableUs + 1e-9 >= estimatedUs))
@@ -387,7 +477,9 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       reservedUs,
                       availableUs,
                       "airtime_deferred",
-                      false);
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
         return;
     }
 
@@ -401,10 +493,17 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                                     descriptor->expectedMacServiceBytes,
                                     1.0);
     reservation.deadlineTimeNs = descriptor->deadlineTimeNs;
+    reservation.expectedPacketIndices.insert(descriptor->packetIndices.begin(),
+                                             descriptor->packetIndices.end());
 
-    const bool launched =
-        m_sender->RequestSecondaryCopy(sample.key.frameId,
-                                       "adaptive airtime utility positive");
+    const bool launched = selectedPacketIndices
+                              ? m_sender->RequestSecondaryPackets(
+                                    sample.key.frameId,
+                                    *selectedPacketIndices,
+                                    "adaptive primary-deficit utility positive")
+                              : m_sender->RequestSecondaryCopy(
+                                    sample.key.frameId,
+                                    "adaptive airtime utility positive");
     if (!launched)
     {
         WriteDecision(sample,
@@ -417,7 +516,9 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                       reservedUs,
                       availableUs,
                       "launch_rejected",
-                      false);
+                      false,
+                      descriptor ? &*descriptor : nullptr,
+                      acknowledgedPacketIndices);
         return;
     }
     // Zero-offset packet sends are scheduled events, so registering here still
@@ -435,7 +536,9 @@ AdaptiveAirtimeDuplicationController::NotifySnapshot(const PredictionSample& sam
                   reservedUs,
                   availableUs,
                   "action",
-                  true);
+                  true,
+                  descriptor ? &*descriptor : nullptr,
+                  acknowledgedPacketIndices);
 }
 
 void
@@ -505,7 +608,15 @@ AdaptiveAirtimeDuplicationController::WriteHeader()
                 "airtime_budget_fraction,bucket_capacity_us,bucket_balance_us,"
                 "initial_bucket_capacity_us,"
                 "reserved_airtime_us,available_airtime_us,measured_airtime_total_us,"
-                "decision,secondary_launched\n";
+                "decision,secondary_launched";
+    if (m_secondaryPacketSelection ==
+        AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED)
+    {
+        m_output << ",frame_packet_count,primary_acked_packets,"
+                    "primary_acked_packet_indices,secondary_packet_count,"
+                    "secondary_packet_indices,secondary_packet_order";
+    }
+    m_output << '\n';
 }
 
 void
@@ -519,7 +630,10 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
                                                     double reservedUs,
                                                     double availableUs,
                                                     const std::string& decision,
-                                                    bool launched)
+                                                    bool launched,
+                                                    const DelayedCopyDescriptor* descriptor,
+                                                    const std::vector<uint32_t>*
+                                                        primaryAcknowledgedPacketIndices)
 {
     if (!m_output)
     {
@@ -533,8 +647,37 @@ AdaptiveAirtimeDuplicationController::WriteDecision(const PredictionSample& samp
              << referenceUs << ',' << m_shadowPrice << ',' << normalizedCost << ','
              << utility << ',' << m_budgetFraction << ',' << m_bucketCapacityUs << ','
              << balanceUs << ',' << m_initialCapacityUs << ',' << reservedUs << ','
-             << availableUs << ','
-             << measuredTotal << ',' << decision << ',' << launched << '\n';
+             << availableUs << ',' << measuredTotal << ',' << decision << ',' << launched;
+    if (m_secondaryPacketSelection ==
+        AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED)
+    {
+        m_output << ',' << sample.framePacketCount << ',';
+        if (sample.framePacketsTxSucceeded)
+        {
+            m_output << *sample.framePacketsTxSucceeded;
+        }
+        m_output << ',';
+        if (primaryAcknowledgedPacketIndices)
+        {
+            for (std::size_t index = 0;
+                 index < primaryAcknowledgedPacketIndices->size();
+                 ++index)
+            {
+                m_output << (index == 0 ? "" : ";")
+                         << (*primaryAcknowledgedPacketIndices)[index];
+            }
+        }
+        m_output << ',' << (descriptor ? descriptor->packetCount : 0) << ',';
+        if (descriptor)
+        {
+            for (std::size_t index = 0; index < descriptor->packetIndices.size(); ++index)
+            {
+                m_output << (index == 0 ? "" : ";") << descriptor->packetIndices[index];
+            }
+        }
+        m_output << ',' << (descriptor ? "primary_unacknowledged_reverse" : "none");
+    }
+    m_output << '\n';
     m_output.flush();
 }
 

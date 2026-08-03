@@ -122,6 +122,19 @@ class FramePacketizer
                                                uint32_t packetCount);
 
     /**
+     * Project a canonical full-copy plan to explicitly ordered packets.
+     *
+     * Packet indexes and frame metadata remain unchanged. Emission offsets
+     * are reassigned from the beginning of the canonical schedule.
+     *
+     * @param plan Canonical full-copy packetization plan.
+     * @param packetIndices Distinct original packet indexes in launch order.
+     * @return Ordered partial-copy plan.
+     */
+    static PacketizationPlan SelectPackets(const PacketizationPlan& plan,
+                                           const std::vector<uint32_t>& packetIndices);
+
+    /**
      * Plan and materialize a frame in one compatibility operation.
      *
      * @param frame Frame to packetize.

@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -22,6 +23,14 @@ namespace ns3
 {
 
 class MultipathSender;
+struct DelayedCopyDescriptor;
+
+/** Secondary packet set used after adaptive admission. */
+enum class AdaptiveSecondaryPacketSelection
+{
+    FULL_COPY,              ///< Preserve the canonical forward full copy.
+    PRIMARY_UNACKNOWLEDGED, ///< Send primary-unacknowledged indexes in reverse order.
+};
 
 /**
  * Causal adaptive-airtime selective duplication controller.
@@ -66,6 +75,13 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param pathId Primary prediction path.
      */
     void SetPrimaryPath(uint8_t pathId);
+
+    /**
+     * Set how an admitted secondary copy is projected to packets.
+     *
+     * @param selection Full forward copy or reverse primary deficit.
+     */
+    void SetSecondaryPacketSelection(AdaptiveSecondaryPacketSelection selection);
 
     /**
      * Set the long-run secondary-airtime budget fraction.
@@ -242,6 +258,18 @@ class AdaptiveAirtimeDuplicationController : public Object
                           double nominalUs,
                           bool fallback);
 
+    /**
+     * Resolve ordered secondary packet indexes for one snapshot.
+     *
+     * A null optional denotes the canonical full copy. An empty vector denotes
+     * an observed zero deficit.
+     *
+     * @param sample Current causal primary snapshot.
+     * @return Packet selection for this stage.
+     */
+    std::optional<std::vector<uint32_t>> ResolveSecondaryPacketIndices(
+        const PredictionSample& sample) const;
+
     /** Write the adaptive decision CSV header. */
     void WriteHeader();
 
@@ -259,6 +287,8 @@ class AdaptiveAirtimeDuplicationController : public Object
      * @param availableUs Pre-decision unreserved balance.
      * @param decision Stable decision name.
      * @param launched Whether this row launched the secondary copy.
+     * @param descriptor Candidate secondary descriptor, if one exists.
+     * @param primaryAcknowledgedPacketIndices Exact acknowledged primary indexes, if queried.
      */
     void WriteDecision(const PredictionSample& sample,
                        double probability,
@@ -270,12 +300,16 @@ class AdaptiveAirtimeDuplicationController : public Object
                        double reservedUs,
                        double availableUs,
                        const std::string& decision,
-                       bool launched);
+                       bool launched,
+                       const DelayedCopyDescriptor* descriptor,
+                       const std::vector<uint32_t>* primaryAcknowledgedPacketIndices);
 
     MultipathSender* m_sender{nullptr}; ///< Non-owning sender pointer.
     Callback<double, const PredictionSample&> m_scorer; ///< Frozen causal scorer.
     Ptr<SecondaryAirtimeMeter> m_meter; ///< Passive secondary airtime meter.
     uint8_t m_primaryPath{1}; ///< Prediction path (5 GHz by default).
+    AdaptiveSecondaryPacketSelection m_secondaryPacketSelection{
+        AdaptiveSecondaryPacketSelection::FULL_COPY}; ///< Admitted packet projection.
     double m_budgetFraction{0.02}; ///< Long-run airtime fraction.
     uint64_t m_bucketHorizonUs{1000000}; ///< Bucket horizon.
     double m_initialShadowPrice{0.20}; ///< Initial dual variable.

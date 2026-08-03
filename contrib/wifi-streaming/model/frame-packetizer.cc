@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <set>
 
 namespace ns3
 {
@@ -86,23 +87,45 @@ FramePacketizer::Materialize(const PacketizationPlan& plan) const
 PacketizationPlan
 FramePacketizer::SelectReverseTail(const PacketizationPlan& plan, uint32_t packetCount)
 {
-    NS_ABORT_MSG_IF(plan.frame.packetCount == 0 ||
-                        plan.frame.packetCount != plan.packets.size(),
-                    "Reverse-tail selection requires a canonical full-copy plan");
     NS_ABORT_MSG_IF(packetCount == 0 || packetCount > plan.packets.size(),
                     "Reverse-tail packet count must be within the full-copy plan");
+    std::vector<uint32_t> packetIndices;
+    packetIndices.reserve(packetCount);
+    for (uint32_t launchIndex = 0; launchIndex < packetCount; ++launchIndex)
+    {
+        packetIndices.push_back(
+            static_cast<uint32_t>(plan.packets.size() - 1 - launchIndex));
+    }
+    return SelectPackets(plan, packetIndices);
+}
+
+PacketizationPlan
+FramePacketizer::SelectPackets(const PacketizationPlan& plan,
+                               const std::vector<uint32_t>& packetIndices)
+{
+    NS_ABORT_MSG_IF(plan.frame.packetCount == 0 ||
+                        plan.frame.packetCount != plan.packets.size(),
+                    "Packet selection requires a canonical full-copy plan");
+    NS_ABORT_MSG_IF(packetIndices.empty() || packetIndices.size() > plan.packets.size(),
+                    "Selected packet indexes must be a nonempty plan subset");
     for (std::size_t index = 0; index < plan.packets.size(); ++index)
     {
         NS_ABORT_MSG_IF(plan.packets[index].packetIndex != index,
-                        "Reverse-tail selection requires contiguous packet indexes");
+                        "Packet selection requires contiguous canonical indexes");
     }
 
     PacketizationPlan selected = plan;
     selected.packets.clear();
-    selected.packets.reserve(packetCount);
-    for (uint32_t launchIndex = 0; launchIndex < packetCount; ++launchIndex)
+    selected.packets.reserve(packetIndices.size());
+    std::set<uint32_t> uniqueIndices;
+    for (std::size_t launchIndex = 0; launchIndex < packetIndices.size(); ++launchIndex)
     {
-        auto packet = plan.packets[plan.packets.size() - 1 - launchIndex];
+        const uint32_t packetIndex = packetIndices[launchIndex];
+        NS_ABORT_MSG_IF(packetIndex >= plan.packets.size(),
+                        "Selected packet index exceeds the canonical plan");
+        NS_ABORT_MSG_IF(!uniqueIndices.insert(packetIndex).second,
+                        "Selected packet indexes must be distinct");
+        auto packet = plan.packets[packetIndex];
         packet.offset = plan.packets[launchIndex].offset;
         selected.packets.push_back(packet);
     }

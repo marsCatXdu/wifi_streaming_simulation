@@ -148,6 +148,23 @@ class AdaptiveAirtimeDuplicationPolicy : public RedundancyPolicy
     PathId m_primary{1}; ///< Primary path used before a causal rescue action.
 };
 
+/**
+ * Identify adaptive duplication whose secondary sends the primary deficit.
+ *
+ * Admission remains controlled by AdaptiveAirtimeDuplicationController. This
+ * distinct policy name preserves the whole-copy policy's experiment contract.
+ */
+class AdaptiveDeficitDuplicationPolicy : public AdaptiveAirtimeDuplicationPolicy
+{
+  public:
+    static TypeId GetTypeId();
+    AdaptiveDeficitDuplicationPolicy();
+
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+    std::string GetName() const override;
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H

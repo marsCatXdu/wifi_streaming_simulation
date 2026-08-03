@@ -504,13 +504,24 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
         output << "]\n"
                << "  },\n";
     }
-    if (config.policy == "adaptive_airtime_duplication")
+    if (config.policy == "adaptive_airtime_duplication" ||
+        config.policy == "adaptive_deficit_duplication")
     {
-        output << "  \"adaptiveAirtimeDuplication\": {\n"
+        const bool primaryDeficit = config.policy == "adaptive_deficit_duplication";
+        output << "  \""
+               << (primaryDeficit ? "adaptiveDeficitDuplication"
+                                  : "adaptiveAirtimeDuplication")
+               << "\": {\n"
                << "    \"model_id\": \"" << PredictionModelEvaluator::GetModelId() << "\",\n"
                << "    \"source_model_sha256\": \""
                << PredictionModelEvaluator::GetSourceModelSha256() << "\",\n"
                << "    \"feature_set\": \"F0+F1-degraded\",\n"
+               << "    \"admission_feature_set\": \"F0+F1-degraded\",\n"
+               << "    \"packet_selection_feature_set\": \""
+               << (primaryDeficit ? "F2-primary-frame-ack-state" : "none") << "\",\n"
+               << "    \"packet_selection\": \""
+               << (primaryDeficit ? "primary_unacknowledged_reverse" : "full_forward")
+               << "\",\n"
                << "    \"degradation_profile\": \"polling_1ms\",\n"
                << "    \"calibration\": \"platt\",\n"
                << "    \"stages\": [";

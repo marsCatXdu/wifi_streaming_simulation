@@ -480,7 +480,8 @@ main(int argc, char* argv[])
     command.AddValue("topology", "single_link, dual_interface, or mlo_str", topology);
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, full_duplication, "
-                     "selective_duplication, or adaptive_airtime_duplication",
+                     "selective_duplication, adaptive_airtime_duplication, or "
+                     "adaptive_deficit_duplication",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -717,7 +718,8 @@ main(int argc, char* argv[])
         NS_ABORT_MSG_IF(topology != "dual_interface" ||
                             (policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                              policyName != "selective_duplication" &&
-                             policyName != "adaptive_airtime_duplication") ||
+                             policyName != "adaptive_airtime_duplication" &&
+                             policyName != "adaptive_deficit_duplication") ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
                         "Prediction telemetry requires dual_interface, a fixed-link or "
@@ -755,7 +757,8 @@ main(int argc, char* argv[])
                             "Frozen selective predictor supports only T0, T1, T2, and T4");
         }
     }
-    if (policyName == "adaptive_airtime_duplication")
+    if (policyName == "adaptive_airtime_duplication" ||
+        policyName == "adaptive_deficit_duplication")
     {
         NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
                         "Adaptive airtime duplication requires prediction telemetry");
@@ -891,7 +894,8 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(policyName != "fixed_link_0" && policyName != "fixed_link_1" &&
                         policyName != "static_best" && policyName != "full_duplication" &&
                         policyName != "selective_duplication" &&
-                        policyName != "adaptive_airtime_duplication",
+                        policyName != "adaptive_airtime_duplication" &&
+                        policyName != "adaptive_deficit_duplication",
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
                     "fullDuplicationPrimaryPath must be 0 or 1");
@@ -904,6 +908,7 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(secondaryAirtimeMeterEnabled &&
                         policyName != "selective_duplication" &&
                         policyName != "adaptive_airtime_duplication" &&
+                        policyName != "adaptive_deficit_duplication" &&
                         policyName != "full_duplication",
                     "Secondary airtime metering supports only selective, adaptive, or full "
                     "duplication policies");
@@ -1862,7 +1867,8 @@ main(int argc, char* argv[])
     receiver->SetMetricsCollector(metrics);
     receiver->SetCleanupTimeout(Seconds(1));
     if (policyName == "selective_duplication" ||
-        policyName == "adaptive_airtime_duplication")
+        policyName == "adaptive_airtime_duplication" ||
+        policyName == "adaptive_deficit_duplication")
     {
         // Keep primary-only frames open so a causal delayed secondary launch
         // can still be accepted before the deadline.
@@ -1946,6 +1952,13 @@ main(int argc, char* argv[])
         sender->SetPolicy(policy);
         sender->SetDelayedSecondaryPath(0);
     }
+    else if (policyName == "adaptive_deficit_duplication")
+    {
+        auto policy = CreateObject<AdaptiveDeficitDuplicationPolicy>();
+        policy->SetPrimaryPath(1);
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(0);
+    }
     else
     {
         auto policy = CreateObject<FullDuplicationPolicy>();
@@ -1960,6 +1973,7 @@ main(int argc, char* argv[])
         secondaryAirtimeMeterEnabled &&
         (policyName == "selective_duplication" ||
          policyName == "adaptive_airtime_duplication" ||
+         policyName == "adaptive_deficit_duplication" ||
          policyName == "full_duplication");
     if (meterWanted)
     {
@@ -1996,7 +2010,8 @@ main(int argc, char* argv[])
             MakeCallback(&SelectiveDuplicationController::NotifySnapshot,
                          PeekPointer(selectiveController)));
     }
-    if (policyName == "adaptive_airtime_duplication")
+    if (policyName == "adaptive_airtime_duplication" ||
+        policyName == "adaptive_deficit_duplication")
     {
         closedLoopPredictor = CreateObject<ClosedLoopRiskPredictor>();
         adaptiveController = CreateObject<AdaptiveAirtimeDuplicationController>();
@@ -2005,6 +2020,11 @@ main(int argc, char* argv[])
             MakeCallback(&ClosedLoopRiskPredictor::Score, PeekPointer(closedLoopPredictor)));
         adaptiveController->SetAirtimeMeter(secondaryAirtimeMeter);
         adaptiveController->SetPrimaryPath(1);
+        if (policyName == "adaptive_deficit_duplication")
+        {
+            adaptiveController->SetSecondaryPacketSelection(
+                AdaptiveSecondaryPacketSelection::PRIMARY_UNACKNOWLEDGED);
+        }
         adaptiveController->SetBudgetFraction(adaptiveAirtimeBudgetFraction);
         adaptiveController->SetBucketHorizonUs(adaptiveAirtimeBucketHorizonUs);
         adaptiveController->SetInitialShadowPrice(adaptiveAirtimeInitialShadowPrice);
