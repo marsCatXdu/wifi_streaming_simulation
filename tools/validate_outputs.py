@@ -4322,7 +4322,15 @@ def _validate_secondary_airtime(
         _require(meter_close(estimate_total, exact_estimate_total),
                  "secondary airtime summary: action estimates do not sum")
         measured_total = sum(float(item["measured"]) for item in settlement_by_frame.values())
-        _require(accounting_close(measured_total, tagged_total),
+        measured_matches = (
+            _paired_meter_sum_close(
+                tagged_total,
+                [row["measured_airtime_us"] for row in settlements],
+            )
+            if policy == PAIRED_VALUE_T2_POLICY
+            else accounting_close(measured_total, tagged_total)
+        )
+        _require(measured_matches,
                  "secondary airtime settlements: measured airtime does not sum")
         for frame_id, estimate in action_estimates.items():
             settlement = settlement_by_frame[frame_id]

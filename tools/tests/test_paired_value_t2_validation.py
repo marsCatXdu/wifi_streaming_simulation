@@ -1224,6 +1224,12 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         serialized = ["4"] * 224
         self.assertTrue(_paired_meter_sum_close(896.0 - 1.4e-9, serialized))
         self.assertFalse(_paired_meter_sum_close(896.0 - 0.0001, serialized))
+        settlement_values = [
+            "4064.8", "1590.8", "2623.6", "3506.8", "3915.2", "6484",
+            "1586.33333333", "10931.2666667", "3616", "2107.2", "3452.8",
+        ]
+        self.assertTrue(_paired_meter_sum_close(43878.8, settlement_values))
+        self.assertFalse(_paired_meter_sum_close(43878.8001, settlement_values))
 
     def test_rejects_action_settlement_and_summary_count_drift(self) -> None:
         action_temporary, action_fixture = self.fixture(action=True)
