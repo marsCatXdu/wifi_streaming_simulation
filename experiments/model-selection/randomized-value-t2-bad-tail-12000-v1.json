@@ -1,0 +1,80 @@
+{
+  "selection_schema_version": 1,
+  "selection_id": "randomized-value-t2-bad-tail-12000-v1",
+  "status": "frozen_before_model_fit",
+  "training": {
+    "tool_introduced_git_commit": "1215ea9ce8af830a2b6cf41516f02565b66f792a",
+    "tool": "tools/train_randomized_value.py",
+    "tool_sha256": "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911",
+    "random_seed": 20260804
+  },
+  "dataset": {
+    "artifact_manifest_sha256": "1c532dbf931c7dfe58ffa227de2447da0e71ee80043b9f913ce3fb2e90613a00",
+    "dataset_metadata_sha256": "29648c19992b565ad855030452f65aeef8e36f6f4e9230a6f623eb1793112e50",
+    "randomized_t2_sha256": "26bec3b9ff5ed7df80b5b8bc5c7e95d28af3b4d519850a6841568279ed31b995",
+    "randomized_t4_wait_sha256": "3eed0fc5752ba300dab3a6061b99e4ffa214fa54fe6ab1eeb2bda0b0e3f0452f",
+    "source_project_git_commit": "61454072bf1d70a2a677843e303e545628613c50",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "run_group_count": 96,
+    "split": {
+      "algorithm": "sha256_seed_run_exact_64_16_16_v1",
+      "unit": "(seed, run_number)",
+      "train": 64,
+      "calibration": 16,
+      "test": 16
+    }
+  },
+  "feature_contract": {
+    "id": "randomized_intervention_leakage_safe_v1",
+    "logical_feature_count": 84,
+    "encoded_feature_count": 85,
+    "input_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1"
+  },
+  "primary_policy": {
+    "stage": "T2",
+    "sample_offset_us": 2000,
+    "target": "bad_tail_12000us",
+    "target_definition": "incomplete or union latency strictly greater than 12000 us",
+    "action": "canonical_full_secondary_copy",
+    "sequential_policy": "T2_only",
+    "threshold_comparator": "float32(score) >= float32(threshold)"
+  },
+  "selection": {
+    "role": "calibration",
+    "criterion": "maximum_calibration_dr_policy_value_v1",
+    "maximum_realized_treatment_fraction": 0.2,
+    "maximum_calibration_dr_secondary_airtime_us_per_eligible_frame": 400.0,
+    "candidate_treatment_fractions": [
+      0.0,
+      0.02,
+      0.05,
+      0.1,
+      0.15,
+      0.2
+    ],
+    "test_role_used_during_selection": false,
+    "cluster_intervals_used_during_selection": false
+  },
+  "runtime_safety_guard": {
+    "secondary_airtime_budget_fraction": 0.006,
+    "bucket_horizon_us": 10000000,
+    "initial_bucket_horizon_us": 2000000,
+    "cost_safety_factor": 1.25,
+    "role": "catastrophe_guard_after_learned_admission"
+  },
+  "confirmation": {
+    "evidence_role": "fresh_closed_loop_confirmation",
+    "seed_start": 1301,
+    "seed_count": 48,
+    "policies": [
+      "paired_value_duplication_t2",
+      "mlo_str",
+      "mlo_emlsr"
+    ],
+    "mlo_n_max_inflights": 1,
+    "environment": "unchanged_neutral_mixed4x4",
+    "sender_airtime_ratio_upper_target": 1.2,
+    "background_throughput_loss_fraction_upper_target": 0.01
+  }
+}
