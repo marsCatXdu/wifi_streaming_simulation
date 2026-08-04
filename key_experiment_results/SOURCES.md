@@ -23,10 +23,16 @@ following ignored result roots:
 | `04_genuine_polling_v1/predicted_risk_threshold_020` | `results/genuine_polling_v1/predicted_risk_duplication_threshold_020` and `results/genuine_polling_v1/predicted_risk_unconditional_threshold_020` |
 | `05_adaptive_airtime_obss_v1` | `results/adaptive_airtime_obss_v1/runs` (invalidated; audit only) |
 | `06_paired_value_t2_str_qualification_v1` | `results/paired_value_t2_str_qualification_da48d7d` |
+| `07_score_aware_t2_str_engineering_v2` | `results/paired_value_t2_score_aware_str_engineering_v2/runs` |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
 without modifying the original replay directory.
+
+The complete V2 raw archive is intentionally not committed because it is
+94,939,663 compressed bytes.  Its local path and SHA-256 are recorded in
+`07_score_aware_t2_str_engineering_v2/README.md`; publishing that exact archive
+as a release asset remains a reproducibility task.
 
 `SHA256SUMS` covers every curated artifact except itself. It can be checked
 from the repository root with:

@@ -3,3 +3,4 @@
 
 # Preserve the report's intentional Markdown hard breaks.
 06_paired_value_t2_str_qualification_v1/qualification.md whitespace=-trailing-space
+07_score_aware_t2_str_engineering_v2/qualification.md whitespace=-trailing-space

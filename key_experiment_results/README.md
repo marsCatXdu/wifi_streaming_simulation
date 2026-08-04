@@ -34,6 +34,23 @@ frame-independent 1 ms polling evidence is preserved under
 | `04_genuine_polling_v1/predicted_risk_threshold_020` | Runtime calibrated-risk distributions | Conditional-action and unconditional PDF/CDF plots |
 | `05_adaptive_airtime_obss_v1` | Invalidated adaptive-airtime OBSS v1 | Historical aggregates and figures retained for audit; not valid evidence |
 | `06_paired_value_t2_str_qualification_v1` | Primary-only temporal-T2 selective duplication versus STR MLO | Strict 48-pair report, compact aggregates, admission diagnostics, and qualification plus standard figures |
+| `07_score_aware_t2_str_engineering_v2` | Score-aware temporal-T2 V2 versus STR MLO | First all-gate engineering pass, 48-pair report, admission diagnostics, raw-archive identity, and qualification plus standard figures |
+
+## Current best STR result
+
+Score-aware temporal-T2 V2 is the first selective-duplication candidate in
+this repository to pass all frozen engineering gates against STR MLO.  Across
+48 fresh matched pairs it records 0.5729% all-generated deadline misses versus
+0.7998% for STR, and 17.192 ms mean per-run completed-frame P99 versus
+18.875 ms.  Both paired 95% intervals favor the policy.  Its sender-airtime
+ratio is 1.1217 with an upper interval endpoint of 1.1565, and background loss
+is 0.0054%.
+
+This is engineering evidence, not final confirmation.  Seeds `1301` through
+`1348` remain unopened, and the longer-term target of more than 50% fewer
+misses than STR has not yet been reached.  See
+`07_score_aware_t2_str_engineering_v2/README.md` for the full diagnosis and
+the next controlled experiment.
 
 ## Principal streaming results
 

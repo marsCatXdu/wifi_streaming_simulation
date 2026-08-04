@@ -1,0 +1,29 @@
+{
+  "attempt_pid": 14366,
+  "completed_run_count": 96,
+  "manifest_after_sha256": "24a87c9ec02e7564116992367754bdcf6ffc7845a1fa26908b8dea92fe316ef2",
+  "manifest_backup": "experiment_manifest.85-runs.41bfb892cf07.json",
+  "manifest_before_reconstructed_from_verified_subset": true,
+  "manifest_before_sha256": "41bfb892cf0708211fdde8b7b79b4e7f279b46ab745c000358eb386539567b85",
+  "manifest_reconstruction": "All 85 existing command records matched regenerated eb7f960 matrix commands; the 11 missing records used the same derivation.",
+  "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+  "project_commit_of_runs": "eb7f9600fab33876bce4538f665b69785f493d74",
+  "promoted_run_ids": [
+    "0e8ecc9b208d5e641330",
+    "12041b4b606420562ba2",
+    "424ce5e837d6904b6e41",
+    "4990d18e91d1cc5f8261",
+    "61f8de03e4dac83f6c7f",
+    "67ce35deb194343343fd",
+    "854ad866dd7f91800c03",
+    "98536f28911531dfad6c",
+    "c34a960e036b02ff9862",
+    "e02d2bba006394892c8b",
+    "fb4a53aecd4e93481067"
+  ],
+  "schema_version": 1,
+  "simulations_rerun": 0,
+  "timestamp_utc": "2026-08-04T15:25:07.454918+00:00",
+  "validated_attempt_count": 11,
+  "validator_commit": "cff64f7a1044e9934f9f4a3acad79dac200eec4e"
+}
