@@ -17,6 +17,7 @@ import json
 import math
 import os
 import pickle
+import random
 import shutil
 import subprocess
 import tempfile
@@ -302,6 +303,122 @@ def _policy_on_role(
     return policy, metrics
 
 
+def _paired_policy_delta_uncertainty(
+    data: trainer.audited.StageDataset,
+    indices: np.ndarray,
+    source_policy: np.ndarray,
+    candidate_policy: np.ndarray,
+    components: dict[str, tuple[np.ndarray, np.ndarray]],
+    cost_phi1: np.ndarray,
+    *,
+    seed: int,
+    context: str,
+) -> dict[str, Any]:
+    """Bootstrap paired policy deltas by resampling complete run groups."""
+
+    if not (
+        len(indices)
+        == len(source_policy)
+        == len(candidate_policy)
+        == len(cost_phi1)
+    ):
+        raise CostAblationError("paired uncertainty arrays differ in length")
+    primitives: dict[str, np.ndarray] = {
+        "source:action": source_policy.astype(float),
+        "candidate:action": candidate_policy.astype(float),
+        "source:airtime": source_policy * cost_phi1,
+        "candidate:airtime": candidate_policy * cost_phi1,
+    }
+    for target in (
+        trainer.TARGET_DEADLINE,
+        trainer.TARGET_LATE18,
+        trainer.TARGET_COMPLETION,
+    ):
+        phi0, phi1 = components[target]
+        effect = phi1 - phi0
+        primitives[f"source:{target}"] = phi0 + source_policy * effect
+        primitives[f"candidate:{target}"] = phi0 + candidate_policy * effect
+
+    positions: dict[tuple[int, int], list[int]] = {}
+    for position, index in enumerate(indices):
+        positions.setdefault(data.rows[index].group, []).append(position)
+    groups = sorted(positions)
+    if not groups:
+        raise CostAblationError("paired uncertainty has no run groups")
+    summaries = {
+        name: [
+            (float(np.sum(values[positions[group]])), len(positions[group]))
+            for group in groups
+        ]
+        for name, values in primitives.items()
+    }
+
+    def derive(means: dict[str, float]) -> dict[str, float]:
+        source_completion = means[f"source:{trainer.TARGET_COMPLETION}"]
+        candidate_completion = means[f"candidate:{trainer.TARGET_COMPLETION}"]
+        if source_completion <= 0 or candidate_completion <= 0:
+            raise CostAblationError(
+                "paired uncertainty has a non-positive completion denominator"
+            )
+        return {
+            "deadline_miss_probability": (
+                means[f"candidate:{trainer.TARGET_DEADLINE}"]
+                - means[f"source:{trainer.TARGET_DEADLINE}"]
+            ),
+            "completed_late18_ratio": (
+                means[f"candidate:{trainer.TARGET_LATE18}"]
+                / candidate_completion
+                - means[f"source:{trainer.TARGET_LATE18}"] / source_completion
+            ),
+            "airtime_us_per_eligible_frame": (
+                means["candidate:airtime"] - means["source:airtime"]
+            ),
+            "action_fraction": means["candidate:action"] - means["source:action"],
+        }
+
+    point = derive(
+        {name: float(np.mean(values)) for name, values in primitives.items()}
+    )
+    replications = {name: [] for name in point}
+    generator = random.Random(trainer.audited._cluster_seed(seed, context))
+    for _ in range(trainer.BOOTSTRAP_REPLICATIONS):
+        sampled = [generator.randrange(len(groups)) for _ in groups]
+        means = {
+            name: sum(group_values[index][0] for index in sampled)
+            / sum(group_values[index][1] for index in sampled)
+            for name, group_values in summaries.items()
+        }
+        derived = derive(means)
+        for name, value in derived.items():
+            replications[name].append(value)
+    alpha = (1.0 - trainer.BOOTSTRAP_CONFIDENCE) / 2.0
+    return {
+        "unit": "(seed, run_number)",
+        "method": "deterministic_paired_run_cluster_percentile_bootstrap_v1",
+        "evidence_role": (
+            "previously_opened_engineering_test"
+            if context.endswith(":test")
+            else "selection_reused_descriptive"
+        ),
+        "replications": trainer.BOOTSTRAP_REPLICATIONS,
+        "confidence_level": trainer.BOOTSTRAP_CONFIDENCE,
+        "run_count": len(groups),
+        "contrast": "cost_free_policy_minus_frozen_source_policy",
+        "estimands": {
+            name: {
+                "estimate": estimate,
+                "ci_lower": trainer.audited._linear_percentile(
+                    replications[name], alpha
+                ),
+                "ci_upper": trainer.audited._linear_percentile(
+                    replications[name], 1.0 - alpha
+                ),
+            }
+            for name, estimate in point.items()
+        },
+    }
+
+
 def _record_summary(record: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in record.items() if key != "selected"}
 
@@ -391,6 +508,15 @@ def evaluate_cost_ablation(
         trainer._frame_gate(base_data, calibration, selected["frame_gate"]),
         selected["score_threshold"],
     )
+    source_calibration_policy = trainer._apply_threshold(
+        calibration_scores[
+            (source_contract["feature_family"], source_contract["ranker"])
+        ],
+        trainer._frame_gate(
+            base_data, calibration, source_contract["frame_gate"]
+        ),
+        source_contract["score_threshold"],
+    )
     selected_calibration_uncertainty = trainer._cluster_uncertainty(
         base_data,
         calibration,
@@ -399,6 +525,16 @@ def evaluate_cost_ablation(
         calibration_cost,
         seed=random_seed,
         context="temporal-t2-cost-ablation:calibration",
+    )
+    calibration_paired_uncertainty = _paired_policy_delta_uncertainty(
+        base_data,
+        calibration,
+        source_calibration_policy,
+        selected_calibration_policy,
+        calibration_components,
+        calibration_cost,
+        seed=random_seed,
+        context="temporal-t2-cost-ablation-paired:calibration",
     )
 
     # This branch starts only after the cost-free calibration winner is frozen.
@@ -434,6 +570,16 @@ def evaluate_cost_ablation(
         test_cost,
         seed=random_seed,
         context="temporal-t2-cost-ablation:test",
+    )
+    test_paired_uncertainty = _paired_policy_delta_uncertainty(
+        base_data,
+        test,
+        source_test_policy,
+        selected_test_policy,
+        test_components,
+        test_cost,
+        seed=random_seed,
+        context="temporal-t2-cost-ablation-paired:test",
     )
     selected_test.update(
         {
@@ -494,6 +640,7 @@ def evaluate_cost_ablation(
         "selected_cost_free_calibration_policy": selected_summary,
         "source_frozen_engineering_test_policy": source_test_summary,
         "selected_cost_free_engineering_test_policy": selected_test,
+        "calibration_paired_delta_uncertainty": calibration_paired_uncertainty,
         "calibration_balanced_min_improvement_delta": (
             selected["balanced_min_relative_improvement"]
             - source_record["balanced_min_relative_improvement"]
@@ -516,6 +663,7 @@ def evaluate_cost_ablation(
                 - source_test["realized_action_fraction"]
             ),
         },
+        "engineering_test_paired_delta_uncertainty": test_paired_uncertainty,
         "interpretation_guardrails": [
             "The engineering test split was already opened by V1 and is descriptive.",
             "This result isolates score ranking; it does not validate a runtime guard.",
@@ -608,6 +756,15 @@ def render_report(result: dict[str, Any]) -> str:
     source_test = result["source_frozen_engineering_test_policy"]
     selected_test = result["selected_cost_free_engineering_test_policy"]
     delta = result["engineering_test_deltas"]
+    paired = result["engineering_test_paired_delta_uncertainty"]["estimands"]
+
+    def interval(name: str, scale: float = 1.0) -> str:
+        value = paired[name]
+        return (
+            f"[{scale * value['ci_lower']:+.6f}, "
+            f"{scale * value['ci_upper']:+.6f}]"
+        )
+
     return "\n".join(
         [
             "# Temporal T2 cost-denominator ablation",
@@ -632,31 +789,36 @@ def render_report(result: dict[str, Any]) -> str:
             "",
             "## Engineering-test estimates",
             "",
-            "| Metric | Frozen source | Cost-free winner | Delta (winner - source) |",
+            "| Metric | Frozen source | Cost-free winner | "
+            "Paired delta (winner - source), 95% interval |",
             "| --- | ---: | ---: | ---: |",
             (
                 "| Deadline-miss probability | "
                 f"{source_test['dr_policy_deadline_miss']:.6%} | "
                 f"{selected_test['dr_policy_deadline_miss']:.6%} | "
-                f"{delta['deadline_miss_probability']:+.6%} |"
+                f"{100 * delta['deadline_miss_probability']:+.6f} pp "
+                f"{interval('deadline_miss_probability', 100)} pp |"
             ),
             (
                 "| Completed-late18 ratio | "
                 f"{source_test['dr_policy_completed_late18_ratio']:.6%} | "
                 f"{selected_test['dr_policy_completed_late18_ratio']:.6%} | "
-                f"{delta['completed_late18_ratio']:+.6%} |"
+                f"{100 * delta['completed_late18_ratio']:+.6f} pp "
+                f"{interval('completed_late18_ratio', 100)} pp |"
             ),
             (
                 "| DR airtime (us/eligible frame) | "
                 f"{source_test['dr_airtime_us_per_eligible_frame']:.3f} | "
                 f"{selected_test['dr_airtime_us_per_eligible_frame']:.3f} | "
-                f"{delta['airtime_us_per_eligible_frame']:+.3f} |"
+                f"{delta['airtime_us_per_eligible_frame']:+.3f} "
+                f"{interval('airtime_us_per_eligible_frame')} |"
             ),
             (
                 "| Action fraction | "
                 f"{source_test['realized_action_fraction']:.6%} | "
                 f"{selected_test['realized_action_fraction']:.6%} | "
-                f"{delta['action_fraction']:+.6%} |"
+                f"{100 * delta['action_fraction']:+.6f} pp "
+                f"{interval('action_fraction', 100)} pp |"
             ),
             "",
             "The calibration winner is chosen without consulting engineering-test outcomes.",
@@ -675,6 +837,9 @@ def plot_result(
     selected_cal = result["selected_cost_free_calibration_policy"]
     source_test = result["source_frozen_engineering_test_policy"]
     selected_test = result["selected_cost_free_engineering_test_policy"]
+    paired_test = result["engineering_test_paired_delta_uncertainty"][
+        "estimands"
+    ]
     signal = source_cal["signal"]
     family = source_cal["feature_family"]
     gate = source_cal["frame_gate"]
@@ -781,6 +946,26 @@ def plot_result(
     axis.set_title("Already-opened engineering test")
     axis.grid(axis="y", alpha=0.25)
     axis.legend(frameon=False)
+    miss_delta = paired_test["deadline_miss_probability"]
+    late_delta = paired_test["completed_late18_ratio"]
+    axis.text(
+        0.98,
+        0.97,
+        (
+            "Paired deltas (95% CI)\n"
+            f"miss: {100 * miss_delta['estimate']:+.3f} pp "
+            f"[{100 * miss_delta['ci_lower']:+.3f}, "
+            f"{100 * miss_delta['ci_upper']:+.3f}]\n"
+            f"late18: {100 * late_delta['estimate']:+.3f} pp "
+            f"[{100 * late_delta['ci_lower']:+.3f}, "
+            f"{100 * late_delta['ci_upper']:+.3f}]"
+        ),
+        transform=axis.transAxes,
+        ha="right",
+        va="top",
+        fontsize=8.5,
+        bbox={"facecolor": "white", "edgecolor": "#bbbbbb", "alpha": 0.9},
+    )
 
     axis = axes[1, 1]
     names = ["Frozen source", "Cost-free winner"]

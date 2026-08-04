@@ -57,6 +57,13 @@ class CostDenominatorAblationTests(unittest.TestCase):
         self.assertFalse(selected["cost_normalized"])
         self.assertEqual(sum(record["selected"] for record in records), 1)
         self.assertEqual(sum(record["source_frozen"] for record in records), 1)
+        paired = result["engineering_test_paired_delta_uncertainty"]
+        self.assertEqual(paired["run_count"], 4)
+        self.assertEqual(paired["replications"], 20)
+        for name, estimate in result["engineering_test_deltas"].items():
+            interval = paired["estimands"][name]
+            self.assertAlmostEqual(interval["estimate"], estimate)
+            self.assertLessEqual(interval["ci_lower"], interval["ci_upper"])
 
         output = self.root / "ablation"
         ablation.write_outputs(result, records, output)
