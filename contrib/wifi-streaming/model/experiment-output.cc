@@ -4,6 +4,7 @@
 
 #include "experiment-output.h"
 #include "closed-loop-risk-predictor.h"
+#include "paired-value-t2-controller.h"
 #include "prediction-model-evaluator.h"
 #include "prediction-telemetry-collector.h"
 #include "randomized-intervention-controller.h"
@@ -251,8 +252,12 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  \"seed\": " << config.rngSeed << ",\n"
            << "  \"run\": " << config.rngRun << ",\n"
            << "  \"topology\": \"" << JsonEscape(config.topology) << "\",\n"
-           << "  \"policy\": \"" << JsonEscape(config.policy) << "\",\n"
-           << "  \"duration_s\": " << config.durationSeconds << ",\n"
+           << "  \"policy\": \"" << JsonEscape(config.policy) << "\",\n";
+    if (config.policy == "paired_value_duplication_t2")
+    {
+        output << "  \"environment\": \"unchanged_neutral_mixed4x4\",\n";
+    }
+    output << "  \"duration_s\": " << config.durationSeconds << ",\n"
            << "  \"warmup_s\": " << config.warmupSeconds << ",\n"
            << "  \"measurement_start_s\": " << config.warmupSeconds << ",\n"
            << "  \"measurement_stop_s\": " << config.warmupSeconds + config.durationSeconds
@@ -543,6 +548,57 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"event_schema_version\": " << PREDICTION_EVENT_SCHEMA_VERSION << ",\n"
                << "    \"feature_support_mask_version\": " << FEATURE_SUPPORT_MASK_VERSION
                << "\n"
+               << "  },\n";
+    }
+    if (config.policy == "paired_value_duplication_t2")
+    {
+        constexpr uint64_t nanosPerMicrosecond = 1000;
+        constexpr uint64_t decisionStopGuardUs =
+            (PairedValueT2Controller::MEASUREMENT_STOP_NS -
+             PairedValueT2Controller::DECISION_STOP_NS) /
+            nanosPerMicrosecond;
+        output << "  \"pairedValueDuplicationT2\": {\n"
+               << "    \"csv_schema_version\": "
+               << PairedValueT2Controller::CSV_SCHEMA_VERSION << ",\n"
+               << "    \"summary_schema_version\": "
+               << PairedValueT2Controller::SUMMARY_SCHEMA_VERSION << ",\n"
+               << "    \"runtime_contract_id\": \""
+               << PairedValueT2Controller::GetRuntimeContractId() << "\",\n"
+               << "    \"runtime_contract_sha256\": \""
+               << PairedValueT2Controller::GetRuntimeContractSha256() << "\",\n"
+               << "    \"primary_path\": " << +PairedValueT2Controller::PRIMARY_PATH_ID
+               << ",\n"
+               << "    \"primary_copy_id\": "
+               << +PairedValueT2Controller::PRIMARY_COPY_ID << ",\n"
+               << "    \"secondary_path\": "
+               << +PairedValueT2Controller::SECONDARY_PATH_ID << ",\n"
+               << "    \"secondary_copy_id\": "
+               << +PairedValueT2Controller::SECONDARY_COPY_ID << ",\n"
+               << "    \"stage\": \"T2\",\n"
+               << "    \"sample_offset_us\": " << PairedValueT2Controller::T2_OFFSET_US
+               << ",\n"
+               << "    \"measurement_start_ns\": "
+               << PairedValueT2Controller::MEASUREMENT_START_NS << ",\n"
+               << "    \"measurement_stop_ns\": "
+               << PairedValueT2Controller::MEASUREMENT_STOP_NS << ",\n"
+               << "    \"decision_start_ns\": "
+               << PairedValueT2Controller::DECISION_START_NS << ",\n"
+               << "    \"decision_stop_ns\": "
+               << PairedValueT2Controller::DECISION_STOP_NS << ",\n"
+               << "    \"decision_stop_guard_us\": " << decisionStopGuardUs << ",\n"
+               << "    \"delayed_secondary_prediction_tracking_enabled\": true,\n"
+               << "    \"receiver_hold_for_delayed_secondary\": true,\n"
+               << "    \"action\": \"canonical_full_secondary_copy\",\n"
+               << "    \"cost_estimator_id\": \""
+               << PairedValueT2Controller::GetCostEstimatorId() << "\",\n"
+               << "    \"cost_safety_factor\": "
+               << PairedValueT2Controller::COST_SAFETY_FACTOR << ",\n"
+               << "    \"budget_fraction\": " << PairedValueT2Controller::BUDGET_FRACTION
+               << ",\n"
+               << "    \"budget_max_horizon_us\": "
+               << PairedValueT2Controller::BUDGET_MAX_HORIZON_US << ",\n"
+               << "    \"budget_initial_horizon_us\": "
+               << PairedValueT2Controller::BUDGET_INITIAL_HORIZON_US << "\n"
                << "  },\n";
     }
     if (config.policy == "selective_duplication")

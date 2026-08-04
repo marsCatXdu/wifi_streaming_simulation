@@ -213,6 +213,43 @@ class RandomizedFullCopyExplorationPolicy : public RedundancyPolicy
     PathId m_primary{1}; ///< Primary path used before the assigned intervention.
 };
 
+/**
+ * Select the frozen primary path for paired temporal T2 value control.
+ *
+ * This policy never duplicates at the frame boundary. The paired-value T2
+ * controller may later launch the canonical full secondary copy after its
+ * causal telemetry, learned-score, and airtime-budget gates pass.
+ */
+class PairedValueT2Policy : public RedundancyPolicy
+{
+  public:
+    /**
+     * Get the policy TypeId.
+     *
+     * @return Policy TypeId.
+     */
+    static TypeId GetTypeId();
+
+    PairedValueT2Policy();
+
+    /**
+     * Select frozen primary path 1 without immediate duplication.
+     *
+     * @param frame Frame being assigned to the primary path.
+     * @param telemetry Causal link telemetry at the frame boundary.
+     * @return Fixed-primary decision for later paired-value control.
+     */
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+
+    /**
+     * Get the stable policy provenance name.
+     *
+     * @return Policy name.
+     */
+    std::string GetName() const override;
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H

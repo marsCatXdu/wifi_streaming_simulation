@@ -1971,6 +1971,51 @@ class RandomizedFullCopyExplorationPolicyTestCase : public TestCase
     }
 };
 
+/**
+ * Verify the frozen paired-value primary policy contract and provenance.
+ */
+class PairedValueT2PolicyTestCase : public TestCase
+{
+  public:
+    PairedValueT2PolicyTestCase()
+        : TestCase("Paired-value T2 policy preserves delayed-control provenance")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        const FrameDescriptor frame{1, 0, 1200, 1, 10000, FrameType::P_FRAME};
+        LinkTelemetrySnapshot telemetry;
+        telemetry.pathScores.emplace(1, 2.5);
+
+        auto policy = CreateObject<PairedValueT2Policy>();
+        const auto decision = policy->Decide(frame, telemetry);
+        NS_TEST_ASSERT_MSG_EQ(decision.primaryPath,
+                              1,
+                              "Paired-value policy chose wrong primary");
+        NS_TEST_ASSERT_MSG_EQ(decision.duplicate,
+                              false,
+                              "Paired-value policy duplicated before T2 control");
+        NS_TEST_ASSERT_MSG_EQ(decision.secondaryPath.has_value(),
+                              false,
+                              "Paired-value policy selected an immediate secondary");
+        NS_TEST_ASSERT_MSG_EQ_TOL(decision.primaryScore,
+                                  2.5,
+                                  0.0,
+                                  "Paired-value policy lost primary telemetry");
+        NS_TEST_ASSERT_MSG_EQ(decision.reason,
+                              "paired temporal value T2 primary",
+                              "Paired-value decision provenance changed");
+        NS_TEST_ASSERT_MSG_EQ(policy->GetName(),
+                              "paired_value_duplication_t2",
+                              "Paired-value policy name changed");
+        NS_TEST_ASSERT_MSG_EQ(policy->GetInstanceTypeId().GetName(),
+                              "ns3::PairedValueT2Policy",
+                              "Paired-value policy TypeId changed");
+    }
+};
+
 class OutputStatisticsTestCase : public TestCase
 {
   public:
@@ -2236,6 +2281,59 @@ class OutputStatisticsTestCase : public TestCase
                 "\"eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1\""),
             std::string::npos,
             "Randomized cost estimator is missing");
+
+        const std::string pairedDirectory = directory + "/paired-value-t2";
+        ExperimentOutput::PrepareRunDirectory(pairedDirectory);
+        StreamingRunConfig pairedConfig;
+        pairedConfig.runId = "paired-value-t2";
+        pairedConfig.policy = "paired_value_duplication_t2";
+        pairedConfig.durationSeconds = 60;
+        pairedConfig.warmupSeconds = 1;
+        pairedConfig.predictionTelemetryEnabled = true;
+        pairedConfig.predictionSampleOffsetsUs = {0, 2000};
+        pairedConfig.predictionHistoryWindowsUs = {1000, 5000, 20000};
+        pairedConfig.secondaryAirtimeMeterEnabled = true;
+        ExperimentOutput::WriteResolvedConfig(pairedDirectory, pairedConfig);
+        std::ifstream pairedResolved(pairedDirectory + "/resolved_config.json");
+        std::ostringstream pairedText;
+        pairedText << pairedResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(
+            pairedText.str().find(
+                "\"environment\": \"unchanged_neutral_mixed4x4\""),
+            std::string::npos,
+            "Paired-value neutral environment label is missing");
+        NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
+                                  "\"pairedValueDuplicationT2\": {"),
+                              std::string::npos,
+                              "Paired-value resolved object is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            pairedText.str().find(
+                "\"runtime_contract_id\": "
+                "\"paired-value-duplication-t2-runtime-v1\""),
+            std::string::npos,
+            "Paired-value runtime contract ID is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            pairedText.str().find(
+                "\"runtime_contract_sha256\": "
+                "\"b9b9caf6cf49e73cb0669107576a17790f59bda4875c43f676caa426393dbf41\""),
+            std::string::npos,
+            "Paired-value runtime contract SHA-256 is missing");
+        NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
+                                  "\"delayed_secondary_prediction_tracking_enabled\": true"),
+                              std::string::npos,
+                              "Paired-value delayed-secondary tracking is missing");
+        NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
+                                  "\"receiver_hold_for_delayed_secondary\": true"),
+                              std::string::npos,
+                              "Paired-value receiver hold is missing");
+        NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
+                                  "\"decision_stop_ns\": 60466000000"),
+                              std::string::npos,
+                              "Paired-value decision window is missing");
+        NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
+                                  "\"budget_fraction\": 0.006"),
+                              std::string::npos,
+                              "Paired-value budget fraction is missing");
 
         const std::string selectiveDirectory = directory + "/selective";
         ExperimentOutput::PrepareRunDirectory(selectiveDirectory);
@@ -4812,6 +4910,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new RandomizedFrameAssignmentDeterminismTestCase, TestCase::Duration::QUICK);
         AddTestCase(new RandomizedFullCopyExplorationPolicyTestCase,
                     TestCase::Duration::QUICK);
+        AddTestCase(new PairedValueT2PolicyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new OutputStatisticsTestCase, TestCase::Duration::QUICK);
         AddTestCase(new ReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new DelayedSecondaryHoldTestCase, TestCase::Duration::QUICK);

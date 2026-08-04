@@ -566,7 +566,8 @@ main(int argc, char* argv[])
     command.AddValue("policy",
                      "fixed_link_0, fixed_link_1, static_best, full_duplication, "
                      "selective_duplication, adaptive_airtime_duplication, "
-                     "adaptive_deficit_duplication, or randomized_full_copy_exploration",
+                     "adaptive_deficit_duplication, randomized_full_copy_exploration, "
+                     "or paired_value_duplication_t2",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -840,7 +841,8 @@ main(int argc, char* argv[])
                              policyName != "selective_duplication" &&
                              policyName != "adaptive_airtime_duplication" &&
                              policyName != "adaptive_deficit_duplication" &&
-                             policyName != "randomized_full_copy_exploration") ||
+                             policyName != "randomized_full_copy_exploration" &&
+                             policyName != "paired_value_duplication_t2") ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
                         "Prediction telemetry requires dual_interface, a fixed-link or "
@@ -1035,6 +1037,40 @@ main(int argc, char* argv[])
             "Randomized assignment stop guard must cover deadline/queue settlement and leave "
             "a common intervention window");
     }
+    if (policyName == "paired_value_duplication_t2")
+    {
+        NS_ABORT_MSG_IF(topology != "dual_interface",
+                        "Paired-value T2 control requires dual_interface topology");
+        NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
+                        "Paired-value T2 control requires prediction telemetry");
+        NS_ABORT_MSG_IF(!secondaryAirtimeMeterEnabled,
+                        "Paired-value T2 control requires the secondary airtime meter");
+        NS_ABORT_MSG_IF(emissionMode != "burst",
+                        "Paired-value T2 control requires burst emission");
+        NS_ABORT_MSG_IF(predictionEventLogEnabled || predictionOracleFeaturesEnabled,
+                        "Paired-value T2 control requires commodity telemetry without raw "
+                        "events or oracle fields");
+        NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs !=
+                            std::vector<uint64_t>({0, 2000}),
+                        "Paired-value T2 control requires exactly the T0 and T2 samples");
+        NS_ABORT_MSG_IF(resolvedPredictionHistoryWindowsUs !=
+                            std::vector<uint64_t>({1000, 5000, 20000}),
+                        "Paired-value T2 control requires exact 1, 5, and 20 ms histories");
+        NS_ABORT_MSG_IF(predictionPollingIntervalUs != 1000 ||
+                            predictionPollingReportDelayUs != 1000,
+                        "Paired-value T2 control requires genuine delayed 1 ms polling");
+        NS_ABORT_MSG_IF(durationSeconds != 60.0,
+                        "Paired-value T2 control requires the frozen 60 s duration");
+        NS_ABORT_MSG_IF(sourceName != "synthetic" || fps != 30.0 || frameSize != 12000 ||
+                            keyframeSizeMultiplier != 4.0 || gopLength != 60 ||
+                            payloadSize != 1200 || deadlineUs != 33333,
+                        "Paired-value T2 control requires the frozen synthetic frame profile");
+        NS_ABORT_MSG_IF(queueMaxDelayMs != 500 || maxAmpduSize != 65535 ||
+                            maxAmsduSize != 0 || txopLimitUs != 0 ||
+                            rtsCtsThreshold != 4692480 || fragmentationThreshold != 65535 ||
+                            guardIntervalNs != 800,
+                        "Paired-value T2 control requires the frozen Wi-Fi cost profile");
+    }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
     NS_ABORT_MSG_IF(ulOfdmaScope != "target_aps" && ulOfdmaScope != "all_he_eht_aps",
@@ -1129,7 +1165,8 @@ main(int argc, char* argv[])
                         policyName != "selective_duplication" &&
                         policyName != "adaptive_airtime_duplication" &&
                         policyName != "adaptive_deficit_duplication" &&
-                        policyName != "randomized_full_copy_exploration",
+                        policyName != "randomized_full_copy_exploration" &&
+                        policyName != "paired_value_duplication_t2",
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
                     "fullDuplicationPrimaryPath must be 0 or 1");
@@ -1147,6 +1184,7 @@ main(int argc, char* argv[])
                         policyName != "adaptive_airtime_duplication" &&
                         policyName != "adaptive_deficit_duplication" &&
                         policyName != "randomized_full_copy_exploration" &&
+                        policyName != "paired_value_duplication_t2" &&
                         policyName != "full_duplication",
                     "Secondary airtime metering supports only selective, adaptive, randomized, "
                     "or full duplication policies");
@@ -2605,7 +2643,8 @@ main(int argc, char* argv[])
                                           stationDevices.Get(selectedPath),
                                           0,
                                           AC_BE);
-        if (policyName == "randomized_full_copy_exploration")
+        if (policyName == "randomized_full_copy_exploration" ||
+            policyName == "paired_value_duplication_t2")
         {
             // Bind the hypothetical secondary after the primary so T0 path
             // history is initialized in the same explicit causal order used
@@ -2622,7 +2661,8 @@ main(int argc, char* argv[])
     if (policyName == "selective_duplication" ||
         policyName == "adaptive_airtime_duplication" ||
         policyName == "adaptive_deficit_duplication" ||
-        policyName == "randomized_full_copy_exploration")
+        policyName == "randomized_full_copy_exploration" ||
+        policyName == "paired_value_duplication_t2")
     {
         // Keep primary-only frames open so a causal delayed secondary launch
         // can still be accepted before the deadline.
@@ -2721,6 +2761,13 @@ main(int argc, char* argv[])
         sender->SetDelayedSecondaryPath(0);
         sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
     }
+    else if (policyName == "paired_value_duplication_t2")
+    {
+        auto policy = CreateObject<PairedValueT2Policy>();
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(PairedValueT2Controller::SECONDARY_PATH_ID);
+        sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
+    }
     else
     {
         auto policy = CreateObject<FullDuplicationPolicy>();
@@ -2731,6 +2778,7 @@ main(int argc, char* argv[])
     Ptr<SelectiveDuplicationController> selectiveController;
     Ptr<AdaptiveAirtimeDuplicationController> adaptiveController;
     Ptr<RandomizedInterventionController> randomizedController;
+    Ptr<PairedValueT2Controller> pairedValueController;
     Ptr<SecondaryAirtimeMeter> secondaryAirtimeMeter;
     const bool meterWanted =
         secondaryAirtimeMeterEnabled &&
@@ -2738,6 +2786,7 @@ main(int argc, char* argv[])
          policyName == "adaptive_airtime_duplication" ||
          policyName == "adaptive_deficit_duplication" ||
          policyName == "randomized_full_copy_exploration" ||
+         policyName == "paired_value_duplication_t2" ||
          policyName == "full_duplication");
     if (meterWanted)
     {
@@ -2775,6 +2824,19 @@ main(int argc, char* argv[])
         predictionTelemetry->SetSnapshotCallback(
             MakeCallback(&RandomizedInterventionController::NotifySnapshot,
                          PeekPointer(randomizedController)));
+    }
+    if (policyName == "paired_value_duplication_t2")
+    {
+        pairedValueController = CreateObject<PairedValueT2Controller>();
+        pairedValueController->SetSender(PeekPointer(sender));
+        pairedValueController->SetAirtimeMeter(secondaryAirtimeMeter);
+        pairedValueController->SetOutputFiles(
+            runId,
+            (std::filesystem::path(outputDir) / "paired_value_t2_decisions.csv").string(),
+            (std::filesystem::path(outputDir) / "paired_value_t2_summary.json").string());
+        predictionTelemetry->SetSnapshotCallback(
+            MakeCallback(&PairedValueT2Controller::NotifySnapshot,
+                         PeekPointer(pairedValueController)));
     }
     if (policyName == "selective_duplication")
     {
@@ -3104,6 +3166,23 @@ main(int argc, char* argv[])
                         "Randomized intervention accepted more launches than it attempted");
     }
     metrics->FinalizeMissingFrames();
+    if (pairedValueController)
+    {
+        std::set<uint64_t> generatedFrameIds;
+        std::set<uint64_t> duplicatedFrameIds;
+        for (const auto& frame : metrics->GetFrameResults())
+        {
+            const bool inserted = generatedFrameIds.insert(frame.frame.frameId).second;
+            NS_ABORT_MSG_IF(!inserted,
+                            "Paired-value final frame output contains duplicate frame ID "
+                                << frame.frame.frameId);
+            if (frame.duplicated)
+            {
+                duplicatedFrameIds.insert(frame.frame.frameId);
+            }
+        }
+        pairedValueController->WriteSummary(generatedFrameIds.size(), duplicatedFrameIds);
+    }
     for (std::size_t i = 0; i < backgroundUdpSources.size(); ++i)
     {
         backgroundBytesSentPerStation[backgroundUdpOrdinals[i]] =
