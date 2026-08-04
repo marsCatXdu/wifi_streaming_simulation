@@ -128,6 +128,19 @@ SecondaryAirtimeBudgetGuard::CanReserveWithDebtLimit(
 }
 
 bool
+SecondaryAirtimeBudgetGuard::CanReserveAgainstRemainingRefill(
+    double estimatedUs,
+    double outstandingReservationsUs,
+    uint64_t stopNs) const noexcept
+{
+    const auto remainingRefillUs = GetRemainingRefillCreditUs(stopNs);
+    return remainingRefillUs &&
+           CanReserveWithDebtLimit(estimatedUs,
+                                   outstandingReservationsUs,
+                                   *remainingRefillUs);
+}
+
+bool
 SecondaryAirtimeBudgetGuard::DebitMeasuredAirtime(uint64_t nowNs,
                                                   double measuredUs) noexcept
 {
@@ -233,6 +246,23 @@ SecondaryAirtimeBudgetGuard::GetAvailableBalanceUs(
     const double availableUs = m_balanceUs - outstandingReservationsUs;
     return std::isfinite(availableUs) ? std::optional<double>(availableUs)
                                       : std::nullopt;
+}
+
+std::optional<double>
+SecondaryAirtimeBudgetGuard::GetRemainingRefillCreditUs(
+    uint64_t stopNs) const noexcept
+{
+    if (!IsOperational() || stopNs < m_lastRefillTimeNs)
+    {
+        return std::nullopt;
+    }
+    const double remainingUs =
+        static_cast<double>(stopNs - m_lastRefillTimeNs) / 1000.0;
+    const double remainingRefillUs =
+        m_configuration.fraction * remainingUs;
+    return std::isfinite(remainingRefillUs)
+               ? std::optional<double>(remainingRefillUs)
+               : std::nullopt;
 }
 
 void

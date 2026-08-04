@@ -150,6 +150,28 @@ class SecondaryAirtimeBudgetGuardAccountingTestCase : public TestCase
                                                             0.0),
                               guard.CanReserve(10000.0, 2000.0),
                               "Zero debt limit differs from strict admission");
+        constexpr uint64_t repaymentStopNs = startNs + 60000000000ULL;
+        const auto remainingRefillUs =
+            guard.GetRemainingRefillCreditUs(repaymentStopNs);
+        NS_TEST_ASSERT_MSG_EQ(remainingRefillUs.has_value(),
+                              true,
+                              "Valid remaining-refill query failed");
+        NS_TEST_ASSERT_MSG_EQ_TOL(*remainingRefillUs,
+                                  360000.0,
+                                  0.0,
+                                  "Remaining refill differs from the causal rate");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveAgainstRemainingRefill(370000.0,
+                                                    2000.0,
+                                                    repaymentStopNs),
+            true,
+            "Exact repayable reservation was rejected");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveAgainstRemainingRefill(370000.001,
+                                                    2000.0,
+                                                    repaymentStopNs),
+            false,
+            "Reservation beyond remaining refill was admitted");
 
         NS_TEST_ASSERT_MSG_EQ(guard.DebitMeasuredAirtime(startNs, 15000.0),
                               true,
@@ -227,6 +249,14 @@ class SecondaryAirtimeBudgetGuardFailClosedTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(guard.CanReserve(1.0, 0.0),
                               false,
                               "Unconfigured guard admitted a reservation");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.GetRemainingRefillCreditUs(1000).has_value(),
+            false,
+            "Unconfigured guard exposed remaining refill");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveAgainstRemainingRefill(1.0, 0.0, 1000),
+            false,
+            "Unconfigured guard admitted against remaining refill");
 
         NS_TEST_ASSERT_MSG_EQ(
             guard.Configure({0.006, 1000000, 2000000}),
@@ -240,6 +270,19 @@ class SecondaryAirtimeBudgetGuardFailClosedTestCase : public TestCase
             true,
             "Valid reconfiguration failed to recover the guard");
         NS_TEST_ASSERT_MSG_EQ(guard.Initialize(2000), true, "Valid guard failed to initialize");
+        const auto zeroRemainingRefillUs =
+            guard.GetRemainingRefillCreditUs(2000);
+        NS_TEST_ASSERT_MSG_EQ(zeroRemainingRefillUs.has_value(),
+                              true,
+                              "Current-time remaining-refill query failed");
+        NS_TEST_ASSERT_MSG_EQ_TOL(*zeroRemainingRefillUs,
+                                  0.0,
+                                  0.0,
+                                  "Current-time remaining refill is nonzero");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveAgainstRemainingRefill(12000.0, 0.0, 2000),
+            guard.CanReserve(12000.0, 0.0),
+            "Zero remaining refill differs from strict admission");
         NS_TEST_ASSERT_MSG_EQ(guard.GetAvailableBalanceUs(-1.0).has_value(),
                               false,
                               "Negative outstanding reservation was accepted");
@@ -256,6 +299,14 @@ class SecondaryAirtimeBudgetGuardFailClosedTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(guard.CanReserveWithDebtLimit(1.0, 0.0, -1.0),
                               false,
                               "Negative debt limit was admitted");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.GetRemainingRefillCreditUs(1999).has_value(),
+            false,
+            "Regressing remaining-refill stop was accepted");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveAgainstRemainingRefill(1.0, 0.0, 1999),
+            false,
+            "Reservation against a regressing refill stop was admitted");
 
         NS_TEST_ASSERT_MSG_EQ(guard.Refill(1999),
                               false,

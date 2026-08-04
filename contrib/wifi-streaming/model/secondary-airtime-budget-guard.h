@@ -107,6 +107,23 @@ class SecondaryAirtimeBudgetGuard
                                  double maximumDebtUs) const noexcept;
 
     /**
+     * Test whether one estimate fits after all refill through a future stop.
+     *
+     * The stop must not precede the last accepted causal timestamp.  Future
+     * refill is used only as a query-time debt limit; this method does not
+     * mutate the balance or install unearned credit.
+     *
+     * @param estimatedUs Proposed reservation in microseconds.
+     * @param outstandingReservationsUs Active external reservations.
+     * @param stopNs Exclusive repayment-stop timestamp in nanoseconds.
+     * @return True only when the reservation is repayable by the stop.
+     */
+    bool CanReserveAgainstRemainingRefill(
+        double estimatedUs,
+        double outstandingReservationsUs,
+        uint64_t stopNs) const noexcept;
+
+    /**
      * Debit measured airtime after refilling through its timestamp.
      *
      * @param nowNs Measurement timestamp in nanoseconds.
@@ -159,6 +176,16 @@ class SecondaryAirtimeBudgetGuard
      */
     std::optional<double> GetAvailableBalanceUs(
         double outstandingReservationsUs) const noexcept;
+
+    /**
+     * Return refill earnable between the current causal time and a stop.
+     *
+     * @param stopNs Exclusive repayment-stop timestamp in nanoseconds.
+     * @return Remaining refill in microseconds, or empty for invalid state or
+     *         a regressing stop.
+     */
+    std::optional<double> GetRemainingRefillCreditUs(
+        uint64_t stopNs) const noexcept;
 
   private:
     /** Mark the current runtime state permanently fail closed. */
