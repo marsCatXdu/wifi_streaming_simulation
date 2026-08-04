@@ -55,8 +55,9 @@ P99.
 | Preserve canonical artifacts | `62312a3` | Model, manifest, candidates, and metrics tracked |
 | Add strict qualification analyzer | `ba59751` | Exact gates, shared bootstrap, and 28 focused runner/analyzer tests |
 
-The latest implementation milestone is `3b8984f`, which adds the strict
-paired temporal-T2 run validator.
+The latest implementation milestone is `bc76a13`, which bounds accumulated
+12-significant-digit airtime serialization after the first real preflight
+exposed the issue.
 
 ## One authoritative TODO checklist
 
@@ -64,9 +65,9 @@ paired temporal-T2 run validator.
   avoidable overlap with earlier generic validation, fix the remaining
   positive event-to-frame allocation invariant, run the focused and
   compatibility checks once, then commit and push (`3b8984f`).
-- [ ] Run and strictly validate the two-run local preflight.  Fix only defects
+- [x] Run and strictly validate the two-run local preflight.  Fix only defects
   that block a trustworthy campaign, and commit/push any such fix at a clean
-  boundary.
+  boundary (`bc76a13`; fresh manifest recorded below).
 - [ ] Run the 96-run campaign on the 64-vCPU VM, fetch and checksum the raw
   artifacts, validate every run locally, analyze against STR MLO, and record
   the result and next scientific decision here.
@@ -84,15 +85,14 @@ receive at least one tagged byte's positive airtime share.  Existing generic
 CSV and full-copy descriptor helpers are reused instead of maintaining the
 parallel implementations found by the history audit.
 
-The next action is the real two-run local preflight from a clean worktree:
+The fresh same-commit local preflight passed at `bc76a13`.  Its authoritative
+manifest is:
 
-```bash
-.venv/bin/python tools/run_experiments.py \
-  experiments/configs/paired_value_t2_str_preflight_v1.yaml \
-  --workers 2 \
-  --output-root /tmp/paired-value-t2-str-preflight/runs \
-  --no-analysis
-```
+`/tmp/paired-value-t2-str-preflight-bc76a13/runs/experiment_manifest.json`
+
+The next action is to deploy one clean commit to the VM, verify its 64-vCPU
+build/runtime dependencies, and launch the frozen 96-run qualification matrix
+with 64 workers.  Do not open reserved final-confirmation seeds.
 
 No engineering qualification seed has been run yet.
 
@@ -106,8 +106,25 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Two retained real artifacts at `3b8984f`: both validated with 1,800 frames;
   the action-bearing artifact had 1,016 evaluated model rows and 133 actions.
 - `py_compile` and `git diff --check` passed before `3b8984f`.
+- Fresh local preflight at `bc76a13`: policy run
+  `6ed9ba7d99a25fd10eb7` and STR run `f393a86fa1727822896f`
+  both completed and independently revalidated with 1,800 frames.  Manifest
+  project commit and ns-3 upstream commit exactly match the run artifacts.
 
 ## Work log
+
+### 2026-08-04 - Complete fresh same-commit local preflight
+
+- The first fresh preflight completed both simulations but rejected the T2
+  run because 224 event rows serialized at 12 significant digits accumulated
+  `1.397e-9 us` of difference from the max-precision controller total.
+- Added a sum of per-row half-unit quantization bounds while preserving tests
+  that reject a `0.0001 us` mutation; committed and pushed as `bc76a13`.
+- Started a new output root because the project commit changed; did not reuse
+  the older STR artifact.
+- Both `bc76a13` arms completed and passed an explicit validator invocation
+  with exact project/ns-3 commits.  The preflight used seed 43 only, not an
+  engineering or reserved confirmation seed.
 
 ### 2026-08-04 - Complete strict paired-T2 run validation
 
