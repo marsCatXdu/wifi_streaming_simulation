@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -972,6 +973,77 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             _replay_paired_value_t2_meter(
                 decisions, [event], impossible, estimates, nominals
             )
+
+    def test_checks_rounded_solver_integer_witness(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "primary_sample_time_ns": "1200000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "1",
+                "meter_reserved_after_us": "2",
+            },
+        ]
+        event = {
+            "time_ns": "1250000000",
+            "ppdu_duration_us": "1",
+            "tagged_mpdu_bytes": "3",
+            "frame_ids": "0;1",
+        }
+        settlements = [
+            {
+                "frame_id": "0",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.666666666667",
+                "measured_airtime_us": "0.333333333333",
+                "nominal_airtime_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.333333333333",
+                "measured_airtime_us": "0.666666666667",
+                "nominal_airtime_us": "1",
+            },
+        ]
+        estimates = {0: 1.0, 1: 1.0}
+        nominals = {0: 1.0, 1: 1.0}
+
+        from scipy import optimize
+
+        original_milp = optimize.milp
+
+        def represented_with_residual(*args, **kwargs):
+            result = original_milp(*args, **kwargs)
+            result.x = result.x.copy()
+            result.x[0] += 2.6e-7
+            result.x[1] -= 2.6e-7
+            return result
+
+        with mock.patch("scipy.optimize.milp", side_effect=represented_with_residual):
+            _replay_paired_value_t2_meter(
+                decisions, [event], settlements, estimates, nominals
+            )
+
+        def represented_with_wrong_rounding(*args, **kwargs):
+            result = original_milp(*args, **kwargs)
+            result.x = result.x.copy()
+            result.x[0] += 0.51
+            result.x[1] -= 0.51
+            return result
+
+        with mock.patch("scipy.optimize.milp", side_effect=represented_with_wrong_rounding):
+            with self.assertRaisesRegex(ValidationError, "witness violates"):
+                _replay_paired_value_t2_meter(
+                    decisions, [event], settlements, estimates, nominals
+                )
 
     def test_rejects_solver_tolerance_and_noncanonical_event_evidence(self) -> None:
         decisions = [

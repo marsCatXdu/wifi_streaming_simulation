@@ -3538,8 +3538,12 @@ def _validate_paired_value_t2_meter_checkpoints(
     witness = np.asarray(result.x, dtype=np.float64).copy()
     integer_indices = np.flatnonzero(integrality)
     rounded = np.rint(witness[integer_indices])
-    _require(np.all(np.abs(witness[integer_indices] - rounded) <= 1e-9),
-             "paired-value meter solver returned a non-integral witness")
+    # HiGHS may return an integer-feasible solution with visible postsolve
+    # representation error (observed at 2.6e-7 bytes with SciPy 1.11.4).  The
+    # solver representation is not evidence; the rounded integer assignment
+    # is.  Round it unconditionally, then fail closed by independently checking
+    # every variable bound and linear constraint below against the validator's
+    # 1e-9-us accounting envelope.
     witness[integer_indices] = rounded
     # Reconstruct the continuous and binary checkpoint variables from the
     # integer byte witness.  This removes the MIP solver's harmless continuous
