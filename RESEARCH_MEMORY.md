@@ -172,6 +172,42 @@ The checksum-bound raw 96-run archive has SHA-256
 Its local and experiment-host paths are recorded in the compact snapshot.  It
 still needs durable external publication before a release-quality handoff.
 
+## Full-horizon carry-over V3 null result
+
+V3 tested whether V2's unused long-run headroom was stranded by its 10-second
+credit capacity.  It raised only the maximum horizon and capacity to 60 seconds
+and `360000 us`; startup credit remained `12000 us`.  Predictor, threshold,
+P-frame gate, emergency score and `60000 us` debt, 0.6% refill, reservation,
+action, and environment were unchanged.  The exact contract is
+`experiments/model-selection/paired-value-duplication-t2-full-horizon-carryover-v3.json`.
+
+The 48-pair closed-loop campaign reused opened seeds `1251` through `1298`.
+All 96 runs passed strict validation.  V3's headline result is exactly V2's:
+495 misses, 17.192 ms mean per-run completed P99, sender-airtime ratio 1.1217,
+and background loss 0.0054%.  This is a genuine null intervention, not merely
+an underpowered comparison:
+
+- zero of 86,400 policy decisions differ from V2;
+- zero of 86,400 frame outcomes differ, excluding `run_id`;
+- the two aggregate CSV files are byte-identical;
+- 29,673 guard-balance rows do differ, and V3 reaches its `360000 us` cap.
+
+The extra credit is mistimed.  It changes available credit on 29,295
+noncandidate rows and 378 actions V2 already admits strictly.  It changes
+available credit on none of the 2,116 emergency actions and none of the 2,540
+guard rejections.  Do not rerun larger bucket capacities or claim that V3
+improves V2.  The compact evidence is
+`key_experiment_results/08_full_horizon_t2_str_engineering_v3`.
+
+The next admission mechanism should make credit available at the constrained
+decision: allow conservative reservations to borrow only causally remaining
+refill before measurement stop, reduce that allowance with time, and enforce
+repayment at the stop.  Test it only on opened engineering seeds.  If it does
+not turn rejected candidates into useful rescues while keeping the sender
+airtime interval below 1.20, stop admission tuning and move to better
+treated-outcome/cost ranking, startup fallback, and an I-frame-specific rule.
+Reserved confirmation seeds `1301` through `1348` remain unopened.
+
 ## Randomized-policy population mapping
 
 The randomized T2 intervention dataset estimates effects only among frames

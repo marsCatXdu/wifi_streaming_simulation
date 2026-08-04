@@ -1,0 +1,84 @@
+{
+  "analysis": "paired_value_t2_v2_v3_behavioral_comparison",
+  "evidence_role": "engineering_negative_result",
+  "schema_version": 1,
+  "paired_units": 48,
+  "seeds": {
+    "start": 1251,
+    "stop_inclusive": 1298,
+    "ns3_run": 1
+  },
+  "sources": {
+    "v2": {
+      "manifest_path": "results/paired_value_t2_score_aware_str_engineering_v2/runs/experiment_manifest.json",
+      "manifest_sha256": "24a87c9ec02e7564116992367754bdcf6ffc7845a1fa26908b8dea92fe316ef2"
+    },
+    "v3": {
+      "manifest_path": "results/paired_value_t2_full_horizon_str_engineering_v3/runs/experiment_manifest.json",
+      "manifest_sha256": "b37f7614d731257f83bcb79af5ab041e88f5619ba987f0fb9475cc9274c17a33"
+    }
+  },
+  "method": {
+    "pairing": "exact seed and ns-3 run from the two manifest-bound policy arms",
+    "decision_fields_compared": [
+      "frame_id",
+      "decision_status",
+      "passes_score_threshold",
+      "strict_guard_admitted",
+      "emergency_admitted",
+      "admission_tier"
+    ],
+    "frame_outcome_comparison": "exact CSV strings for every frames.csv field except run_id",
+    "balance_comparison": "exact serialized guard_balance_before_us strings"
+  },
+  "behavioral_result": {
+    "policy_decision_rows": 86400,
+    "decision_different_seeds": [],
+    "decision_different_rows": 0,
+    "frame_outcome_rows": 86400,
+    "outcome_different_seeds": [],
+    "outcome_different_rows": 0,
+    "aggregate_csv_byte_identical": true,
+    "aggregate_csv_sha256": "55b95c127c149a930cb1f24dbf7912c050e9ea2d7558a67cebd5a2fa22036003",
+    "diagnostic_payload_without_provenance_byte_identical": true,
+    "diagnostic_payload_without_provenance_sha256": "b3fbd8c11bb9ec4cf39f5839e032fbf3c343934a96d6e2c478858fea3475dd16"
+  },
+  "guard_state_result": {
+    "balance_different_rows": 29673,
+    "v2_maximum_balance_before_us": 60000.0,
+    "v3_maximum_balance_before_us": 360000.0,
+    "v3_balance_above_v2_capacity_rows": 29519,
+    "available_credit_delta_by_v3_terminal_class": {
+      "strict_action": {
+        "rows": 2828,
+        "changed_rows": 378,
+        "mean_delta_us": 11297.864,
+        "maximum_delta_us": 296714.0
+      },
+      "emergency_action": {
+        "rows": 2116,
+        "changed_rows": 0,
+        "mean_delta_us": 0.0,
+        "maximum_delta_us": 0.0
+      },
+      "guard_rejected": {
+        "rows": 2540,
+        "changed_rows": 0,
+        "mean_delta_us": 0.0,
+        "maximum_delta_us": 0.0
+      },
+      "noncandidate": {
+        "rows": 78916,
+        "changed_rows": 29295,
+        "mean_delta_us": 47375.54,
+        "maximum_delta_us": 300000.0
+      }
+    }
+  },
+  "interpretation": {
+    "full_horizon_carryover_changed_guard_state": true,
+    "full_horizon_carryover_changed_admission": false,
+    "reason": "The added credit existed only on noncandidates or frames that V2 already admitted strictly. Every V2 emergency action and every guard rejection saw exactly the same available credit in V3.",
+    "next_mechanism": "Test bounded borrowing against causally remaining future refill instead of increasing stored-credit capacity."
+  }
+}

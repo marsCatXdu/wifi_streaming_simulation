@@ -64,6 +64,8 @@ P99.
 | Validate V2 evidence | `24a5774` | Strict replay including serialized float32 profile identity |
 | Make paired-meter replay robust | `cff64f7` | Component MILP, exact lattices, and independently rechecked integer witnesses |
 | Qualify and archive score-aware V2 | `d114f65` | Strict 48-pair all-gate pass, compact snapshot, and raw-archive identity |
+| Add full-horizon carry-over V3 | `1774d5b` | Isolated runtime profile with unchanged startup credit and opened-seed matrices |
+| Validate full-horizon evidence | `ad16a84` | Profile-bound raw replay and qualification closure |
 
 The latest validator milestone is `cff64f7`.  It exactly replays the compiled
 ridge reduction order and proves one integer per-frame byte allocation can
@@ -91,11 +93,15 @@ recheck.
   archive the all-gate STR victory, and preserve seeds `1301` through `1348`
   (`d114f65`; simulation build `eb7f960`, final validator `cff64f7`; result under
   `key_experiment_results/07_score_aware_t2_str_engineering_v2`).
-- [ ] Isolate full-horizon causal carry-over as admission V3 on already-open
+- [x] Isolate full-horizon causal carry-over as admission V3 on already-open
   engineering seeds while freezing the V2 predictor, threshold, emergency
-  tier, refill, reservation, action, and environment.  Do not replace the
-  predictor or open final-confirmation seeds until this guard question is
-  resolved.
+  tier, refill, reservation, action, and environment.  V3 changed guard state
+  but zero decisions or frame outcomes; archive the negative result under
+  `key_experiment_results/08_full_horizon_t2_str_engineering_v3`.
+- [ ] Replace ineffective storage capacity with bounded reservation against
+  causally remaining refill, preserving conservative accounting and enforcing
+  repayment by measurement stop.  Evaluate only on opened seeds before
+  deciding whether to proceed to predictor, startup, or I-frame work.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -118,22 +124,29 @@ versus 11.24% for strict admissions.  The remaining 495 misses decompose into
 170 below threshold, 162 guard rejected, 72 startup history, 48 restricted
 I-frames, 34 acted but still late/incomplete, and 9 outside the window.
 
-The current boundary is one controlled V3 guard test, not an open-ended model
-search.  Increase the causal token-bucket capacity/carry-over from 10 seconds
-toward the full 60-second experiment horizon while keeping the V2 predictor,
-threshold, P-frame gate, emergency tier/debt, 0.6% refill, conservative cost
-reservation, duplicate action, and environment fixed.  Use already-open
-engineering seeds only.  All threshold passers have 355.25 ms/run of learned
-predicted cost versus 360 ms/run of generated credit, but the 120.84 ms/run
-assigned to rejected candidates is only a projection until closed-loop
-contention is measured.
+Full-horizon V3 closed the stored-credit question with a negative result.  It
+changes 29,673 serialized guard-balance rows and reaches `360000 us`, but its
+86,400 policy decisions and 86,400 frame outcomes are exactly V2's.  Extra
+credit appears on 29,295 noncandidate rows and 378 already-strict actions.  It
+appears on none of 2,116 emergency actions and none of 2,540 guard rejections.
+Increasing capacity therefore cannot expose the projected admission headroom
+for this chronology.
 
-After this isolation, shift to the predictor/outcome problem unless the guard
-still clearly dominates.  The specific targets are 170 below-threshold
-misses and the substantial airtime spent accelerating already-on-time frames
-or giving no benefit.  Startup and I-frames are separate semantic changes:
-choose a causal non-temporal startup fallback or consistent pre-roll, and
-test an I-specific policy instead of indiscriminate I-frame duplication.
+The next boundary is one causal future-refill experiment, not another bucket
+size or predictor search.  Permit a reservation to borrow only credit that is
+known to refill before measurement stop, decrease that allowance as the stop
+approaches, retain conservative reservation and measured settlement, and
+prove repayment at the boundary.  The current all-passer canonical
+reservation is 309.3 ms/run versus 360 ms/run of generated refill, but actual
+closed-loop airtime and contention remain unknown until measured.
+
+If bounded future refill still cannot improve admission within the airtime
+gate, shift immediately to the predictor/outcome problem.  Its specific
+targets are 170 below-threshold misses and the substantial airtime spent
+accelerating already-on-time frames or giving no benefit.  Startup and
+I-frames remain separate semantic changes: choose a causal non-temporal
+startup fallback or consistent pre-roll, and test an I-specific policy rather
+than indiscriminate I-frame duplication.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -206,8 +219,39 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Final V2 48-pair report: policy 0.5729% misses and 17.192 ms P99; STR
   0.7998% and 18.875 ms; sender-airtime ratio 1.1217; background loss
   0.0054%; performance, resource, and overall status all `pass`.
+- Full-horizon V3 implementation and evidence closure through `ad16a84`:
+  `57/57` focused validator, qualification, plotting, and runner tests passed;
+  the C++ controller suite and target build also passed.
+- V3 seed-43 preflight passed strict validation but exactly reproduced V2's
+  216 actions, 8 misses, and 21.419 ms P99.
+- The 96-run V3 campaign manifest SHA-256 is
+  `b37f7614d731257f83bcb79af5ab041e88f5619ba987f0fb9475cc9274c17a33`.
+  Analysis and plotting each freshly strict-validated all 96 runs.
+- The V3 raw archive passes `zstd -t` locally and remotely and has SHA-256
+  `a355df37bce69b57a9f8cf0f081b5c66f7ea4563508734ad824abd0fd27eb598`
+  at 95,546,464 compressed bytes.
+- Exact V2/V3 comparison found zero changed admission rows and zero changed
+  frame-outcome rows despite 29,673 changed guard-balance rows.
 
 ## Work log
+
+### 2026-08-05 - Falsify full-horizon stored-credit carry-over
+
+- Added and pushed the isolated full-horizon V3 runtime and strict evidence
+  profile through `ad16a84`, keeping startup credit at two seconds and all
+  predictor/action/environment settings frozen.
+- Strictly validated the local seed-43 preflight, then ran all 96 opened-seed
+  simulations as a detached service on the 64-vCPU VM.  The campaign completed
+  in about 13 minutes and consumed 8 h 59 min of CPU time.
+- Fetched and checksum-verified the 95.5 MB raw archive, rebuilt the aggregate,
+  and freshly strict-validated every run through both analysis and plotting.
+- Generated the four qualification figures and all eight requested historical
+  CDF/PDF/deadline/burst/resource figures.
+- Proved the larger bucket changed guard state but not one admission or frame
+  outcome.  Archived the negative result under
+  `key_experiment_results/08_full_horizon_t2_str_engineering_v3`.
+- Chose bounded borrowing against causally remaining refill as the next single
+  admission intervention; reserved confirmation seeds remain unopened.
 
 ### 2026-08-04 - Establish and archive the first STR engineering victory
 

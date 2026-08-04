@@ -1,7 +1,7 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-08-04. It intentionally excludes
+experimental evidence generated through 2026-08-05. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
@@ -35,6 +35,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `05_adaptive_airtime_obss_v1` | Invalidated adaptive-airtime OBSS v1 | Historical aggregates and figures retained for audit; not valid evidence |
 | `06_paired_value_t2_str_qualification_v1` | Primary-only temporal-T2 selective duplication versus STR MLO | Strict 48-pair report, compact aggregates, admission diagnostics, and qualification plus standard figures |
 | `07_score_aware_t2_str_engineering_v2` | Score-aware temporal-T2 V2 versus STR MLO | First all-gate engineering pass, 48-pair report, admission diagnostics, raw-archive identity, and qualification plus standard figures |
+| `08_full_horizon_t2_str_engineering_v3` | Full-horizon carry-over V3 versus STR MLO | Strict 48-pair null result, exact V2/V3 decision comparison, raw-archive identity, and qualification plus standard figures |
 
 ## Current best STR result
 
@@ -48,9 +49,12 @@ is 0.0054%.
 
 This is engineering evidence, not final confirmation.  Seeds `1301` through
 `1348` remain unopened, and the longer-term target of more than 50% fewer
-misses than STR has not yet been reached.  See
-`07_score_aware_t2_str_engineering_v2/README.md` for the full diagnosis and
-the next controlled experiment.
+misses than STR has not yet been reached.  Full-horizon V3 changes guard
+balances but reproduces every V2 admission and frame outcome exactly, so the
+simpler V2 remains the current best implementation.  See
+`07_score_aware_t2_str_engineering_v2/README.md` for the victory and
+`08_full_horizon_t2_str_engineering_v3/README.md` for the negative carry-over
+test and next mechanism.
 
 ## Principal streaming results
 
