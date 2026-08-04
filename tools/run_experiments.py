@@ -35,6 +35,7 @@ PREDICTION_SCHEMA_VERSIONS = {
     "event_schema_version": 2,
     "feature_support_mask_version": 2,
 }
+RUN_ID_RUNTIME_CONTRACT_KEY = "runtime_contract"
 CLI_KEYS = {
     "duration": "duration", "fps": "fps", "frame_size": "frameSize",
     "gop_length": "gopLength", "keyframe_size_multiplier": "keyframeSizeMultiplier",
@@ -142,13 +143,14 @@ CLI_KEYS = {
 
 def project_commit(root: Path = ROOT) -> str:
     status = subprocess.check_output(
-        ["git", "status", "--porcelain", "--untracked-files=no"],
+        ["git", "status", "--porcelain", "--untracked-files=all"],
         cwd=root,
         text=True,
     ).strip()
     if status:
         raise RuntimeError(
-            "tracked project changes are uncommitted; commit them before running experiments"
+            "project changes are uncommitted or untracked; commit them before running "
+            "experiments"
         )
     return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
 
@@ -161,12 +163,134 @@ def matrix_sha256(document: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_json(document).encode()).hexdigest()
 
 
+def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of one source artifact."""
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validated_project_file(root: Path, declared: Any, label: str) -> Path:
+    if not isinstance(declared, str) or not declared:
+        raise ValueError(f"{label} path must be a nonempty project-relative string")
+    relative = Path(declared)
+    if relative.is_absolute():
+        raise ValueError(f"{label} path must be project-relative")
+    root = root.resolve()
+    cursor = root
+    for part in relative.parts:
+        if part in {".", ".."}:
+            raise ValueError(f"{label} path must be canonical: {declared}")
+        cursor /= part
+        if cursor.is_symlink():
+            raise ValueError(f"{label} path may not traverse a symlink: {declared}")
+    candidate = root / relative
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root)
+    except (FileNotFoundError, OSError, ValueError) as error:
+        raise ValueError(f"{label} path is missing or outside the project: {declared}") from error
+    if candidate.is_symlink() or not resolved.is_file():
+        raise ValueError(f"{label} must be a regular, non-symlink file: {declared}")
+    return resolved
+
+
+def _validate_sha256(value: Any, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        raise ValueError(f"{label} must be a lowercase SHA-256 digest")
+    return value
+
+
+def validate_runtime_contract(
+    document: dict[str, Any], root: Path = ROOT
+) -> dict[str, Any] | None:
+    """Validate an optional frozen runtime contract and its exact source closure."""
+    declaration = document.get("runtime_contract")
+    if declaration is None:
+        return None
+    if not isinstance(declaration, dict):
+        raise ValueError("runtime_contract must be a mapping")
+    required_keys = {"id", "path", "sha256", "source_artifacts"}
+    if set(declaration) != required_keys:
+        raise ValueError(
+            "runtime_contract must contain exactly id, path, sha256, and source_artifacts"
+        )
+    contract_id = declaration["id"]
+    if not isinstance(contract_id, str) or not contract_id:
+        raise ValueError("runtime_contract id must be a nonempty string")
+    declared_contract_sha = _validate_sha256(
+        declaration["sha256"], "runtime_contract sha256"
+    )
+    contract_path = _validated_project_file(
+        root, declaration["path"], "runtime_contract"
+    )
+    observed_contract_sha = sha256_file(contract_path)
+    if observed_contract_sha != declared_contract_sha:
+        raise ValueError(
+            "runtime_contract hash drift: "
+            f"expected {declared_contract_sha}, observed {observed_contract_sha}"
+        )
+    try:
+        contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"runtime_contract is not valid JSON: {contract_path}") from error
+    if not isinstance(contract, dict) or contract.get("runtime_contract_id") != contract_id:
+        raise ValueError("runtime_contract id differs from the hash-verified contract file")
+
+    declared_sources = declaration["source_artifacts"]
+    if not isinstance(declared_sources, dict) or not declared_sources:
+        raise ValueError("runtime_contract source_artifacts must be a nonempty mapping")
+    try:
+        contract_sources = contract["runtime_outputs"]["controller_summary_json"][
+            "required_source_artifacts_exact"
+        ]
+    except (KeyError, TypeError) as error:
+        raise ValueError(
+            "runtime_contract lacks controller-summary source artifact closure"
+        ) from error
+    if canonical_json(declared_sources) != canonical_json(contract_sources):
+        raise ValueError(
+            "runtime_contract source_artifacts differ from the hash-verified contract"
+        )
+    for name, artifact in declared_sources.items():
+        if not isinstance(name, str) or not name or not isinstance(artifact, dict):
+            raise ValueError("runtime_contract source artifact entries are invalid")
+        if set(artifact) != {"path", "sha256"}:
+            raise ValueError(
+                f"runtime_contract source artifact {name} must contain path and sha256"
+            )
+        expected_sha = _validate_sha256(
+            artifact["sha256"], f"runtime_contract source artifact {name} sha256"
+        )
+        artifact_path = _validated_project_file(
+            root, artifact["path"], f"runtime_contract source artifact {name}"
+        )
+        observed_sha = sha256_file(artifact_path)
+        if observed_sha != expected_sha:
+            raise ValueError(
+                f"runtime_contract source artifact hash drift for {name}: "
+                f"expected {expected_sha}, observed {observed_sha}"
+            )
+    return {
+        "runtime_contract_id": contract_id,
+        "runtime_contract_sha256": declared_contract_sha,
+        "source_artifacts": copy.deepcopy(declared_sources),
+    }
+
+
 def validate_existing_manifest(
     path: Path,
     experiment: str,
     matrix_sha: str,
     project_git_commit: str,
     expected_run_ids: set[str],
+    runtime_contract: dict[str, Any] | None = None,
 ) -> None:
     """Reject resume roots belonging to different code or matrix content."""
     if not path.exists():
@@ -182,6 +306,8 @@ def validate_existing_manifest(
         "project_commit": project_git_commit,
         "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
     }
+    if runtime_contract is not None:
+        expected_identity.update(runtime_contract)
     mismatches = [
         key for key, expected in expected_identity.items()
         if manifest.get(key) != expected
@@ -204,6 +330,41 @@ def validate_existing_manifest(
         )
 
 
+def build_experiment_manifest(
+    experiment: str,
+    matrix_sha: str,
+    config_file: Path,
+    project_git_commit: str,
+    specs: list[dict[str, Any]],
+    runtime_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a schema-2 manifest while preserving legacy non-contract shape."""
+    manifest = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "experiment": experiment,
+        "matrix_sha256": matrix_sha,
+        "config_file": str(config_file.resolve()),
+        "project_commit": project_git_commit,
+        "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
+        "runs": [
+            {
+                "run_id": spec["run_id"],
+                "status": "complete",
+                "seed": spec["seed"],
+                "run": spec["run"],
+                "directory": spec["run_id"],
+                "config": spec["config"],
+                "command": None,
+            }
+            for spec in specs
+            if spec.get("completed")
+        ],
+    }
+    if runtime_contract is not None:
+        manifest.update(copy.deepcopy(runtime_contract))
+    return manifest
+
+
 def _nested_leaf(value: Any, leaf: str) -> Any:
     if not isinstance(value, dict):
         return None
@@ -218,8 +379,20 @@ def _nested_leaf(value: Any, leaf: str) -> Any:
     return matches[0] if matches else None
 
 
-def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
-                  ns3_commit: str, project_git_commit: str) -> str:
+def run_identity_document(
+    resolved: dict[str, Any],
+    seed: int,
+    run: int,
+    ns3_commit: str,
+    project_git_commit: str,
+    runtime_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return the canonical input document used to derive one run ID.
+
+    Contract-backed runs add the complete manifest identity under the stable
+    ``runtime_contract`` key. Non-contract runs retain the historical identity
+    document exactly.
+    """
     identity = {
         "config": resolved, "seed": seed, "run": run,
         "ns3_commit": ns3_commit, "project_commit": project_git_commit,
@@ -228,7 +401,33 @@ def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
     if prediction_enabled is not None and not isinstance(prediction_enabled, bool):
         raise ValueError("prediction_telemetry_enabled must be Boolean")
     if prediction_enabled:
-        identity["prediction_schema_versions"] = PREDICTION_SCHEMA_VERSIONS
+        identity["prediction_schema_versions"] = copy.deepcopy(PREDICTION_SCHEMA_VERSIONS)
+    if runtime_contract is not None:
+        required = {
+            "runtime_contract_id",
+            "runtime_contract_sha256",
+            "source_artifacts",
+        }
+        if set(runtime_contract) != required:
+            raise ValueError(
+                "run identity runtime contract must contain exactly "
+                "runtime_contract_id, runtime_contract_sha256, and source_artifacts"
+            )
+        identity[RUN_ID_RUNTIME_CONTRACT_KEY] = copy.deepcopy(runtime_contract)
+    return identity
+
+
+def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
+                  ns3_commit: str, project_git_commit: str,
+                  runtime_contract: dict[str, Any] | None = None) -> str:
+    identity = run_identity_document(
+        resolved,
+        seed,
+        run,
+        ns3_commit,
+        project_git_commit,
+        runtime_contract,
+    )
     return hashlib.sha256(canonical_json(identity).encode()).hexdigest()[:20]
 
 
@@ -346,7 +545,9 @@ def cli_arguments(config: dict[str, Any], config_dir: Path) -> list[str]:
 
 def atomic_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False, encoding="utf-8") as output:
+    with tempfile.NamedTemporaryFile(
+        "w", dir=path.parent, delete=False, encoding="utf-8"
+    ) as output:
         json.dump(value, output, indent=2, sort_keys=True)
         output.write("\n")
         temporary = Path(output.name)
@@ -422,6 +623,9 @@ def write_experiment_description(document: dict[str, Any],
     has_randomized = any(
         policy == "randomized_full_copy_exploration" for _, policy, _ in approaches
     )
+    has_paired_value_t2 = any(
+        policy == "paired_value_duplication_t2" for _, policy, _ in approaches
+    )
     has_deficit = any(policy == "adaptive_deficit_duplication"
                       for _, policy, _ in approaches)
     approach_lines: list[str] = []
@@ -475,6 +679,13 @@ def write_experiment_description(document: dict[str, Any],
                 "  full-copy treatment. A treatment launches on 2.4 GHz only if",
                 "  the primary remains actionable at its assigned paired-link",
                 "  snapshot; the randomized intervention is not token-gated.",
+            ]
+        elif topology == "dual_interface" and policy == "paired_value_duplication_t2":
+            approach_lines += [
+                "* ``Paired-value T2 duplication``: each frame starts on the",
+                "  5 GHz interface. At T2, the frozen primary-only temporal value",
+                "  model may launch a full 2.4 GHz copy under the fixed measured-",
+                "  airtime guard recorded by the runtime contract.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -554,6 +765,14 @@ def write_experiment_description(document: dict[str, Any],
             "Assignment and execution are logged separately, and the secondary "
             "airtime meter observes treatment cost."
         )
+    if has_paired_value_t2:
+        action_sentences.append(
+            "The paired-value T2 arm validates matching primary and hypothetical-"
+            "secondary snapshots, but its frozen temporal model reads only primary "
+            "causal telemetry. It launches a full secondary copy only after the "
+            "fixed model, frame-type, actionability, descriptor, and measured-airtime "
+            "gates pass; receiver outcomes never enter the decision."
+        )
     if action_sentences:
         action_text = " ".join(action_sentences)
     else:
@@ -597,7 +816,7 @@ def write_experiment_description(document: dict[str, Any],
     if prediction.get("prediction_telemetry_enabled", False):
         snapshot_text = (
             "The sender records passive, receiver-independent paired-link causal"
-            if has_randomized
+            if has_randomized or has_paired_value_t2
             else "The primary-link sender records passive, receiver-independent causal"
         )
         offsets = ", ".join(
@@ -765,6 +984,7 @@ def main() -> None:
                         help="keep validated completed runs and execute missing runs")
     args = parser.parse_args()
     document = load_yaml(args.config.resolve())
+    runtime_contract = validate_runtime_contract(document)
     workers = args.workers or int(document.get("workers", 1))
     if workers < 1:
         parser.error("workers must be positive")
@@ -775,7 +995,7 @@ def main() -> None:
     seen = set()
     for spec in specs:
         spec["run_id"] = derive_run_id(spec["config"], spec["seed"], spec["run"],
-                                       NS3_UPSTREAM_COMMIT, commit)
+                                       NS3_UPSTREAM_COMMIT, commit, runtime_contract)
         if spec["run_id"] in seen:
             raise ValueError(f"duplicate resolved run in matrix: {spec['run_id']}")
         seen.add(spec["run_id"])
@@ -794,31 +1014,20 @@ def main() -> None:
         resolved_matrix_sha,
         commit,
         seen,
+        runtime_contract,
     )
     write_experiment_description(document, specs, output_root)
     if not args.no_build:
         subprocess.run([str(ROOT / "ns3"), "build", "streaming-experiment"],
                        cwd=ROOT, check=True)
-    manifest = {
-        "schema_version": MANIFEST_SCHEMA_VERSION,
-        "experiment": experiment,
-        "matrix_sha256": resolved_matrix_sha,
-        "config_file": str(args.config.resolve()), "project_commit": commit,
-        "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
-        "runs": [
-            {
-                "run_id": spec["run_id"],
-                "status": "complete",
-                "seed": spec["seed"],
-                "run": spec["run"],
-                "directory": spec["run_id"],
-                "config": spec["config"],
-                "command": None,
-            }
-            for spec in specs
-            if spec.get("completed")
-        ],
-    }
+    manifest = build_experiment_manifest(
+        experiment,
+        resolved_matrix_sha,
+        args.config,
+        commit,
+        specs,
+        runtime_contract,
+    )
     atomic_json(manifest_path, manifest)
     failures = []
     with ThreadPoolExecutor(max_workers=workers) as executor:

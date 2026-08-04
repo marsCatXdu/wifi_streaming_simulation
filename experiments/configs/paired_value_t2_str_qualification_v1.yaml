@@ -1,0 +1,120 @@
+extends: closed_loop_adaptive_airtime_obss.yaml
+
+name: paired-value-t2-str-qualification-v1
+output_root: results/paired_value_t2_str_qualification_v1/runs
+workers: 64
+
+runtime_contract:
+  id: paired-value-duplication-t2-runtime-v1
+  path: experiments/model-selection/paired-value-duplication-t2-runtime-v1.json
+  sha256: b9b9caf6cf49e73cb0669107576a17790f59bda4875c43f676caa426393dbf41
+  source_artifacts:
+    frozen_selection:
+      path: experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json
+      sha256: c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f
+    canonical_fit_manifest:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json
+      sha256: b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f
+    canonical_model_pickle:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl
+      sha256: dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8
+    canonical_candidates:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv
+      sha256: 7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb
+    canonical_metrics:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json
+      sha256: 35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014
+
+base:
+  stream:
+    source: synthetic
+    duration: 60
+    fps: 30
+    frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  wifi:
+    wifi_standard: eht
+    queue_max_packets: 500
+    queue_max_delay_ms: 500
+    max_ampdu_size: 65535
+    max_amsdu_size: 0
+    txop_limit_us: 0
+    rts_cts_threshold: 4692480
+    fragmentation_threshold: 65535
+    guard_interval_ns: 800
+    mlo_sta_max_inflights: 1
+    ul_ofdma_enabled: false
+
+seeds:
+  - 1201
+  - 1202
+  - 1203
+  - 1204
+  - 1205
+  - 1206
+  - 1207
+  - 1208
+  - 1209
+  - 1210
+  - 1211
+  - 1212
+  - 1213
+  - 1214
+  - 1215
+  - 1216
+  - 1217
+  - 1218
+  - 1219
+  - 1220
+  - 1221
+  - 1222
+  - 1223
+  - 1224
+  - 1225
+  - 1226
+  - 1227
+  - 1228
+  - 1229
+  - 1230
+  - 1231
+  - 1232
+  - 1233
+  - 1234
+  - 1235
+  - 1236
+  - 1237
+  - 1238
+  - 1239
+  - 1240
+  - 1241
+  - 1242
+  - 1243
+  - 1244
+  - 1245
+  - 1246
+  - 1247
+  - 1248
+runs: [1]
+
+topologies:
+  - name: dual_interface
+  - name: mlo_str
+
+policies:
+  - name: paired_value_duplication_t2
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 2000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+  - name: fixed_link_0
+    topologies: [mlo_str]

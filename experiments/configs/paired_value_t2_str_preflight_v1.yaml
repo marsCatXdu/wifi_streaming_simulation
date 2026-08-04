@@ -1,0 +1,6 @@
+extends: paired_value_t2_str_qualification_v1.yaml
+
+name: paired-value-t2-str-preflight-v1
+output_root: /tmp/wifi-streaming-paired-value-t2-str-preflight-v1
+workers: 2
+seeds: [43]
