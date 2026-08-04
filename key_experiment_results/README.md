@@ -1,7 +1,7 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-08-02. It intentionally excludes
+experimental evidence generated through 2026-08-04. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
@@ -33,6 +33,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `04_genuine_polling_v1/closed_loop_combined_threshold_020` | Closed-loop duplication under combined contention at threshold 0.20 | Seven paired groups, aggregate evidence, control summaries, and figures |
 | `04_genuine_polling_v1/predicted_risk_threshold_020` | Runtime calibrated-risk distributions | Conditional-action and unconditional PDF/CDF plots |
 | `05_adaptive_airtime_obss_v1` | Invalidated adaptive-airtime OBSS v1 | Historical aggregates and figures retained for audit; not valid evidence |
+| `06_paired_value_t2_str_qualification_v1` | Primary-only temporal-T2 selective duplication versus STR MLO | Strict 48-pair report, compact aggregates, admission diagnostics, and qualification plus standard figures |
 
 ## Principal streaming results
 
@@ -170,6 +171,24 @@ The corrected matrix is `closed-loop-adaptive-airtime-obss-v2`, writing to
 `results/adaptive_airtime_obss_v2/runs`. No corrected headline result is claimed
 until that matrix has completed and passed the strict event/settlement validator.
 
+## Paired temporal-T2 qualification against STR MLO
+
+The first compiled primary-only temporal-T2 policy was qualified on 48 matched
+mixed-4x4 engineering seeds.  It passed the resource targets but failed both
+required performance gates: its all-generated miss rate was 0.7882% versus
+0.7049% for STR, while its favorable 0.697 ms completed-P99 point difference
+was not statistically decisive.  Sender-airtime ratio was 1.1324 and
+background-throughput loss was 0.0014%.
+
+The failure is primarily an admission-allocation problem.  The policy rescued
+538 of 551 acted primary misses, but the chronological airtime guard rejected
+2,276 score-passing frames containing another 349 primary misses.  Those
+rejected frames had higher model scores and a higher primary-copy miss rate
+than admitted frames.  The next engineering iteration should make the guard
+score-aware before replacing the otherwise useful primary-risk model.  See
+`06_paired_value_t2_str_qualification_v1/README.md` for intervals,
+heterogeneity, interpretation limits, and provenance.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -203,3 +222,5 @@ For online prediction:
    rounded values in this README are navigation summaries.
 6. Adaptive-airtime OBSS v1 is explicitly invalidated and is not among the
    authoritative numeric evidence.
+7. The temporal-T2 48-pair result is engineering qualification and failed its
+   performance gates; reserved final-confirmation seeds remain unopened.

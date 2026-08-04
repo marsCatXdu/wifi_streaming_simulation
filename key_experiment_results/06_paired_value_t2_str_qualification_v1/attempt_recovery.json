@@ -1,0 +1,24 @@
+{
+  "completed_run_count": 96,
+  "manifest_after_sha256": "50e90d04e68b0d13cba9eb80873098a21871f0b80cc9d535fadf51d4470c3420",
+  "manifest_backup": "experiment_manifest.87-runs.cf56e807ae8f.json",
+  "manifest_before_sha256": "cf56e807ae8f10dd090a62567a8f3caf3540bdf1ee339545153861f5d637e1ff",
+  "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+  "project_commit_of_runs": "da48d7d93366cede85b3c41c9b987c49f45f2b25",
+  "promoted_run_ids": [
+    "397ea92af9209f53da89",
+    "5c9d287b3c9899ea1208",
+    "6febd898a51ff08685e9",
+    "81f7812d299197fa0c10",
+    "8be57cd1ec827bbe583b",
+    "a487d047c904ca5b0976",
+    "ad38930c5aad5bd9e7f6",
+    "ccf8b1dd1578ecbf0044",
+    "cfea881cda9814bdf2bb"
+  ],
+  "recovery_script_sha256": "1063c5f93b3e460fa9b054c8b2826fe4e2217f28d5b25350410c6fbde38351ae",
+  "schema_version": 1,
+  "simulations_rerun": 0,
+  "timestamp_utc": "2026-08-04T10:25:33.817036+00:00",
+  "validator_commit": "575f17188c18a18ca00f3c4efbf8d1a86baae13a"
+}

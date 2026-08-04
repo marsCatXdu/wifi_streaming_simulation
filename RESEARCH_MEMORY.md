@@ -61,6 +61,59 @@ EMLSR misses and 10.712--14.241 ms for its mean per-run completed P99.  Re-run
 the paired analysis on the final fresh-seed, same-build campaign rather than
 treating these engineering seeds as final confirmation evidence.
 
+## Temporal-T2 48-pair STR qualification
+
+The compiled primary-only temporal-T2 policy was run against STR MLO on the
+48 matched engineering seeds `1201` through `1248` in the unchanged neutral
+mixed-4x4 environment.  All 96 runs from commit `da48d7d` passed strict raw
+validation.  The authoritative compact snapshot is
+`key_experiment_results/06_paired_value_t2_str_qualification_v1`.
+
+The candidate failed both performance gates while passing both resource
+targets:
+
+| Metric | Temporal-T2 | STR MLO | Paired policy-minus-STR result |
+| --- | ---: | ---: | ---: |
+| All-generated miss rate | 0.7882% | 0.7049% | +0.0833 pp, 95% interval [-0.0567, +0.2269] pp |
+| Mean per-run completed P99 | 17.416 ms | 18.113 ms | -0.697 ms, 95% interval [-1.816, +0.310] ms |
+| Sender-airtime ratio | - | - | 1.1324, 95% interval [1.0963, 1.1660] |
+| Background-throughput loss | - | - | 0.0014%, 95% interval [-0.0017%, 0.0048%] |
+
+The negative result does not mean that duplication or the primary-risk model
+failed.  Of 551 admitted actions whose primary copy would miss, 538 were
+rescued.  Across evaluated frames, the primary-miss ranking AUC is 0.922 and
+bad12 AUC is 0.875.  The dominant defect is chronological guard allocation:
+2,276 higher-scoring threshold passers were rejected after credit was spent,
+and those frames contain 349 primary misses.  Guard-rejected frames have a
+15.33% primary miss rate versus 11.12% for admitted actions.  The learned cost
+head matches total cost but has effectively zero per-action rank correlation,
+so dividing benefit by that estimate does not allocate individual actions
+well.
+
+Fix admission before replacing the predictor: preserve airtime for the
+highest scores, or allow a bounded high-score emergency tier/future-credit
+borrowing, while retaining canonical conservative cost reservation.  Explore
+this only on development/engineering seeds.  Seeds `1301` through `1348`
+remain reserved for final confirmation and must stay unopened until a revised
+candidate passes engineering qualification.
+
+The performance regression relative to
+`primary_tail_t4_remote_a7ac4ae4da42` is predominantly lost action coverage.
+The old closest-airtime arm acts on 8.06% of frames and covers 85.3% of its
+observable primary misses; the current policy acts on 5.73% and covers 45.2%.
+Current rescue efficacy is higher (97.6% versus 94.5%).  Both campaigns use
+the same nominal mixed-4x4/STR configuration, and a seed-43 STR control
+reproduces exactly across builds.  The old campaign has only 12 different,
+post-selection development seeds, however, so use an old-T4 arm on current
+engineering seeds as a mechanism control rather than claiming a causal
+cross-campaign treatment effect.
+
+Do not interpret the smaller maximum miss burst (10 versus STR's 14) as a
+victory.  Temporal-T2 has 106 multi-frame miss episodes containing 289 missed
+frames, versus STR's 57 episodes and 164 frames.  Absolute miss reduction
+remains the objective; replacing rare long bursts with more frequent shorter
+bursts is not sufficient.
+
 ## Randomized-policy population mapping
 
 The randomized T2 intervention dataset estimates effects only among frames
@@ -136,8 +189,10 @@ the action-clean common-T2-eligible population, not all generated frames.  The
 airtime point estimate passes the 400 us selection ceiling but its uncertainty
 interval does not.  The selected P-only candidate beat the corresponding
 all-frame candidate by only about `1.7e-5` in the maximin objective, so that
-gate is fragile.  The compiled policy must therefore be judged on fresh paired
-seeds 1301+ with the 0.6% measured-airtime guard.  Apply the frozen confirmation
-contract: beat STR decisively on all-frame miss rate and mean per-run
-completed-frame P99, beat EMLSR decisively on miss rate only, and never use
-EMLSR's survivor-conditioned completed P99 as a target.
+gate is fragile.  The compiled policy was subsequently judged on the 48
+engineering seeds `1201` through `1248` with the 0.6% measured-airtime guard
+and failed both STR performance gates; see the qualification section above.
+Do not consume the reserved `1301` through `1348` confirmation seeds for this
+failed version.  Retain the confirmation contract for a revised candidate:
+beat STR decisively on all-frame miss rate and mean per-run completed-frame
+P99, and never use EMLSR's survivor-conditioned completed P99 as a target.

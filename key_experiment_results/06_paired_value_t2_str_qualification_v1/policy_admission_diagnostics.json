@@ -1,0 +1,126 @@
+{
+  "action_outcomes": [
+    {
+      "count": 3144,
+      "label": "Primary on time, accelerated"
+    },
+    {
+      "count": 1258,
+      "label": "Primary on time, no benefit"
+    },
+    {
+      "count": 538,
+      "label": "Primary miss rescued"
+    },
+    {
+      "count": 13,
+      "label": "Primary miss late/incomplete"
+    }
+  ],
+  "analysis": "paired_value_t2_policy_admission_diagnostics",
+  "evidence_role": "diagnostic_only_not_a_qualification_gate",
+  "funnel": [
+    {
+      "count": 86400,
+      "label": "All generated frames"
+    },
+    {
+      "count": 44194,
+      "label": "Primary actionable"
+    },
+    {
+      "count": 43549,
+      "label": "In window and history ready"
+    },
+    {
+      "count": 42157,
+      "label": "P-frame model evaluated"
+    },
+    {
+      "count": 7229,
+      "label": "Score threshold passed"
+    },
+    {
+      "count": 4953,
+      "label": "Airtime guard admitted"
+    },
+    {
+      "count": 4953,
+      "label": "Secondary launched"
+    }
+  ],
+  "provenance": {
+    "all_runs_freshly_strict_validated": true,
+    "expected_paired_unit_count": 48,
+    "manifest_sha256": "50e90d04e68b0d13cba9eb80873098a21871f0b80cc9d535fadf51d4470c3420",
+    "strict_report_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_str_qualification_da48d7d/paired_value_t2_str_qualification.json",
+    "strict_report_sha256": "ef90188f7cf96858a40eb9290bfcc45c56a1e10ea3d37cc7a2450b35502d4e92",
+    "validated_run_count": 96
+  },
+  "schema_version": 1,
+  "statuses": [
+    {
+      "count": 41699,
+      "label": "Not actionable",
+      "primary_miss_count": 0,
+      "primary_miss_rate": 0.0,
+      "status": "not_actionable"
+    },
+    {
+      "count": 384,
+      "label": "History warmup",
+      "primary_miss_count": 83,
+      "primary_miss_rate": 0.21614583333333334,
+      "status": "history_warmup"
+    },
+    {
+      "count": 768,
+      "label": "Outside window",
+      "primary_miss_count": 10,
+      "primary_miss_rate": 0.013020833333333334,
+      "status": "outside_decision_window"
+    },
+    {
+      "count": 1392,
+      "label": "Frame type restricted",
+      "primary_miss_count": 64,
+      "primary_miss_rate": 0.04597701149425287,
+      "status": "frame_type_restricted"
+    },
+    {
+      "count": 0,
+      "label": "Descriptor unavailable",
+      "primary_miss_count": 0,
+      "primary_miss_rate": 0.0,
+      "status": "descriptor_unavailable"
+    },
+    {
+      "count": 34928,
+      "label": "Below score threshold",
+      "primary_miss_count": 162,
+      "primary_miss_rate": 0.0046381126889601465,
+      "status": "below_score_threshold"
+    },
+    {
+      "count": 2276,
+      "label": "Airtime guard rejected",
+      "primary_miss_count": 349,
+      "primary_miss_rate": 0.15333919156414763,
+      "status": "airtime_guard_rejected"
+    },
+    {
+      "count": 0,
+      "label": "Launch rejected",
+      "primary_miss_count": 0,
+      "primary_miss_rate": 0.0,
+      "status": "launch_rejected"
+    },
+    {
+      "count": 4953,
+      "label": "Action",
+      "primary_miss_count": 551,
+      "primary_miss_rate": 0.11124570967090652,
+      "status": "action"
+    }
+  ]
+}

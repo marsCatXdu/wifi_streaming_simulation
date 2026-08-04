@@ -1,2 +1,5 @@
 # Preserve generated CSV bytes so SHA256SUMS remains checkout-independent.
-*.csv -text
+*.csv -text whitespace=-trailing-space
+
+# Preserve the report's intentional Markdown hard breaks.
+06_paired_value_t2_str_qualification_v1/qualification.md whitespace=-trailing-space

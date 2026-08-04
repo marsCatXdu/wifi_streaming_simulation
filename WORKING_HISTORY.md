@@ -10,8 +10,9 @@ source of truth; reconcile this document with them before continuing work.
 
 ## Stable objective
 
-Qualify the frozen primary-only temporal-T2 selective-duplication policy
-against STR MLO in the unchanged neutral mixed-4x4 environment.
+Improve selective duplication until an engineering candidate decisively beats
+STR MLO in the unchanged neutral mixed-4x4 environment, then qualify the
+frozen candidate on untouched confirmation seeds.
 
 The policy defeats STR MLO only if the paired campaign establishes all of the
 following:
@@ -55,10 +56,11 @@ P99.
 | Preserve canonical artifacts | `62312a3` | Model, manifest, candidates, and metrics tracked |
 | Add strict qualification analyzer | `ba59751` | Exact gates, shared bootstrap, and 28 focused runner/analyzer tests |
 
-The latest implementation milestone is `575f171`.  It exactly replays the
+The latest validator milestone is `6b822a4`.  It exactly replays the
 compiled ridge reduction order and proves one integer per-frame byte
 allocation can jointly satisfy PPDU totals, settlements, and every outstanding
-reservation checkpoint.
+reservation checkpoint.  It also accepts only solver-rounded integer
+witnesses that pass an independent exact constraint recheck.
 
 ## One authoritative TODO checklist
 
@@ -69,9 +71,14 @@ reservation checkpoint.
 - [x] Run and strictly validate the two-run local preflight.  Fix only defects
   that block a trustworthy campaign, and commit/push any such fix at a clean
   boundary (`bc76a13`; fresh manifest recorded below).
-- [ ] Run the 96-run campaign on the 64-vCPU VM, fetch and checksum the raw
+- [x] Run the 96-run campaign on the 64-vCPU VM, fetch and checksum the raw
   artifacts, validate every run locally, analyze against STR MLO, and record
-  the result and next scientific decision here.
+  the result and next scientific decision here (`6b822a4`; compact result
+  archived under `key_experiment_results/06_paired_value_t2_str_qualification_v1`).
+- [ ] Implement and evaluate a score-aware measured-airtime admission policy
+  on development seeds, preserving seeds `1301` through `1348` for final
+  confirmation.  Replace the predictor only after admission is no longer the
+  dominant failure.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -79,32 +86,25 @@ item only when the research objective genuinely changes.
 ## Current work boundary
 
 All 96 qualification simulations finished on the VM from clean commit
-`da48d7d`.  The runner promoted 87 runs and preserved nine paired-policy
-attempts after the then-current validator rejected them.  Eight rejections
-were caused by sklearn/NumPy versus compiled scalar ridge reduction order; one
-was caused by replaying an arbitrary feasible split for a PPDU shared by two
-frames.  None was a simulation crash or invalid controller output.
+`da48d7d`; every run now passes the strict local validator.  Nine preserved
+attempts were recovered without rerunning their valid simulations.  The
+canonical manifest SHA-256 is
+`50e90d04e68b0d13cba9eb80873098a21871f0b80cc9d535fadf51d4470c3420`.
 
-The two validator defects and two audit-discovered fail-open edges are fixed
-and pushed as `575f171`.  The final implementation uses positive integer byte
-variables, the meter's ascending-frame/last-residual allocation semantics, a
-joint reservation-checkpoint feasibility model, a `1e-9 us` solver envelope,
-and an independently reconstructed witness.  All nine preserved attempts now
-validate with 1,800 frames each.
+The temporal-T2 candidate fails engineering qualification.  It records 681
+misses (0.7882%) versus STR's 609 (0.7049%); the paired miss interval is
+[-0.0567, +0.2269] percentage points.  Its P99 point estimate is 0.697 ms
+better, but the paired interval [-1.816, +0.310] ms is inconclusive.  It passes
+the sender-airtime ratio target at 1.1324 and background target at 0.0014%
+loss.
 
-The fresh same-commit local preflight passed at `bc76a13`.  Its authoritative
-manifest is:
-
-`/tmp/paired-value-t2-str-preflight-bc76a13/runs/experiment_manifest.json`
-
-The VM campaign root is:
-
-`/home/jingweili/experiments/paired-value-t2-str-qualification-da48d7d`
-
-The next action is to deploy the validator-only commit, promote the nine
-validated attempts without rerunning any simulation, reconstruct and verify
-the canonical 96-run manifest, then fetch/checksum/analyze the full campaign.
-Do not open reserved final-confirmation seeds.
+Admission, not duplication efficacy, is the next work boundary.  The policy
+rescues 538/551 acted primary misses, while the chronological guard rejects
+2,276 higher-scoring candidates containing 349 primary misses.  Implement a
+score-aware guard or bounded high-score emergency credit on development seeds
+before considering a new predictor.  Keep the current primary-risk features;
+the learned cost head requires later replacement because it has no useful
+per-action rank correlation.  Do not open reserved final-confirmation seeds.
 
 The V1 event schema does not record its per-frame byte split or equal-time
 callback sequence, and the portable compiled cost path does not freeze FMA
@@ -136,8 +136,35 @@ Do not repeat an entry unless relevant code changed after it ran.
   `2501cc18b66f91c23c971705e8c730a4e6b1a603cd34f5b7bf916fb72e727586`.
 - An independent release audit reproduced and then confirmed rejection of an
   impossible three-byte `0.5/0.5` split and a `5e-8 us` checkpoint mutation.
+- Rounded-witness portability fix at `6b822a4`: `16/16` focused paired tests,
+  `135/135` validator-import compatibility tests, all 96 campaign runs, and
+  both retained preflight arms passed.
+- Final 48-pair report: policy 0.7882% misses and 17.416 ms P99; STR 0.7049%
+  and 18.113 ms; sender-airtime ratio 1.1324; background loss 0.0014%.
+- Qualification plotting checks at `d78c288`: `61/61` combined
+  qualification, plotting, and generic analysis-tool tests passed.  Real
+  regeneration freshly strict-validated all 96 runs before writing the
+  machine-readable admission diagnostic and figures.
 
 ## Work log
+
+### 2026-08-04 - Analyze and archive the temporal-T2 qualification
+
+- Recovered the nine validator-only false rejections, reconstructed a
+  checksum-bound 96-run manifest, and strictly revalidated every run.
+- Fixed portable acceptance of valid rounded MILP witnesses and pushed it as
+  `6b822a4`.
+- Established that the candidate passes resource targets but fails both STR
+  performance gates on 48 matched pairs.
+- Reconstructed the admission funnel and primary-copy counterfactual.  The
+  launched secondary copy rescues 97.64% of acted primary misses, while the
+  chronological guard rejects a higher-risk population containing 349
+  primary misses.
+- Added the standard CDF/PDF/burst suite and paired qualification figures,
+  then hardened plot generation to rebind the expanded matrix and freshly
+  strict-validate all 96 raw runs through `d78c288`.
+- Chose score-aware measured-airtime admission as the next intervention;
+  retained seeds `1301` through `1348` for final confirmation.
 
 ### 2026-08-04 - Complete VM simulations and repair strict replay
 
