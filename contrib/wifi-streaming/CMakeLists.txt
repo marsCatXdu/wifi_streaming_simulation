@@ -12,6 +12,8 @@ build_lib(
     model/closed-loop-risk-predictor.cc
     model/prediction-telemetry-collector.cc
     model/selective-duplication-controller.cc
+    model/canonical-secondary-airtime-estimator.cc
+    model/secondary-airtime-budget-guard.cc
     model/adaptive-airtime-duplication-controller.cc
     model/secondary-airtime-meter.cc
     model/metrics-collector.cc
@@ -36,6 +38,8 @@ build_lib(
     model/closed-loop-risk-predictor.h
     model/prediction-telemetry-collector.h
     model/selective-duplication-controller.h
+    model/canonical-secondary-airtime-estimator.h
+    model/secondary-airtime-budget-guard.h
     model/adaptive-airtime-duplication-controller.h
     model/secondary-airtime-meter.h
     model/metrics-collector.h
@@ -56,5 +60,6 @@ build_lib(
   TEST_SOURCES
     test/primary-tail-t4-model-evaluator-test.cc
     test/randomized-intervention-controller-test.cc
+    test/secondary-airtime-primitives-test.cc
     test/wifi-streaming-test-suite.cc
 )

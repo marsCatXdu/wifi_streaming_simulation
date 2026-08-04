@@ -4,13 +4,11 @@
 
 #include "randomized-intervention-controller.h"
 
+#include "canonical-secondary-airtime-estimator.h"
 #include "streaming-header.h"
 
 #include "ns3/abort.h"
-#include "ns3/eht-phy.h"
 #include "ns3/log.h"
-#include "ns3/wifi-phy.h"
-#include "ns3/wifi-tx-vector.h"
 
 #include <cmath>
 #include <iomanip>
@@ -28,21 +26,6 @@ namespace
 
 constexpr double COST_SAFETY_FACTOR = 1.25;
 constexpr uint64_t NANOS_PER_MICROSECOND = 1000;
-constexpr uint32_t WIFI_MAC_OVERHEAD_BYTES = 38;
-
-WifiTxVector
-MakeEstimatorTxVector()
-{
-    return WifiTxVector(EhtPhy::GetEhtMcs5(),
-                        0,
-                        WIFI_PREAMBLE_EHT_MU,
-                        NanoSeconds(800),
-                        1,
-                        1,
-                        0,
-                        MHz_u{20},
-                        false);
-}
 
 void
 WriteOptionalUint64(std::ostream& output, const std::optional<uint64_t>& value)
@@ -726,20 +709,9 @@ RandomizedInterventionController::EstimateNominalAirtimeUs(
     uint32_t packetCount,
     uint64_t expectedMacServiceBytes)
 {
-    NS_ABORT_MSG_IF(packetCount == 0, "Randomized airtime estimate requires packets");
-    NS_ABORT_MSG_IF(expectedMacServiceBytes == 0,
-                    "Randomized airtime estimate requires MAC service bytes");
-    const auto txVector = MakeEstimatorTxVector();
-    const uint64_t rateBps =
-        EhtPhy::GetEhtMcs5().GetDataRate(MHz_u{20}, NanoSeconds(800), 1);
-    NS_ABORT_MSG_IF(rateBps == 0, "Randomized EHT MCS5 estimate resolved to zero rate");
-    const double preambleUs =
-        WifiPhy::CalculatePhyPreambleAndHeaderDuration(txVector).GetSeconds() * 1e6;
-    const double macBytes =
-        static_cast<double>(expectedMacServiceBytes) +
-        static_cast<double>(WIFI_MAC_OVERHEAD_BYTES) * packetCount;
-    const double payloadUs = 8.0 * macBytes / static_cast<double>(rateBps) * 1e6;
-    return preambleUs + payloadUs;
+    return CanonicalSecondaryAirtimeEstimator::EstimateNominalUs(
+        packetCount,
+        expectedMacServiceBytes);
 }
 
 double
@@ -747,8 +719,10 @@ RandomizedInterventionController::EstimateFullCopyAirtimeUs(
     uint32_t packetCount,
     uint64_t expectedMacServiceBytes) const
 {
-    return COST_SAFETY_FACTOR *
-           EstimateNominalAirtimeUs(packetCount, expectedMacServiceBytes);
+    return CanonicalSecondaryAirtimeEstimator::EstimateUs(packetCount,
+                                                          expectedMacServiceBytes,
+                                                          COST_SAFETY_FACTOR,
+                                                          1.0);
 }
 
 std::string_view

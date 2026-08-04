@@ -4,15 +4,13 @@
 
 #include "adaptive-airtime-duplication-controller.h"
 
+#include "canonical-secondary-airtime-estimator.h"
 #include "multipath-sender.h"
 #include "streaming-header.h"
 
 #include "ns3/abort.h"
-#include "ns3/eht-phy.h"
 #include "ns3/log.h"
 #include "ns3/simulator.h"
-#include "ns3/wifi-phy.h"
-#include "ns3/wifi-tx-vector.h"
 
 #include <algorithm>
 #include <cmath>
@@ -28,20 +26,6 @@ NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationController);
 
 namespace
 {
-
-WifiTxVector
-MakeEstimatorTxVector()
-{
-    return WifiTxVector(EhtPhy::GetEhtMcs5(),
-                        0,
-                        WIFI_PREAMBLE_EHT_MU,
-                        NanoSeconds(800),
-                        1,
-                        1,
-                        0,
-                        MHz_u{20},
-                        false);
-}
 
 std::string_view
 PacketSelectionName(AdaptiveSecondaryPacketSelection selection)
@@ -390,21 +374,10 @@ AdaptiveAirtimeDuplicationController::EstimateSecondaryAirtimeUs(
     uint64_t expectedMacServiceBytes,
     double inflation) const
 {
-    NS_ABORT_MSG_IF(packetCount == 0, "Secondary airtime estimate requires packets");
-    NS_ABORT_MSG_IF(expectedMacServiceBytes == 0,
-                    "Secondary airtime estimate requires MAC service bytes");
-    NS_ABORT_MSG_IF(!std::isfinite(inflation) || inflation < 1,
-                    "Secondary airtime inflation must be finite and >= 1");
-    const auto txVector = MakeEstimatorTxVector();
-    const uint64_t rateBps =
-        EhtPhy::GetEhtMcs5().GetDataRate(MHz_u{20}, NanoSeconds(800), 1);
-    NS_ABORT_MSG_IF(rateBps == 0, "EHT MCS5 data rate resolved to zero");
-    const Time preamble = WifiPhy::CalculatePhyPreambleAndHeaderDuration(txVector);
-    const double preambleUs = preamble.GetSeconds() * 1e6;
-    const double macBytes =
-        static_cast<double>(expectedMacServiceBytes) + 38.0 * static_cast<double>(packetCount);
-    const double payloadUs = (8.0 * macBytes / static_cast<double>(rateBps)) * 1e6;
-    return m_costSafetyFactor * inflation * (preambleUs + payloadUs);
+    return CanonicalSecondaryAirtimeEstimator::EstimateUs(packetCount,
+                                                          expectedMacServiceBytes,
+                                                          m_costSafetyFactor,
+                                                          inflation);
 }
 
 double
