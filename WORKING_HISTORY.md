@@ -55,15 +55,15 @@ P99.
 | Preserve canonical artifacts | `62312a3` | Model, manifest, candidates, and metrics tracked |
 | Add strict qualification analyzer | `ba59751` | Exact gates, shared bootstrap, and 28 focused runner/analyzer tests |
 
-`ba59751` is the current committed `main` and `origin/main` boundary at the
-time of this update.
+The latest implementation milestone is `3b8984f`, which adds the strict
+paired temporal-T2 run validator.
 
 ## One authoritative TODO checklist
 
-- [ ] Finish one reviewable paired-T2 output-validator boundary: remove
+- [x] Finish one reviewable paired-T2 output-validator boundary: remove
   avoidable overlap with earlier generic validation, fix the remaining
   positive event-to-frame allocation invariant, run the focused and
-  compatibility checks once, then commit and push.
+  compatibility checks once, then commit and push (`3b8984f`).
 - [ ] Run and strictly validate the two-run local preflight.  Fix only defects
   that block a trustworthy campaign, and commit/push any such fix at a clean
   boundary.
@@ -76,26 +76,23 @@ item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The validator boundary is confined to these code/test files:
+The validator boundary is committed at `3b8984f`.  It independently replays
+the exact 246-feature canonical model, paired decision/status gates,
+controller summary, measured-airtime guard, and causal event/settlement
+allocation.  The final fix requires every frame ID listed by a PPDU event to
+receive at least one tagged byte's positive airtime share.  Existing generic
+CSV and full-copy descriptor helpers are reused instead of maintaining the
+parallel implementations found by the history audit.
 
-- `tools/validate_outputs.py`
-- `tools/tests/test_paired_value_t2_validation.py`
+The next action is the real two-run local preflight from a clean worktree:
 
-The validator currently adds genuinely new checks for exact 246-feature
-canonical-model replay, paired decision/status gates, controller summary,
-measured-airtime guard replay, and causal event/settlement allocation.  It
-also contains avoidable overlap with previously committed generic telemetry,
-descriptor, meter, and runtime-contract validation.  Reuse the existing
-validated parsing and estimator helpers where doing so does not weaken the
-independent model/runtime check.  Do not turn this cleanup into a separate
-framework project.
-
-One medium issue remains before commit: the max-flow reconstruction permits a
-zero allocation on a frame ID explicitly listed in a secondary-airtime event.
-The C++ meter lists a frame only after observing positive tagged MPDU bytes, so
-every listed event/frame edge must receive positive airtime.  Enforce a
-defensible positive lower bound (the event duration divided by tagged bytes is
-available) and add the reproduced two-active-frame regression.
+```bash
+.venv/bin/python tools/run_experiments.py \
+  experiments/configs/paired_value_t2_str_preflight_v1.yaml \
+  --workers 2 \
+  --output-root /tmp/paired-value-t2-str-preflight/runs \
+  --no-analysis
+```
 
 No engineering qualification seed has been run yet.
 
@@ -103,20 +100,27 @@ No engineering qualification seed has been run yet.
 
 Do not repeat an entry unless relevant code changed after it ran.
 
-- Paired validator focused suite before the remaining positive-edge fix:
-  `10/10` passed.
-- Validator compatibility suites at the same boundary: `144/144` passed.
-- Two retained real artifacts at that boundary: both validated with 1,800
-  frames; the action-bearing artifact had 1,016 evaluated model rows and 133
-  actions.
-- `py_compile` and `git diff --check` passed at that boundary.
-- Independent audit result: model replay, strict CSV width, absolute summary
-  accounting, settlement ordering, and positive-marginal allocation checks
-  passed; the zero-allocation edge issue above remains.
-
-These checks must be rerun once after the code changes, not once per agent.
+- Paired validator focused suite at `3b8984f`: `10/10` passed.
+- Direct validator-import compatibility suites at `3b8984f`: `129/129`
+  passed.
+- Two retained real artifacts at `3b8984f`: both validated with 1,800 frames;
+  the action-bearing artifact had 1,016 evaluated model rows and 133 actions.
+- `py_compile` and `git diff --check` passed before `3b8984f`.
 
 ## Work log
+
+### 2026-08-04 - Complete strict paired-T2 run validation
+
+- Replayed the canonical sklearn model from independently reconstructed 246
+  primary-only temporal features for every evaluated decision.
+- Added exact policy/config/source, decision, summary, guard, meter, and
+  launch/settlement causality validation.
+- Fixed the final max-flow fail-open by imposing a positive lower bound on
+  every logged event/frame edge.
+- Reused the generic exact CSV path and canonical full-copy descriptor
+  arithmetic instead of retaining parallel implementations.
+- Passed the focused, compatibility, retained-artifact, compilation, and diff
+  checks recorded above; committed as `3b8984f`.
 
 ### 2026-08-04 - Detect and stop nested validator work
 
