@@ -52,6 +52,12 @@ FULL_HORIZON_PREFLIGHT = (
 FULL_HORIZON_ENGINEERING = (
     ROOT / "experiments/configs/paired_value_t2_full_horizon_str_engineering_v3.yaml"
 )
+REMAINING_REFILL_PREFLIGHT = (
+    ROOT / "experiments/configs/paired_value_t2_remaining_refill_str_preflight_v4.yaml"
+)
+REMAINING_REFILL_ENGINEERING = (
+    ROOT / "experiments/configs/paired_value_t2_remaining_refill_str_engineering_v4.yaml"
+)
 RUNTIME_CONTRACT = (
     ROOT / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
 )
@@ -62,6 +68,10 @@ SCORE_AWARE_RUNTIME_CONTRACT = (
 FULL_HORIZON_RUNTIME_CONTRACT = (
     ROOT
     / "experiments/model-selection/paired-value-duplication-t2-full-horizon-carryover-v3.json"
+)
+REMAINING_REFILL_RUNTIME_CONTRACT = (
+    ROOT
+    / "experiments/model-selection/paired-value-duplication-t2-remaining-refill-borrowing-v4.json"
 )
 
 
@@ -340,6 +350,65 @@ class PairedValueT2RunnerTest(unittest.TestCase):
         self.assertIn(
             "--pairedValueT2AdmissionProfile=score_aware_full_horizon_v3",
             cli_arguments(policy, FULL_HORIZON_ENGINEERING.parent),
+        )
+
+    def test_remaining_refill_configs_freeze_final_tier_and_reuse_opened_seeds(
+        self,
+    ) -> None:
+        preflight_raw = yaml.safe_load(
+            REMAINING_REFILL_PREFLIGHT.read_text(encoding="utf-8")
+        )
+        engineering_raw = yaml.safe_load(
+            REMAINING_REFILL_ENGINEERING.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            preflight_raw["extends"], "paired_value_t2_str_qualification_v1.yaml"
+        )
+        self.assertEqual(
+            engineering_raw["extends"],
+            "paired_value_t2_remaining_refill_str_preflight_v4.yaml",
+        )
+
+        preflight = load_yaml(REMAINING_REFILL_PREFLIGHT)
+        engineering = load_yaml(REMAINING_REFILL_ENGINEERING)
+        self.assertEqual(preflight["seeds"], [43])
+        self.assertEqual(engineering["seeds"], list(range(1251, 1299)))
+        self.assertTrue(set(engineering["seeds"]).isdisjoint(range(1301, 1349)))
+        self.assertEqual(
+            matrix_sha256(preflight),
+            "64f62abdbecb92d84e0a71e7b7de387d84cba56dcff07800c6e0db05c608f762",
+        )
+        self.assertEqual(
+            matrix_sha256(engineering),
+            "1b49aeebf241dd0111a958311b62c859064c84d9e4597c11f85a8753aed658d6",
+        )
+        self.assertEqual(len(expand_config(preflight)), 2)
+        specs = expand_config(engineering)
+        self.assertEqual(len(specs), 96)
+
+        contract = validate_runtime_contract(engineering)
+        self.assertIsNotNone(contract)
+        assert contract is not None
+        self.assertEqual(
+            contract["runtime_contract_id"],
+            "paired-value-duplication-t2-remaining-refill-borrowing-v4",
+        )
+        self.assertEqual(
+            contract["runtime_contract_sha256"],
+            hashlib.sha256(REMAINING_REFILL_RUNTIME_CONTRACT.read_bytes()).hexdigest(),
+        )
+        policy = next(
+            spec["config"]
+            for spec in specs
+            if spec["config"]["policy"] == "paired_value_duplication_t2"
+        )
+        self.assertEqual(
+            policy["prediction"]["paired_value_t2_admission_profile"],
+            "score_aware_remaining_refill_v4",
+        )
+        self.assertIn(
+            "--pairedValueT2AdmissionProfile=score_aware_remaining_refill_v4",
+            cli_arguments(policy, REMAINING_REFILL_ENGINEERING.parent),
         )
 
     def test_runtime_contract_rejects_contract_and_source_hash_drift(self) -> None:

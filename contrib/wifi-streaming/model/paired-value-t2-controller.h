@@ -49,6 +49,7 @@ class PairedValueT2Controller : public Object
         BASELINE_V1 = 0,              ///< Strict measured-airtime admission.
         SCORE_AWARE_EMERGENCY_V2 = 1, ///< Bounded high-score future credit.
         SCORE_AWARE_FULL_HORIZON_V3 = 2, ///< Full-horizon causal carry-over.
+        SCORE_AWARE_REMAINING_REFILL_V4 = 3, ///< Final remaining-refill borrowing tier.
     };
 
     /** Baseline decision CSV schema version. */
@@ -62,6 +63,12 @@ class PairedValueT2Controller : public Object
 
     /** Score-aware controller summary schema version. */
     static constexpr uint32_t SCORE_AWARE_SUMMARY_SCHEMA_VERSION = 2;
+
+    /** Remaining-refill decision CSV schema version. */
+    static constexpr uint32_t REMAINING_REFILL_CSV_SCHEMA_VERSION = 3;
+
+    /** Remaining-refill controller summary schema version. */
+    static constexpr uint32_t REMAINING_REFILL_SUMMARY_SCHEMA_VERSION = 3;
 
     /** Frozen primary path identifier. */
     static constexpr uint8_t PRIMARY_PATH_ID = 1;
@@ -176,9 +183,17 @@ class PairedValueT2Controller : public Object
      * Return whether a profile uses the frozen score-aware emergency tier.
      *
      * @param profile Admission profile.
-     * @return True for V2 and V3.
+     * @return True for V2, V3, and V4.
      */
     static bool UsesScoreAwareEmergency(AdmissionProfile profile);
+
+    /**
+     * Return whether a profile uses final remaining-refill borrowing.
+     *
+     * @param profile Admission profile.
+     * @return True only for V4.
+     */
+    static bool UsesRemainingRefillBorrowing(AdmissionProfile profile);
 
     /**
      * Return the maximum causal carry-over horizon for one profile.
@@ -337,6 +352,9 @@ class PairedValueT2Controller : public Object
         bool passesEmergencyScore{false}; ///< Whether the high-score tier passed.
         bool emergencyAdmissionConsidered{false}; ///< Whether bounded debt was queried.
         bool emergencyAdmitted{false}; ///< Whether bounded future credit admitted.
+        double remainingRefillCreditUs{0}; ///< Refill earnable before measurement stop.
+        bool remainingRefillAdmissionConsidered{false}; ///< Whether final-tier credit was queried.
+        bool remainingRefillAdmitted{false}; ///< Whether final-tier credit admitted the copy.
         bool launchAttempted{false};     ///< Whether sender request was made.
         bool secondaryLaunched{false};   ///< Whether sender accepted the request.
         double guardBalanceAfterUs{0};   ///< Earned balance after the decision.
@@ -454,7 +472,7 @@ class PairedValueT2Controller : public Object
                           double nominalUs,
                           bool fallback);
 
-    /** Write the exact 82-column decision CSV header. */
+    /** Write the exact profile-specific decision CSV header. */
     void WriteDecisionHeader();
 
     /**
@@ -513,6 +531,8 @@ class PairedValueT2Controller : public Object
     uint64_t m_emergencyScorePassed{0}; ///< Score-aware emergency threshold passes.
     uint64_t m_emergencyAdmissionConsidered{0}; ///< Bounded-debt admission queries.
     uint64_t m_emergencyAdmitted{0}; ///< Bounded future-credit admissions.
+    uint64_t m_remainingRefillAdmissionConsidered{0}; ///< Final-tier admission queries.
+    uint64_t m_remainingRefillAdmitted{0}; ///< Final-tier admissions.
     uint64_t m_launchAttempted{0}; ///< RequestSecondaryCopy call count.
     uint64_t m_secondarySettled{0}; ///< Meter settlement count.
     double m_expectedMeterReservedUs{0}; ///< Independently tracked meter reservation total.

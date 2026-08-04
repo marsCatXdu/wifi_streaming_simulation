@@ -1002,7 +1002,9 @@ ControllerSetup
 ConfigureGoldenSender(const GoldenCase& golden,
                       const std::string& label,
                       const std::string& runId,
-                      uint16_t port)
+                      uint16_t port,
+                      PairedValueT2Controller::AdmissionProfile admissionProfile =
+                          PairedValueT2Controller::AdmissionProfile::BASELINE_V1)
 {
     NodeContainer nodes;
     nodes.Create(2);
@@ -1063,6 +1065,7 @@ ConfigureGoldenSender(const GoldenCase& golden,
                           paths.meterEvents,
                           paths.meterSettlements,
                           paths.meterSummary);
+    controller->SetAdmissionProfile(admissionProfile);
     controller->SetSender(PeekPointer(sender));
     controller->SetAirtimeMeter(meter);
     controller->SetOutputFiles(runId, paths.decisions, paths.controllerSummary);
@@ -1691,6 +1694,8 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             "score_aware_emergency_v2");
         const auto fullHorizon = PairedValueT2Controller::ParseAdmissionProfile(
             "score_aware_full_horizon_v3");
+        const auto remainingRefill = PairedValueT2Controller::ParseAdmissionProfile(
+            "score_aware_remaining_refill_v4");
         NS_TEST_ASSERT_MSG_EQ(baseline.has_value(),
                               true,
                               "Baseline admission profile did not parse");
@@ -1700,11 +1705,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(fullHorizon.has_value(),
                               true,
                               "Full-horizon admission profile did not parse");
+        NS_TEST_ASSERT_MSG_EQ(remainingRefill.has_value(),
+                              true,
+                              "Remaining-refill admission profile did not parse");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::ParseAdmissionProfile("unsupported").has_value(),
             false,
             "Unsupported admission profile parsed");
-        if (!baseline || !scoreAware || !fullHorizon)
+        if (!baseline || !scoreAware || !fullHorizon || !remainingRefill)
         {
             return;
         }
@@ -1718,6 +1726,10 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             static_cast<uint32_t>(*fullHorizon),
             static_cast<uint32_t>(Profile::SCORE_AWARE_FULL_HORIZON_V3),
             "Full-horizon profile ordinal changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint32_t>(*remainingRefill),
+            static_cast<uint32_t>(Profile::SCORE_AWARE_REMAINING_REFILL_V4),
+            "Remaining-refill profile ordinal changed");
         NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*baseline),
                               1,
                               "Baseline decision schema changed");
@@ -1728,6 +1740,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::GetCsvSchemaVersion(*fullHorizon),
             2,
             "Full-horizon decision schema changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetCsvSchemaVersion(*remainingRefill),
+            3,
+            "Remaining-refill decision schema differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetSummarySchemaVersion(*remainingRefill),
+            3,
+            "Remaining-refill summary schema differs");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::GetRuntimeContractId(*scoreAware),
             "paired-value-duplication-t2-score-aware-emergency-v2",
@@ -1745,6 +1765,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8",
             "Full-horizon runtime digest changed");
         NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractId(*remainingRefill),
+            "paired-value-duplication-t2-remaining-refill-borrowing-v4",
+            "Remaining-refill runtime identity differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractSha256(*remainingRefill),
+            "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd",
+            "Remaining-refill runtime digest differs");
+        NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::GetBudgetMaxHorizonUs(*scoreAware),
             10000000,
             "V2 carry-over horizon changed");
@@ -1760,6 +1788,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::GetBudgetCapacityUs(*fullHorizon),
             360000,
             "V3 carry-over capacity differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetMaxHorizonUs(*remainingRefill),
+            60000000,
+            "V4 carry-over horizon differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetCapacityUs(*remainingRefill),
+            360000,
+            "V4 carry-over capacity differs");
         auto fullHorizonController = CreateObject<PairedValueT2Controller>();
         fullHorizonController->SetAdmissionProfile(*fullHorizon);
         NS_TEST_ASSERT_MSG_EQ(
@@ -1813,6 +1849,125 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
                 true,
                 "Score-aware decision suffix differs from its runtime contract");
         }
+        setup.controller->Dispose();
+        Simulator::Destroy();
+        RemovePaths(setup.paths);
+
+        auto remainingSetup = ConfigureBareController("remaining-refill-profile",
+                                                      "paired-value-remaining-refill-profile",
+                                                      *remainingRefill);
+        const auto remainingLines = ReadLines(remainingSetup.paths.decisions);
+        NS_TEST_ASSERT_MSG_EQ(remainingLines.size(),
+                              1,
+                              "Remaining-refill decision header count differs");
+        if (remainingLines.size() == 1)
+        {
+            const auto header = SplitCsv(remainingLines[0]);
+            NS_TEST_ASSERT_MSG_EQ(header.size(),
+                                  DECISION_COLUMNS.size() + 11,
+                                  "Remaining-refill decision column count differs");
+            const std::array<std::string_view, 3> expectedSuffix{
+                "remaining_refill_credit_us",
+                "remaining_refill_admission_considered",
+                "remaining_refill_admitted",
+            };
+            NS_TEST_ASSERT_MSG_EQ(
+                std::equal(expectedSuffix.begin(),
+                           expectedSuffix.end(),
+                           header.end() - expectedSuffix.size()),
+                true,
+                "Remaining-refill decision suffix differs from its runtime contract");
+        }
+        remainingSetup.controller->Dispose();
+        Simulator::Destroy();
+        RemovePaths(remainingSetup.paths);
+    }
+};
+
+/**
+ * Prove that V4 adds only the final remaining-refill admission tier.
+ *
+ * @ingroup tests
+ */
+class PairedValueT2RemainingRefillAdmissionTestCase : public TestCase
+{
+  public:
+    PairedValueT2RemainingRefillAdmissionTestCase()
+        : TestCase("Paired-value T2 admits a low-emergency-score frame against remaining refill")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        using Profile = PairedValueT2Controller::AdmissionProfile;
+        const auto& golden = temporal_t2_feature_adapter_golden_v1::GetCases()[0];
+        const std::string runId = "paired-value-remaining-refill-action";
+        auto setup = ConfigureGoldenSender(golden,
+                                           "remaining-refill-action",
+                                           runId,
+                                           9294,
+                                           Profile::SCORE_AWARE_REMAINING_REFILL_V4);
+        for (uint64_t frameId = 0; frameId <= 8; ++frameId)
+        {
+            if (frameId == 8)
+            {
+                Simulator::Schedule(
+                    NanoSeconds(golden.currentSample.sampleTimeNs - 1),
+                    &PairedValueT2ControllerTestAccess::DebitGuard,
+                    setup.controller,
+                    golden.currentSample.sampleTimeNs - 1,
+                    359999.0);
+            }
+            SchedulePair(setup.controller,
+                         MakeGoldenHistoryPrimary(golden, runId, frameId));
+        }
+        Simulator::Stop(NanoSeconds(golden.currentSample.sampleTimeNs + 1));
+        Simulator::Run();
+
+        const auto lines = ReadLines(setup.paths.decisions);
+        NS_TEST_ASSERT_MSG_EQ(lines.size(),
+                              10,
+                              "Remaining-refill decision rows are incomplete");
+        if (lines.size() == 10)
+        {
+            const auto header = SplitCsv(lines[0]);
+            const auto row = SplitCsv(lines[9]);
+            NS_TEST_ASSERT_MSG_EQ(row.size(), 93, "Remaining-refill row width differs");
+            NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "decision_status")],
+                                  "action",
+                                  "Remaining-refill tier did not produce an action");
+            NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "strict_guard_admitted")],
+                                  "0",
+                                  "Strict admission unexpectedly accepted the fixture");
+            NS_TEST_ASSERT_MSG_EQ(
+                row[FindColumn(header, "passes_emergency_score_threshold")],
+                "0",
+                "Fixture unexpectedly passed the inherited emergency score gate");
+            NS_TEST_ASSERT_MSG_EQ(
+                row[FindColumn(header, "remaining_refill_admission_considered")],
+                "1",
+                "Remaining-refill tier was not considered");
+            NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "remaining_refill_admitted")],
+                                  "1",
+                                  "Remaining-refill tier did not admit the fixture");
+            NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "admission_tier")],
+                                  "remaining_refill",
+                                  "Decision did not identify the final admission tier");
+            const double expectedRemainingRefillUs =
+                PairedValueT2Controller::BUDGET_FRACTION *
+                static_cast<double>(PairedValueT2Controller::MEASUREMENT_STOP_NS -
+                                    golden.currentSample.sampleTimeNs) /
+                NANOS_PER_MICROSECOND;
+            NS_TEST_ASSERT_MSG_EQ_TOL(
+                std::stod(row[FindColumn(header, "remaining_refill_credit_us")]),
+                expectedRemainingRefillUs,
+                1e-9,
+                "Decision row did not record exact remaining causal refill");
+        }
+        NS_TEST_ASSERT_MSG_EQ(setup.controller->GetLaunchCount(),
+                              1,
+                              "Remaining-refill fixture did not launch one copy");
         setup.controller->Dispose();
         Simulator::Destroy();
         RemovePaths(setup.paths);
@@ -2294,6 +2449,7 @@ class PairedValueT2ControllerTestSuite : public TestSuite
         AddTestCase(new PairedValueT2ClosedLoopTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2OrderedModelGatesTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2AdmissionProfileTestCase(), Duration::QUICK);
+        AddTestCase(new PairedValueT2RemainingRefillAdmissionTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2EarlyGatesTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2StatefulHistoryTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2ValidationTestCase(), Duration::QUICK);

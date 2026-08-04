@@ -67,6 +67,10 @@ constexpr std::string_view FULL_HORIZON_RUNTIME_CONTRACT_ID =
     "paired-value-duplication-t2-full-horizon-carryover-v3";
 constexpr std::string_view FULL_HORIZON_RUNTIME_CONTRACT_SHA256 =
     "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8";
+constexpr std::string_view REMAINING_REFILL_RUNTIME_CONTRACT_ID =
+    "paired-value-duplication-t2-remaining-refill-borrowing-v4";
+constexpr std::string_view REMAINING_REFILL_RUNTIME_CONTRACT_SHA256 =
+    "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd";
 constexpr std::string_view COST_ESTIMATOR_ID =
     "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1";
 constexpr std::string_view LAUNCH_REASON = "paired temporal value full copy at T2";
@@ -200,7 +204,8 @@ PairedValueT2Controller::SetAdmissionProfile(AdmissionProfile profile)
                     "Cannot change paired-value admission profile after output setup");
     NS_ABORT_MSG_IF(profile != AdmissionProfile::BASELINE_V1 &&
                         profile != AdmissionProfile::SCORE_AWARE_EMERGENCY_V2 &&
-                        profile != AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3,
+                        profile != AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3 &&
+                        profile != AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4,
                     "Unknown paired-value admission profile");
     const uint64_t maximumHorizonUs = GetBudgetMaxHorizonUs(profile);
     const uint64_t capacityUs = GetBudgetCapacityUs(profile);
@@ -234,6 +239,8 @@ PairedValueT2Controller::AdmissionProfileName(AdmissionProfile profile)
         return "score_aware_emergency_v2";
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return "score_aware_full_horizon_v3";
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return "score_aware_remaining_refill_v4";
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -254,6 +261,10 @@ PairedValueT2Controller::ParseAdmissionProfile(std::string_view name)
     {
         return AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3;
     }
+    if (name == AdmissionProfileName(AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4))
+    {
+        return AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4;
+    }
     return std::nullopt;
 }
 
@@ -267,6 +278,8 @@ PairedValueT2Controller::GetCsvSchemaVersion(AdmissionProfile profile)
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return SCORE_AWARE_CSV_SCHEMA_VERSION;
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return REMAINING_REFILL_CSV_SCHEMA_VERSION;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
@@ -282,6 +295,8 @@ PairedValueT2Controller::GetSummarySchemaVersion(AdmissionProfile profile)
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return SCORE_AWARE_SUMMARY_SCHEMA_VERSION;
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return REMAINING_REFILL_SUMMARY_SCHEMA_VERSION;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
@@ -296,6 +311,23 @@ PairedValueT2Controller::UsesScoreAwareEmergency(AdmissionProfile profile)
         return false;
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return true;
+    }
+    NS_ABORT_MSG("Unknown paired-value admission profile");
+    return false;
+}
+
+bool
+PairedValueT2Controller::UsesRemainingRefillBorrowing(AdmissionProfile profile)
+{
+    switch (profile)
+    {
+    case AdmissionProfile::BASELINE_V1:
+    case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return false;
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return true;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
@@ -311,6 +343,7 @@ PairedValueT2Controller::GetBudgetMaxHorizonUs(AdmissionProfile profile)
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
         return BUDGET_MAX_HORIZON_US;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return FULL_HORIZON_BUDGET_MAX_HORIZON_US;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
@@ -326,6 +359,7 @@ PairedValueT2Controller::GetBudgetCapacityUs(AdmissionProfile profile)
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
         return BUDGET_CAPACITY_US;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return FULL_HORIZON_BUDGET_CAPACITY_US;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
@@ -401,6 +435,8 @@ PairedValueT2Controller::GetRuntimeContractId(AdmissionProfile profile)
         return SCORE_AWARE_RUNTIME_CONTRACT_ID;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return FULL_HORIZON_RUNTIME_CONTRACT_ID;
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return REMAINING_REFILL_RUNTIME_CONTRACT_ID;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -423,6 +459,8 @@ PairedValueT2Controller::GetRuntimeContractSha256(AdmissionProfile profile)
         return SCORE_AWARE_RUNTIME_CONTRACT_SHA256;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return FULL_HORIZON_RUNTIME_CONTRACT_SHA256;
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return REMAINING_REFILL_RUNTIME_CONTRACT_SHA256;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -694,6 +732,15 @@ PairedValueT2Controller::CaptureAccountingBefore(DecisionEvidence& evidence)
                         !std::isfinite(evidence.guardDebtBeforeUs),
                     "Paired-value guard before-state is invalid");
     evidence.guardAvailableBeforeUs = *available;
+    if (UsesRemainingRefillBorrowing(m_admissionProfile))
+    {
+        const auto remainingRefillUs =
+            m_guard.GetRemainingRefillCreditUs(MEASUREMENT_STOP_NS);
+        NS_ABORT_MSG_IF(!remainingRefillUs || !std::isfinite(*remainingRefillUs) ||
+                            *remainingRefillUs < 0,
+                        "Paired-value remaining-refill credit is invalid");
+        evidence.remainingRefillCreditUs = *remainingRefillUs;
+    }
 }
 
 void
@@ -846,8 +893,24 @@ PairedValueT2Controller::ProcessPair(const PredictionSample& primary,
                         }
                     }
                 }
+                if (!evidence.strictGuardAdmitted && !evidence.emergencyAdmitted &&
+                    UsesRemainingRefillBorrowing(m_admissionProfile))
+                {
+                    evidence.remainingRefillAdmissionConsidered = true;
+                    ++m_remainingRefillAdmissionConsidered;
+                    evidence.remainingRefillAdmitted =
+                        m_guard.CanReserveAgainstRemainingRefill(
+                            evidence.canonicalReservedAirtimeUs,
+                            evidence.meterReservedBeforeUs,
+                            MEASUREMENT_STOP_NS);
+                    if (evidence.remainingRefillAdmitted)
+                    {
+                        ++m_remainingRefillAdmitted;
+                    }
+                }
                 evidence.guardAdmitted = evidence.strictGuardAdmitted ||
-                                         evidence.emergencyAdmitted;
+                                         evidence.emergencyAdmitted ||
+                                         evidence.remainingRefillAdmitted;
                 if (!evidence.guardAdmitted)
                 {
                     evidence.status = DecisionStatus::AIRTIME_GUARD_REJECTED;
@@ -1078,6 +1141,12 @@ PairedValueT2Controller::WriteDecisionHeader()
                "emergency_admission_considered,emergency_maximum_debt_us,"
                "emergency_admitted,admission_tier";
     }
+    if (UsesRemainingRefillBorrowing(m_admissionProfile))
+    {
+        m_decisions
+            << ",remaining_refill_credit_us,remaining_refill_admission_considered,"
+               "remaining_refill_admitted";
+    }
     m_decisions << '\n';
     m_decisions.flush();
 }
@@ -1189,7 +1258,9 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
         const std::string_view admissionTier =
             evidence.strictGuardAdmitted
                 ? "strict"
-                : (evidence.emergencyAdmitted ? "emergency" : "none");
+                : (evidence.emergencyAdmitted
+                       ? "emergency"
+                       : (evidence.remainingRefillAdmitted ? "remaining_refill" : "none"));
         m_decisions << ',' << AdmissionProfileName(m_admissionProfile) << ','
                     << evidence.strictGuardAdmitted << ','
                     << EMERGENCY_SCORE_THRESHOLD << ','
@@ -1197,6 +1268,12 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
                     << evidence.emergencyAdmissionConsidered << ','
                     << EMERGENCY_MAXIMUM_DEBT_US << ','
                     << evidence.emergencyAdmitted << ',' << admissionTier;
+    }
+    if (UsesRemainingRefillBorrowing(m_admissionProfile))
+    {
+        m_decisions << ',' << evidence.remainingRefillCreditUs << ','
+                    << evidence.remainingRefillAdmissionConsidered << ','
+                    << evidence.remainingRefillAdmitted;
     }
     m_decisions << '\n';
     m_decisions.flush();
@@ -1235,15 +1312,26 @@ PairedValueT2Controller::WriteSummary(
                         featureStatusSum != m_featureEvaluated ||
                         scorePassStatusSum != m_scoreThresholdPassed ||
                         launchAttemptStatusSum != m_launchAttempted ||
-                        m_strictGuardAdmitted + m_emergencyAdmitted !=
+                        m_strictGuardAdmitted + m_emergencyAdmitted +
+                                m_remainingRefillAdmitted !=
                             m_launchAttempted ||
                         m_emergencyScorePassed !=
                             m_emergencyAdmissionConsidered ||
                         m_emergencyAdmitted > m_emergencyAdmissionConsidered ||
+                        m_remainingRefillAdmitted >
+                            m_remainingRefillAdmissionConsidered ||
+                        (UsesRemainingRefillBorrowing(m_admissionProfile) &&
+                         m_remainingRefillAdmissionConsidered !=
+                             m_remainingRefillAdmitted +
+                                 m_statusCounts[StatusIndex(
+                                     DecisionStatus::AIRTIME_GUARD_REJECTED)]) ||
                         (!UsesScoreAwareEmergency(m_admissionProfile) &&
                          (m_emergencyScorePassed != 0 ||
                           m_emergencyAdmissionConsidered != 0 ||
                           m_emergencyAdmitted != 0)) ||
+                        (!UsesRemainingRefillBorrowing(m_admissionProfile) &&
+                         (m_remainingRefillAdmissionConsidered != 0 ||
+                          m_remainingRefillAdmitted != 0)) ||
                         m_launchedFrameIds.size() !=
                             m_statusCounts[StatusIndex(DecisionStatus::ACTION)] ||
                         m_launchedFrames.size() != m_launchedFrameIds.size() ||
@@ -1377,7 +1465,19 @@ PairedValueT2Controller::WriteSummary(
             << "    \"emergency_score_threshold_float32_bits_hex\": "
                "\"0x391d4952\",\n"
             << "    \"emergency_maximum_debt_us\": "
-            << EMERGENCY_MAXIMUM_DEBT_US << "\n";
+            << EMERGENCY_MAXIMUM_DEBT_US;
+        if (UsesRemainingRefillBorrowing(m_admissionProfile))
+        {
+            summary
+                << ",\n"
+                << "    \"remaining_refill_borrowing_enabled\": true,\n"
+                << "    \"remaining_refill_repayment_stop_ns\": "
+                << MEASUREMENT_STOP_NS << ",\n"
+                << "    \"remaining_refill_credit_formula\": "
+                   "\"fraction * (repayment_stop_ns - "
+                   "last_causal_guard_refill_ns) / 1000\"";
+        }
+        summary << "\n";
     }
     else
     {
@@ -1418,7 +1518,16 @@ PairedValueT2Controller::WriteSummary(
                 << m_emergencyScorePassed << ",\n"
                 << "    \"emergency_admission_considered\": "
                 << m_emergencyAdmissionConsidered << ",\n"
-                << "    \"emergency_admitted\": " << m_emergencyAdmitted << "\n";
+                << "    \"emergency_admitted\": " << m_emergencyAdmitted;
+        if (UsesRemainingRefillBorrowing(m_admissionProfile))
+        {
+            summary << ",\n"
+                    << "    \"remaining_refill_admission_considered\": "
+                    << m_remainingRefillAdmissionConsidered << ",\n"
+                    << "    \"remaining_refill_admitted\": "
+                    << m_remainingRefillAdmitted;
+        }
+        summary << "\n";
     }
     else
     {
@@ -1447,7 +1556,14 @@ PairedValueT2Controller::WriteSummary(
         << "    \"meter_reserved_final_raw_us\": " << meterReservedRawUs << ",\n"
         << "    \"meter_reserved_final_normalized_us\": 0,\n"
         << "    \"learned_cost_used_for_token_accounting\": false";
-    if (UsesScoreAwareEmergency(m_admissionProfile))
+    if (UsesRemainingRefillBorrowing(m_admissionProfile))
+    {
+        summary
+            << ",\n"
+            << "    \"strict_plus_emergency_plus_remaining_refill_admitted_equals_"
+               "launch_attempted\": true\n";
+    }
+    else if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         summary
             << ",\n"

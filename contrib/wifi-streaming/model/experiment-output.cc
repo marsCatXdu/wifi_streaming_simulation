@@ -621,7 +621,20 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                 << "    \"emergency_score_threshold_float32_bits_hex\": "
                    "\"0x391d4952\",\n"
                 << "    \"emergency_maximum_debt_us\": "
-                << PairedValueT2Controller::EMERGENCY_MAXIMUM_DEBT_US << "\n";
+                << PairedValueT2Controller::EMERGENCY_MAXIMUM_DEBT_US;
+            if (PairedValueT2Controller::UsesRemainingRefillBorrowing(
+                    *admissionProfile))
+            {
+                output
+                    << ",\n"
+                    << "    \"remaining_refill_borrowing_enabled\": true,\n"
+                    << "    \"remaining_refill_repayment_stop_ns\": "
+                    << PairedValueT2Controller::MEASUREMENT_STOP_NS << "\n";
+            }
+            else
+            {
+                output << "\n";
+            }
         }
         else
         {

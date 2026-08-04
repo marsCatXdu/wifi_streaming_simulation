@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "paired-value-duplication-t2-remaining-refill-borrowing-v4",
+  "status": "frozen_engineering_candidate",
+  "purpose": "Test whether a final causal admission tier can convert otherwise rejected score passers into rescues by borrowing only refill remaining before measurement stop.",
+  "inherits": {
+    "runtime_contract_id": "paired-value-duplication-t2-full-horizon-carryover-v3",
+    "path": "experiments/model-selection/paired-value-duplication-t2-full-horizon-carryover-v3.json",
+    "sha256": "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8"
+  },
+  "unchanged_contract": {
+    "policy_name": "paired_value_duplication_t2",
+    "environment": "unchanged_neutral_mixed4x4",
+    "predictor": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "primary_score_threshold_float32_bits_hex": "0x38bbc0e5",
+    "frame_gate": "p_frames_only",
+    "decision_stage": "T2",
+    "decision_offset_us": 2000,
+    "action": "canonical_full_secondary_copy",
+    "canonical_cost_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+    "cost_safety_factor": 1.25,
+    "budget_fraction": 0.006,
+    "budget_max_horizon_us": 60000000,
+    "budget_capacity_us": 360000,
+    "budget_initial_horizon_us": 2000000,
+    "budget_initial_credit_us": 12000,
+    "emergency_score_threshold_float32": 0.0001500000071246177,
+    "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+    "emergency_maximum_debt_us": 60000,
+    "measurement_window_ns": [
+      1000000000,
+      61000000000
+    ],
+    "decision_window_ns": [
+      1000000000,
+      60466000000
+    ]
+  },
+  "remaining_refill_override": {
+    "profile_id": "score_aware_remaining_refill_v4",
+    "repayment_stop_ns": 61000000000,
+    "remaining_refill_credit_formula": "budget_fraction * (repayment_stop_ns - last_causal_guard_refill_ns) / 1000",
+    "remaining_refill_credit_units": "microseconds",
+    "ordered_admission_semantics": [
+      "Apply inherited strict admission without change.",
+      "If strict admission fails, apply the inherited high-score emergency threshold and 60000 us debt limit without change.",
+      "If neither inherited tier admits, consider every primary-score-threshold passer for the remaining-refill tier.",
+      "Admit the final tier only when current available balance plus refill causally remaining before measurement stop covers the conservative canonical reservation.",
+      "Do not mutate the guard balance or install future credit at decision time; measured secondary airtime remains the only debit and later refill repays any realized debt."
+    ],
+    "strict_admission_changed": false,
+    "high_score_emergency_changed": false,
+    "primary_score_threshold_changed": false,
+    "long_run_refill_rate_changed": false,
+    "startup_credit_changed": false,
+    "learned_cost_used_for_token_accounting": false,
+    "new_tier_can_only_add_actions": true
+  },
+  "telemetry_contract": {
+    "decision_csv_schema_version": 3,
+    "controller_summary_schema_version": 3,
+    "v2_columns_retained_in_order": true,
+    "decision_columns_appended": [
+      "remaining_refill_credit_us",
+      "remaining_refill_admission_considered",
+      "remaining_refill_admitted"
+    ],
+    "admission_tier_values": [
+      "none",
+      "strict",
+      "emergency",
+      "remaining_refill"
+    ],
+    "summary_count_keys_appended": [
+      "remaining_refill_admission_considered",
+      "remaining_refill_admitted"
+    ],
+    "summary_integrity_key_appended": "strict_plus_emergency_plus_remaining_refill_admitted_equals_launch_attempted"
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        }
+      }
+    }
+  },
+  "selection_evidence": {
+    "v3_negative_result_path": "key_experiment_results/08_full_horizon_t2_str_engineering_v3/v2_v3_behavioral_comparison.json",
+    "v3_negative_result_sha256": "00c71ed2914c37a48d3bdcc65524c67e8ae4f3ccbe7b96fa99ad5fd9b7dbd312",
+    "observed_v3_guard_rejected_frames": 2540,
+    "observed_v3_guard_rejected_primary_misses": 162,
+    "pointwise_v3_state_remaining_refill_eligible_rejections": 2383,
+    "pointwise_added_canonical_reservation_us_per_run": 98485.0,
+    "projection_warning": "Pointwise replay does not reserve counterfactual actions, model their measured airtime, or include their contention. It selects the mechanism but is not an outcome estimate."
+  },
+  "evaluation_boundary": {
+    "pilot_seeds": [
+      43
+    ],
+    "engineering_seed_start": 1251,
+    "engineering_seed_stop_inclusive": 1298,
+    "engineering_seeds_previously_opened": true,
+    "reserved_confirmation_seed_start": 1301,
+    "reserved_confirmation_seed_stop_inclusive": 1348,
+    "reserved_confirmation_seeds_must_remain_unopened": true,
+    "reference": "STR MLO NMaxInflights=1",
+    "primary_gates": [
+      "paired all-generated deadline-miss difference confidence interval below zero",
+      "paired mean per-run completed-frame HF7 P99 difference confidence interval below zero"
+    ],
+    "resource_gates": {
+      "sender_airtime_ratio_strictly_below": 1.2,
+      "background_throughput_loss_fraction_at_most": 0.01
+    }
+  },
+  "interpretation_limits": [
+    "The reused 1251-1298 seeds are development evidence and cannot independently confirm V4.",
+    "A canonical reservation fitting remaining refill does not guarantee measured airtime, because retries and shared PPDUs are observed only after admission.",
+    "New actions change contention and later predictor inputs, so the pointwise V3 replay is not a closed-loop projection.",
+    "The predictor, primary threshold, startup behavior, I-frame gate, action, and environment must not be tuned in this experiment.",
+    "EMLSR completed-frame P99 is survivor-conditioned and is not an optimization gate."
+  ]
+}
