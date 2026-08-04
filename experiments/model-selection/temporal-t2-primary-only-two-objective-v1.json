@@ -1,0 +1,272 @@
+{
+  "selection_schema_version": 1,
+  "selection_id": "temporal-t2-primary-only-two-objective-v1",
+  "status": "frozen_before_canonical_model_fit",
+  "training": {
+    "tool_introduced_git_commit": "873d91b25627e2e8e0b9a465cb4071a6004a06e6",
+    "tool": "tools/train_temporal_t2_value.py",
+    "tool_sha256": "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9",
+    "local_dependency_source_sha256": {
+      "build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+      "build_randomized_temporal_dataset.py": "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3",
+      "train_randomized_value.py": "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911"
+    },
+    "random_seed": 20260804,
+    "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "canonical_fit": {
+      "status": "pending",
+      "must_use_exact_frozen_tool_and_dataset": true,
+      "must_refuse_output_overwrite": true
+    }
+  },
+  "dataset": {
+    "path": "results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+    "feature_contract_id": "randomized_intervention_t2_temporal_action_clean_v1",
+    "artifact_manifest_sha256": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+    "dataset_metadata_sha256": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+    "randomized_t2_temporal_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+    "input_v1_artifacts_sha256": {
+      "artifact_manifest.json": "1c532dbf931c7dfe58ffa227de2447da0e71ee80043b9f913ce3fb2e90613a00",
+      "dataset_metadata.json": "29648c19992b565ad855030452f65aeef8e36f6f4e9230a6f623eb1793112e50",
+      "randomized_t2.csv": "26bec3b9ff5ed7df80b5b8bc5c7e95d28af3b4d519850a6841568279ed31b995",
+      "randomized_t4_wait.csv": "3eed0fc5752ba300dab3a6061b99e4ffa214fa54fe6ab1eeb2bda0b0e3f0452f"
+    },
+    "source_project_git_commit": "61454072bf1d70a2a677843e303e545628613c50",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "run_group_count": 96,
+    "row_count": 73400,
+    "population": "v1 common-T2-eligible rows with exact lags 1/3/8 and action-clean secondary delayed-PHY endpoints",
+    "estimand": "binary_assignment_ITT_on_action_clean_temporal_population",
+    "arms": [
+      "CONTROL",
+      "FULL_COPY_T2"
+    ],
+    "filter_counts": {
+      "candidate_v1_t2_rows": 76526,
+      "excluded_lag8_warmup": 498,
+      "excluded_any_secondary_action_dirty": 2628,
+      "included_rows": 73400
+    },
+    "split": {
+      "algorithm": "sha256_seed_run_exact_64_16_16_v1",
+      "unit": "(seed, run_number)",
+      "train": 64,
+      "calibration": 16,
+      "test": 16
+    }
+  },
+  "feature_contract": {
+    "scope": "strictly_primary_only",
+    "secondary_feature_count": 0,
+    "receiver_prior_outcomes_allowed": false,
+    "input_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+    "categorical_encoding": "exact I_FRAME/P_FRAME one-hot",
+    "feature_families_in_order": [
+      {
+        "id": "primary_base",
+        "encoded_feature_count": 68,
+        "definition": "67 primary or frame logical v1 features, with frame type encoded as two columns"
+      },
+      {
+        "id": "primary_compact_physics",
+        "encoded_feature_count": 75,
+        "definition": "primary_base plus the seven predeclared compact primary physics features"
+      },
+      {
+        "id": "primary_compact_physics_temporal",
+        "encoded_feature_count": 246,
+        "definition": "primary_compact_physics plus 12 delayed current primary radio features and 53 primary features at each exact lag 1, 3, and 8"
+      }
+    ],
+    "exact_frame_lags": [
+      1,
+      3,
+      8
+    ],
+    "compact_primary_physics_feature_count": 7,
+    "primary_temporal_feature_count": 171
+  },
+  "model_contract": {
+    "fit_role": "train_only",
+    "value_targets": [
+      "deadline_miss",
+      "completed_late_18000us",
+      "bad_tail_12000us"
+    ],
+    "heads_per_value_target": {
+      "primary_need": "HGB probability on all training rows",
+      "treated_bad": "HGB probability on treated and launched training rows"
+    },
+    "value_definition": "max(primary-need probability - treated-bad probability, 0)",
+    "cost_model": "Ridge on log1p measured secondary airtime given treated launch, with Duan smearing",
+    "predicted_cost_floor_us": 1.0,
+    "predicted_cost_cap_us": 1000000.0,
+    "evaluation": {
+      "method": "known-propensity doubly robust policy evaluation",
+      "nuisance_fit_role": "train_only",
+      "nuisance_feature_family": "primary_compact_physics_temporal",
+      "known_t2_treatment_probability": 0.09090909090909091,
+      "bootstrap": {
+        "unit": "(seed, run_number)",
+        "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+        "replications": 2000,
+        "confidence_level": 0.95,
+        "used_for_candidate_selection": false
+      }
+    }
+  },
+  "primary_policy": {
+    "stage": "T2",
+    "sample_offset_us": 2000,
+    "action": "canonical_full_secondary_copy",
+    "sequential_policy": "T2_only",
+    "threshold_comparator": "float32(score) >= float32(threshold)",
+    "threshold_must_be_positive": true,
+    "objectives": {
+      "deadline_miss": "unconditional; incomplete frames are misses",
+      "completed_late18": "P(frame completes and latency is greater than 18000 us) divided by P(frame completes)"
+    },
+    "completion_denominator": "P(frame completes), not P(frame meets deadline)",
+    "legacy_bad12_role": "candidate ranker only; not a confirmation objective"
+  },
+  "selection": {
+    "trainer_selection_id": "calibration_two_objective_50pct_maximin_v1",
+    "role": "calibration",
+    "candidate_count": 192,
+    "rankers_in_order": [
+      "deadline_value_per_cost",
+      "completed_late18_value_per_cost",
+      "balanced_normalized_value_per_cost",
+      "legacy_bad12_value_per_cost"
+    ],
+    "ranker_definitions": {
+      "deadline_value_per_cost": "nonnegative predicted deadline-miss value divided by predicted cost",
+      "completed_late18_value_per_cost": "nonnegative predicted completed-and-late18 value divided by predicted cost",
+      "balanced_normalized_value_per_cost": "equal mean of deadline and completed-and-late18 values normalized by their training-only control-primary risks, divided by predicted cost",
+      "legacy_bad12_value_per_cost": "nonnegative predicted incomplete-or-later-than-12000-us value divided by predicted cost"
+    },
+    "frame_gates_in_order": [
+      "all_frames",
+      "p_frames_only"
+    ],
+    "candidate_treatment_fractions": [
+      0.05,
+      0.075,
+      0.1,
+      0.125,
+      0.15,
+      0.165,
+      0.18,
+      0.2
+    ],
+    "admissibility_constraints": {
+      "positive_float32_threshold": true,
+      "maximum_realized_treatment_fraction": 0.2,
+      "maximum_calibration_dr_secondary_airtime_us_per_eligible_frame": 400.0,
+      "minimum_relative_deadline_miss_improvement": 0.5,
+      "minimum_relative_completed_late18_improvement": 0.5,
+      "require_finite_and_probability_consistent_dr_estimates": true
+    },
+    "primary_rule": "maximize the smaller calibrated relative improvement across deadline miss and conditional completed-late18",
+    "tie_break_in_order": [
+      "larger mean relative improvement",
+      "lower calibration DR secondary airtime",
+      "lower realized action fraction",
+      "lower stable predeclared candidate ordinal"
+    ],
+    "cluster_intervals_used_during_selection": false
+  },
+  "engineering_test": {
+    "status": "previously_opened_engineering_evidence_not_confirmation",
+    "used_during_candidate_selection": false,
+    "policy_application": "apply the one frozen calibration float32 threshold once after candidate selection",
+    "may_change_frozen_selection": false,
+    "confirmation_role": false
+  },
+  "population_mapping": {
+    "offline_selection_population": "action-clean common-T2-eligible frames only",
+    "raw_offline_risks_directly_comparable_to_all_generated_frame_mlo_metrics": false,
+    "required_final_denominator": "all generated frames",
+    "missed_or_intentionally_abandoned_frames_remain_in_denominator": true,
+    "completed_p99_requires_closed_loop_reconstruction_or_confirmation": true
+  },
+  "runtime_safety_guard": {
+    "secondary_airtime_budget_fraction": 0.006,
+    "bucket_horizon_us": 10000000,
+    "initial_bucket_horizon_us": 2000000,
+    "cost_safety_factor": 1.25,
+    "role": "catastrophe_guard_after_learned_admission"
+  },
+  "confirmation": {
+    "evidence_role": "fresh_closed_loop_confirmation",
+    "seed_start": 1301,
+    "seed_count": 48,
+    "same_final_build_required": true,
+    "policies": [
+      "paired_value_duplication_t2",
+      "mlo_str",
+      "mlo_emlsr"
+    ],
+    "mlo_n_max_inflights": 1,
+    "environment": "unchanged_neutral_mixed4x4",
+    "pairing": {
+      "unit": "(seed, run_number)",
+      "same_seed_and_run_required_for_all_three_policies": true,
+      "missing_or_duplicate_pair_handling": "fail the campaign; never silently exclude a pair"
+    },
+    "paired_inference": {
+      "method": "deterministic_paired_whole_run_percentile_bootstrap_v1",
+      "replications": 10000,
+      "confidence_level": 0.95,
+      "random_seed": 20260804,
+      "resampling_unit": "matched (seed, run_number) policy triplet",
+      "deadline_miss": {
+        "per_run_estimator": "missed generated frames divided by all generated frames in the measurement window",
+        "paired_statistic": "mean of policy-minus-baseline per-run differences",
+        "decisive_lower_rule": "upper endpoint of the paired 95% interval is strictly below zero",
+        "baselines": [
+          "mlo_str",
+          "mlo_emlsr"
+        ]
+      },
+      "completed_frame_p99": {
+        "baseline": "mlo_str only",
+        "per_run_population": "all frames in the measurement window with finite receiver union completion latency, including completions after deadline",
+        "per_run_quantile": "empirical type-7 0.99 quantile",
+        "minimum_completed_frames_per_run": 100,
+        "insufficient_completion_handling": "fail the STR comparison; never exclude the run or pool it with another run",
+        "campaign_estimator": "mean of per-run completed-frame P99 values, not a pooled-frame P99",
+        "paired_statistic": "mean of policy-minus-STR per-run P99 differences",
+        "decisive_lower_rule": "upper endpoint of the paired 95% interval is strictly below zero"
+      }
+    },
+    "victory_gates": {
+      "str_mlo": [
+        "decisively lower all-generated-frame deadline-miss rate under the frozen paired interval rule",
+        "decisively lower mean per-run completed-frame P99 under the frozen paired interval rule, with deadline-miss rate reported beside it"
+      ],
+      "emlsr_mlo": [
+        "decisively lower all-generated-frame deadline-miss rate"
+      ],
+      "emlsr_completed_frame_p99": "descriptive only, survivor-conditioned, and never a victory gate"
+    },
+    "optional_emlsr_latency_context": "explicitly defined all-generated-frame deadline-censored latency",
+    "sender_airtime_ratio_upper_target": {
+      "exclusive_upper_bound": 1.2,
+      "statistic": "policy summed sender PHY TX airtime divided by baseline summed sender PHY TX airtime, using the ratio of matched run means",
+      "required_against_each_baseline": [
+        "mlo_str",
+        "mlo_emlsr"
+      ]
+    },
+    "background_throughput_loss_fraction_upper_target": {
+      "inclusive_upper_bound": 0.01,
+      "statistic": "one minus policy background-throughput mean divided by baseline background-throughput mean over matched runs",
+      "required_against_each_baseline": [
+        "mlo_str",
+        "mlo_emlsr"
+      ]
+    }
+  }
+}
