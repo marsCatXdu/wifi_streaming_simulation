@@ -15,6 +15,7 @@ import random
 import re
 import statistics
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
@@ -175,6 +176,53 @@ SOURCE_ARTIFACTS = {
 }
 
 
+@dataclass(frozen=True)
+class QualificationProfile:
+    """Frozen evidence boundary for one two-arm engineering campaign."""
+
+    key: str
+    runtime_contract_path: Path
+    runtime_contract_id: str
+    runtime_contract_sha256: str
+    expected_seed_run_units: tuple[tuple[int, int], ...]
+    policy_label: str
+    analysis_id: str
+    markdown_title: str
+    contract_kind: str
+
+
+V1_PROFILE = QualificationProfile(
+    key="v1",
+    runtime_contract_path=RUNTIME_CONTRACT_PATH,
+    runtime_contract_id=RUNTIME_CONTRACT_ID,
+    runtime_contract_sha256=RUNTIME_CONTRACT_SHA256,
+    expected_seed_run_units=EXPECTED_SEED_RUN_UNITS,
+    policy_label=ARM_LABELS["policy"],
+    analysis_id="paired_value_t2_str_qualification",
+    markdown_title="Paired-value T2 qualification against STR MLO",
+    contract_kind="base_v1",
+)
+SCORE_AWARE_V2_PROFILE = QualificationProfile(
+    key="score-aware-v2",
+    runtime_contract_path=(
+        REPOSITORY_ROOT
+        / "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json"
+    ),
+    runtime_contract_id="paired-value-duplication-t2-score-aware-emergency-v2",
+    runtime_contract_sha256=(
+        "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+    ),
+    expected_seed_run_units=tuple((seed, 1) for seed in range(1251, 1299)),
+    policy_label="Score-aware T2 V2",
+    analysis_id="paired_value_t2_score_aware_str_engineering",
+    markdown_title="Score-aware T2 V2 engineering against STR MLO",
+    contract_kind="score_aware_v2",
+)
+PROFILES = {
+    profile.key: profile for profile in (V1_PROFILE, SCORE_AWARE_V2_PROFILE)
+}
+
+
 class QualificationError(ValueError):
     """Raised before inference when campaign evidence is not contract-complete."""
 
@@ -327,19 +375,8 @@ def _load_neutral_declarations() -> tuple[dict[str, Any], dict[str, Any]]:
     return environment, topology_wifi
 
 
-def _verify_source_closure() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
-    observed_contract_sha = _sha256_file(RUNTIME_CONTRACT_PATH)
-    if observed_contract_sha != RUNTIME_CONTRACT_SHA256:
-        raise QualificationError(
-            "runtime contract checksum changed: "
-            f"expected {RUNTIME_CONTRACT_SHA256}, found {observed_contract_sha}"
-        )
-    contract = _read_json(RUNTIME_CONTRACT_PATH)
-    if (
-        contract.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
-        or contract.get("selected_policy_contract", {}).get("policy_name") != POLICY_NAME
-    ):
-        raise QualificationError("runtime contract identity changed")
+def _verify_analyzer_contract(contract: dict[str, Any]) -> None:
+    """Verify the inherited statistical and final-confirmation boundary."""
     analyzer = contract.get("confirmation_analyzer_contract", {})
     confirmation = contract.get("fresh_confirmation_contract", {})
     expected_analyzer = {
@@ -355,10 +392,6 @@ def _verify_source_closure() -> tuple[dict[str, Any], dict[str, Any], dict[str, 
         or confirmation.get("seed_count") != EXPECTED_PAIR_COUNT
     ):
         raise QualificationError("frozen confirmation unit declaration changed")
-    if set(seed for seed, _ in EXPECTED_SEED_RUN_UNITS) & set(
-        RESERVED_FINAL_CONFIRMATION_SEEDS
-    ):
-        raise QualificationError("engineering units overlap reserved final-confirmation seeds")
     completed = analyzer.get("completed_frame_p99", {})
     airtime = analyzer.get("sender_airtime_target", {})
     background = analyzer.get("background_throughput_target", {})
@@ -368,6 +401,87 @@ def _verify_source_closure() -> tuple[dict[str, Any], dict[str, Any], dict[str, 
         or background.get("inclusive_loss_fraction_upper_bound") != MAXIMUM_BACKGROUND_LOSS
     ):
         raise QualificationError("frozen qualification thresholds changed")
+
+
+def _verify_source_closure(
+    profile: QualificationProfile = V1_PROFILE,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    observed_contract_sha = _sha256_file(profile.runtime_contract_path)
+    if observed_contract_sha != profile.runtime_contract_sha256:
+        raise QualificationError(
+            "runtime contract checksum changed: "
+            f"expected {profile.runtime_contract_sha256}, found {observed_contract_sha}"
+        )
+    contract = _read_json(profile.runtime_contract_path)
+    if contract.get("runtime_contract_id") != profile.runtime_contract_id:
+        raise QualificationError("runtime contract identity changed")
+
+    if profile.contract_kind == "base_v1":
+        if contract.get("selected_policy_contract", {}).get("policy_name") != POLICY_NAME:
+            raise QualificationError("runtime contract policy identity changed")
+        analyzer_contract = contract
+    elif profile.contract_kind == "score_aware_v2":
+        expected_inheritance = {
+            "runtime_contract_id": RUNTIME_CONTRACT_ID,
+            "path": str(RUNTIME_CONTRACT_PATH.relative_to(REPOSITORY_ROOT)),
+            "sha256": RUNTIME_CONTRACT_SHA256,
+        }
+        if _canonical_json(contract.get("inherits")) != _canonical_json(
+            expected_inheritance
+        ):
+            raise QualificationError("score-aware contract inheritance changed")
+        if _sha256_file(RUNTIME_CONTRACT_PATH) != RUNTIME_CONTRACT_SHA256:
+            raise QualificationError("inherited runtime contract checksum changed")
+        analyzer_contract = _read_json(RUNTIME_CONTRACT_PATH)
+        if (
+            analyzer_contract.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
+            or analyzer_contract.get("selected_policy_contract", {}).get("policy_name")
+            != POLICY_NAME
+            or contract.get("unchanged_contract", {}).get("policy_name") != POLICY_NAME
+        ):
+            raise QualificationError("score-aware inherited policy identity changed")
+        boundary = contract.get("evaluation_boundary", {})
+        expected_seeds = [seed for seed, _ in profile.expected_seed_run_units]
+        expected_primary_gates = [
+            "paired all-generated deadline-miss difference confidence interval below zero",
+            (
+                "paired mean per-run completed-frame HF7 P99 difference "
+                "confidence interval below zero"
+            ),
+        ]
+        if (
+            boundary.get("fresh_engineering_seed_start") != min(expected_seeds)
+            or boundary.get("fresh_engineering_seed_stop_inclusive") != max(expected_seeds)
+            or boundary.get("reserved_confirmation_seed_start")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[0]
+            or boundary.get("reserved_confirmation_seed_stop_inclusive")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[-1]
+            or boundary.get(
+                "reserved_confirmation_seeds_must_remain_unopened_until_engineering_pass"
+            )
+            is not True
+            or boundary.get("reference") != "STR MLO NMaxInflights=1"
+            or boundary.get("primary_gates") != expected_primary_gates
+            or boundary.get("resource_gates", {}).get(
+                "sender_airtime_ratio_strictly_below"
+            )
+            != MAXIMUM_AIRTIME_RATIO
+            or boundary.get("resource_gates", {}).get(
+                "background_throughput_loss_fraction_at_most"
+            )
+            != MAXIMUM_BACKGROUND_LOSS
+        ):
+            raise QualificationError("score-aware evaluation boundary changed")
+    else:
+        raise QualificationError(f"unsupported qualification profile {profile.key!r}")
+
+    _verify_analyzer_contract(analyzer_contract)
+    if len(profile.expected_seed_run_units) != EXPECTED_PAIR_COUNT:
+        raise QualificationError("engineering profile does not declare exactly 48 units")
+    if set(seed for seed, _ in profile.expected_seed_run_units) & set(
+        RESERVED_FINAL_CONFIRMATION_SEEDS
+    ):
+        raise QualificationError("engineering units overlap reserved final-confirmation seeds")
     contract_sources = (
         contract.get("runtime_outputs", {})
         .get("controller_summary_json", {})
@@ -570,6 +684,7 @@ def _resolve_config_file(serialized: str, manifest_path: Path) -> Path:
 def _validate_manifest(
     aggregate_path: Path,
     aggregate: dict[str, Any],
+    profile: QualificationProfile = V1_PROFILE,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     manifest_path = aggregate_path.parent / "experiment_manifest.json"
     manifest = _read_json(manifest_path)
@@ -591,8 +706,8 @@ def _validate_manifest(
     if manifest["schema_version"] != MANIFEST_SCHEMA_VERSION:
         raise QualificationError(f"{manifest_path}: unsupported manifest schema")
     if (
-        manifest["runtime_contract_id"] != RUNTIME_CONTRACT_ID
-        or manifest["runtime_contract_sha256"] != RUNTIME_CONTRACT_SHA256
+        manifest["runtime_contract_id"] != profile.runtime_contract_id
+        or manifest["runtime_contract_sha256"] != profile.runtime_contract_sha256
         or _canonical_json(manifest["source_artifacts"]) != _canonical_json(SOURCE_ARTIFACTS)
     ):
         raise QualificationError(f"{manifest_path}: runtime source closure mismatch")
@@ -619,9 +734,9 @@ def _validate_manifest(
         raise QualificationError(f"{manifest_path}: campaign matrix checksum mismatch")
     declared_runtime = document.get("runtime_contract")
     expected_runtime_declaration = {
-        "id": RUNTIME_CONTRACT_ID,
-        "path": str(RUNTIME_CONTRACT_PATH.relative_to(REPOSITORY_ROOT)),
-        "sha256": RUNTIME_CONTRACT_SHA256,
+        "id": profile.runtime_contract_id,
+        "path": str(profile.runtime_contract_path.relative_to(REPOSITORY_ROOT)),
+        "sha256": profile.runtime_contract_sha256,
         "source_artifacts": SOURCE_ARTIFACTS,
     }
     if _canonical_json(declared_runtime) != _canonical_json(expected_runtime_declaration):
@@ -691,8 +806,8 @@ def _validate_manifest(
         "config_file_sha256": _sha256_file(local_config),
         "project_commit": project_commit,
         "ns3_upstream_commit": ns3_commit,
-        "runtime_contract_id": RUNTIME_CONTRACT_ID,
-        "runtime_contract_sha256": RUNTIME_CONTRACT_SHA256,
+        "runtime_contract_id": profile.runtime_contract_id,
+        "runtime_contract_sha256": profile.runtime_contract_sha256,
         "source_artifacts": copy.deepcopy(SOURCE_ARTIFACTS),
         "completed_run_count": len(manifest_by_id),
         "expanded_matrix_identity_verified": True,
@@ -820,21 +935,25 @@ def _validate_required_artifacts(run_dir: Path, arm: str) -> None:
         raise QualificationError(f"{run_dir}: missing raw artifacts {', '.join(missing)}")
 
 
-def _validate_policy_source_identity(run_dir: Path, config: dict[str, Any]) -> None:
+def _validate_policy_source_identity(
+    run_dir: Path,
+    config: dict[str, Any],
+    profile: QualificationProfile = V1_PROFILE,
+) -> None:
     runtime = config.get("pairedValueDuplicationT2")
     if not isinstance(runtime, dict):
         raise QualificationError(f"{run_dir}: missing pairedValueDuplicationT2 config")
     if (
-        runtime.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
-        or runtime.get("runtime_contract_sha256") != RUNTIME_CONTRACT_SHA256
+        runtime.get("runtime_contract_id") != profile.runtime_contract_id
+        or runtime.get("runtime_contract_sha256") != profile.runtime_contract_sha256
     ):
         raise QualificationError(f"{run_dir}: resolved runtime contract mismatch")
     summary = _read_json(run_dir / "paired_value_t2_summary.json")
     if (
         summary.get("run_id") != config.get("run_id")
         or summary.get("policy") != POLICY_NAME
-        or summary.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
-        or summary.get("runtime_contract_sha256") != RUNTIME_CONTRACT_SHA256
+        or summary.get("runtime_contract_id") != profile.runtime_contract_id
+        or summary.get("runtime_contract_sha256") != profile.runtime_contract_sha256
         or _canonical_json(summary.get("source_artifacts")) != _canonical_json(SOURCE_ARTIFACTS)
     ):
         raise QualificationError(f"{run_dir}: controller source/runtime identity mismatch")
@@ -956,6 +1075,7 @@ def _observation(
     manifest: dict[str, Any],
     neutral_environment: dict[str, Any],
     topology_wifi: dict[str, Any],
+    profile: QualificationProfile = V1_PROFILE,
 ) -> dict[str, Any]:
     _validate_required_artifacts(run_dir, arm)
     config = _read_json(run_dir / "resolved_config.json")
@@ -992,7 +1112,7 @@ def _observation(
     if _canonical_json(observed_topology) != _canonical_json(expected_topology):
         raise QualificationError(f"{run_dir}: topology-specific Wi-Fi closure mismatch")
     if arm == "policy":
-        _validate_policy_source_identity(run_dir, config)
+        _validate_policy_source_identity(run_dir, config, profile)
     else:
         forbidden = POLICY_RUN_ARTIFACTS & {path.name for path in run_dir.iterdir()}
         if forbidden:
@@ -1147,12 +1267,15 @@ def _arm_summary(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
-    """Validate raw evidence and return the frozen 48-pair STR qualification."""
+def analyze_campaign(
+    inputs: Path | Iterable[Path],
+    profile: QualificationProfile = V1_PROFILE,
+) -> dict[str, Any]:
+    """Validate raw evidence and return one frozen 48-pair STR qualification."""
     input_paths = [inputs] if isinstance(inputs, Path) else list(inputs)
     if not input_paths:
         raise QualificationError("at least one campaign input is required")
-    _, neutral_environment, topology_wifi = _verify_source_closure()
+    _, neutral_environment, topology_wifi = _verify_source_closure(profile)
     aggregate_paths = [_resolve_aggregate(path) for path in input_paths]
     if len(set(aggregate_paths)) != len(aggregate_paths):
         raise QualificationError("duplicate aggregate input")
@@ -1163,7 +1286,7 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
     run_count = 0
     for aggregate_path in aggregate_paths:
         aggregate = _read_json(aggregate_path)
-        manifest, runs_by_id = _validate_manifest(aggregate_path, aggregate)
+        manifest, runs_by_id = _validate_manifest(aggregate_path, aggregate, profile)
         manifest_identities.append(manifest)
         for run in runs_by_id.values():
             run_count += 1
@@ -1182,12 +1305,13 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
                 manifest,
                 neutral_environment,
                 topology_wifi,
+                profile,
             )
             pair = observation["pair"]
             if pair in indexes[arm]:
                 raise QualificationError(f"duplicate {arm} run for seed/run {pair}")
             indexes[arm][pair] = observation
-    expected_pairs = set(EXPECTED_SEED_RUN_UNITS)
+    expected_pairs = set(profile.expected_seed_run_units)
     if run_count != EXPECTED_RUN_COUNT:
         raise QualificationError(
             f"campaign has {run_count} runs; expected exactly {EXPECTED_RUN_COUNT}"
@@ -1199,7 +1323,7 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
                 f"missing {sorted(expected_pairs - set(index))}, "
                 f"extra {sorted(set(index) - expected_pairs)}"
             )
-    pairs = list(EXPECTED_SEED_RUN_UNITS)
+    pairs = list(profile.expected_seed_run_units)
     for pair in pairs:
         environments = {
             _canonical_json(indexes[arm][pair]["environment"])
@@ -1335,7 +1459,12 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
     resource_status = _composite(resource_criteria.values())
     return {
         "schema_version": 1,
-        "analysis": "paired_value_t2_str_qualification",
+        "analysis": profile.analysis_id,
+        **(
+            {"qualification_profile": profile.key}
+            if profile != V1_PROFILE
+            else {}
+        ),
         "evidence_role": "engineering_qualification",
         "confirmation_eligibility": {
             "eligible": False,
@@ -1353,9 +1482,9 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
         ],
         "source_closure": {
             "runtime_contract": {
-                "path": str(RUNTIME_CONTRACT_PATH),
-                "runtime_contract_id": RUNTIME_CONTRACT_ID,
-                "sha256": RUNTIME_CONTRACT_SHA256,
+                "path": str(profile.runtime_contract_path),
+                "runtime_contract_id": profile.runtime_contract_id,
+                "sha256": profile.runtime_contract_sha256,
             },
             "neutral_environment_source": {
                 "path": str(NEUTRAL_SOURCE_PATH),
@@ -1397,7 +1526,10 @@ def analyze_campaign(inputs: Path | Iterable[Path]) -> dict[str, Any]:
             ],
         },
         "treatments": {
-            arm: {"label": ARM_LABELS[arm], **_arm_summary(rows)}
+            arm: {
+                "label": profile.policy_label if arm == "policy" else ARM_LABELS[arm],
+                **_arm_summary(rows),
+            }
             for arm, rows in ordered.items()
         },
         "comparison_against_str": {
@@ -1463,8 +1595,12 @@ def render_markdown(report: dict[str, Any]) -> str:
     background_bootstrap = background["paired_bootstrap"]
     policy = report["treatments"]["policy"]
     baseline = report["treatments"]["str_mlo"]
+    profile_key = report.get("qualification_profile", V1_PROFILE.key)
+    profile = PROFILES.get(profile_key)
+    if profile is None:
+        raise QualificationError(f"unknown report qualification profile {profile_key!r}")
     lines = [
-        "# Paired-value T2 qualification against STR MLO",
+        f"# {profile.markdown_title}",
         "",
         "Evidence role: engineering qualification only; this is not final confirmation.",
         "The reserved final-confirmation seeds were not used.",
@@ -1472,7 +1608,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"Validated matched seed/run units: {report['paired_unit_count']}.",
         "Every headline value below was reconstructed from raw per-run artifacts.",
         "",
-        "| Metric | Paired-value T2 | STR MLO | Policy-minus-STR 95% interval |",
+        f"| Metric | {profile.policy_label} | STR MLO | Policy-minus-STR 95% interval |",
         "| --- | ---: | ---: | ---: |",
         (
             "| All-generated deadline-miss rate | "
@@ -1524,13 +1660,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--markdown-output", type=Path)
     parser.add_argument(
+        "--profile",
+        choices=tuple(PROFILES),
+        default=V1_PROFILE.key,
+        help="frozen runtime and engineering-seed profile to validate",
+    )
+    parser.add_argument(
         "--require-pass",
         action="store_true",
         help="write the validated report, then exit 1 unless the overall target passes",
     )
     args = parser.parse_args(argv)
     try:
-        report = analyze_campaign(args.inputs)
+        report = analyze_campaign(args.inputs, PROFILES[args.profile])
         serialized = json.dumps(report, indent=2, sort_keys=True, allow_nan=False) + "\n"
         markdown = render_markdown(report)
         if args.json_output is not None:

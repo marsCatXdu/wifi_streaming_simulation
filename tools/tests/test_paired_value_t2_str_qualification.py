@@ -53,8 +53,14 @@ def _strict_validation_stub(
 class SyntheticCampaign:
     """One exact 48-pair raw campaign with deliberately simple outcomes."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        profile: qualification.QualificationProfile = qualification.V1_PROFILE,
+    ) -> None:
         self.root = root
+        self.profile = profile
+        self.seeds = [seed for seed, _ in profile.expected_seed_run_units]
         self.config_path = root / "synthetic_str_qualification.yaml"
         self.aggregate_path = root / "aggregate.json"
         self.manifest_path = root / "experiment_manifest.json"
@@ -63,22 +69,21 @@ class SyntheticCampaign:
         self.manifest_runs: dict[tuple[str, int], dict[str, object]] = {}
         self._create()
 
-    @staticmethod
-    def _matrix_document() -> dict[str, object]:
+    def _matrix_document(self) -> dict[str, object]:
         return {
-            "name": "synthetic-paired-value-t2-str-qualification",
+            "name": f"synthetic-paired-value-t2-str-qualification-{self.profile.key}",
             "runtime_contract": {
-                "id": qualification.RUNTIME_CONTRACT_ID,
+                "id": self.profile.runtime_contract_id,
                 "path": str(
-                    qualification.RUNTIME_CONTRACT_PATH.relative_to(
+                    self.profile.runtime_contract_path.relative_to(
                         qualification.REPOSITORY_ROOT
                     )
                 ),
-                "sha256": qualification.RUNTIME_CONTRACT_SHA256,
+                "sha256": self.profile.runtime_contract_sha256,
                 "source_artifacts": qualification.SOURCE_ARTIFACTS,
             },
             "base": {"fixture_contract": "v1"},
-            "seeds": list(range(1201, 1249)),
+            "seeds": self.seeds,
             "runs": [1],
             "topologies": [
                 {"name": "dual_interface"},
@@ -125,8 +130,8 @@ class SyntheticCampaign:
         if arm == "policy":
             config["environment"] = "unchanged_neutral_mixed4x4"
             config["pairedValueDuplicationT2"] = {
-                "runtime_contract_id": qualification.RUNTIME_CONTRACT_ID,
-                "runtime_contract_sha256": qualification.RUNTIME_CONTRACT_SHA256,
+                "runtime_contract_id": self.profile.runtime_contract_id,
+                "runtime_contract_sha256": self.profile.runtime_contract_sha256,
             }
         return config
 
@@ -149,18 +154,16 @@ class SyntheticCampaign:
             })
         return rows
 
-    @staticmethod
-    def _default_airtime(arm: str, seed: int) -> int:
-        offset = seed - 1201
+    def _default_airtime(self, arm: str, seed: int) -> int:
+        offset = seed - self.seeds[0]
         return (
             110_000 + 250 * offset
             if arm == "policy"
             else 100_000 + 100 * offset
         )
 
-    @staticmethod
-    def _default_background_bytes(arm: str, seed: int) -> int:
-        offset = seed - 1201
+    def _default_background_bytes(self, arm: str, seed: int) -> int:
+        offset = seed - self.seeds[0]
         return (
             995_000 + 900 * offset
             if arm == "policy"
@@ -226,8 +229,8 @@ class SyntheticCampaign:
                 {
                     "run_id": run_id,
                     "policy": qualification.POLICY_NAME,
-                    "runtime_contract_id": qualification.RUNTIME_CONTRACT_ID,
-                    "runtime_contract_sha256": qualification.RUNTIME_CONTRACT_SHA256,
+                    "runtime_contract_id": self.profile.runtime_contract_id,
+                    "runtime_contract_sha256": self.profile.runtime_contract_sha256,
                     "source_artifacts": qualification.SOURCE_ARTIFACTS,
                 },
             )
@@ -255,8 +258,8 @@ class SyntheticCampaign:
                 qualification.NS3_UPSTREAM_COMMIT,
                 PROJECT_COMMIT,
                 {
-                    "runtime_contract_id": qualification.RUNTIME_CONTRACT_ID,
-                    "runtime_contract_sha256": qualification.RUNTIME_CONTRACT_SHA256,
+                    "runtime_contract_id": self.profile.runtime_contract_id,
+                    "runtime_contract_sha256": self.profile.runtime_contract_sha256,
                     "source_artifacts": qualification.SOURCE_ARTIFACTS,
                 },
             )
@@ -305,8 +308,8 @@ class SyntheticCampaign:
                 "config_file": str(self.config_path),
                 "project_commit": PROJECT_COMMIT,
                 "ns3_upstream_commit": qualification.NS3_UPSTREAM_COMMIT,
-                "runtime_contract_id": qualification.RUNTIME_CONTRACT_ID,
-                "runtime_contract_sha256": qualification.RUNTIME_CONTRACT_SHA256,
+                "runtime_contract_id": self.profile.runtime_contract_id,
+                "runtime_contract_sha256": self.profile.runtime_contract_sha256,
                 "source_artifacts": qualification.SOURCE_ARTIFACTS,
                 "runs": manifest_runs,
             },
@@ -319,7 +322,7 @@ class SyntheticCampaign:
         policy_worse: bool = False,
         incomplete_count: int = 0,
     ) -> None:
-        for seed in range(1201, 1249):
+        for seed in self.seeds:
             run_dir = self.run_dirs[(arm, seed)]
             run_id = str(self.aggregate_runs[(arm, seed)]["run_id"])
             rows = self._frame_rows(run_id, arm)
@@ -349,7 +352,7 @@ class SyntheticCampaign:
             )
 
     def rewrite_airtime(self, arm: str, total_airtime: int) -> None:
-        for seed in range(1201, 1249):
+        for seed in self.seeds:
             _write_csv(
                 self.run_dirs[(arm, seed)] / "link_intervals.csv",
                 ["link_id", "phy_tx_time_us"],
@@ -360,7 +363,7 @@ class SyntheticCampaign:
             )
 
     def rewrite_background(self, arm: str, received_bytes: int) -> None:
-        for seed in range(1201, 1249):
+        for seed in self.seeds:
             _write_csv(
                 self.run_dirs[(arm, seed)] / "background_flows.csv",
                 ["bytes_received"],
@@ -369,7 +372,7 @@ class SyntheticCampaign:
 
     def restore_resources(self) -> None:
         for arm in qualification.ARM_IDENTITIES:
-            for seed in range(1201, 1249):
+            for seed in self.seeds:
                 total_airtime = self._default_airtime(arm, seed)
                 _write_csv(
                     self.run_dirs[(arm, seed)] / "link_intervals.csv",
@@ -434,6 +437,7 @@ class PairedValueT2StrQualificationTest(unittest.TestCase):
     def test_valid_raw_fixture_passes_all_three_statuses(self) -> None:
         report = self.analyze()
         self.assertEqual(report["paired_unit_count"], 48)
+        self.assertNotIn("qualification_profile", report)
         self.assertEqual(report["evidence_role"], "engineering_qualification")
         self.assertFalse(report["confirmation_eligibility"]["eligible"])
         self.assertFalse(report["confirmation_eligibility"]["reserved_units_used"])
@@ -549,6 +553,56 @@ class PairedValueT2StrQualificationTest(unittest.TestCase):
         ]
         self.assertEqual(analyzer_ids, runner_ids)
         self.assertEqual(len(set(analyzer_ids)), qualification.EXPECTED_RUN_COUNT)
+
+    def test_score_aware_profile_validates_fresh_engineering_boundary(self) -> None:
+        profile = qualification.SCORE_AWARE_V2_PROFILE
+        matrix_path = (
+            qualification.REPOSITORY_ROOT
+            / "experiments/configs/paired_value_t2_score_aware_str_engineering_v2.yaml"
+        )
+        document = qualification._load_yaml(matrix_path)
+        specs = qualification._expand_config(document)
+        self.assertEqual(len(specs), qualification.EXPECTED_RUN_COUNT)
+        self.assertEqual(
+            sorted({(spec["seed"], spec["run"]) for spec in specs}),
+            list(profile.expected_seed_run_units),
+        )
+        self.assertEqual(
+            document["runtime_contract"],
+            {
+                "id": profile.runtime_contract_id,
+                "path": str(
+                    profile.runtime_contract_path.relative_to(
+                        qualification.REPOSITORY_ROOT
+                    )
+                ),
+                "sha256": profile.runtime_contract_sha256,
+                "source_artifacts": qualification.SOURCE_ARTIFACTS,
+            },
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            campaign = SyntheticCampaign(Path(temporary), profile)
+            with mock.patch.object(
+                qualification, "validate_run", side_effect=_strict_validation_stub
+            ) as validator:
+                report = qualification.analyze_campaign(campaign.root, profile)
+        self.assertEqual(validator.call_count, qualification.EXPECTED_RUN_COUNT)
+        self.assertEqual(report["qualification_profile"], profile.key)
+        self.assertEqual(report["analysis"], profile.analysis_id)
+        self.assertEqual(report["paired_unit_count"], qualification.EXPECTED_PAIR_COUNT)
+        self.assertEqual(
+            [unit["seed"] for unit in report["paired_units"]],
+            list(range(1251, 1299)),
+        )
+        self.assertEqual(report["treatments"]["policy"]["label"], profile.policy_label)
+        self.assertEqual(
+            report["source_closure"]["runtime_contract"]["sha256"],
+            profile.runtime_contract_sha256,
+        )
+        markdown = qualification.render_markdown(report)
+        self.assertIn(f"# {profile.markdown_title}", markdown)
+        self.assertIn(f"| Metric | {profile.policy_label} | STR MLO |", markdown)
 
     def test_runner_built_manifest_rejects_count_membership_and_entry_drift(self) -> None:
         import run_experiments as runner
