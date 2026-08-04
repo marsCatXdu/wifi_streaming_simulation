@@ -306,8 +306,8 @@ class PairedValueT2Fixture:
                     primary_probability = 0.5570165353516654
                     treated_logit = -3.4484510705169495
                     treated_probability = 0.030815085331925698
-                    predicted_log = 6.950695605650517
-                    predicted_cost = 1138.7851611363524
+                    predicted_log = 6.9506956056505125
+                    predicted_cost = 1138.7851611363471
                     value = 0.5262014500197397
                     score = 0.0004620726394932717
                 else:
@@ -315,8 +315,8 @@ class PairedValueT2Fixture:
                     primary_probability = 0.01464253001654195
                     treated_logit = -6.367112060290477
                     treated_probability = 0.0017141675689690686
-                    predicted_log = 7.280664746799871
-                    predicted_cost = 1584.35590942054
+                    predicted_log = 7.280664746799867
+                    predicted_cost = 1584.3559094205343
                     value = 0.01292836244757288
                     score = 8.160011930158362e-06
                 row.update({
@@ -665,6 +665,21 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValidationError, "canonical model replay differs"):
                 fixture.validate_decisions()
 
+    def test_replays_compiled_cost_accumulation_order(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.validate_decisions()
+            # sklearn's vector reduction is the same canonical ridge model but
+            # differs from the compiled evaluator's ordered scalar sum by five
+            # binary64 ULPs for this feature vector.
+            fixture.decisions[8].update({
+                "predicted_log_airtime": "6.950695605650517",
+                "predicted_secondary_airtime_us": "1138.7851611363524",
+            })
+            fixture._write_inputs()
+            with self.assertRaisesRegex(ValidationError, "canonical model replay differs"):
+                fixture.validate_decisions()
+
     def test_rejects_over_wide_paired_polling_row(self) -> None:
         temporary, fixture = self.fixture()
         with temporary:
@@ -800,13 +815,220 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             )
         listed_without_allocation = copy.deepcopy(event)
         listed_without_allocation["frame_ids"] = "0;1"
-        with self.assertRaisesRegex(ValidationError, "positive airtime"):
+        with self.assertRaisesRegex(
+            ValidationError, "positive airtime|no feasible event allocation"
+        ):
             _replay_paired_value_t2_meter(
                 decisions,
                 [listed_without_allocation],
                 settlements,
                 estimates,
                 nominals,
+            )
+
+    def test_accepts_jointly_feasible_shared_ppdu_checkpoints(self) -> None:
+        reservation = 1983.760667318285
+        after_first = reservation - 1590.8
+        after_shared = reservation - 1563.8
+        decisions = [
+            {
+                "frame_id": "9",
+                "primary_sample_time_ns": "1302000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": repr(reservation),
+            },
+            {
+                "frame_id": "10",
+                "primary_sample_time_ns": "1335333333",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": repr(after_first),
+                "meter_reserved_after_us": repr(after_first + reservation),
+            },
+            {
+                "frame_id": "11",
+                "primary_sample_time_ns": "1368666667",
+                "secondary_launched": "0",
+                "meter_reserved_before_us": repr(after_shared),
+                "meter_reserved_after_us": repr(after_shared),
+            },
+            {
+                "frame_id": "12",
+                "primary_sample_time_ns": "1402000000",
+                "secondary_launched": "0",
+                "meter_reserved_before_us": repr(after_shared),
+                "meter_reserved_after_us": repr(after_shared),
+            },
+            {
+                "frame_id": "13",
+                "primary_sample_time_ns": "1435333333",
+                "secondary_launched": "0",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "0",
+            },
+        ]
+        events = [
+            {
+                "time_ns": "1304611377",
+                "ppdu_duration_us": "1590.8",
+                "tagged_mpdu_bytes": "13160",
+                "frame_ids": "9",
+            },
+            {
+                "time_ns": "1341395435",
+                "ppdu_duration_us": "3127.6",
+                "tagged_mpdu_bytes": "26320",
+                "frame_ids": "9;10",
+            },
+            {
+                "time_ns": "1410599461",
+                "ppdu_duration_us": "3127.6",
+                "tagged_mpdu_bytes": "26320",
+                "frame_ids": "9;10",
+            },
+        ]
+        settlements = [
+            {
+                "frame_id": "9",
+                "settlement_time_ns": "1413815127",
+                "released_airtime_us": "0",
+                "measured_airtime_us": "4718.4",
+                "nominal_airtime_us": "1000",
+            },
+            {
+                "frame_id": "10",
+                "settlement_time_ns": "1413815127",
+                "released_airtime_us": "0",
+                "measured_airtime_us": "3127.6",
+                "nominal_airtime_us": "1000",
+            },
+        ]
+        estimates = {9: reservation, 10: reservation}
+        nominals = {9: 1000.0, 10: 1000.0}
+        _replay_paired_value_t2_meter(
+            decisions, events, settlements, estimates, nominals
+        )
+
+        inconsistent = copy.deepcopy(decisions)
+        inconsistent[2]["meter_reserved_before_us"] = repr(after_shared + 1.0)
+        inconsistent[2]["meter_reserved_after_us"] = repr(after_shared + 1.0)
+        with self.assertRaisesRegex(
+            ValidationError, "no feasible event allocation|witness violates"
+        ):
+            _replay_paired_value_t2_meter(
+                inconsistent, events, settlements, estimates, nominals
+            )
+
+    def test_requires_integer_ppdu_byte_allocations(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "primary_sample_time_ns": "1200000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "1",
+                "meter_reserved_after_us": "2",
+            },
+        ]
+        event = {
+            "time_ns": "1250000000",
+            "ppdu_duration_us": "1",
+            "tagged_mpdu_bytes": "3",
+            "frame_ids": "0;1",
+        }
+        settlements = [
+            {
+                "frame_id": "0",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.666666666667",
+                "measured_airtime_us": "0.333333333333",
+                "nominal_airtime_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.333333333333",
+                "measured_airtime_us": "0.666666666667",
+                "nominal_airtime_us": "1",
+            },
+        ]
+        estimates = {0: 1.0, 1: 1.0}
+        nominals = {0: 1.0, 1: 1.0}
+        _replay_paired_value_t2_meter(
+            decisions, [event], settlements, estimates, nominals
+        )
+
+        impossible = copy.deepcopy(settlements)
+        for settlement in impossible:
+            settlement["released_airtime_us"] = "0.5"
+            settlement["measured_airtime_us"] = "0.5"
+        with self.assertRaisesRegex(ValidationError, "no feasible event allocation"):
+            _replay_paired_value_t2_meter(
+                decisions, [event], impossible, estimates, nominals
+            )
+
+    def test_rejects_solver_tolerance_and_noncanonical_event_evidence(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "primary_sample_time_ns": "1200000000",
+                "secondary_launched": "0",
+                "meter_reserved_before_us": "0.75",
+                "meter_reserved_after_us": "0.75",
+            },
+        ]
+        event = {
+            "time_ns": "1150000000",
+            "ppdu_duration_us": "0.25",
+            "tagged_mpdu_bytes": "1",
+            "frame_ids": "0",
+        }
+        settlement = {
+            "frame_id": "0",
+            "settlement_time_ns": "1300000000",
+            "released_airtime_us": "0.75",
+            "measured_airtime_us": "0.25",
+            "nominal_airtime_us": "1",
+        }
+        _replay_paired_value_t2_meter(
+            decisions, [event], [settlement], {0: 1.0}, {0: 1.0}
+        )
+
+        drifted = copy.deepcopy(decisions)
+        drifted[1]["meter_reserved_before_us"] = "0.75000005"
+        drifted[1]["meter_reserved_after_us"] = "0.75000005"
+        with self.assertRaisesRegex(
+            ValidationError, "no feasible event allocation|witness violates"
+        ):
+            _replay_paired_value_t2_meter(
+                drifted, [event], [settlement], {0: 1.0}, {0: 1.0}
+            )
+
+        noncanonical = copy.deepcopy(event)
+        noncanonical["ppdu_duration_us"] = "0.2500000000001"
+        with self.assertRaisesRegex(ValidationError, "not canonical"):
+            _replay_paired_value_t2_meter(
+                decisions, [noncanonical], [settlement], {0: 1.0}, {0: 1.0}
+            )
+
+        unsorted = copy.deepcopy(event)
+        unsorted.update({"tagged_mpdu_bytes": "2", "frame_ids": "1;0"})
+        with self.assertRaisesRegex(ValidationError, "not canonical"):
+            _replay_paired_value_t2_meter(
+                decisions, [unsorted], [settlement], {0: 1.0}, {0: 1.0}
             )
 
     def test_rejects_submillisecond_controller_summary_airtime_drift(self) -> None:

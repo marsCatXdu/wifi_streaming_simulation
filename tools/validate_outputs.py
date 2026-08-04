@@ -2551,6 +2551,52 @@ def _paired_value_t2_feature_vector(
     return vector
 
 
+def _paired_value_t2_ordered_cost_log(features: Any) -> float:
+    """Replay the compiled ridge head's explicit scalar accumulation order."""
+    context = _paired_value_t2_model_replay_context()
+    cost_head = context["cost_head"]
+    try:
+        imputer = cost_head.named_steps["impute"]
+        scaler = cost_head.named_steps["scale"]
+        regressor = cost_head.named_steps["regressor"]
+        medians = imputer.statistics_
+        indicator_features = imputer.indicator_.features_
+        means = scaler.mean_
+        scales = scaler.scale_
+        coefficients = regressor.coef_
+        transformed = [
+            float(medians[index]) if math.isnan(float(value)) else float(value)
+            for index, value in enumerate(features)
+        ]
+        transformed.extend(
+            1.0 if math.isnan(float(features[index])) else 0.0
+            for index in indicator_features
+        )
+        _require(
+            len(features) == 246
+            and len(medians) == 246
+            and len(transformed) == len(means) == len(scales) == len(coefficients)
+            and len(transformed) == 262,
+            "paired-value model replay: canonical cost transform differs",
+        )
+        predicted_log = float(regressor.intercept_)
+        for index, value in enumerate(transformed):
+            scale = float(scales[index])
+            _require(scale > 0 and math.isfinite(scale),
+                     "paired-value model replay: canonical cost scale differs")
+            # Keep these operations separate and ordered.  This is the exact
+            # expression evaluated by TemporalT2ValueModelEvaluator::EvaluateCost.
+            standardized = (value - float(means[index])) / scale
+            predicted_log += float(coefficients[index]) * standardized
+    except (AttributeError, KeyError, TypeError, ValueError, OverflowError) as error:
+        raise ValidationError(
+            f"paired-value model replay: canonical cost head differs: {error}"
+        ) from error
+    _require(math.isfinite(predicted_log),
+             "paired-value model replay: canonical cost result is non-finite")
+    return predicted_log
+
+
 def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> None:
     """Batch-replay and compare every evaluated row with the canonical model."""
     if not records:
@@ -2572,7 +2618,16 @@ def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> No
     for index, record in enumerate(records):
         primary_probability = float(primary_probabilities[index])
         treated_probability = float(treated_probabilities[index])
-        predicted_log = float(predicted_logs[index])
+        sklearn_predicted_log = float(predicted_logs[index])
+        predicted_log = _paired_value_t2_ordered_cost_log(record["features"])
+        # The pinned sklearn pipeline evaluates the same ridge expression with
+        # a vector reduction.  Require semantic agreement, but compare output
+        # evidence with the compiled evaluator's explicit reduction order.
+        _require(
+            abs(predicted_log - sklearn_predicted_log)
+            <= 16 * max(math.ulp(predicted_log), math.ulp(sklearn_predicted_log)),
+            "paired-value model replay: ordered and sklearn cost heads diverge",
+        )
         adjusted_log = min(
             max(predicted_log + math.log(context["smearing_factor"]), 0.0),
             math.log1p(1_000_000.0),
@@ -2591,16 +2646,16 @@ def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> No
             "value_per_cost_score_float32": score,
         }
         observed = record["values"]
-        # The generated C++ evaluator and sklearn replay use different
-        # reduction/libm paths.  Retain only their deterministic last-bit
-        # envelope with an explicit per-diagnostic bound; do not reuse the
-        # validator's generic relative-tolerance helper.
+        # The generated tree evaluator and sklearn classifiers, and the C++
+        # and Python libm paths, retain deterministic last-bit differences.
+        # Use one explicit bound per diagnostic; do not reuse the validator's
+        # generic relative-tolerance helper.
         evaluator_tolerances = {
             "primary_bad12_logit": 1e-15,
             "primary_bad12_probability": 2e-16,
             "treated_bad12_logit": 1e-15,
             "treated_bad12_probability": 2e-16,
-            "predicted_log_airtime": 1e-14,
+            "predicted_log_airtime": 0.0,
             "predicted_secondary_airtime_us": max(3e-11, predicted_cost * 2e-14),
             "nonnegative_bad12_value": 2e-16,
             "value_per_cost_score_float32": 0.0,
@@ -3208,146 +3263,318 @@ def _paired_value_t2_event_frames(row: dict[str, str]) -> tuple[int, ...]:
     _require(tokens and all(re.fullmatch(r"[0-9]+", token) for token in tokens),
              "secondary airtime events: invalid frame_ids")
     frame_ids = tuple(int(token) for token in tokens)
-    _require(len(frame_ids) == len(set(frame_ids)),
-             "secondary airtime events: repeated frame ID in PPDU")
+    _require(len(frame_ids) == len(set(frame_ids)) and
+             frame_ids == tuple(sorted(frame_ids)),
+             "secondary airtime events: frame IDs are repeated or not canonical")
     return frame_ids
 
 
-def _paired_value_t2_airtime_allocations(
+def _validate_paired_value_t2_meter_checkpoints(
+    decision_rows: list[dict[str, str]],
     event_records: list[dict[str, Any]],
-    measured_by_frame: dict[int, float],
-) -> dict[tuple[int, int], float]:
-    """Find a feasible event-to-frame airtime allocation from frozen evidence.
+    settlement_records: dict[int, dict[str, Any]],
+    launches: dict[int, int],
+    action_estimates: dict[int, float],
+) -> None:
+    """Prove one latent PPDU split can satisfy every meter checkpoint.
 
-    Event rows expose a PPDU duration, total tagged bytes, and the set of
-    tagged frames, while settlement rows expose each frame's final measured
-    airtime.  Every listed frame contributed at least one tagged byte, so a
-    lower-bounded bipartite max-flow proves that some strictly positive
-    allocation exists on every logged event/frame edge and that the event and
-    frame marginals reconcile.  It does not claim to recover the meter's
-    unlogged byte-proportional split.
+    The V1 event schema records each PPDU's total tagged bytes and participating
+    frame IDs, but not the per-frame byte split used by the meter.  Consequently
+    an arbitrary feasible final-marginal max-flow is not an exact replay of an
+    intermediate reservation checkpoint.  This mixed-integer feasibility model
+    keeps the byte split latent and jointly constrains all event totals, final
+    frame settlements, and decision-time outstanding reservations.
     """
-    frame_ids = sorted(measured_by_frame)
-    frame_index = {frame_id: index for index, frame_id in enumerate(frame_ids)}
-    event_count = len(event_records)
-    source = 0
-    event_start = 1
-    frame_start = event_start + event_count
-    sink = frame_start + len(frame_ids)
-    graph: list[list[list[float | int]]] = [[] for _ in range(sink + 1)]
+    decision_file = "paired_value_t2_decisions.csv"
+    checkpoints: list[dict[str, Any]] = []
+    for row in decision_rows:
+        time_ns = _integer(row, "primary_sample_time_ns", decision_file)
+        active_frames = tuple(sorted(
+            frame_id
+            for frame_id, launch_time in launches.items()
+            if launch_time < time_ns <= int(settlement_records[frame_id]["time"])
+        ))
+        observed_before = _number(row, "meter_reserved_before_us", decision_file)
+        if active_frames:
+            checkpoints.append({
+                "time": time_ns,
+                "observed": observed_before,
+                "active_frames": active_frames,
+            })
+        else:
+            _require(_paired_close(observed_before, 0.0),
+                     "paired-value decision has a reservation without an active frame")
 
-    def add_edge(origin: int, target: int, capacity: float) -> int:
-        forward: list[float | int] = [target, len(graph[target]), capacity, capacity]
-        reverse: list[float | int] = [origin, len(graph[origin]), 0.0, 0.0]
-        graph[origin].append(forward)
-        graph[target].append(reverse)
-        return len(graph[origin]) - 1
+    if not event_records:
+        _require(
+            all(_paired_close(float(record["measured"]), 0.0)
+                for record in settlement_records.values()),
+            "secondary airtime settlement is positive without a PPDU event",
+        )
+        return
 
-    allocation_edges: dict[tuple[int, int], tuple[int, int]] = {}
-    lower_bounds: dict[tuple[int, int], float] = {}
-    frame_lower_bounds = {frame_id: 0.0 for frame_id in frame_ids}
-    event_residual_total = 0.0
-    for event_index, record in enumerate(event_records):
-        duration = float(record["duration"])
-        tagged_bytes = int(record["tagged_bytes"])
-        event_frames = record["frame_ids"]
-        _require(duration > 0 and tagged_bytes >= len(event_frames),
-                 "secondary airtime event cannot allocate positive tagged bytes")
-        minimum = duration / tagged_bytes
-        residual = duration - minimum * len(event_frames)
-        _require(minimum > 0 and residual >= -PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
-                 "secondary airtime event has no positive per-frame allocation")
-        if residual < 0:
-            residual = 0.0
-        event_residual_total += residual
-        event_node = event_start + event_index
-        add_edge(source, event_node, residual)
-        for frame_id in event_frames:
-            edge_index = add_edge(
-                event_node,
-                frame_start + frame_index[frame_id],
-                residual,
+    try:
+        import warnings
+
+        import numpy as np
+        from scipy.optimize import Bounds, LinearConstraint, milp
+    except ImportError as error:
+        raise ValidationError(
+            f"paired-value meter replay: cannot load feasibility solver: {error}"
+        ) from error
+
+    byte_edges = [
+        (event_index, frame_id)
+        for event_index, event in enumerate(event_records)
+        for frame_id in event["frame_ids"]
+    ]
+    byte_index = {
+        edge: index for index, edge in enumerate(byte_edges)
+    }
+    checkpoint_pairs = [
+        (checkpoint_index, frame_id)
+        for checkpoint_index, checkpoint in enumerate(checkpoints)
+        for frame_id in checkpoint["active_frames"]
+    ]
+    byte_count = len(byte_edges)
+    pair_count = len(checkpoint_pairs)
+    variable_count = byte_count + 2 * pair_count
+    remaining_start = byte_count
+    unsaturated_start = byte_count + pair_count
+
+    rows: list[Any] = []
+    lower_constraints: list[float] = []
+    upper_constraints: list[float] = []
+
+    def add_constraint(coefficients: Any, lower: float, upper: float) -> None:
+        rows.append(coefficients)
+        lower_constraints.append(lower)
+        upper_constraints.append(upper)
+
+    variable_lower = np.zeros(variable_count, dtype=np.float64)
+    variable_upper = np.full(variable_count, np.inf, dtype=np.float64)
+    for edge_index, (event_index, _) in enumerate(byte_edges):
+        event = event_records[event_index]
+        variable_lower[edge_index] = 1.0
+        variable_upper[edge_index] = float(event["tagged_bytes"])
+
+    for event_index, event in enumerate(event_records):
+        coefficients = np.zeros(variable_count, dtype=np.float64)
+        for frame_id in event["frame_ids"]:
+            coefficients[byte_index[(event_index, frame_id)]] = 1.0
+        tagged_bytes = float(event["tagged_bytes"])
+        add_constraint(coefficients, tagged_bytes, tagged_bytes)
+
+    def allocation_expression(event_index: int, frame_id: int) -> tuple[Any, float, float]:
+        """Return center-value C++ allocation coefficients, constant, and error."""
+        event = event_records[event_index]
+        duration = float(event["duration"])
+        tagged_bytes = float(event["tagged_bytes"])
+        frames = event["frame_ids"]
+        coefficients = np.zeros(variable_count, dtype=np.float64)
+        constant = 0.0
+        if frame_id != frames[-1]:
+            coefficients[byte_index[(event_index, frame_id)]] = \
+                duration / tagged_bytes
+        else:
+            constant = duration
+            for previous_frame in frames[:-1]:
+                coefficients[byte_index[(event_index, previous_frame)]] -= \
+                    duration / tagged_bytes
+        # The serialized duration hides at most half a 12-digit unit.  Cover
+        # that scale error plus the ordered binary64 multiply/sum residual.
+        uncertainty = (
+            _paired_meter_quantization_us(str(event["duration_text"]))
+            + (len(frames) + 2) * math.ulp(duration)
+        )
+        return coefficients, constant, uncertainty
+
+    for frame_id, settlement in settlement_records.items():
+        coefficients = np.zeros(variable_count, dtype=np.float64)
+        constant = 0.0
+        allocation_uncertainty = 0.0
+        for event_index, _ in enumerate(event_records):
+            if (event_index, frame_id) in byte_index:
+                event_coefficients, event_constant, event_uncertainty = \
+                    allocation_expression(event_index, frame_id)
+                coefficients += event_coefficients
+                constant += event_constant
+                allocation_uncertainty += event_uncertainty
+        measured = float(settlement["measured"])
+        quantization = _paired_meter_quantization_us(
+            str(settlement["measured_text"])
+        )
+        add_constraint(
+            coefficients,
+            measured - quantization - allocation_uncertainty - constant,
+            measured + quantization + allocation_uncertainty - constant,
+        )
+
+    pairs_by_checkpoint: dict[int, list[int]] = {}
+    pairs_by_frame: dict[int, list[int]] = {}
+    for pair_index, (checkpoint_index, frame_id) in enumerate(checkpoint_pairs):
+        pairs_by_checkpoint.setdefault(checkpoint_index, []).append(pair_index)
+        pairs_by_frame.setdefault(frame_id, []).append(pair_index)
+        checkpoint = checkpoints[checkpoint_index]
+        cumulative = np.zeros(variable_count, dtype=np.float64)
+        cumulative_constant = 0.0
+        cumulative_uncertainty = 0.0
+        for event_index, event in enumerate(event_records):
+            if (int(event["time"]) < int(checkpoint["time"])
+                    and (event_index, frame_id) in byte_index):
+                event_coefficients, event_constant, event_uncertainty = \
+                    allocation_expression(event_index, frame_id)
+                cumulative += event_coefficients
+                cumulative_constant += event_constant
+                cumulative_uncertainty += event_uncertainty
+
+        remaining_index = remaining_start + pair_index
+        unsaturated_index = unsaturated_start + pair_index
+        reservation = action_estimates[frame_id]
+        measured = float(settlement_records[frame_id]["measured"])
+        measured_quantization = _paired_meter_quantization_us(
+            str(settlement_records[frame_id]["measured_text"])
+        )
+        big_m = (
+            max(reservation, measured + measured_quantization)
+            + PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+        )
+        variable_upper[remaining_index] = reservation
+        variable_upper[unsaturated_index] = 1.0
+
+        # remaining = max(reservation - cumulative allocation, 0).
+        coefficients = cumulative.copy()
+        coefficients[remaining_index] += 1.0
+        add_constraint(
+            coefficients,
+            reservation - cumulative_constant - cumulative_uncertainty,
+            np.inf,
+        )
+
+        coefficients = cumulative.copy()
+        coefficients[remaining_index] += 1.0
+        coefficients[unsaturated_index] += big_m
+        add_constraint(
+            coefficients,
+            -np.inf,
+            reservation + big_m - cumulative_constant + cumulative_uncertainty,
+        )
+
+        coefficients = np.zeros(variable_count, dtype=np.float64)
+        coefficients[remaining_index] = 1.0
+        coefficients[unsaturated_index] = -reservation
+        add_constraint(coefficients, -np.inf, 0.0)
+
+        coefficients = cumulative.copy()
+        coefficients[unsaturated_index] += big_m
+        add_constraint(
+            coefficients,
+            -np.inf,
+            reservation + big_m - cumulative_constant + cumulative_uncertainty,
+        )
+
+        coefficients = cumulative.copy()
+        coefficients[unsaturated_index] += reservation
+        add_constraint(
+            coefficients,
+            reservation - cumulative_constant - cumulative_uncertainty,
+            np.inf,
+        )
+
+    for checkpoint_index, checkpoint in enumerate(checkpoints):
+        coefficients = np.zeros(variable_count, dtype=np.float64)
+        for pair_index in pairs_by_checkpoint[checkpoint_index]:
+            coefficients[remaining_start + pair_index] = 1.0
+        observed = float(checkpoint["observed"])
+        add_constraint(
+            coefficients,
+            observed - PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+            observed + PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+        )
+
+    # A frame may move from unsaturated to saturated, never back again.
+    for pair_indices in pairs_by_frame.values():
+        for previous, current in zip(pair_indices, pair_indices[1:]):
+            coefficients = np.zeros(variable_count, dtype=np.float64)
+            coefficients[unsaturated_start + current] = 1.0
+            coefficients[unsaturated_start + previous] = -1.0
+            add_constraint(coefficients, -np.inf, 0.0)
+
+    matrix = np.asarray(rows, dtype=np.float64)
+    integrality = np.zeros(variable_count, dtype=np.uint8)
+    integrality[:byte_count] = 1
+    integrality[unsaturated_start:] = 1
+    try:
+        # scipy forwards this supported HiGHS option even though its local
+        # option whitelist does not yet name it.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Unrecognized options detected:.*mip_feasibility_tolerance",
+                category=RuntimeWarning,
             )
-            allocation_edges[(event_index, frame_id)] = (event_node, edge_index)
-            lower_bounds[(event_index, frame_id)] = minimum
-            frame_lower_bounds[frame_id] += minimum
-    for frame_id in frame_ids:
-        residual = measured_by_frame[frame_id] - frame_lower_bounds[frame_id]
-        _require(residual >= -PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
-                 "secondary airtime settlement cannot give every listed frame "
-                 "positive airtime")
-        if residual < 0:
-            residual = 0.0
-        add_edge(
-            frame_start + frame_index[frame_id],
-            sink,
-            residual,
-        )
-
-    total_flow = 0.0
-    epsilon = 1e-12
-    while True:
-        levels = [-1] * len(graph)
-        levels[source] = 0
-        queue = [source]
-        for node in queue:
-            for target, _, capacity, _ in graph[node]:
-                if float(capacity) > epsilon and levels[int(target)] < 0:
-                    levels[int(target)] = levels[node] + 1
-                    queue.append(int(target))
-        if levels[sink] < 0:
-            break
-        cursors = [0] * len(graph)
-
-        def send(node: int, available: float) -> float:
-            if node == sink:
-                return available
-            while cursors[node] < len(graph[node]):
-                edge = graph[node][cursors[node]]
-                target = int(edge[0])
-                capacity = float(edge[2])
-                if capacity > epsilon and levels[target] == levels[node] + 1:
-                    pushed = send(target, min(available, capacity))
-                    if pushed > epsilon:
-                        edge[2] = capacity - pushed
-                        reverse = graph[target][int(edge[1])]
-                        reverse[2] = float(reverse[2]) + pushed
-                        return pushed
-                cursors[node] += 1
-            return 0.0
-
-        while True:
-            pushed = send(source, math.inf)
-            if pushed <= epsilon:
-                break
-            total_flow += pushed
-
-    _require(_paired_close(total_flow, event_residual_total),
-             "secondary airtime evidence has no feasible per-frame allocation")
-    allocations: dict[tuple[int, int], float] = {}
-    for event_index, record in enumerate(event_records):
-        allocated = 0.0
-        for frame_id in record["frame_ids"]:
-            node, edge_index = allocation_edges[(event_index, frame_id)]
-            edge = graph[node][edge_index]
-            residual_flow = float(edge[3]) - float(edge[2])
-            if abs(residual_flow) <= epsilon:
-                residual_flow = 0.0
-            flow = lower_bounds[(event_index, frame_id)] + residual_flow
-            _require(flow > 0,
-                     "secondary airtime allocation is not positive")
-            allocations[(event_index, frame_id)] = flow
-            allocated += flow
-        _require(_paired_close(allocated, float(record["duration"])),
-                 "secondary airtime event has no feasible per-frame allocation")
-    for frame_id, measured in measured_by_frame.items():
-        allocated = sum(
-            allocations.get((event_index, frame_id), 0.0)
-            for event_index in range(event_count)
-        )
-        _require(_paired_close(allocated, measured),
-                 "secondary airtime settlement has no feasible event allocation")
-    return allocations
+            result = milp(
+                np.zeros(variable_count, dtype=np.float64),
+                integrality=integrality,
+                bounds=Bounds(variable_lower, variable_upper),
+                constraints=LinearConstraint(
+                    matrix,
+                    np.asarray(lower_constraints, dtype=np.float64),
+                    np.asarray(upper_constraints, dtype=np.float64),
+                ),
+                options={
+                    "presolve": True,
+                    "time_limit": 30.0,
+                    "mip_rel_gap": 0.0,
+                    "mip_feasibility_tolerance": 1e-9,
+                },
+            )
+    except (TypeError, ValueError, FloatingPointError) as error:
+        raise ValidationError(
+            f"paired-value meter replay: feasibility solver failed: {error}"
+        ) from error
+    _require(result.success and result.x is not None,
+             "paired-value reservation checkpoints have no feasible event allocation")
+    witness = np.asarray(result.x, dtype=np.float64).copy()
+    integer_indices = np.flatnonzero(integrality)
+    rounded = np.rint(witness[integer_indices])
+    _require(np.all(np.abs(witness[integer_indices] - rounded) <= 1e-9),
+             "paired-value meter solver returned a non-integral witness")
+    witness[integer_indices] = rounded
+    # Reconstruct the continuous and binary checkpoint variables from the
+    # integer byte witness.  This removes the MIP solver's harmless continuous
+    # row slack before independently checking the declared 1e-9 envelopes.
+    for pair_index, (checkpoint_index, frame_id) in enumerate(checkpoint_pairs):
+        checkpoint = checkpoints[checkpoint_index]
+        cumulative = 0.0
+        for event_index, event in enumerate(event_records):
+            if (int(event["time"]) < int(checkpoint["time"])
+                    and (event_index, frame_id) in byte_index):
+                coefficients, constant, _ = allocation_expression(
+                    event_index, frame_id
+                )
+                cumulative += float(coefficients @ witness) + constant
+        reservation = action_estimates[frame_id]
+        witness[remaining_start + pair_index] = max(reservation - cumulative, 0.0)
+        witness[unsaturated_start + pair_index] = float(cumulative <= reservation)
+    activities = matrix @ witness
+    lower_array = np.asarray(lower_constraints, dtype=np.float64)
+    upper_array = np.asarray(upper_constraints, dtype=np.float64)
+    tolerance = PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+    lower_violation = float(np.max(np.maximum(lower_array - activities, 0.0)))
+    upper_violation = float(np.max(np.maximum(activities - upper_array, 0.0)))
+    bound_violation = float(max(
+        np.max(np.maximum(variable_lower - witness, 0.0)),
+        np.max(np.maximum(witness - variable_upper, 0.0)),
+    ))
+    _require(
+        bound_violation <= tolerance
+        and lower_violation <= tolerance
+        and upper_violation <= tolerance,
+        "paired-value meter solver witness violates the accounting envelope "
+        f"(bounds={bound_violation:.17g}, lower={lower_violation:.17g}, "
+        f"upper={upper_violation:.17g})",
+    )
 
 
 def _replay_paired_value_t2_meter(
@@ -3399,6 +3626,12 @@ def _replay_paired_value_t2_meter(
     for event_index, row in enumerate(events):
         event_time = _integer(row, "time_ns", event_file)
         frame_ids = _paired_value_t2_event_frames(row)
+        duration = _number(row, "ppdu_duration_us", event_file)
+        tagged_bytes = _integer(row, "tagged_mpdu_bytes", event_file)
+        _require(duration == float(format(duration, ".12g")),
+                 "secondary airtime event duration is not canonical 12-digit output")
+        _require(tagged_bytes >= len(frame_ids),
+                 "secondary airtime event cannot assign one byte to every frame")
         for frame_id in frame_ids:
             _require(frame_id in launches,
                      "secondary airtime event references an unlaunched frame")
@@ -3408,86 +3641,33 @@ def _replay_paired_value_t2_meter(
         event_records.append({
             "index": event_index,
             "time": event_time,
-            "duration": _number(row, "ppdu_duration_us", event_file),
-            "tagged_bytes": _integer(row, "tagged_mpdu_bytes", event_file),
+            "duration": duration,
+            "duration_text": row["ppdu_duration_us"],
+            "tagged_bytes": tagged_bytes,
             "frame_ids": frame_ids,
         })
 
-    allocations = _paired_value_t2_airtime_allocations(
+    _validate_paired_value_t2_meter_checkpoints(
+        decision_rows,
         event_records,
-        {
-            frame_id: float(record["measured"])
-            for frame_id, record in settlement_records.items()
-        },
+        settlement_records,
+        launches,
+        action_estimates,
     )
-
-    timeline: list[tuple[int, int, int, Any]] = []
-    for row_index, row in enumerate(decision_rows):
-        timeline.append((
-            _integer(row, "primary_sample_time_ns", decision_file),
-            0,
-            row_index,
-            row,
-        ))
-    for event_index, record in enumerate(event_records):
-        timeline.append((int(record["time"]), 1, event_index, record))
     for frame_id, record in settlement_records.items():
-        timeline.append((int(record["time"]), 2, frame_id, record))
-
-    active: dict[int, dict[str, float]] = {}
-    for _, kind, identity, record in sorted(timeline):
-        if kind == 0:
-            row = record
-            observed_before = _number(row, "meter_reserved_before_us", decision_file)
-            expected_before = sum(state["remaining"] for state in active.values())
-            _require(_paired_close(observed_before, expected_before),
-                     "paired-value decision outstanding reservation differs from meter replay")
-            frame_id = _integer(row, "frame_id", decision_file)
-            launched = _flag(row, "secondary_launched", decision_file)
-            if launched:
-                _require(frame_id not in active,
-                         "paired-value action launched an already-active frame")
-                active[frame_id] = {
-                    "remaining": action_estimates[frame_id],
-                    "measured": 0.0,
-                }
-            observed_after = _number(row, "meter_reserved_after_us", decision_file)
-            expected_after = sum(state["remaining"] for state in active.values())
-            _require(_paired_close(observed_after, expected_after),
-                     "paired-value decision post-action reservation differs from meter replay")
-        elif kind == 1:
-            event_index = identity
-            for frame_id in record["frame_ids"]:
-                _require(frame_id in active,
-                         "secondary airtime event references an inactive frame")
-                allocated = allocations[(event_index, frame_id)]
-                state = active[frame_id]
-                state["measured"] += allocated
-                state["remaining"] -= min(state["remaining"], allocated)
-                if abs(state["remaining"]) <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US:
-                    state["remaining"] = 0.0
-        else:
-            frame_id = identity
-            _require(frame_id in active,
-                     "secondary airtime settlement references an inactive frame")
-            state = active[frame_id]
-            _require(_paired_close(state["measured"], float(record["measured"])),
-                     "secondary airtime settlement measured total differs from replay")
-            measured_text = str(record["measured_text"])
-            released_text = str(record["released_text"])
-            released = float(record["released"])
-            measured = float(record["measured"])
-            _require(
-                released == float(format(released, ".12g"))
-                and measured == float(format(measured, ".12g"))
-                and abs(max(action_estimates[frame_id] - measured, 0.0) - released)
-                <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
-                + _paired_meter_quantization_us(measured_text)
-                + _paired_meter_quantization_us(released_text),
-                     "secondary airtime settlement release differs from replay")
-            del active[frame_id]
-    _require(not active,
-             "paired-value meter replay ended with outstanding reservations")
+        measured_text = str(record["measured_text"])
+        released_text = str(record["released_text"])
+        released = float(record["released"])
+        measured = float(record["measured"])
+        _require(
+            released == float(format(released, ".12g"))
+            and measured == float(format(measured, ".12g"))
+            and abs(max(action_estimates[frame_id] - measured, 0.0) - released)
+            <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+            + _paired_meter_quantization_us(measured_text)
+            + _paired_meter_quantization_us(released_text),
+            "secondary airtime settlement release differs from replay",
+        )
 
 
 def _validate_paired_value_t2_summary(
