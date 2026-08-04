@@ -6,6 +6,14 @@ This file provides guidance to AI agents when working with code in this reposito
 
 ns-3 is a discrete-event network simulator for Internet systems, written in C++ with Python bindings. The project uses CMake for building but provides a custom `ns3` wrapper script for easier command-line usage.
 
+## Persistent Research Memory
+
+Before interpreting experiment results, selecting an operating point, or
+designing an MLO comparison, read `RESEARCH_MEMORY.md`.  It records durable
+research conclusions whose context must survive across agent sessions.  Keep
+new entries evidence-linked and distinguish completed-frame latency metrics
+from metrics whose denominator includes missed or incomplete frames.
+
 ## Build System
 
 ### Essential Commands
