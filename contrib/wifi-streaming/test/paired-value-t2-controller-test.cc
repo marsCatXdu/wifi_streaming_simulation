@@ -884,7 +884,11 @@ struct ControllerSetup
 };
 
 ControllerSetup
-ConfigureBareController(const std::string& label, const std::string& runId)
+ConfigureBareController(
+    const std::string& label,
+    const std::string& runId,
+    PairedValueT2Controller::AdmissionProfile admissionProfile =
+        PairedValueT2Controller::AdmissionProfile::BASELINE_V1)
 {
     auto sender = CreateObject<MultipathSender>();
     auto meter = CreateObject<SecondaryAirtimeMeter>();
@@ -894,6 +898,7 @@ ConfigureBareController(const std::string& label, const std::string& runId)
                           paths.meterEvents,
                           paths.meterSettlements,
                           paths.meterSummary);
+    controller->SetAdmissionProfile(admissionProfile);
     controller->SetSender(PeekPointer(sender));
     controller->SetAirtimeMeter(meter);
     controller->SetOutputFiles(runId, paths.decisions, paths.controllerSummary);
@@ -1629,6 +1634,100 @@ class PairedValueT2OrderedModelGatesTestCase : public TestCase
 };
 
 /**
+ * Verify isolated score-aware profile identity and decision telemetry.
+ *
+ * @ingroup tests
+ */
+class PairedValueT2AdmissionProfileTestCase : public TestCase
+{
+  public:
+    PairedValueT2AdmissionProfileTestCase()
+        : TestCase("Paired-value T2 freezes separate score-aware admission evidence")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        using Profile = PairedValueT2Controller::AdmissionProfile;
+        const auto baseline =
+            PairedValueT2Controller::ParseAdmissionProfile("baseline_v1");
+        const auto scoreAware = PairedValueT2Controller::ParseAdmissionProfile(
+            "score_aware_emergency_v2");
+        NS_TEST_ASSERT_MSG_EQ(baseline.has_value(),
+                              true,
+                              "Baseline admission profile did not parse");
+        NS_TEST_ASSERT_MSG_EQ(scoreAware.has_value(),
+                              true,
+                              "Score-aware admission profile did not parse");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::ParseAdmissionProfile("unsupported").has_value(),
+            false,
+            "Unsupported admission profile parsed");
+        if (!baseline || !scoreAware)
+        {
+            return;
+        }
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint32_t>(*baseline),
+                              static_cast<uint32_t>(Profile::BASELINE_V1),
+                              "Baseline profile ordinal changed");
+        NS_TEST_ASSERT_MSG_EQ(static_cast<uint32_t>(*scoreAware),
+                              static_cast<uint32_t>(Profile::SCORE_AWARE_EMERGENCY_V2),
+                              "Score-aware profile ordinal changed");
+        NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*baseline),
+                              1,
+                              "Baseline decision schema changed");
+        NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*scoreAware),
+                              2,
+                              "Score-aware decision schema changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractId(*scoreAware),
+            "paired-value-duplication-t2-score-aware-emergency-v2",
+            "Score-aware runtime identity changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractSha256(*scoreAware),
+            "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda",
+            "Score-aware runtime digest changed");
+
+        auto setup = ConfigureBareController("score-aware-profile",
+                                             "paired-value-score-aware-profile",
+                                             *scoreAware);
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint32_t>(setup.controller->GetAdmissionProfile()),
+            static_cast<uint32_t>(*scoreAware),
+                              "Controller did not retain its admission profile");
+        const auto lines = ReadLines(setup.paths.decisions);
+        NS_TEST_ASSERT_MSG_EQ(lines.size(), 1, "Decision header was not written exactly once");
+        if (lines.size() == 1)
+        {
+            const auto header = SplitCsv(lines[0]);
+            NS_TEST_ASSERT_MSG_EQ(header.size(),
+                                  DECISION_COLUMNS.size() + 8,
+                                  "Score-aware decision column count differs");
+            const std::array<std::string_view, 8> expectedSuffix{
+                "admission_profile_id",
+                "strict_guard_admitted",
+                "emergency_score_threshold_float32",
+                "passes_emergency_score_threshold",
+                "emergency_admission_considered",
+                "emergency_maximum_debt_us",
+                "emergency_admitted",
+                "admission_tier",
+            };
+            NS_TEST_ASSERT_MSG_EQ(
+                std::equal(expectedSuffix.begin(),
+                           expectedSuffix.end(),
+                           header.end() - expectedSuffix.size()),
+                true,
+                "Score-aware decision suffix differs from its runtime contract");
+        }
+        setup.controller->Dispose();
+        Simulator::Destroy();
+        RemovePaths(setup.paths);
+    }
+};
+
+/**
  * Exercise early gate precedence without querying a delayed descriptor.
  *
  * @ingroup tests
@@ -2102,6 +2201,7 @@ class PairedValueT2ControllerTestSuite : public TestSuite
     {
         AddTestCase(new PairedValueT2ClosedLoopTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2OrderedModelGatesTestCase(), Duration::QUICK);
+        AddTestCase(new PairedValueT2AdmissionProfileTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2EarlyGatesTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2StatefulHistoryTestCase(), Duration::QUICK);
         AddTestCase(new PairedValueT2ValidationTestCase(), Duration::QUICK);

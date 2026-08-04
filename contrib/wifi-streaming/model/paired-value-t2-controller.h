@@ -43,11 +43,24 @@ class PairedValueT2ControllerTestAccess;
 class PairedValueT2Controller : public Object
 {
   public:
-    /** Decision CSV schema version. */
+    /** Frozen admission profiles. */
+    enum class AdmissionProfile : uint8_t
+    {
+        BASELINE_V1 = 0,              ///< Strict measured-airtime admission.
+        SCORE_AWARE_EMERGENCY_V2 = 1, ///< Bounded high-score future credit.
+    };
+
+    /** Baseline decision CSV schema version. */
     static constexpr uint32_t CSV_SCHEMA_VERSION = 1;
 
-    /** Controller summary schema version. */
+    /** Baseline controller summary schema version. */
     static constexpr uint32_t SUMMARY_SCHEMA_VERSION = 1;
+
+    /** Score-aware decision CSV schema version. */
+    static constexpr uint32_t SCORE_AWARE_CSV_SCHEMA_VERSION = 2;
+
+    /** Score-aware controller summary schema version. */
+    static constexpr uint32_t SCORE_AWARE_SUMMARY_SCHEMA_VERSION = 2;
 
     /** Frozen primary path identifier. */
     static constexpr uint8_t PRIMARY_PATH_ID = 1;
@@ -88,6 +101,12 @@ class PairedValueT2Controller : public Object
     /** Frozen canonical-cost safety factor. */
     static constexpr double COST_SAFETY_FACTOR = 1.25;
 
+    /** Frozen float32 emergency-tier score threshold. */
+    static constexpr float EMERGENCY_SCORE_THRESHOLD = 0.0001500000071246177F;
+
+    /** Frozen emergency-tier maximum negative available balance. */
+    static constexpr double EMERGENCY_MAXIMUM_DEBT_US = 60000.0;
+
     /** Absolute tolerance for floating-point accounting in microseconds. */
     static constexpr double ACCOUNTING_TOLERANCE_US = 1e-9;
 
@@ -96,6 +115,49 @@ class PairedValueT2Controller : public Object
 
     PairedValueT2Controller();
     ~PairedValueT2Controller() override;
+
+    /**
+     * Select one frozen admission profile before any output or runtime setup.
+     *
+     * @param profile Admission profile to execute and identify in evidence.
+     */
+    void SetAdmissionProfile(AdmissionProfile profile);
+
+    /** @return Selected admission profile. */
+    AdmissionProfile GetAdmissionProfile() const;
+
+    /**
+     * Return the stable profile identifier.
+     *
+     * @param profile Admission profile.
+     * @return Stable profile identifier.
+     */
+    static std::string_view AdmissionProfileName(AdmissionProfile profile);
+
+    /**
+     * Parse one stable admission-profile identifier.
+     *
+     * @param name Prospective profile identifier.
+     * @return Matching profile, or empty for an unsupported name.
+     */
+    static std::optional<AdmissionProfile> ParseAdmissionProfile(
+        std::string_view name);
+
+    /**
+     * Return the decision schema for one admission profile.
+     *
+     * @param profile Admission profile.
+     * @return Frozen decision CSV schema version.
+     */
+    static uint32_t GetCsvSchemaVersion(AdmissionProfile profile);
+
+    /**
+     * Return the summary schema for one admission profile.
+     *
+     * @param profile Admission profile.
+     * @return Frozen controller summary schema version.
+     */
+    static uint32_t GetSummarySchemaVersion(AdmissionProfile profile);
 
     /**
      * Set the sender that owns canonical delayed copies.
@@ -150,8 +212,24 @@ class PairedValueT2Controller : public Object
     /** @return Frozen runtime-contract identifier. */
     static std::string_view GetRuntimeContractId();
 
+    /**
+     * Return the frozen runtime contract for one admission profile.
+     *
+     * @param profile Admission profile.
+     * @return Frozen runtime-contract identifier.
+     */
+    static std::string_view GetRuntimeContractId(AdmissionProfile profile);
+
     /** @return SHA-256 of the exact frozen runtime-contract file bytes. */
     static std::string_view GetRuntimeContractSha256();
+
+    /**
+     * Return the runtime-contract digest for one admission profile.
+     *
+     * @param profile Admission profile.
+     * @return SHA-256 of the exact runtime-contract file bytes.
+     */
+    static std::string_view GetRuntimeContractSha256(AdmissionProfile profile);
 
     /** @return Frozen canonical secondary-cost estimator identifier. */
     static std::string_view GetCostEstimatorId();
@@ -218,6 +296,10 @@ class PairedValueT2Controller : public Object
         double guardDebtBeforeUs{0};     ///< Negative-balance depth before action.
         bool guardAdmissionConsidered{false}; ///< Whether score reached admission.
         bool guardAdmitted{false};       ///< Whether canonical reservation fit.
+        bool strictGuardAdmitted{false}; ///< Whether strict credit admitted the copy.
+        bool passesEmergencyScore{false}; ///< Whether the high-score tier passed.
+        bool emergencyAdmissionConsidered{false}; ///< Whether bounded debt was queried.
+        bool emergencyAdmitted{false}; ///< Whether bounded future credit admitted.
         bool launchAttempted{false};     ///< Whether sender request was made.
         bool secondaryLaunched{false};   ///< Whether sender accepted the request.
         double guardBalanceAfterUs{0};   ///< Earned balance after the decision.
@@ -375,6 +457,7 @@ class PairedValueT2Controller : public Object
     Ptr<SecondaryAirtimeMeter> m_meter; ///< Shared measured-airtime meter.
     TemporalT2ValuePredictor m_predictor; ///< Frozen history and model adapter.
     SecondaryAirtimeBudgetGuard m_guard; ///< Frozen measured-airtime guard.
+    AdmissionProfile m_admissionProfile{AdmissionProfile::BASELINE_V1}; ///< Admission semantics.
     std::optional<PredictionSample> m_pendingPrimary; ///< Sole unmatched primary endpoint.
     std::string m_runId; ///< Exact run identity.
     std::ofstream m_decisions; ///< One-row-per-generated-frame decision CSV.
@@ -389,6 +472,10 @@ class PairedValueT2Controller : public Object
     uint64_t m_pairedFrames{0}; ///< Fully validated paired T2 frames.
     uint64_t m_featureEvaluated{0}; ///< Model evaluation count.
     uint64_t m_scoreThresholdPassed{0}; ///< Frozen learned-score pass count.
+    uint64_t m_strictGuardAdmitted{0}; ///< Strict-credit admissions.
+    uint64_t m_emergencyScorePassed{0}; ///< Score-aware emergency threshold passes.
+    uint64_t m_emergencyAdmissionConsidered{0}; ///< Bounded-debt admission queries.
+    uint64_t m_emergencyAdmitted{0}; ///< Bounded future-credit admissions.
     uint64_t m_launchAttempted{0}; ///< RequestSecondaryCopy call count.
     uint64_t m_secondarySettled{0}; ///< Meter settlement count.
     double m_expectedMeterReservedUs{0}; ///< Independently tracked meter reservation total.

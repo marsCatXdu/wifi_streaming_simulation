@@ -557,15 +557,24 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
             (PairedValueT2Controller::MEASUREMENT_STOP_NS -
              PairedValueT2Controller::DECISION_STOP_NS) /
             nanosPerMicrosecond;
+        const auto admissionProfile =
+            PairedValueT2Controller::ParseAdmissionProfile(
+                config.pairedValueT2AdmissionProfile);
+        NS_ABORT_MSG_IF(!admissionProfile,
+                        "Unknown paired-value admission profile "
+                            << config.pairedValueT2AdmissionProfile);
         output << "  \"pairedValueDuplicationT2\": {\n"
                << "    \"csv_schema_version\": "
-               << PairedValueT2Controller::CSV_SCHEMA_VERSION << ",\n"
+               << PairedValueT2Controller::GetCsvSchemaVersion(*admissionProfile) << ",\n"
                << "    \"summary_schema_version\": "
-               << PairedValueT2Controller::SUMMARY_SCHEMA_VERSION << ",\n"
+               << PairedValueT2Controller::GetSummarySchemaVersion(*admissionProfile)
+               << ",\n"
                << "    \"runtime_contract_id\": \""
-               << PairedValueT2Controller::GetRuntimeContractId() << "\",\n"
+               << PairedValueT2Controller::GetRuntimeContractId(*admissionProfile)
+               << "\",\n"
                << "    \"runtime_contract_sha256\": \""
-               << PairedValueT2Controller::GetRuntimeContractSha256() << "\",\n"
+               << PairedValueT2Controller::GetRuntimeContractSha256(*admissionProfile)
+               << "\",\n"
                << "    \"primary_path\": " << +PairedValueT2Controller::PRIMARY_PATH_ID
                << ",\n"
                << "    \"primary_copy_id\": "
@@ -598,8 +607,27 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"budget_max_horizon_us\": "
                << PairedValueT2Controller::BUDGET_MAX_HORIZON_US << ",\n"
                << "    \"budget_initial_horizon_us\": "
-               << PairedValueT2Controller::BUDGET_INITIAL_HORIZON_US << "\n"
-               << "  },\n";
+               << PairedValueT2Controller::BUDGET_INITIAL_HORIZON_US;
+        if (*admissionProfile ==
+            PairedValueT2Controller::AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+        {
+            output
+                << ",\n"
+                << "    \"admission_profile_id\": \""
+                << PairedValueT2Controller::AdmissionProfileName(*admissionProfile)
+                << "\",\n"
+                << "    \"emergency_score_threshold_float32\": "
+                << PairedValueT2Controller::EMERGENCY_SCORE_THRESHOLD << ",\n"
+                << "    \"emergency_score_threshold_float32_bits_hex\": "
+                   "\"0x391d4952\",\n"
+                << "    \"emergency_maximum_debt_us\": "
+                << PairedValueT2Controller::EMERGENCY_MAXIMUM_DEBT_US << "\n";
+        }
+        else
+        {
+            output << "\n";
+        }
+        output << "  },\n";
     }
     if (config.policy == "selective_duplication")
     {

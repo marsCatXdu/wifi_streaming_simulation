@@ -145,6 +145,8 @@ struct StreamingRunConfig
     uint64_t predictionPollingReportDelayUs{1000};
     bool predictionEventLogEnabled{false};
     bool predictionOracleFeaturesEnabled{false};
+    std::string pairedValueT2AdmissionProfile{
+        "baseline_v1"}; ///< Frozen paired-value admission semantics.
     double selectiveDuplicationThreshold{0};
     double selectiveDuplicationFrameBudget{0};
     uint32_t selectiveDuplicationBurstHorizonFrames{0};

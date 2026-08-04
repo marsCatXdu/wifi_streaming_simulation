@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "paired-value-duplication-t2-score-aware-emergency-v2",
+  "status": "frozen_engineering_candidate",
+  "purpose": "Test whether bounded high-score future-credit borrowing repairs burst-clipped admission without changing the temporal-T2 predictor, action, environment, or long-run airtime refill rate.",
+  "inherits": {
+    "runtime_contract_id": "paired-value-duplication-t2-runtime-v1",
+    "path": "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json",
+    "sha256": "b9b9caf6cf49e73cb0669107576a17790f59bda4875c43f676caa426393dbf41"
+  },
+  "unchanged_contract": {
+    "policy_name": "paired_value_duplication_t2",
+    "environment": "unchanged_neutral_mixed4x4",
+    "predictor": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "primary_score_threshold_float32_bits_hex": "0x38bbc0e5",
+    "frame_gate": "p_frames_only",
+    "decision_stage": "T2",
+    "decision_offset_us": 2000,
+    "action": "canonical_full_secondary_copy",
+    "canonical_cost_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+    "cost_safety_factor": 1.25,
+    "budget_fraction": 0.006,
+    "budget_max_horizon_us": 10000000,
+    "budget_initial_horizon_us": 2000000,
+    "budget_capacity_us": 60000,
+    "budget_initial_credit_us": 12000,
+    "measurement_window_ns": [
+      1000000000,
+      61000000000
+    ],
+    "decision_window_ns": [
+      1000000000,
+      60466000000
+    ]
+  },
+  "admission_override": {
+    "profile_id": "score_aware_emergency_v2",
+    "ordered_steps": [
+      "Apply every inherited gate through the primary score threshold.",
+      "Attempt inherited strict admission: canonical_reserved_airtime_us <= guard_balance_before_us - meter_reserved_before_us.",
+      "Only if strict admission fails, compare the already computed float32 value-per-cost score with the frozen emergency threshold.",
+      "Only if the emergency threshold passes, admit when canonical_reserved_airtime_us <= guard_balance_before_us - meter_reserved_before_us + emergency_maximum_debt_us.",
+      "Launch and reserve the canonical copy exactly as in runtime v1. Measured PHY airtime remains the only guard debit, and ordinary refill repays any debt."
+    ],
+    "emergency_score_threshold_float32": 0.0001500000071246177,
+    "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+    "comparison": "greater_than_or_equal",
+    "emergency_maximum_debt_us": 60000,
+    "emergency_maximum_debt_interpretation": "one additional ten-second bucket depth at the unchanged 0.6 percent refill rate",
+    "strict_admission_precedes_emergency": true,
+    "canonical_reserved_cost_used_for_both_tiers": true,
+    "learned_cost_used_for_token_accounting": false,
+    "admission_is_query_only": true,
+    "debt_note": "The admission bound applies to balance minus outstanding reservations. Realized measured airtime can exceed a reservation, so peak measured debt is reported independently and may exceed the admission limit."
+  },
+  "telemetry_override": {
+    "decision_csv_schema_version": 2,
+    "append_columns_in_order": [
+      "admission_profile_id",
+      "strict_guard_admitted",
+      "emergency_score_threshold_float32",
+      "passes_emergency_score_threshold",
+      "emergency_admission_considered",
+      "emergency_maximum_debt_us",
+      "emergency_admitted",
+      "admission_tier"
+    ],
+    "admission_tier_values": [
+      "none",
+      "strict",
+      "emergency"
+    ],
+    "controller_summary_schema_version": 2,
+    "summary_budget_guard_additions": [
+      "admission_profile_id",
+      "emergency_score_threshold_float32",
+      "emergency_score_threshold_float32_bits_hex",
+      "emergency_maximum_debt_us"
+    ],
+    "summary_count_additions": [
+      "strict_guard_admitted",
+      "emergency_score_threshold_passed",
+      "emergency_admission_considered",
+      "emergency_admitted"
+    ],
+    "summary_integrity_additions": [
+      "strict_plus_emergency_admitted_equals_launch_attempted"
+    ]
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        }
+      }
+    }
+  },
+  "selection_evidence": {
+    "qualification_path": "key_experiment_results/06_paired_value_t2_str_qualification_v1/qualification.json",
+    "qualification_sha256": "ef90188f7cf96858a40eb9290bfcc45c56a1e10ea3d37cc7a2450b35502d4e92",
+    "admission_diagnostics_path": "key_experiment_results/06_paired_value_t2_str_qualification_v1/policy_admission_diagnostics.json",
+    "admission_diagnostics_sha256": "21882afac147b12514286cca628b03868d7c392e65ad7f50b9954c3ebaab6bb2",
+    "observed_guard_rejected_frames": 2276,
+    "observed_guard_rejected_primary_misses": 349,
+    "observed_action_primary_misses": 551,
+    "observed_action_primary_miss_rescues": 538,
+    "observed_primary_miss_auc": 0.922,
+    "threshold_rationale": "The threshold is a rounded, predeclared high-score tier near the median score of guard-rejected candidates. Static diagnostics on already opened engineering runs projected useful miss coverage and an airtime ratio below 1.20; only a new closed-loop run may establish either effect.",
+    "debt_limit_rationale": "One bucket depth permits a difficult interval to borrow against later refill while keeping the intervention bounded and directly comparable with the v1 burst horizon."
+  },
+  "evaluation_boundary": {
+    "pilot_seeds": [
+      43,
+      44
+    ],
+    "fresh_engineering_seed_start": 1251,
+    "fresh_engineering_seed_stop_inclusive": 1298,
+    "reserved_confirmation_seed_start": 1301,
+    "reserved_confirmation_seed_stop_inclusive": 1348,
+    "reserved_confirmation_seeds_must_remain_unopened_until_engineering_pass": true,
+    "reference": "STR MLO NMaxInflights=1",
+    "primary_gates": [
+      "paired all-generated deadline-miss difference confidence interval below zero",
+      "paired mean per-run completed-frame HF7 P99 difference confidence interval below zero"
+    ],
+    "resource_gates": {
+      "sender_airtime_ratio_strictly_below": 1.2,
+      "background_throughput_loss_fraction_at_most": 0.01
+    }
+  },
+  "interpretation_limits": [
+    "The old 1201-1248 diagnostics selected this mechanism and cannot independently qualify it.",
+    "The learned cost head is retained only inside the frozen score; its individual cost ranking remains untrusted.",
+    "A lower maximum miss-burst length is supporting evidence only and cannot replace absolute miss-rate improvement.",
+    "EMLSR completed-frame P99 is survivor-conditioned and is not an optimization gate."
+  ]
+}

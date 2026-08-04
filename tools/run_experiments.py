@@ -110,6 +110,7 @@ CLI_KEYS = {
     "prediction_polling_report_delay_us": "predictionPollingReportDelayUs",
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
+    "paired_value_t2_admission_profile": "pairedValueT2AdmissionProfile",
     "randomized_assignment_salt": "randomizedAssignmentSalt",
     "randomized_t2_probability": "randomizedT2Probability",
     "randomized_t4_probability": "randomizedT4Probability",

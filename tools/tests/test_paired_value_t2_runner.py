@@ -40,8 +40,18 @@ QUALIFICATION = (
     ROOT / "experiments/configs/paired_value_t2_str_qualification_v1.yaml"
 )
 PREFLIGHT = ROOT / "experiments/configs/paired_value_t2_str_preflight_v1.yaml"
+SCORE_AWARE_PREFLIGHT = (
+    ROOT / "experiments/configs/paired_value_t2_score_aware_str_preflight_v2.yaml"
+)
+SCORE_AWARE_ENGINEERING = (
+    ROOT / "experiments/configs/paired_value_t2_score_aware_str_engineering_v2.yaml"
+)
 RUNTIME_CONTRACT = (
     ROOT / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
+)
+SCORE_AWARE_RUNTIME_CONTRACT = (
+    ROOT
+    / "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json"
 )
 
 
@@ -187,6 +197,61 @@ class PairedValueT2RunnerTest(unittest.TestCase):
         self.assertEqual(
             validate_runtime_contract(document),
             validate_runtime_contract(load_yaml(QUALIFICATION)),
+        )
+
+    def test_score_aware_configs_freeze_profile_and_preserve_confirmation(self) -> None:
+        preflight_raw = yaml.safe_load(SCORE_AWARE_PREFLIGHT.read_text(encoding="utf-8"))
+        engineering_raw = yaml.safe_load(
+            SCORE_AWARE_ENGINEERING.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            preflight_raw["extends"], "paired_value_t2_str_qualification_v1.yaml"
+        )
+        self.assertEqual(
+            engineering_raw["extends"],
+            "paired_value_t2_score_aware_str_preflight_v2.yaml",
+        )
+
+        preflight = load_yaml(SCORE_AWARE_PREFLIGHT)
+        engineering = load_yaml(SCORE_AWARE_ENGINEERING)
+        self.assertEqual(preflight["seeds"], [43])
+        self.assertEqual(engineering["seeds"], list(range(1251, 1299)))
+        self.assertTrue(set(engineering["seeds"]).isdisjoint(range(1301, 1349)))
+        self.assertEqual(
+            matrix_sha256(preflight),
+            "9fc0983ca797cb88697a85b221d3434b5acf4b3c20677c140aaac39092751835",
+        )
+        self.assertEqual(
+            matrix_sha256(engineering),
+            "125370c3dfe0a0416816fb7e2a6f90b6db9d45b4eac3757c829bec123973f49a",
+        )
+        self.assertEqual(len(expand_config(preflight)), 2)
+        specs = expand_config(engineering)
+        self.assertEqual(len(specs), 96)
+
+        contract = validate_runtime_contract(engineering)
+        self.assertIsNotNone(contract)
+        assert contract is not None
+        self.assertEqual(
+            contract["runtime_contract_id"],
+            "paired-value-duplication-t2-score-aware-emergency-v2",
+        )
+        self.assertEqual(
+            contract["runtime_contract_sha256"],
+            hashlib.sha256(SCORE_AWARE_RUNTIME_CONTRACT.read_bytes()).hexdigest(),
+        )
+        policy = next(
+            spec["config"]
+            for spec in specs
+            if spec["config"]["policy"] == "paired_value_duplication_t2"
+        )
+        self.assertEqual(
+            policy["prediction"]["paired_value_t2_admission_profile"],
+            "score_aware_emergency_v2",
+        )
+        self.assertIn(
+            "--pairedValueT2AdmissionProfile=score_aware_emergency_v2",
+            cli_arguments(policy, SCORE_AWARE_ENGINEERING.parent),
         )
 
     def test_real_runtime_contract_and_five_source_artifacts_validate(self) -> None:

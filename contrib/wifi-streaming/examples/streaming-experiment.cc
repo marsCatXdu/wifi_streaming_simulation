@@ -440,6 +440,7 @@ main(int argc, char* argv[])
     uint64_t predictionPollingReportDelayUs = 1000;
     bool predictionEventLogEnabled = false;
     bool predictionOracleFeaturesEnabled = false;
+    std::string pairedValueT2AdmissionProfile = "baseline_v1";
     double selectiveDuplicationThreshold = 0.2;
     double selectiveDuplicationFrameBudget = 0.3;
     uint32_t selectiveDuplicationBurstHorizonFrames = 30;
@@ -603,6 +604,10 @@ main(int argc, char* argv[])
     command.AddValue("predictionOracleFeaturesEnabled",
                      "Populate causal ns-3 F3 current-state fields",
                      predictionOracleFeaturesEnabled);
+    command.AddValue("pairedValueT2AdmissionProfile",
+                     "Paired-value admission profile: baseline_v1 or "
+                     "score_aware_emergency_v2",
+                     pairedValueT2AdmissionProfile);
     command.AddValue("selectiveDuplicationThreshold",
                      "Calibrated miss-probability action threshold",
                      selectiveDuplicationThreshold);
@@ -816,6 +821,12 @@ main(int argc, char* argv[])
     std::vector<uint64_t> resolvedAdaptiveIFrameOnlyDecisionOffsetsUs;
     AdaptiveAdmissionPacketCost resolvedAdaptiveAdmissionPacketCost =
         AdaptiveAdmissionPacketCost::LAUNCHED_PACKET_SET;
+    const auto resolvedPairedValueT2AdmissionProfile =
+        PairedValueT2Controller::ParseAdmissionProfile(
+            pairedValueT2AdmissionProfile);
+    NS_ABORT_MSG_IF(!resolvedPairedValueT2AdmissionProfile,
+                    "Unknown pairedValueT2AdmissionProfile "
+                        << pairedValueT2AdmissionProfile);
     const uint64_t resolvedAdaptiveAirtimeInitialBucketHorizonUs =
         adaptiveAirtimeInitialBucketHorizonUs == 0
             ? adaptiveAirtimeBucketHorizonUs
@@ -1070,6 +1081,13 @@ main(int argc, char* argv[])
                             rtsCtsThreshold != 4692480 || fragmentationThreshold != 65535 ||
                             guardIntervalNs != 800,
                         "Paired-value T2 control requires the frozen Wi-Fi cost profile");
+    }
+    else
+    {
+        NS_ABORT_MSG_IF(
+            *resolvedPairedValueT2AdmissionProfile !=
+                PairedValueT2Controller::AdmissionProfile::BASELINE_V1,
+            "A nonbaseline paired-value admission profile requires paired-value control");
     }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
@@ -2499,6 +2517,7 @@ main(int argc, char* argv[])
     resolved.predictionPollingReportDelayUs = predictionPollingReportDelayUs;
     resolved.predictionEventLogEnabled = predictionEventLogEnabled;
     resolved.predictionOracleFeaturesEnabled = predictionOracleFeaturesEnabled;
+    resolved.pairedValueT2AdmissionProfile = pairedValueT2AdmissionProfile;
     resolved.selectiveDuplicationThreshold = selectiveDuplicationThreshold;
     resolved.selectiveDuplicationFrameBudget = selectiveDuplicationFrameBudget;
     resolved.selectiveDuplicationBurstHorizonFrames =
@@ -2828,6 +2847,8 @@ main(int argc, char* argv[])
     if (policyName == "paired_value_duplication_t2")
     {
         pairedValueController = CreateObject<PairedValueT2Controller>();
+        pairedValueController->SetAdmissionProfile(
+            *resolvedPairedValueT2AdmissionProfile);
         pairedValueController->SetSender(PeekPointer(sender));
         pairedValueController->SetAirtimeMeter(secondaryAirtimeMeter);
         pairedValueController->SetOutputFiles(

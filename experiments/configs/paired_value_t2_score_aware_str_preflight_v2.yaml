@@ -1,0 +1,44 @@
+extends: paired_value_t2_str_qualification_v1.yaml
+
+name: paired-value-t2-score-aware-str-preflight-v2
+output_root: results/paired_value_t2_score_aware_str_preflight_v2/runs
+workers: 2
+
+runtime_contract:
+  id: paired-value-duplication-t2-score-aware-emergency-v2
+  path: experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json
+  sha256: bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda
+  source_artifacts:
+    frozen_selection:
+      path: experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json
+      sha256: c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f
+    canonical_fit_manifest:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json
+      sha256: b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f
+    canonical_model_pickle:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl
+      sha256: dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8
+    canonical_candidates:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv
+      sha256: 7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb
+    canonical_metrics:
+      path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json
+      sha256: 35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014
+
+seeds: [43]
+
+policies:
+  - name: paired_value_duplication_t2
+    topologies: [dual_interface]
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 2000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.secondary_airtime_meter_enabled: true
+      prediction.paired_value_t2_admission_profile: score_aware_emergency_v2
+  - name: fixed_link_0
+    topologies: [mlo_str]
