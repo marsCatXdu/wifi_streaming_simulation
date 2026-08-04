@@ -1,0 +1,11 @@
+{
+  "ablation_id": "frozen_temporal_heads_cost_denominator_ablation_v1",
+  "artifacts_sha256": {
+    "temporal_t2_cost_ablation.md": "2ca1881b5d84077a5804cc7dcec8c93626871ae4ac0eca60a0194f469326c600",
+    "temporal_t2_cost_ablation.png": "9168deef99a4fed57cf62362bf981a81f0ad8e6db09a226df7e00818b1389106",
+    "temporal_t2_cost_ablation_candidates.csv": "dac3ee0e34f39f0bb89a05d1c15b280ff92fda38f2ad2070c63e6bc20b8d66b7",
+    "temporal_t2_cost_ablation_metrics.json": "e7a4452738e940e2a28ad475fc6213fc4a4c5ea9c195e5b5a8d60b2f4cca2574"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1
+}

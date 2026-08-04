@@ -1,0 +1,398 @@
+{
+  "ablation_id": "frozen_temporal_heads_cost_denominator_ablation_v1",
+  "ablation_schema_version": 1,
+  "calibration_balanced_min_improvement_delta": 0.06642513998138722,
+  "calibration_paired_delta_uncertainty": {
+    "confidence_level": 0.95,
+    "contrast": "cost_free_policy_minus_frozen_source_policy",
+    "estimands": {
+      "action_fraction": {
+        "ci_lower": 0.010775143463921057,
+        "ci_upper": 0.018364896116679196,
+        "estimate": 0.014978739853111711
+      },
+      "airtime_us_per_eligible_frame": {
+        "ci_lower": 1.617383365131169,
+        "ci_upper": 43.87853598787827,
+        "estimate": 25.421300876114913
+      },
+      "completed_late18_ratio": {
+        "ci_lower": -0.006310342921362034,
+        "ci_upper": -0.00023190242704898678,
+        "estimate": -0.002407803512857158
+      },
+      "deadline_miss_probability": {
+        "ci_lower": -0.001394894950266273,
+        "ci_upper": -6.535443264009817e-05,
+        "estimate": -0.0006718641686659882
+      }
+    },
+    "evidence_role": "selection_reused_descriptive",
+    "method": "deterministic_paired_run_cluster_percentile_bootstrap_v1",
+    "replications": 2000,
+    "run_count": 16,
+    "unit": "(seed, run_number)"
+  },
+  "candidate_count": 384,
+  "cost_free_candidate_count": 192,
+  "dataset_artifacts_sha256": {
+    "dataset_metadata.json": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+    "randomized_t2_temporal.csv": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+  },
+  "dataset_dir": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+  "decisive_confirmation": "fresh closed-loop seeds 1301+ remain untouched",
+  "engineering_test_deltas": {
+    "action_fraction": 0.014934041317514302,
+    "airtime_us_per_eligible_frame": 30.4671983541283,
+    "completed_late18_ratio": -0.0010285583588947305,
+    "deadline_miss_probability": -0.0005055895312241696
+  },
+  "engineering_test_paired_delta_uncertainty": {
+    "confidence_level": 0.95,
+    "contrast": "cost_free_policy_minus_frozen_source_policy",
+    "estimands": {
+      "action_fraction": {
+        "ci_lower": 0.01108156645196383,
+        "ci_upper": 0.0181902185373502,
+        "estimate": 0.014934041317514302
+      },
+      "airtime_us_per_eligible_frame": {
+        "ci_lower": 20.651889518574972,
+        "ci_upper": 39.51542981331117,
+        "estimate": 30.4671983541283
+      },
+      "completed_late18_ratio": {
+        "ci_lower": -0.001861442630418869,
+        "ci_upper": -0.0003131302102554892,
+        "estimate": -0.001028558358894727
+      },
+      "deadline_miss_probability": {
+        "ci_lower": -0.001015661653741793,
+        "ci_upper": -6.433311435826767e-06,
+        "estimate": -0.0005055895312241626
+      }
+    },
+    "evidence_role": "previously_opened_engineering_test",
+    "method": "deterministic_paired_run_cluster_percentile_bootstrap_v1",
+    "replications": 2000,
+    "run_count": 16,
+    "unit": "(seed, run_number)"
+  },
+  "evidence_status": "retrospective_previously_opened_engineering_evidence_not_confirmation",
+  "feature_family_order": [
+    "primary_base",
+    "primary_compact_physics",
+    "primary_compact_physics_temporal"
+  ],
+  "frame_gate_order": [
+    "all_frames",
+    "p_frames_only"
+  ],
+  "interpretation_guardrails": [
+    "The engineering test split was already opened by V1 and is descriptive.",
+    "This result isolates score ranking; it does not validate a runtime guard.",
+    "No secondary-link feature is introduced by this ablation.",
+    "Fresh seeds 1301+ are not read or consumed."
+  ],
+  "model_refit": false,
+  "provenance": {
+    "evaluator_source_path": "tools/evaluate_temporal_t2_cost_ablation.py",
+    "evaluator_source_sha256": "298e2972076d87988fbe59696dcd98f57c17eafe9a9485c59f08e50c257ab7e3",
+    "repository_git_commit": "8d8f2460781c65c8a735a49e974c5358a6813097",
+    "repository_worktree_clean": true,
+    "repository_worktree_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "trainer_source_sha256": "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9"
+  },
+  "random_seed": 20260804,
+  "ranker_order": [
+    "deadline_value_per_cost",
+    "deadline_value",
+    "completed_late18_value_per_cost",
+    "completed_late18_value",
+    "balanced_normalized_value_per_cost",
+    "balanced_normalized_value",
+    "legacy_bad12_value_per_cost",
+    "legacy_bad12_value"
+  ],
+  "requested_action_fractions": [
+    0.05,
+    0.075,
+    0.1,
+    0.125,
+    0.15,
+    0.165,
+    0.18,
+    0.2
+  ],
+  "scientific_question": "Does removing the learned per-frame secondary-airtime divisor improve ranking when all fitted outcome heads and evaluation nuisances are fixed?",
+  "selected_cost_free_calibration_policy": {
+    "admissible": 1,
+    "balanced_min_relative_improvement": 0.6842970342335413,
+    "candidate_ordinal": 381,
+    "completed_late18_relative_improvement": 0.6842970342335413,
+    "cost_normalized": 0,
+    "deadline_miss_relative_improvement": 0.8331808845702058,
+    "dr_airtime_us_per_eligible_frame": 398.05068892607824,
+    "dr_bad12_benefit": 0.058676988485235754,
+    "dr_deadline_miss_benefit": 0.01684338503022732,
+    "dr_policy_bad12": 0.04593010883237435,
+    "dr_policy_completed_late18_numerator": 0.011405127588224082,
+    "dr_policy_completed_late18_ratio": 0.011443720106647919,
+    "dr_policy_completion_probability": 0.9966276247527744,
+    "dr_policy_deadline_miss": 0.003372375247225442,
+    "dr_treat_none_bad12": 0.1046070973176101,
+    "dr_treat_none_completed_late18_numerator": 0.035515588448998006,
+    "dr_treat_none_completed_late18_ratio": 0.036248376947821924,
+    "dr_treat_none_completion_probability": 0.9797842397225471,
+    "dr_treat_none_deadline_miss": 0.02021576027745276,
+    "feature_family": "primary_compact_physics_temporal",
+    "frame_gate": "p_frames_only",
+    "mean_relative_improvement": 0.7587389594018735,
+    "ranker": "legacy_bad12_value",
+    "realized_action_fraction": 0.16505604947816002,
+    "rejection_reason": "",
+    "requested_action_fraction": 0.165,
+    "run_cluster_uncertainty": {
+      "confidence_level": 0.95,
+      "estimands": {
+        "completed_late18_relative_improvement": {
+          "ci_lower": 0.5696950933023224,
+          "ci_upper": 0.7771642208039296,
+          "estimate": 0.6842970342335415
+        },
+        "deadline_miss_relative_improvement": {
+          "ci_lower": 0.7546357821778974,
+          "ci_upper": 0.8739161580187164,
+          "estimate": 0.8331808845702059
+        },
+        "dr_airtime_us_per_eligible_frame": {
+          "ci_lower": 257.4971932243931,
+          "ci_upper": 512.0748422682374,
+          "estimate": 398.05068892607824
+        },
+        "dr_policy_completed_late18_numerator": {
+          "ci_lower": 0.00682333871270656,
+          "ci_upper": 0.015322971842793383,
+          "estimate": 0.011405127588224076
+        },
+        "dr_policy_completed_late18_ratio": {
+          "ci_lower": 0.006844876295531281,
+          "ci_upper": 0.015384208808293302,
+          "estimate": 0.011443720106647912
+        },
+        "dr_policy_completion_probability": {
+          "ci_lower": 0.9949832491672537,
+          "ci_upper": 0.9983949563184034,
+          "estimate": 0.9966276247527746
+        },
+        "dr_policy_deadline_miss": {
+          "ci_lower": 0.0016050436815967138,
+          "ci_upper": 0.005016750832746293,
+          "estimate": 0.0033723752472254397
+        },
+        "realized_action_fraction": {
+          "ci_lower": 0.11031215973888775,
+          "ci_upper": 0.20630086522452332,
+          "estimate": 0.16505604947816002
+        }
+      },
+      "evidence_role": "selection_reused_descriptive",
+      "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+      "replications": 2000,
+      "run_count": 16,
+      "unit": "(seed, run_number)"
+    },
+    "score_threshold": 0.18692325055599213,
+    "signal": "legacy_bad12_value",
+    "source_frozen": 0
+  },
+  "selected_cost_free_engineering_test_policy": {
+    "completed_late18_relative_improvement": 0.647215624875993,
+    "deadline_miss_relative_improvement": 0.830569330176826,
+    "dr_airtime_us_per_eligible_frame": 395.9615772716738,
+    "dr_bad12_benefit": 0.06744981582894179,
+    "dr_deadline_miss_benefit": 0.023152935299759418,
+    "dr_policy_bad12": 0.053980383513059615,
+    "dr_policy_completed_late18_numerator": 0.01481896469410814,
+    "dr_policy_completed_late18_ratio": 0.014889287487108238,
+    "dr_policy_completion_probability": 0.995276953778951,
+    "dr_policy_deadline_miss": 0.00472304622104899,
+    "dr_treat_none_bad12": 0.1214301993420014,
+    "dr_treat_none_completed_late18_numerator": 0.0410285573990395,
+    "dr_treat_none_completed_late18_ratio": 0.042205065011381285,
+    "dr_treat_none_completion_probability": 0.9721240184791916,
+    "dr_treat_none_deadline_miss": 0.027875981520808408,
+    "frozen_feature_family": "primary_compact_physics_temporal",
+    "frozen_float32_score_threshold": 0.18692325055599213,
+    "frozen_frame_gate": "p_frames_only",
+    "frozen_ranker": "legacy_bad12_value",
+    "realized_action_fraction": 0.17680245582012777,
+    "row_count": 12053,
+    "run_cluster_uncertainty": {
+      "confidence_level": 0.95,
+      "estimands": {
+        "completed_late18_relative_improvement": {
+          "ci_lower": 0.5690209293066861,
+          "ci_upper": 0.696808260339464,
+          "estimate": 0.6472156248759928
+        },
+        "deadline_miss_relative_improvement": {
+          "ci_lower": 0.7792015599194129,
+          "ci_upper": 0.8626077249108628,
+          "estimate": 0.8305693301768258
+        },
+        "dr_airtime_us_per_eligible_frame": {
+          "ci_lower": 272.94486472555684,
+          "ci_upper": 506.22742058155166,
+          "estimate": 395.9615772716738
+        },
+        "dr_policy_completed_late18_numerator": {
+          "ci_lower": 0.011223353385351327,
+          "ci_upper": 0.01801770701603613,
+          "estimate": 0.014818964694108145
+        },
+        "dr_policy_completed_late18_ratio": {
+          "ci_lower": 0.011268246551759767,
+          "ci_upper": 0.01810168413889705,
+          "estimate": 0.014889287487108242
+        },
+        "dr_policy_completion_probability": {
+          "ci_lower": 0.994061583876827,
+          "ci_upper": 0.9966802312580143,
+          "estimate": 0.9952769537789511
+        },
+        "dr_policy_deadline_miss": {
+          "ci_lower": 0.003319768741985711,
+          "ci_upper": 0.005938416123173071,
+          "estimate": 0.004723046221048997
+        },
+        "realized_action_fraction": {
+          "ci_lower": 0.13353769305371613,
+          "ci_upper": 0.20930275880031138,
+          "estimate": 0.17680245582012777
+        }
+      },
+      "evidence_role": "previously_opened_engineering_test",
+      "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+      "replications": 2000,
+      "run_count": 16,
+      "unit": "(seed, run_number)"
+    },
+    "run_count": 16
+  },
+  "selection_pool": "cost-free rankers only",
+  "selection_role": "calibration",
+  "source_frozen_calibration_policy": {
+    "admissible": 1,
+    "balanced_min_relative_improvement": 0.617871894252154,
+    "candidate_ordinal": 364,
+    "completed_late18_relative_improvement": 0.617871894252154,
+    "cost_normalized": 1,
+    "deadline_miss_relative_improvement": 0.7999462122430246,
+    "dr_airtime_us_per_eligible_frame": 372.6293880499633,
+    "dr_bad12_benefit": 0.05395404197013452,
+    "dr_deadline_miss_benefit": 0.016171520861561334,
+    "dr_policy_bad12": 0.05065305534747558,
+    "dr_policy_completed_late18_numerator": 0.013795504741712924,
+    "dr_policy_completed_late18_ratio": 0.013851523619505078,
+    "dr_policy_completion_probability": 0.9959557605841085,
+    "dr_policy_deadline_miss": 0.004044239415891427,
+    "dr_treat_none_bad12": 0.1046070973176101,
+    "dr_treat_none_completed_late18_numerator": 0.035515588448998006,
+    "dr_treat_none_completed_late18_ratio": 0.036248376947821924,
+    "dr_treat_none_completion_probability": 0.9797842397225471,
+    "dr_treat_none_deadline_miss": 0.02021576027745276,
+    "feature_family": "primary_compact_physics_temporal",
+    "frame_gate": "p_frames_only",
+    "mean_relative_improvement": 0.7089090532475893,
+    "ranker": "legacy_bad12_value_per_cost",
+    "realized_action_fraction": 0.1500773096250483,
+    "rejection_reason": "",
+    "requested_action_fraction": 0.15,
+    "score_threshold": 8.952784264693037e-05,
+    "signal": "legacy_bad12_value",
+    "source_frozen": 1
+  },
+  "source_frozen_engineering_test_policy": {
+    "completed_late18_relative_improvement": 0.6228451290926702,
+    "deadline_miss_relative_improvement": 0.8124322277811035,
+    "dr_airtime_us_per_eligible_frame": 365.4943789175455,
+    "dr_bad12_benefit": 0.06455264115833217,
+    "dr_deadline_miss_benefit": 0.02264734576853525,
+    "dr_policy_bad12": 0.05687755818366923,
+    "dr_policy_completed_late18_numerator": 0.015834617228113385,
+    "dr_policy_completed_late18_ratio": 0.01591784584600297,
+    "dr_policy_completion_probability": 0.9947713642477268,
+    "dr_policy_deadline_miss": 0.005228635752273159,
+    "dr_treat_none_bad12": 0.1214301993420014,
+    "dr_treat_none_completed_late18_numerator": 0.0410285573990395,
+    "dr_treat_none_completed_late18_ratio": 0.042205065011381285,
+    "dr_treat_none_completion_probability": 0.9721240184791916,
+    "dr_treat_none_deadline_miss": 0.027875981520808408,
+    "frozen_feature_family": "primary_compact_physics_temporal",
+    "frozen_float32_score_threshold": 8.952784264693037e-05,
+    "frozen_frame_gate": "p_frames_only",
+    "frozen_ranker": "legacy_bad12_value_per_cost",
+    "realized_action_fraction": 0.16186841450261347,
+    "row_count": 12053,
+    "run_cluster_uncertainty": {
+      "confidence_level": 0.95,
+      "estimands": {
+        "completed_late18_relative_improvement": {
+          "ci_lower": 0.5363752969417503,
+          "ci_upper": 0.6765751738697052,
+          "estimate": 0.6228451290926702
+        },
+        "deadline_miss_relative_improvement": {
+          "ci_lower": 0.749725698744535,
+          "ci_upper": 0.8587539749107707,
+          "estimate": 0.8124322277811035
+        },
+        "dr_airtime_us_per_eligible_frame": {
+          "ci_lower": 259.02186573102955,
+          "ci_upper": 476.13152331365256,
+          "estimate": 365.4943789175455
+        },
+        "dr_policy_completed_late18_numerator": {
+          "ci_lower": 0.011714555738921158,
+          "ci_upper": 0.019566278212463595,
+          "estimate": 0.015834617228113385
+        },
+        "dr_policy_completed_late18_ratio": {
+          "ci_lower": 0.011763599738313845,
+          "ci_upper": 0.019688587573459627,
+          "estimate": 0.01591784584600297
+        },
+        "dr_policy_completion_probability": {
+          "ci_lower": 0.9932640529927194,
+          "ci_upper": 0.9965644351080313,
+          "estimate": 0.9947713642477268
+        },
+        "dr_policy_deadline_miss": {
+          "ci_lower": 0.0034355648919687093,
+          "ci_upper": 0.006735947007280633,
+          "estimate": 0.005228635752273159
+        },
+        "realized_action_fraction": {
+          "ci_lower": 0.12346579020076393,
+          "ci_upper": 0.1933585183637815,
+          "estimate": 0.16186841450261347
+        }
+      },
+      "evidence_role": "previously_opened_engineering_test",
+      "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+      "replications": 2000,
+      "run_count": 16,
+      "unit": "(seed, run_number)"
+    },
+    "run_count": 16
+  },
+  "source_model_artifacts_sha256": {
+    "temporal_t2_value_models.pkl": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8",
+    "temporal_t2_value_policy_candidates.csv": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb",
+    "temporal_t2_value_training_metrics.json": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+  },
+  "source_model_dir": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1",
+  "source_model_manifest_sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f",
+  "test_role_used_during_selection": false
+}

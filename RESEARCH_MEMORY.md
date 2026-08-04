@@ -252,6 +252,42 @@ on-time primaries.  Keep startup fallback and an I-frame-specific policy as
 separate later interventions.  Reserved confirmation seeds `1301` through
 `1348` remain unopened.
 
+## Frozen-head cost-denominator ablation
+
+Commit `8d8f246` adds a checksum-bound retrospective ablation that reuses the
+canonical primary-only temporal-T2 model without fitting any head.  It pairs
+each existing value signal with a cost-free version, selects only among the
+cost-free candidates on the original calibration runs, and evaluates the
+winner once on the already-opened engineering-test role.  Seeds `1301`
+through `1348` remain untouched.
+
+The learned per-frame secondary-airtime divisor harms rank order.  At the
+same 15% requested action fraction, temporal family, and P-frame gate, raw
+bad12 value improves deadline misses by 82.40% and completed-late18 by 65.40%,
+versus 79.99% and 61.79% for bad12 value divided by learned cost.  Raw value
+also uses less calibrated DR airtime: 360.05 versus 372.63 us per eligible
+frame.  This matched-budget result isolates the denominator from action-count
+changes.
+
+The cost-free grid selects raw bad12 value at 16.5% requested actions.  Its
+calibrated worst-objective improvement is 68.43% and its DR airtime is 398.05
+us per eligible frame.  On the opened engineering test, the selected policy
+has 0.4723% estimated misses versus 0.5229% for the frozen source.  The paired
+winner-minus-source 95% interval is `[-0.1016, -0.0006]` percentage points.
+Its completed-late18 ratio is 1.4889% versus 1.5918%, with paired interval
+`[-0.1861, -0.0313]` percentage points.  It uses 1.49 percentage points more
+actions and 30.47 us more DR airtime per eligible frame.
+
+Adopt cost-free value ranking as the baseline, but do not yet claim a runtime
+improvement or remove cost prediction from conservative reservation.  The
+winner still uses legacy bad12 rather than an explicit deadline/tail signal
+and nearly saturates the offline airtime ceiling.  Next, add causally
+available action-clean secondary-path state to the treated-outcome model so
+it can predict whether the identical 2.4 GHz copy rescues the union outcome.
+Compare that finite candidate set on the same opened data before another VM
+campaign.  The compact artifact is
+`key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1`.
+
 ## Randomized-policy population mapping
 
 The randomized T2 intervention dataset estimates effects only among frames

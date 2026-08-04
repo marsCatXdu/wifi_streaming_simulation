@@ -70,6 +70,7 @@ P99.
 | Add remaining-refill V4 | `c08468a` | Final causal borrowing tier with unchanged inherited policy settings |
 | Validate remaining-refill evidence | `28c2b1b` | Schema-V3 replay of remaining credit, tier order, and repayment telemetry |
 | Diagnose V3/V4 admission shift | `6fed1ca` | Exact 86,400-frame action and outcome transition tool |
+| Evaluate frozen-head cost divisor | `8d8f246` | Paired cost-free ranking grid and whole-run delta uncertainty |
 
 The latest T2 validator milestone is `28c2b1b`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay, and adds independent
@@ -105,9 +106,11 @@ tiers, summary counts, and repayment telemetry.
   V2/V3 because early lower-risk actions displace later higher-risk actions;
   archive it as a negative result and do not promote it.
 - [ ] Return to V2 and develop one better predictor/ranker from existing
-  randomized-intervention evidence.  Target deadline rescue and tail benefit
-  directly, use secondary-path state where causally available, and evaluate
-  only on opened development data before defining another runtime campaign.
+  randomized-intervention evidence.  The frozen-head ablation now establishes
+  raw value as a better baseline than value divided by learned cost
+  (`8d8f246`).  Next add causally available action-clean secondary-path state
+  to the treated-outcome model and compare the finite candidates only on
+  opened development data before defining another runtime campaign.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -153,16 +156,25 @@ Conditional rescue remains about 95.7%, so chronological future-credit
 spending, not duplication, causes the loss.  Do not run another bucket or
 remaining-refill variant.
 
-The next boundary is the predictor/outcome problem under the V2 controller.
-Use the existing randomized full-copy evidence to rank expected deadline
-rescue and completed-tail benefit directly, incorporating causally available
-secondary-path state instead of relying only on primary bad12 benefit divided
-by a poorly ranking learned cost head.  First quantify improvement on the
-already-opened splits and measure whether it captures the 170 V2
-below-threshold misses without increasing action cost.  Startup and I-frames
-remain separate semantic changes: choose a causal non-temporal startup
-fallback or consistent pre-roll, and test an I-specific policy rather than
-indiscriminate I-frame duplication.
+The first predictor boundary is complete.  With all fitted primary-only heads
+held fixed, removing the learned cost divisor improves both calibration
+objectives at the same 15% action fraction and lowers estimated airtime.  The
+cost-free grid selects raw bad12 value at 16.5% requested actions.  On the
+already-opened engineering test it estimates 0.4723% misses instead of
+0.5229%, with a paired 95% delta interval of `[-0.1016, -0.0006]` percentage
+points.  Completed-late18 also improves, while action fraction rises by 1.49
+percentage points and DR airtime by 30.47 us per eligible frame.  This is
+development evidence, not a closed-loop STR result.
+
+The next boundary is a causal dual-link treated-outcome model.  Reuse the
+action-clean temporal dataset's delayed 2.4 GHz state to predict whether the
+identical secondary copy rescues deadline and completed-tail outcomes, with
+raw value as the baseline ranker.  Keep the finite calibration grid and all
+opened-test caveats explicit.  Only after that comparison should one candidate
+be exported to the V2 controller and tested on opened closed-loop seeds.
+Startup and I-frames remain separate semantic changes: choose a causal
+non-temporal startup fallback or consistent pre-roll, and test an I-specific
+policy rather than indiscriminate I-frame duplication.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -270,8 +282,38 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Exact V3/V4 comparison at `6fed1ca` found zero changed scores or threshold
   results, 1,034 displaced V3 actions, 1,362 V4-only actions, and a net 90
   additional misses.  All 63 related Python tests passed.
+- Frozen-head cost ablation through `8d8f246`: all 11 trainer/ablation tests
+  passed, together with `py_compile`, line-length, and diff checks.  The
+  clean-worktree output reproduces the frozen calibration and engineering-test
+  point estimates before evaluating the cost-free winner.  Its artifact
+  manifest SHA-256 is
+  `1b082c5d908e00067256512b037871233350ca07df2d6fba9b7fe3f9ddb0b549`.
+- The engineering-test paired winner-minus-source intervals are
+  `[-0.1016, -0.0006]` percentage points for deadline misses,
+  `[-0.1861, -0.0313]` percentage points for completed-late18, and
+  `[+20.65, +39.52]` us per eligible frame for DR airtime.  This split was
+  already open and remains descriptive.
 
 ## Work log
+
+### 2026-08-05 - Remove the harmful score cost divisor
+
+- Added and pushed a strict frozen-bundle ablation as `a92bbeb`; it verifies
+  every source artifact and reproduces the frozen source policy before
+  considering cost-free scores.
+- Added whole-run paired policy-delta uncertainty and pushed it separately as
+  `8d8f246` after recognizing that separate policy intervals were inadequate
+  for the modest estimated gain.
+- Regenerated the output from a clean worktree, verified its manifest hashes,
+  and plotted the paired calibration curves, objective plane, opened-test
+  outcomes and intervals, and resource proxies.
+- Established at a matched 15% action fraction that raw value improves both
+  objectives while using less estimated airtime; selected raw bad12 value at
+  16.5% as the next ranking baseline.
+- Archived the compact evidence under
+  `key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1` and
+  kept reserved confirmation seeds unopened.  The next boundary is causal
+  secondary-path state in the treated-outcome model, not another guard change.
 
 ### 2026-08-05 - Falsify chronological remaining-refill borrowing
 

@@ -37,6 +37,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `07_score_aware_t2_str_engineering_v2` | Score-aware temporal-T2 V2 versus STR MLO | First all-gate engineering pass, 48-pair report, admission diagnostics, raw-archive identity, and qualification plus standard figures |
 | `08_full_horizon_t2_str_engineering_v3` | Full-horizon carry-over V3 versus STR MLO | Strict 48-pair null result, exact V2/V3 decision comparison, raw-archive identity, and qualification plus standard figures |
 | `09_remaining_refill_t2_str_engineering_v4` | Remaining-refill borrowing V4 versus STR MLO | Strict 48-pair pass against STR but regression from V2/V3, exact admission-shift diagnosis, raw-archive identity, and qualification plus standard figures |
+| `10_temporal_t2_cost_denominator_ablation_v1` | Frozen temporal-T2 value heads with and without learned cost normalization | Paired calibration grid, opened-test estimates, whole-run paired uncertainty, generated report, and summary figure |
 
 ## Current best STR result
 
@@ -60,6 +61,15 @@ higher-risk V2 actions.  See
 `08_full_horizon_t2_str_engineering_v3/README.md` and
 `09_remaining_refill_t2_str_engineering_v4/README.md` for the two negative
 guard-isolation tests.
+
+The next frozen-head offline ablation shows that the learned per-frame cost
+divisor degrades ranking. At the same 15% requested action fraction, the raw
+bad12 value improves both calibrated objectives and uses less estimated
+airtime than bad12 value divided by learned cost. The selected cost-free point
+also improves both outcomes on the already-opened engineering test, with
+paired intervals excluding zero, but it uses more actions and has not been
+run closed-loop. See
+`10_temporal_t2_cost_denominator_ablation_v1/README.md`.
 
 ## Principal streaming results
 
@@ -215,6 +225,24 @@ score-aware before replacing the otherwise useful primary-risk model.  See
 `06_paired_value_t2_str_qualification_v1/README.md` for intervals,
 heterogeneity, interpretation limits, and provenance.
 
+## Temporal-T2 cost-denominator ablation
+
+With every fitted head held fixed, removing the learned secondary-airtime
+divisor improves the calibration ordering. At a matched 15% action fraction,
+the worst of the deadline and completed-late18 relative improvements rises
+from 61.79% to 65.40%, while DR airtime falls from 372.63 to 360.05 us per
+eligible frame. The cost-free calibration winner uses 16.5% requested actions
+and reaches 68.43% on the worst objective.
+
+On the already-opened 16-run engineering test, estimated miss probability is
+0.4723% instead of 0.5229%; the paired winner-minus-source interval is
+`[-0.1016, -0.0006]` percentage points. Completed-late18 also improves, while
+DR airtime rises by 30.47 us per eligible frame. This is actionable
+development evidence that the denominator harms rank order, not closed-loop
+STR evidence. The next predictor experiment should use the raw value score as
+its baseline and add causal action-clean secondary-path state to model rescue
+success.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -250,3 +278,6 @@ For online prediction:
    authoritative numeric evidence.
 7. The temporal-T2 48-pair result is engineering qualification and failed its
    performance gates; reserved final-confirmation seeds remain unopened.
+8. The frozen-head cost-denominator ablation uses an already-opened test split
+   and an eligible-frame DR estimand; it is not a runtime or confirmation
+   result.

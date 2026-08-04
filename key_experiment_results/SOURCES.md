@@ -26,6 +26,7 @@ following ignored result roots:
 | `07_score_aware_t2_str_engineering_v2` | `results/paired_value_t2_score_aware_str_engineering_v2/runs` |
 | `08_full_horizon_t2_str_engineering_v3` | `results/paired_value_t2_full_horizon_str_engineering_v3/runs` |
 | `09_remaining_refill_t2_str_engineering_v4` | `results/paired_value_t2_remaining_refill_str_engineering_v4/runs` plus the exact V3/V4 comparison in its result-root directory |
+| `10_temporal_t2_cost_denominator_ablation_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_cost_denominator_ablation_v1` |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
