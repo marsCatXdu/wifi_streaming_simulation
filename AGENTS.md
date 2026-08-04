@@ -14,6 +14,14 @@ research conclusions whose context must survive across agent sessions.  Keep
 new entries evidence-linked and distinguish completed-frame latency metrics
 from metrics whose denominator includes missed or incomplete frames.
 
+Before resuming implementation or experiments, also read
+`WORKING_HISTORY.md`.  It is the authoritative evolving handoff for completed
+milestones, the current worktree boundary, verification already performed,
+and one consistent overall TODO checklist.  Reconcile it with Git and on-disk
+artifacts after a context compression, then update it at clean milestones or
+whenever the execution state materially changes.  Do not create competing
+checklists in other documents.
+
 ## Build System
 
 ### Essential Commands
