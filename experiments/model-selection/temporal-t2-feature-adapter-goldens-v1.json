@@ -1,0 +1,1099 @@
+{
+  "feature_adapter_golden_schema_version": 1,
+  "feature_adapter_golden_id": "temporal-t2-feature-adapter-goldens-v1",
+  "status": "frozen_before_feature_adapter_implementation",
+  "implementation_state": {
+    "temporal_t2_value_model_evaluator_exists": true,
+    "temporal_t2_value_model_data_exists": true,
+    "prediction_sample_polling_report_feature_adapter_exists": false,
+    "feature_adapter_golden_generator_exists": false,
+    "generated_cpp_feature_adapter_golden_exists": false,
+    "scope": "Freeze real-ledger PredictionSample and PredictionPollingReport feature-adapter inputs and expected outputs before implementing the adapter."
+  },
+  "immutability": {
+    "rule": "The feature-adapter implementation and its generated tests must implement these exact five fixtures, identities, source closures, feature words, model outputs, and gate expectations. Any material change requires a new feature_adapter_golden_id.",
+    "row_substitution_allowed": false,
+    "feature_recomputation_tuning_allowed": false,
+    "expected_output_tuning_allowed": false,
+    "model_refit_allowed": false,
+    "threshold_reselection_allowed": false,
+    "generated_cpp_role": "derived_test_artifact_not_authority"
+  },
+  "source_closure": {
+    "hash_algorithm": "sha256",
+    "runtime_contract": {
+      "path": "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json",
+      "sha256": "b9b9caf6cf49e73cb0669107576a17790f59bda4875c43f676caa426393dbf41",
+      "runtime_contract_id": "paired-value-duplication-t2-runtime-v1",
+      "status": "frozen_before_closed_loop_policy_implementation_and_confirmation"
+    },
+    "frozen_selection": {
+      "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+      "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f",
+      "selection_schema_version": 1,
+      "selection_id": "temporal-t2-primary-only-two-objective-v1",
+      "status": "frozen_before_canonical_model_fit"
+    },
+    "canonical_model": {
+      "directory": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1",
+      "repository_git_commit": "9b9ee02edc0b289b0ba4187c3f5567087c1d977f",
+      "repository_worktree_clean": true,
+      "manifest": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+        "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f",
+        "manifest_schema_version": 1
+      },
+      "artifacts_sha256": {
+        "temporal_t2_value_models.pkl": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8",
+        "temporal_t2_value_policy_candidates.csv": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb",
+        "temporal_t2_value_training_metrics.json": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+      },
+      "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+      "feature_family": "primary_compact_physics_temporal",
+      "ranker": "legacy_bad12_value_per_cost",
+      "frame_gate": "p_frames_only",
+      "score_threshold_float32": 8.952784264693037e-05,
+      "score_threshold_float32_bits_hex": "0x38bbc0e5",
+      "threshold_comparator": "float32(value_per_cost_score) >= float32(score_threshold)"
+    },
+    "canonical_temporal_dataset": {
+      "directory": "results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+      "feature_contract_id": "randomized_intervention_t2_temporal_action_clean_v1",
+      "artifacts_sha256": {
+        "artifact_manifest.json": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+        "dataset_metadata.json": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+        "randomized_t2_temporal.csv": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+      },
+      "input_v1_feature_contract_id": "randomized_intervention_leakage_safe_v1",
+      "input_v1_artifacts_sha256": {
+        "artifact_manifest.json": "1c532dbf931c7dfe58ffa227de2447da0e71ee80043b9f913ce3fb2e90613a00",
+        "dataset_metadata.json": "29648c19992b565ad855030452f65aeef8e36f6f4e9230a6f623eb1793112e50",
+        "randomized_t2.csv": "26bec3b9ff5ed7df80b5b8bc5c7e95d28af3b4d519850a6841568279ed31b995",
+        "randomized_t4_wait.csv": "3eed0fc5752ba300dab3a6061b99e4ffa214fa54fe6ab1eeb2bda0b0e3f0452f"
+      },
+      "row_count": 73400,
+      "split_algorithm": "sha256_seed_run_exact_64_16_16_v1"
+    },
+    "feature_producing_source_sha256": {
+      "tools/build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+      "tools/build_randomized_temporal_dataset.py": "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3",
+      "tools/train_randomized_value.py": "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911",
+      "tools/train_temporal_t2_value.py": "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9"
+    },
+    "historical_validation_source_provenance": {
+      "path": "tools/validate_outputs.py",
+      "historical_sha256": "66403ff1d0ceba12f3d5c2faf6299d08eb434c4abd56d158a8282e97c96c49f0",
+      "working_tree_hash_match_required": false,
+      "rationale": "The hash records the validator used when the historical ledgers and temporal dataset were admitted. Final policy-aware validation may evolve as the closed-loop implementation adds outputs and invariants, so its working-tree hash is not part of the frozen feature-producing source closure.",
+      "current_validation_requirement": "The generator must unconditionally require the current authoritative validate_outputs.validate_run to pass every historical raw run before reading its ledgers, regardless of whether its source hash differs from the historical hash."
+    },
+    "ordered_feature_names": {
+      "authoritative_source": "canonical model artifact_manifest.json selected_policy_contract.ordered_feature_names",
+      "serialization_for_hash": "UTF-8 JSON array with ensure_ascii=true and separators comma/colon and no trailing newline",
+      "sha256": "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e",
+      "count": 246,
+      "first": "x_f0_frame_age_us",
+      "last": "x_primary_since_lag8_ppdu_tx_count_per_ms"
+    }
+  },
+  "raw_run_source_closure": [
+    {
+      "run_id": "8bbdd058ca0ab3bf0082",
+      "seed": 1101,
+      "run_number": 1,
+      "run_directory": "results/randomized_full_copy_exploration_collection_v1/runs/8bbdd058ca0ab3bf0082",
+      "files_sha256": {
+        "resolved_config.json": "6968ea769d08b5eaf544c2459a588e04bb5242eb93bd4037479e1a8b0493424d",
+        "prediction_samples.csv": "ea6adf233f8dd27af7907d1000f3d8bed81d41c0c3ac5d58c61cf083b9f09201",
+        "prediction_polling_samples.csv": "229235f13c17ff793e8786c3af0dd63c7ff2122ea0881f41d2d1b2600f5ede37"
+      }
+    },
+    {
+      "run_id": "3622f8bd0f314ff73968",
+      "seed": 1138,
+      "run_number": 1,
+      "run_directory": "results/randomized_full_copy_exploration_collection_v1/runs/3622f8bd0f314ff73968",
+      "files_sha256": {
+        "resolved_config.json": "ea56eea536c9adc3c90aef36f3c66b90ee565249d765586ec29a9bf76fbc796f",
+        "prediction_samples.csv": "7f987c93a30538638d3fd04b3db475a9032873aac875ec4174057fde830f6dee",
+        "prediction_polling_samples.csv": "af7f35ed49e788b5024f62dea0078d619c84d7461f678b2e6d50031268ffc32e"
+      }
+    },
+    {
+      "run_id": "e6ff4d17ee263439a731",
+      "seed": 1158,
+      "run_number": 1,
+      "run_directory": "results/randomized_full_copy_exploration_collection_v1/runs/e6ff4d17ee263439a731",
+      "files_sha256": {
+        "resolved_config.json": "0585a5b4a88a31316abc5c5d0cfad6bcf9d0714c0c50d80882fad0c47a8d7f53",
+        "prediction_samples.csv": "4067a7fd4379e076ded8d41e278f2e3ffeee017d9dbd0e306caf16abc6876deb",
+        "prediction_polling_samples.csv": "87535c726cb4d95aabbcdf3e031322c3463077755a47f601275c5391a2bd8c3d"
+      }
+    },
+    {
+      "run_id": "c7fc90fdfa295932dd2e",
+      "seed": 1185,
+      "run_number": 1,
+      "run_directory": "results/randomized_full_copy_exploration_collection_v1/runs/c7fc90fdfa295932dd2e",
+      "files_sha256": {
+        "resolved_config.json": "be143332f8da03a7b6d095c430749a4cc9bf597adfec552fefcbc31c819c6be6",
+        "prediction_samples.csv": "028c36795859262de39b0f8da69de22cc6a1d56077e3986f1207cc7571f93edc",
+        "prediction_polling_samples.csv": "320d41dcc503dadac550f715ef9d4800e1d7a81918658cea1821a622fe037cf5"
+      }
+    }
+  ],
+  "raw_row_key_contract": {
+    "run_id_location": "fixture identity",
+    "per_ledger_key_fields_in_order": [
+      "frame_id",
+      "sample_stage",
+      "path_id",
+      "copy_id"
+    ],
+    "sample_stage": "T2",
+    "path_id": 1,
+    "copy_id": 0,
+    "applies_to_ledgers": [
+      "prediction_samples.csv",
+      "prediction_polling_samples.csv"
+    ],
+    "endpoint_order": [
+      "current",
+      "lag1",
+      "lag3",
+      "lag8"
+    ],
+    "join_rule": "Each named ledger must contain exactly one row for every fixture endpoint key. Positional, nearest-time, duplicate, or missing joins are forbidden."
+  },
+  "feature_word_contract": {
+    "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+    "feature_count": 246,
+    "finite_value_rule": "Every final raw or derived feature is rounded to IEEE-754 binary32 and widened exactly to binary64 before model evaluation.",
+    "exact_derivation_rule": "Absolute timestamps and cumulative counters remain exact integers until age, retry, structural-zero, or since-lag double arithmetic is formed. Compact-primary-physics values derive from widened binary32 primary-base inputs.",
+    "missing_rule": "A genuinely missing feature is quiet NaN. Infinity and binary32 overflow are forbidden.",
+    "canonical_nan_float32_bits_hex": "0x7fc00000",
+    "word_serialization": "For each feature in authoritative order, take its IEEE-754 binary32 word. Replace every NaN word with 0x7fc00000, preserve every other word including signed zero, serialize each uint32 word least-significant byte first, and concatenate exactly 246 words.",
+    "serialized_byte_count": 984,
+    "digest": "SHA-256 of the 984 canonical bytes",
+    "cpp_comparison_rule": "For a canonical NaN word require std::isnan(actual). Otherwise require actual double to equal the exact binary64 widening of the expected float32 word and require the actual float32 word to equal the expected word."
+  },
+  "fixture_selection_contract": {
+    "count": 5,
+    "all_source_rows_assigned_arm": "CONTROL",
+    "all_source_rows_treatment": false,
+    "all_source_rows_attempted": false,
+    "all_source_rows_launched": false,
+    "purposes_in_exact_order": [
+      "float32 score exactly equals threshold and delayed telemetry differs from live telemetry",
+      "nearest frozen calibration score below threshold",
+      "nearest frozen calibration score above threshold",
+      "above-threshold I-frame rejected by the P-frame gate",
+      "first history-ready frame with a genuinely missing lag8 last-ACK age"
+    ],
+    "runtime_action_scope": "Fixtures assert the learned score gate and P-frame gate only. Descriptor, airtime-guard, launch-acceptance, and final runtime action are intentionally not asserted.",
+    "lag_actionability_scope": "Lag actionability is a property of each source PredictionSample and is emitted as immutable endpoint provenance alongside the lag report. Direct feature-adapter parity receives lag reports explicitly, does not replay history ingestion, and therefore does not prove that a stateful runtime stored those reports before policy gates."
+  },
+  "fixtures": [
+    {
+      "fixture_id": "threshold_equal_delayed_not_live",
+      "purpose": "Exercise exact float32 threshold equality, >= comparison, genuine delayed-current fields, unequal frame-capture spans, and exact lag rates.",
+      "identity": {
+        "run_id": "3622f8bd0f314ff73968",
+        "seed": 1138,
+        "run_number": 1,
+        "frame_id": 861,
+        "temporal_csv_zero_based_row_index": 28216,
+        "temporal_csv_line_number_including_header": 28218,
+        "split_role": "calibration",
+        "frame_type": "P_FRAME",
+        "current_sample_actionable": true
+      },
+      "source_assignment": {
+        "assigned_arm": "CONTROL",
+        "treatment": false,
+        "attempted": false,
+        "launched": false
+      },
+      "endpoints_in_exact_order": [
+        {
+          "role": "current",
+          "lag_frames": 0,
+          "row_key": {
+            "frame_id": 861,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 29702000000,
+          "poll_capture_time_ns": 29701000000,
+          "poll_available_time_ns": 29702000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 0,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag1",
+          "lag_frames": 1,
+          "row_key": {
+            "frame_id": 860,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 29668666667,
+          "poll_capture_time_ns": 29667000000,
+          "poll_available_time_ns": 29668000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 34000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag3",
+          "lag_frames": 3,
+          "row_key": {
+            "frame_id": 858,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 29602000000,
+          "poll_capture_time_ns": 29601000000,
+          "poll_available_time_ns": 29602000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 100000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag8",
+          "lag_frames": 8,
+          "row_key": {
+            "frame_id": 853,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 29435333333,
+          "poll_capture_time_ns": 29434000000,
+          "poll_available_time_ns": 29435000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 267000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        }
+      ],
+      "expected_feature_vector": {
+        "nan_count": 12,
+        "nan_indices": [
+          27,
+          28,
+          29,
+          30,
+          42,
+          43,
+          44,
+          45,
+          57,
+          58,
+          59,
+          60
+        ],
+        "canonical_float32_words_sha256": "1d89dba70d65f862d09b472d5342ebb780c520d76ee114c00c6960c91a59f9ed"
+      },
+      "expected_model_result": {
+        "primary_bad12_logit": -1.3371353062576359,
+        "primary_bad12_probability": 0.20798155113594644,
+        "treated_bad12_logit": -4.7407393326302545,
+        "treated_bad12_probability": 0.008656596778107883,
+        "predicted_log_airtime_raw_ridge": 7.620691643200197,
+        "predicted_secondary_airtime_us": 2226.4018734129554,
+        "nonnegative_bad12_value": 0.19932495435783856,
+        "value_per_cost_score_float32": 8.952784264693037e-05,
+        "value_per_cost_score_float32_bits_hex": "0x38bbc0e5",
+        "passes_score_threshold": true,
+        "passes_p_frame_gate": true,
+        "passes_score_and_p_frame_gates": true
+      },
+      "sentinel_assertions": [
+        {
+          "kind": "delayed_rolling_not_live",
+          "feature_index": 21,
+          "feature_name": "x_primary_mpdu_attempts_1ms",
+          "live_sample_value": 0,
+          "delayed_report_value": 10,
+          "expected_feature_value_float32": 10.0
+        },
+        {
+          "kind": "delayed_last_ack_not_live",
+          "feature_index": 85,
+          "feature_name": "x_primary_delayed_current_last_ack_age_us",
+          "live_sample_last_positive_ack_time_ns": 29701676987,
+          "delayed_report_last_positive_ack_time_ns": 29676400093,
+          "delayed_report_capture_time_ns": 29701000000,
+          "expected_feature_value_float32": 24599.90625
+        },
+        {
+          "kind": "exact_capture_span_rates",
+          "feature_indices": [
+            135,
+            188,
+            241
+          ],
+          "feature_names": [
+            "x_primary_since_lag1_mpdu_attempts_per_ms",
+            "x_primary_since_lag3_mpdu_attempts_per_ms",
+            "x_primary_since_lag8_mpdu_attempts_per_ms"
+          ],
+          "expected_feature_values_float32": [
+            0.8529411554336548,
+            0.7699999809265137,
+            0.7453183531761169
+          ]
+        },
+        {
+          "kind": "threshold_equality_uses_greater_than_or_equal",
+          "score_bits_hex": "0x38bbc0e5",
+          "threshold_bits_hex": "0x38bbc0e5",
+          "expected_pass": true
+        }
+      ]
+    },
+    {
+      "fixture_id": "nearest_calibration_below_threshold",
+      "purpose": "Exercise the nearest frozen calibration score below the float32 threshold and preserve provenance for a nonactionable lag frame.",
+      "identity": {
+        "run_id": "e6ff4d17ee263439a731",
+        "seed": 1158,
+        "run_number": 1,
+        "frame_id": 320,
+        "temporal_csv_zero_based_row_index": 42762,
+        "temporal_csv_line_number_including_header": 42764,
+        "split_role": "calibration",
+        "frame_type": "P_FRAME",
+        "current_sample_actionable": true
+      },
+      "source_assignment": {
+        "assigned_arm": "CONTROL",
+        "treatment": false,
+        "attempted": false,
+        "launched": false
+      },
+      "endpoints_in_exact_order": [
+        {
+          "role": "current",
+          "lag_frames": 0,
+          "row_key": {
+            "frame_id": 320,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 11668666667,
+          "poll_capture_time_ns": 11667000000,
+          "poll_available_time_ns": 11668000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 0,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag1",
+          "lag_frames": 1,
+          "row_key": {
+            "frame_id": 319,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 11635333333,
+          "poll_capture_time_ns": 11634000000,
+          "poll_available_time_ns": 11635000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 33000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag3",
+          "lag_frames": 3,
+          "row_key": {
+            "frame_id": 317,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 11568666667,
+          "poll_capture_time_ns": 11567000000,
+          "poll_available_time_ns": 11568000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 100000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": false
+        },
+        {
+          "role": "lag8",
+          "lag_frames": 8,
+          "row_key": {
+            "frame_id": 312,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 11402000000,
+          "poll_capture_time_ns": 11401000000,
+          "poll_available_time_ns": 11402000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 266000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        }
+      ],
+      "expected_feature_vector": {
+        "nan_count": 15,
+        "nan_indices": [
+          25,
+          27,
+          28,
+          29,
+          30,
+          40,
+          42,
+          43,
+          44,
+          45,
+          55,
+          57,
+          58,
+          59,
+          60
+        ],
+        "canonical_float32_words_sha256": "c7bc7a317b9add14c79dd0fdb3da753243a4ba9f4c4150cb83dcb06292f9f848"
+      },
+      "expected_model_result": {
+        "primary_bad12_logit": -1.2802637389348048,
+        "primary_bad12_probability": 0.21750533271959163,
+        "treated_bad12_logit": -4.479494315464056,
+        "treated_bad12_probability": 0.011212011107813412,
+        "predicted_log_airtime_raw_ridge": 7.656049838809447,
+        "predicted_secondary_airtime_us": 2306.5676921215077,
+        "nonnegative_bad12_value": 0.2062933216117782,
+        "value_per_cost_score_float32": 8.943735883804038e-05,
+        "value_per_cost_score_float32_bits_hex": "0x38bb9051",
+        "passes_score_threshold": false,
+        "passes_p_frame_gate": true,
+        "passes_score_and_p_frame_gates": false
+      },
+      "sentinel_assertions": [
+        {
+          "kind": "below_threshold",
+          "score_bits_hex": "0x38bb9051",
+          "threshold_bits_hex": "0x38bbc0e5",
+          "expected_pass": false
+        },
+        {
+          "kind": "nonactionable_lag_endpoint_provenance",
+          "lag_frames": 3,
+          "source_frame_id": 317,
+          "source_sample_actionable": false,
+          "emitted_identity_and_actionability_metadata_required": true,
+          "direct_adapter_parity_proves_runtime_storage": false
+        }
+      ]
+    },
+    {
+      "fixture_id": "nearest_calibration_above_threshold",
+      "purpose": "Exercise the nearest frozen calibration score above the float32 threshold and preserve provenance for multiple nonactionable lag frames.",
+      "identity": {
+        "run_id": "c7fc90fdfa295932dd2e",
+        "seed": 1185,
+        "run_number": 1,
+        "frame_id": 493,
+        "temporal_csv_zero_based_row_index": 64211,
+        "temporal_csv_line_number_including_header": 64213,
+        "split_role": "calibration",
+        "frame_type": "P_FRAME",
+        "current_sample_actionable": true
+      },
+      "source_assignment": {
+        "assigned_arm": "CONTROL",
+        "treatment": false,
+        "attempted": false,
+        "launched": false
+      },
+      "endpoints_in_exact_order": [
+        {
+          "role": "current",
+          "lag_frames": 0,
+          "row_key": {
+            "frame_id": 493,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 17435333333,
+          "poll_capture_time_ns": 17434000000,
+          "poll_available_time_ns": 17435000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 0,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag1",
+          "lag_frames": 1,
+          "row_key": {
+            "frame_id": 492,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 17402000000,
+          "poll_capture_time_ns": 17401000000,
+          "poll_available_time_ns": 17402000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 33000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag3",
+          "lag_frames": 3,
+          "row_key": {
+            "frame_id": 490,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 17335333333,
+          "poll_capture_time_ns": 17334000000,
+          "poll_available_time_ns": 17335000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 100000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": false
+        },
+        {
+          "role": "lag8",
+          "lag_frames": 8,
+          "row_key": {
+            "frame_id": 485,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 17168666667,
+          "poll_capture_time_ns": 17167000000,
+          "poll_available_time_ns": 17168000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 267000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": false
+        }
+      ],
+      "expected_feature_vector": {
+        "nan_count": 12,
+        "nan_indices": [
+          27,
+          28,
+          29,
+          30,
+          42,
+          43,
+          44,
+          45,
+          57,
+          58,
+          59,
+          60
+        ],
+        "canonical_float32_words_sha256": "0b78b476fcd8ebd8ec0a3530ee8840ff796875abaf12ac0d766ed7dc67dbe08b"
+      },
+      "expected_model_result": {
+        "primary_bad12_logit": -1.3267277940796622,
+        "primary_bad12_probability": 0.2097011415593728,
+        "treated_bad12_logit": -5.308005704692441,
+        "treated_bad12_probability": 0.004927392787791842,
+        "predicted_log_airtime_raw_ridge": 7.647060315581246,
+        "predicted_secondary_airtime_us": 2285.916719023248,
+        "nonnegative_bad12_value": 0.20477374877158097,
+        "value_per_cost_score_float32": 8.958057878771797e-05,
+        "value_per_cost_score_float32_bits_hex": "0x38bbdd35",
+        "passes_score_threshold": true,
+        "passes_p_frame_gate": true,
+        "passes_score_and_p_frame_gates": true
+      },
+      "sentinel_assertions": [
+        {
+          "kind": "above_threshold",
+          "score_bits_hex": "0x38bbdd35",
+          "threshold_bits_hex": "0x38bbc0e5",
+          "expected_pass": true
+        },
+        {
+          "kind": "nonactionable_lag_endpoint_provenance",
+          "source_frame_ids": [
+            490,
+            485
+          ],
+          "lag_frames": [
+            3,
+            8
+          ],
+          "source_sample_actionable": false,
+          "emitted_identity_and_actionability_metadata_required": true,
+          "direct_adapter_parity_proves_runtime_storage": false
+        }
+      ]
+    },
+    {
+      "fixture_id": "i_frame_above_threshold_gate_probe",
+      "purpose": "Exercise exact I/P one-hot encoding and require the caller-owned P-frame gate to reject an above-threshold I-frame.",
+      "identity": {
+        "run_id": "e6ff4d17ee263439a731",
+        "seed": 1158,
+        "run_number": 1,
+        "frame_id": 120,
+        "temporal_csv_zero_based_row_index": 42653,
+        "temporal_csv_line_number_including_header": 42655,
+        "split_role": "calibration",
+        "frame_type": "I_FRAME",
+        "current_sample_actionable": true
+      },
+      "source_assignment": {
+        "assigned_arm": "CONTROL",
+        "treatment": false,
+        "attempted": false,
+        "launched": false
+      },
+      "endpoints_in_exact_order": [
+        {
+          "role": "current",
+          "lag_frames": 0,
+          "row_key": {
+            "frame_id": 120,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 5002000000,
+          "poll_capture_time_ns": 5001000000,
+          "poll_available_time_ns": 5002000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 0,
+          "sample_frame_type": "I_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag1",
+          "lag_frames": 1,
+          "row_key": {
+            "frame_id": 119,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 4968666667,
+          "poll_capture_time_ns": 4967000000,
+          "poll_available_time_ns": 4968000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 34000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag3",
+          "lag_frames": 3,
+          "row_key": {
+            "frame_id": 117,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 4902000000,
+          "poll_capture_time_ns": 4901000000,
+          "poll_available_time_ns": 4902000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 100000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag8",
+          "lag_frames": 8,
+          "row_key": {
+            "frame_id": 112,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 4735333333,
+          "poll_capture_time_ns": 4734000000,
+          "poll_available_time_ns": 4735000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 267000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        }
+      ],
+      "expected_feature_vector": {
+        "nan_count": 10,
+        "nan_indices": [
+          25,
+          27,
+          28,
+          29,
+          30,
+          40,
+          42,
+          43,
+          44,
+          45
+        ],
+        "canonical_float32_words_sha256": "4d0f798b5984903d02970594881679d07c89a9d4307f58364ab04457f6ee9ae6"
+      },
+      "expected_model_result": {
+        "primary_bad12_logit": 1.6199156223007385,
+        "primary_bad12_probability": 0.8347834927647418,
+        "treated_bad12_logit": -2.3759323910978476,
+        "treated_bad12_probability": 0.08502647972625788,
+        "predicted_log_airtime_raw_ridge": 8.900321402294246,
+        "predicted_secondary_airtime_us": 8007.196551835239,
+        "nonnegative_bad12_value": 0.749757013038484,
+        "value_per_cost_score_float32": 9.363539720652625e-05,
+        "value_per_cost_score_float32_bits_hex": "0x38c45e1f",
+        "passes_score_threshold": true,
+        "passes_p_frame_gate": false,
+        "passes_score_and_p_frame_gates": false
+      },
+      "sentinel_assertions": [
+        {
+          "kind": "frame_type_one_hot",
+          "feature_indices": [
+            66,
+            67
+          ],
+          "feature_names": [
+            "x_f0_frame_type=I_FRAME",
+            "x_f0_frame_type=P_FRAME"
+          ],
+          "expected_feature_values_float32": [
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "kind": "caller_owned_frame_gate",
+          "learned_score_pass": true,
+          "p_frame_gate_pass": false,
+          "expected_combined_pass": false
+        }
+      ]
+    },
+    {
+      "fixture_id": "first_history_ready_lag8_last_ack_missing",
+      "purpose": "Exercise the first exact-lag history-ready frame, genuine lag8 last-ACK missingness, structural-zero retry features, and a training-split row.",
+      "identity": {
+        "run_id": "8bbdd058ca0ab3bf0082",
+        "seed": 1101,
+        "run_number": 1,
+        "frame_id": 8,
+        "temporal_csv_zero_based_row_index": 0,
+        "temporal_csv_line_number_including_header": 2,
+        "split_role": "train",
+        "frame_type": "P_FRAME",
+        "current_sample_actionable": true
+      },
+      "source_assignment": {
+        "assigned_arm": "CONTROL",
+        "treatment": false,
+        "attempted": false,
+        "launched": false
+      },
+      "endpoints_in_exact_order": [
+        {
+          "role": "current",
+          "lag_frames": 0,
+          "row_key": {
+            "frame_id": 8,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 1268666667,
+          "poll_capture_time_ns": 1267000000,
+          "poll_available_time_ns": 1268000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 0,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag1",
+          "lag_frames": 1,
+          "row_key": {
+            "frame_id": 7,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 1235333333,
+          "poll_capture_time_ns": 1234000000,
+          "poll_available_time_ns": 1235000000,
+          "sample_minus_capture_ns": 1333333,
+          "current_capture_minus_capture_ns": 33000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag3",
+          "lag_frames": 3,
+          "row_key": {
+            "frame_id": 5,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 1168666667,
+          "poll_capture_time_ns": 1167000000,
+          "poll_available_time_ns": 1168000000,
+          "sample_minus_capture_ns": 1666667,
+          "current_capture_minus_capture_ns": 100000000,
+          "sample_frame_type": "P_FRAME",
+          "sample_actionable": true
+        },
+        {
+          "role": "lag8",
+          "lag_frames": 8,
+          "row_key": {
+            "frame_id": 0,
+            "sample_stage": "T2",
+            "path_id": 1,
+            "copy_id": 0
+          },
+          "sample_time_ns": 1002000000,
+          "poll_capture_time_ns": 1001000000,
+          "poll_available_time_ns": 1002000000,
+          "sample_minus_capture_ns": 1000000,
+          "current_capture_minus_capture_ns": 266000000,
+          "sample_frame_type": "I_FRAME",
+          "sample_actionable": true
+        }
+      ],
+      "expected_feature_vector": {
+        "nan_count": 16,
+        "nan_indices": [
+          25,
+          27,
+          28,
+          29,
+          30,
+          40,
+          42,
+          43,
+          44,
+          45,
+          55,
+          57,
+          58,
+          59,
+          60,
+          239
+        ],
+        "canonical_float32_words_sha256": "0c748008d7a6697f1d3275a909a46d8e76ff74de544ab8ca1a7e01e6352efa1d"
+      },
+      "expected_model_result": {
+        "primary_bad12_logit": -1.0416851269422354,
+        "primary_bad12_probability": 0.2608249784287039,
+        "treated_bad12_logit": -3.6753857144397757,
+        "treated_bad12_probability": 0.02471340133604802,
+        "predicted_log_airtime_raw_ridge": 7.442224730881749,
+        "predicted_secondary_airtime_us": 1862.3369039218371,
+        "nonnegative_bad12_value": 0.23611157709265587,
+        "value_per_cost_score_float32": 0.00012678241182584316,
+        "value_per_cost_score_float32_bits_hex": "0x3904f0e5",
+        "passes_score_threshold": true,
+        "passes_p_frame_gate": true,
+        "passes_score_and_p_frame_gates": true
+      },
+      "sentinel_assertions": [
+        {
+          "kind": "first_history_ready_frame",
+          "current_frame_id": 8,
+          "exact_lag_frame_ids": [
+            7,
+            5,
+            0
+          ],
+          "no_earlier_frame_is_evaluable": true
+        },
+        {
+          "kind": "lag8_last_ack_missing",
+          "value_feature_index": 239,
+          "value_feature_name": "x_primary_lag8_last_ack_age_us",
+          "expected_value": "NaN",
+          "missing_feature_index": 240,
+          "missing_feature_name": "x_primary_lag8_last_ack_age_us_missing",
+          "expected_missing_value_float32": 1.0,
+          "lag8_report_last_positive_ack_time_ns": null
+        },
+        {
+          "kind": "lag_retry_structural_zero",
+          "feature_indices": [
+            98,
+            110,
+            122,
+            151,
+            163,
+            175,
+            204,
+            216,
+            228
+          ],
+          "expected_feature_values_float32": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      ]
+    }
+  ],
+  "generator_contract": {
+    "planned_path": "tools/export_temporal_t2_feature_adapter_goldens_v1.py",
+    "planned_output": "contrib/wifi-streaming/test/temporal-t2-feature-adapter-golden-v1.h",
+    "separate_from_model_exporter": true,
+    "reason_for_separate_generator": "The raw run ledgers are large ignored research artifacts. Model export must not acquire a mandatory dependency on them.",
+    "required_cli_options": [
+      "--runs-root",
+      "--dataset-dir",
+      "--artifact-dir",
+      "--selection",
+      "--contract",
+      "--output",
+      "--check"
+    ],
+    "obligations_in_order": [
+      "Parse this contract as strict unique-key ASCII JSON and validate its schema, identity, status, fixture count, and exact fixture order.",
+      "Hash-verify this contract's runtime contract, selection, canonical model, canonical temporal dataset, input-v1 dataset, feature-producing builder and trainer source files, and every relevant raw run file before parsing dependent content or unpickling the model. Do not hash-enforce the historical validator source.",
+      "Run the current authoritative validate_outputs.validate_run unconditionally before reading each historical raw run through the canonical base builder, even when the working-tree validator hash differs from the historical provenance hash. Then require the builder's complete source-hash dictionary to equal the already hash-verified temporal metadata entry.",
+      "Retrieve exactly one current, lag1, lag3, and lag8 primary T2 endpoint by the frozen row keys. Reject a missing, duplicate, positional, or nearest-time substitute.",
+      "Rebuild the v1 source row through build_randomized_intervention_dataset, rebuild the temporal row through build_randomized_temporal_dataset, and require element-for-element equality with the uniquely keyed frozen temporal CSV row.",
+      "Build indices 0 through 67 from the regenerated primary base row using exact I_FRAME then P_FRAME one-hot order and the frozen float32 numeric adapter.",
+      "Build indices 68 through 74 with train_temporal_t2_value._compact_primary_physics from widened binary32 primary-base values.",
+      "Build indices 75 through 245 from regenerated current and exact-lag primary temporal columns. Keep timestamps and counters exact until derived arithmetic and never read a secondary feature into the selected vector.",
+      "Round the complete vector to binary32, widen to binary64, canonicalize only NaN words for hashing, require the frozen NaN indices and feature digest, and reject infinity or overflow.",
+      "Evaluate the hash-verified canonical sklearn pipelines and require every frozen diagnostic, exact float32 score word, threshold result, and caller-owned P-frame gate result.",
+      "Emit complete current PredictionSample data including live rolling sentinels, an owned current PredictionPollingReport, and owned exact-lag reports containing timing, watermarks, all nine cumulative counters, radio values, three complete rolling windows, and support masks.",
+      "Emit separate immutable endpoint provenance for every lag report: full raw row key, lag distance, sample time, polling capture and availability times, source frame type, and source PredictionSample actionability. This metadata is test evidence and is not an adapter input.",
+      "Emit expected feature words, model diagnostics, gate results, fixture and source provenance, and deterministic formatting. The generated C++ must not require raw results at test runtime.",
+      "In --check mode, perform every validation and fail if the generated output differs byte-for-byte."
+    ]
+  },
+  "python_generator_test_contract": {
+    "planned_path": "tools/tests/test_export_temporal_t2_feature_adapter_goldens.py",
+    "obligations": [
+      "Require exactly the five unique frozen fixture IDs, raw identities, endpoint chains, feature hashes, and score words.",
+      "Require deterministic generation and a passing --check against the repository copy.",
+      "Reject a mismatched enforced artifact or feature-producing source hash before parsing the affected artifact or unpickling the model. Do not reject solely because the current authoritative validator hash differs from its historical provenance hash.",
+      "Reject a missing, duplicate, reversed, or substituted endpoint key.",
+      "Reject any regenerated-vs-frozen temporal row difference.",
+      "Reject any feature-name, NaN-index, word-hash, model-diagnostic, threshold, or gate drift.",
+      "Unit-test the canonical little-endian word and NaN normalization rule."
+    ]
+  },
+  "cpp_feature_adapter_test_contract": {
+    "obligations": [
+      "Construct each complete current PredictionSample and its owned current and exact-lag PredictionPollingReport inputs from the generated fixture.",
+      "Invoke the production feature adapter and require exactly 246 outputs in the authoritative order.",
+      "Compare every finite feature as an exact binary32 word and exact binary32-to-binary64 widening; compare canonical missing words with std::isnan.",
+      "Evaluate the resulting vector through TemporalT2ValueModelEvaluator, compare probability/logit/cost diagnostics within the existing tight parity tolerances, and require the exact float32 score word.",
+      "Require score comparison to use >=, including the exact-equality fixture.",
+      "Require the I-frame fixture to pass the learned score gate but fail the caller-owned P-frame gate.",
+      "Require generated lag endpoint identity, frame type, and actionability metadata to match the frozen provenance. Treat this as provenance only and do not claim that direct adapter parity proves stateful storage before gates.",
+      "Require the named delayed-vs-live, exact-span rate, first-history-ready, one-hot, missing-age, and structural-zero sentinels.",
+      "Keep separate negative tests for wrong width, infinity, float32 overflow, wrong or missing lag identity, future report timing, support-mask drift, rolling-coverage drift, counter reset, and watermark reordering."
+    ]
+  },
+  "stateful_history_test_contract": {
+    "required": true,
+    "separate_from_direct_feature_adapter_parity": true,
+    "test_kind": "synthetic_stateful_ring_or_controller_ingestion",
+    "purpose": "Prove with the production stateful ingestion path that every validated primary report is copied into exact frame-keyed history before outside-window, warmup, frame-type, or actionability gates.",
+    "input_sequence": {
+      "frame_ids_in_exact_order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "contiguous_frame_ids_required": true,
+      "all_sample_and_report_schema_timing_support_rolling_watermark_and_counter_validation_succeeds": true,
+      "all_unspecified_frames": "P_FRAME, actionable, inside the decision window, and otherwise valid through feature assembly",
+      "gate_probe_frames": [
+        {
+          "frame_id": 0,
+          "condition": "sample time is before the decision window",
+          "expected_decision_status": "outside_decision_window",
+          "later_exact_lag_use": {
+            "current_frame_id": 8,
+            "lag_frames": 8
+          }
+        },
+        {
+          "frame_id": 9,
+          "condition": "I_FRAME, actionable, history-ready, and inside the decision window",
+          "expected_decision_status": "frame_type_restricted",
+          "later_exact_lag_use": {
+            "current_frame_id": 12,
+            "lag_frames": 3
+          }
+        },
+        {
+          "frame_id": 10,
+          "condition": "P_FRAME, nonactionable, history-ready, and inside the decision window",
+          "expected_decision_status": "not_actionable",
+          "later_exact_lag_use": {
+            "current_frame_id": 11,
+            "lag_frames": 1
+          }
+        }
+      ],
+      "distinct_report_sentinels_required": true,
+      "sentinel_rule": "Give every frame report distinct exact counters, capture times, radio values, and rolling values so a wrong, nearest, positional, default, or reconstructed endpoint cannot satisfy the expected feature words."
+    },
+    "proof_obligations_in_order": [
+      "Feed frames 0 through 12 one at a time through the production ring or controller ingestion entry point, not by directly constructing a ready-made lag array.",
+      "For each frame, complete all fail-closed validation before observing its policy-gate status.",
+      "Require frame 0 to report outside_decision_window and later require frame 8 exact lag8 features to come from the owned frame-0 report.",
+      "Require frame 9 to report frame_type_restricted and later require frame 12 exact lag3 features to come from the owned frame-9 report.",
+      "Require frame 10 to report not_actionable and later require frame 11 exact lag1 features to come from the owned frame-10 report.",
+      "Require frames 1 through 7 to be stored despite history_warmup and require frame 8 to be the first history-ready frame.",
+      "After submitting at least one gate-probe frame, mutate or destroy the caller-owned source report and require later exact-lag features to retain the originally submitted values, proving an owned copy was stored.",
+      "Require exact frame IDs in the ring slots and reject positional or nearest-time substitution.",
+      "Count this stateful test, and not the direct real-ledger adapter parity cases, as the proof of store-before-gating behavior."
+    ]
+  },
+  "integration_test_contract": {
+    "required_before_confirmation": true,
+    "obligation": "Run a small deterministic ns-3 telemetry scenario, independently reconstruct every evaluated 246-vector from emitted prediction_samples.csv and prediction_polling_samples.csv with the frozen Python reference, and require bit-identical finite feature words, NaN locations, score words, and learned/frame-gate decisions.",
+    "reason": "Historical CSV ledgers serialize floating-point telemetry with 12 significant digits. Real-ledger C++ fixtures alone cannot prove that live internal doubles and serialized training inputs always quantize to the same binary32 word at every boundary."
+  }
+}
