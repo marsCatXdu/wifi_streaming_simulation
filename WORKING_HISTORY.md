@@ -55,9 +55,10 @@ P99.
 | Preserve canonical artifacts | `62312a3` | Model, manifest, candidates, and metrics tracked |
 | Add strict qualification analyzer | `ba59751` | Exact gates, shared bootstrap, and 28 focused runner/analyzer tests |
 
-The latest implementation milestone is `bc76a13`, which bounds accumulated
-12-significant-digit airtime serialization after the first real preflight
-exposed the issue.
+The latest implementation milestone is `575f171`.  It exactly replays the
+compiled ridge reduction order and proves one integer per-frame byte
+allocation can jointly satisfy PPDU totals, settlements, and every outstanding
+reservation checkpoint.
 
 ## One authoritative TODO checklist
 
@@ -77,24 +78,40 @@ item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The validator boundary is committed at `3b8984f`.  It independently replays
-the exact 246-feature canonical model, paired decision/status gates,
-controller summary, measured-airtime guard, and causal event/settlement
-allocation.  The final fix requires every frame ID listed by a PPDU event to
-receive at least one tagged byte's positive airtime share.  Existing generic
-CSV and full-copy descriptor helpers are reused instead of maintaining the
-parallel implementations found by the history audit.
+All 96 qualification simulations finished on the VM from clean commit
+`da48d7d`.  The runner promoted 87 runs and preserved nine paired-policy
+attempts after the then-current validator rejected them.  Eight rejections
+were caused by sklearn/NumPy versus compiled scalar ridge reduction order; one
+was caused by replaying an arbitrary feasible split for a PPDU shared by two
+frames.  None was a simulation crash or invalid controller output.
+
+The two validator defects and two audit-discovered fail-open edges are fixed
+and pushed as `575f171`.  The final implementation uses positive integer byte
+variables, the meter's ascending-frame/last-residual allocation semantics, a
+joint reservation-checkpoint feasibility model, a `1e-9 us` solver envelope,
+and an independently reconstructed witness.  All nine preserved attempts now
+validate with 1,800 frames each.
 
 The fresh same-commit local preflight passed at `bc76a13`.  Its authoritative
 manifest is:
 
 `/tmp/paired-value-t2-str-preflight-bc76a13/runs/experiment_manifest.json`
 
-The next action is to deploy one clean commit to the VM, verify its 64-vCPU
-build/runtime dependencies, and launch the frozen 96-run qualification matrix
-with 64 workers.  Do not open reserved final-confirmation seeds.
+The VM campaign root is:
 
-No engineering qualification seed has been run yet.
+`/home/jingweili/experiments/paired-value-t2-str-qualification-da48d7d`
+
+The next action is to deploy the validator-only commit, promote the nine
+validated attempts without rerunning any simulation, reconstruct and verify
+the canonical 96-run manifest, then fetch/checksum/analyze the full campaign.
+Do not open reserved final-confirmation seeds.
+
+The V1 event schema does not record its per-frame byte split or equal-time
+callback sequence, and the portable compiled cost path does not freeze FMA
+contraction.  The current campaign has no equal-time decision/event or
+decision/settlement collision, and its x86 build exactly matches the scalar
+replay.  Add explicit telemetry/FP-contract evidence before a portable-device
+qualification; this is not a reason to rerun the current campaign.
 
 ## Verification ledger
 
@@ -110,8 +127,35 @@ Do not repeat an entry unless relevant code changed after it ran.
   `6ed9ba7d99a25fd10eb7` and STR run `f393a86fa1727822896f`
   both completed and independently revalidated with 1,800 frames.  Manifest
   project commit and ns-3 upstream commit exactly match the run artifacts.
+- Validator fix at `575f171`: `15/15` focused paired tests and `134/134`
+  validator-import compatibility tests passed; `py_compile` and
+  `git diff --check` passed.
+- All nine preserved VM attempts at `da48d7d` passed the fixed validator with
+  1,800 frames each.  Both `bc76a13` preflight arms still pass.
+- Failed-attempt archive SHA-256:
+  `2501cc18b66f91c23c971705e8c730a4e6b1a603cd34f5b7bf916fb72e727586`.
+- An independent release audit reproduced and then confirmed rejection of an
+  impossible three-byte `0.5/0.5` split and a `5e-8 us` checkpoint mutation.
 
 ## Work log
+
+### 2026-08-04 - Complete VM simulations and repair strict replay
+
+- Built clean `da48d7d` on the 64-vCPU VM and ran the frozen 48-pair matrix
+  with 64 workers.  The simulations produced 87 promoted runs and nine
+  preserved validator-rejected paired attempts.
+- Fetched and checksum-verified all nine attempts.  Eight differed only in
+  the ridge cost log by up to 12 binary64 ULPs because NumPy changed the
+  reduction order; the compiled scalar order reproduces every row exactly.
+- Proved the remaining rejection was an unlogged shared-PPDU split: the
+  controller's equal-byte allocation satisfied its checkpoint, while the old
+  max-flow chose a different extreme allocation with the same final marginals.
+- Replaced the arbitrary max-flow with one joint integer-byte feasibility
+  witness.  A release audit found and caused fixes for continuous byte splits
+  and loose solver acceptance before commit.
+- Passed the focused, compatibility, preflight, nine-real-attempt, compilation,
+  diff, and independent audit checks recorded above; committed and pushed as
+  `575f171`.
 
 ### 2026-08-04 - Complete fresh same-commit local preflight
 
