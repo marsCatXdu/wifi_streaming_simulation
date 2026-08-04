@@ -25,6 +25,10 @@ from validate_outputs import (  # noqa: E402
     PAIRED_VALUE_T2_DECISION_COLUMNS,
     PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
     PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+    PAIRED_VALUE_T2_FULL_HORIZON_CONFIG,
+    PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID,
+    PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256,
+    PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US,
     PAIRED_VALUE_T2_LOG_SMEARING_FACTOR,
     PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
     PAIRED_VALUE_T2_MODEL_METADATA,
@@ -367,24 +371,50 @@ class PairedValueT2Fixture:
             self.decisions,
         )
 
-    def use_score_aware_profile(self) -> None:
+    def use_score_aware_profile(self, *, full_horizon: bool = False) -> None:
         self.decision_columns = (
             PAIRED_VALUE_T2_DECISION_COLUMNS
             + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+        )
+        runtime_contract_id = (
+            PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID
+            if full_horizon
+            else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID
+        )
+        runtime_contract_sha256 = (
+            PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256
+            if full_horizon
+            else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256
+        )
+        admission_profile_id = (
+            "score_aware_full_horizon_v3"
+            if full_horizon
+            else "score_aware_emergency_v2"
+        )
+        guard_max_horizon_us = 60_000_000 if full_horizon else 10_000_000
+        guard_capacity_us = (
+            int(PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US)
+            if full_horizon
+            else 60_000
         )
         self.decision_profile = {
             "score_aware": True,
             "decision_schema_version": 2,
             "summary_schema_version": 2,
-            "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
-            "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+            "runtime_contract_id": runtime_contract_id,
+            "runtime_contract_sha256": runtime_contract_sha256,
             "decision_columns": self.decision_columns,
+            "admission_profile_id": admission_profile_id,
+            "guard_max_horizon_us": guard_max_horizon_us,
+            "guard_capacity_us": guard_capacity_us,
         }
         for row in self.decisions:
             strict = row["guard_admitted"] == "1"
             row.update({
                 "schema_version": "2",
-                "admission_profile_id": "score_aware_emergency_v2",
+                "admission_profile_id": admission_profile_id,
+                "guard_max_horizon_us": str(guard_max_horizon_us),
+                "guard_capacity_us": repr(guard_capacity_us),
                 "strict_guard_admitted": "1" if strict else "0",
                 "emergency_score_threshold_float32": repr(
                     PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
@@ -548,11 +578,15 @@ class PairedValueT2Fixture:
         if self.decision_profile is not None:
             summary.update({
                 "schema_version": 2,
-                "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
-                "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+                "runtime_contract_id": self.decision_profile["runtime_contract_id"],
+                "runtime_contract_sha256":
+                    self.decision_profile["runtime_contract_sha256"],
             })
             summary["budget_guard"].update({
-                "admission_profile_id": "score_aware_emergency_v2",
+                "admission_profile_id":
+                    self.decision_profile["admission_profile_id"],
+                "max_horizon_us": self.decision_profile["guard_max_horizon_us"],
+                "capacity_us": self.decision_profile["guard_capacity_us"],
                 "emergency_score_threshold_float32":
                     PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
                 "emergency_score_threshold_float32_bits_hex": "0x391d4952",
@@ -678,6 +712,28 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             fixture.decisions[8]["strict_guard_admitted"] = "0"
             fixture._write_inputs()
             with self.assertRaisesRegex(ValidationError, "emergency admission differs"):
+                fixture.validate_decisions()
+
+    def test_accepts_full_horizon_profile_without_startup_credit_inflation(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.use_score_aware_profile(full_horizon=True)
+            evidence = fixture.validate_decisions()
+            self.assertEqual(evidence["profile"]["guard_max_horizon_us"], 60_000_000)
+            self.assertEqual(evidence["profile"]["guard_capacity_us"], 360_000.0)
+            meter_summary = fixture.write_summary(evidence)
+            _validate_paired_value_t2_summary(
+                fixture.root,
+                RUN_ID,
+                9,
+                evidence,
+                fixture.events,
+                fixture.settlements,
+                meter_summary,
+            )
+            fixture.decisions[0]["guard_initial_credit_us"] = "360000"
+            fixture._write_inputs()
+            with self.assertRaisesRegex(ValidationError, "guard metadata differs"):
                 fixture.validate_decisions()
 
     def test_rejects_header_order_and_row_width_drift(self) -> None:
@@ -1318,6 +1374,14 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         )
         profile = _validate_paired_value_t2_config(score_aware_config)
         self.assertTrue(profile["score_aware"])
+        full_horizon_config = copy.deepcopy(config)
+        full_horizon_config["pairedValueDuplicationT2"] = copy.deepcopy(
+            PAIRED_VALUE_T2_FULL_HORIZON_CONFIG
+        )
+        profile = _validate_paired_value_t2_config(full_horizon_config)
+        self.assertTrue(profile["score_aware"])
+        self.assertEqual(profile["guard_max_horizon_us"], 60_000_000)
+        self.assertEqual(profile["guard_capacity_us"], 360_000)
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
         with self.assertRaisesRegex(ValidationError, "neutral environment projection"):

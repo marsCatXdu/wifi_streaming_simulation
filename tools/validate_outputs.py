@@ -396,6 +396,17 @@ PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_PATH = (
     / "experiments/model-selection/"
     "paired-value-duplication-t2-score-aware-emergency-v2.json"
 )
+PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID = (
+    "paired-value-duplication-t2-full-horizon-carryover-v3"
+)
+PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256 = (
+    "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8"
+)
+PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "paired-value-duplication-t2-full-horizon-carryover-v3.json"
+)
 PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH = (
     Path(__file__).resolve().parent / "analyze_primary_tail_t4_campaign.py"
 )
@@ -426,6 +437,7 @@ PAIRED_VALUE_T2_DECISION_STOP_NS = 60_466_000_000
 PAIRED_VALUE_T2_MEASUREMENT_STOP_NS = 61_000_000_000
 PAIRED_VALUE_T2_GUARD_FRACTION = 0.006
 PAIRED_VALUE_T2_GUARD_CAPACITY_US = 60_000.0
+PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US = 360_000.0
 PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US = 12_000.0
 PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS = 0x391D4952
 PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD = struct.unpack(
@@ -525,6 +537,13 @@ PAIRED_VALUE_T2_SCORE_AWARE_CONFIG = {
     "emergency_score_threshold_float32": 0.000150000007125,
     "emergency_score_threshold_float32_bits_hex": "0x391d4952",
     "emergency_maximum_debt_us": 60_000,
+}
+PAIRED_VALUE_T2_FULL_HORIZON_CONFIG = {
+    **PAIRED_VALUE_T2_SCORE_AWARE_CONFIG,
+    "runtime_contract_id": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID,
+    "runtime_contract_sha256": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256,
+    "admission_profile_id": "score_aware_full_horizon_v3",
+    "budget_max_horizon_us": 60_000_000,
 }
 PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "enabled": True,
@@ -2339,6 +2358,9 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
             "runtime_contract_path": PAIRED_VALUE_T2_CONTRACT_PATH,
             "resolved_config": PAIRED_VALUE_T2_CONFIG,
             "decision_columns": PAIRED_VALUE_T2_DECISION_COLUMNS,
+            "admission_profile_id": None,
+            "guard_max_horizon_us": 10_000_000,
+            "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
         }
     elif runtime_id == PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID:
         profile = {
@@ -2352,6 +2374,28 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
             "decision_columns": (
                 PAIRED_VALUE_T2_DECISION_COLUMNS
                 + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+            ),
+            "admission_profile_id": "score_aware_emergency_v2",
+            "guard_max_horizon_us": 10_000_000,
+            "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
+        }
+    elif runtime_id == PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID:
+        profile = {
+            "score_aware": True,
+            "decision_schema_version": 2,
+            "summary_schema_version": 2,
+            "runtime_contract_id": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256,
+            "runtime_contract_path": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_PATH,
+            "resolved_config": PAIRED_VALUE_T2_FULL_HORIZON_CONFIG,
+            "decision_columns": (
+                PAIRED_VALUE_T2_DECISION_COLUMNS
+                + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+            ),
+            "admission_profile_id": "score_aware_full_horizon_v3",
+            "guard_max_horizon_us": 60_000_000,
+            "guard_capacity_us": int(
+                PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US
             ),
         }
     else:
@@ -2991,6 +3035,9 @@ def _validate_paired_value_t2_decisions(
             "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
             "runtime_contract_sha256": PAIRED_VALUE_T2_CONTRACT_SHA256,
             "decision_columns": PAIRED_VALUE_T2_DECISION_COLUMNS,
+            "admission_profile_id": None,
+            "guard_max_horizon_us": 10_000_000,
+            "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
         }
     file_name = "paired_value_t2_decisions.csv"
     rows = _csv(
@@ -3213,9 +3260,11 @@ def _validate_paired_value_t2_decisions(
             passes = None
 
         _require(_paired_close(_number(row, "guard_fraction", file_name), 0.006) and
-                 _integer(row, "guard_max_horizon_us", file_name) == 10_000_000 and
+                 _integer(row, "guard_max_horizon_us", file_name) ==
+                 profile["guard_max_horizon_us"] and
                  _integer(row, "guard_initial_horizon_us", file_name) == 2_000_000 and
-                 _paired_close(_number(row, "guard_capacity_us", file_name), 60_000) and
+                 _paired_close(_number(row, "guard_capacity_us", file_name),
+                               profile["guard_capacity_us"]) and
                  _paired_close(_number(row, "guard_initial_credit_us", file_name), 12_000),
                  f"{file_name}: frozen guard metadata differs")
         balance_before = _signed_number(row, "guard_balance_before_us", file_name)
@@ -3254,7 +3303,7 @@ def _validate_paired_value_t2_decisions(
                 row, "emergency_score_threshold_float32", file_name
             )
             _require(
-                row["admission_profile_id"] == "score_aware_emergency_v2"
+                row["admission_profile_id"] == profile["admission_profile_id"]
                 and struct.pack(
                     ">f", _float32(serialized_emergency_threshold, file_name)
                 ) == PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
@@ -3390,6 +3439,7 @@ def _validate_paired_value_t2_decisions(
 def _replay_paired_value_t2_guard(
     decision_rows: list[dict[str, str]],
     events: list[dict[str, str]],
+    profile: dict[str, Any],
 ) -> None:
     """Reconstruct measured-airtime guard balance from independent PHY events."""
     decisions_by_time: dict[int, list[dict[str, str]]] = {}
@@ -3411,7 +3461,7 @@ def _replay_paired_value_t2_guard(
             _require(refill_time >= last_refill_ns,
                      "paired-value guard replay: causal time regressed")
             balance = min(
-                PAIRED_VALUE_T2_GUARD_CAPACITY_US,
+                profile["guard_capacity_us"],
                 balance + PAIRED_VALUE_T2_GUARD_FRACTION *
                 ((refill_time - last_refill_ns) / 1000.0),
             )
@@ -4222,16 +4272,16 @@ def _validate_paired_value_t2_summary(
         "canonical_estimator_id": RANDOMIZED_COST_ESTIMATOR,
         "cost_safety_factor": 1.25,
         "fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
-        "max_horizon_us": 10_000_000,
+        "max_horizon_us": profile["guard_max_horizon_us"],
         "initial_horizon_us": 2_000_000,
-        "capacity_us": 60_000,
+        "capacity_us": profile["guard_capacity_us"],
         "initial_credit_us": 12_000,
         "initialization_time_ns": PAIRED_VALUE_T2_DECISION_START_NS,
         "accounting_absolute_tolerance_us": PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
     }
     if profile["score_aware"]:
         expected_guard.update({
-            "admission_profile_id": "score_aware_emergency_v2",
+            "admission_profile_id": profile["admission_profile_id"],
             "emergency_score_threshold_float32":
                 PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
             "emergency_score_threshold_float32_bits_hex": "0x391d4952",
@@ -4400,7 +4450,7 @@ def _validate_paired_value_t2_summary(
         evidence["action_nominals"],
         evidence["action_byte_quanta"],
     )
-    _replay_paired_value_t2_guard(evidence["rows"], events)
+    _replay_paired_value_t2_guard(evidence["rows"], events, profile)
 
 
 def _validate_secondary_airtime(

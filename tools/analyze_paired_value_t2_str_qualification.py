@@ -218,8 +218,25 @@ SCORE_AWARE_V2_PROFILE = QualificationProfile(
     markdown_title="Score-aware T2 V2 engineering against STR MLO",
     contract_kind="score_aware_v2",
 )
+FULL_HORIZON_V3_PROFILE = QualificationProfile(
+    key="full-horizon-v3",
+    runtime_contract_path=(
+        REPOSITORY_ROOT
+        / "experiments/model-selection/paired-value-duplication-t2-full-horizon-carryover-v3.json"
+    ),
+    runtime_contract_id="paired-value-duplication-t2-full-horizon-carryover-v3",
+    runtime_contract_sha256=(
+        "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8"
+    ),
+    expected_seed_run_units=tuple((seed, 1) for seed in range(1251, 1299)),
+    policy_label="Full-horizon T2 V3",
+    analysis_id="paired_value_t2_full_horizon_str_engineering",
+    markdown_title="Full-horizon T2 V3 engineering against STR MLO",
+    contract_kind="full_horizon_v3",
+)
 PROFILES = {
-    profile.key: profile for profile in (V1_PROFILE, SCORE_AWARE_V2_PROFILE)
+    profile.key: profile
+    for profile in (V1_PROFILE, SCORE_AWARE_V2_PROFILE, FULL_HORIZON_V3_PROFILE)
 }
 
 
@@ -472,6 +489,92 @@ def _verify_source_closure(
             != MAXIMUM_BACKGROUND_LOSS
         ):
             raise QualificationError("score-aware evaluation boundary changed")
+    elif profile.contract_kind == "full_horizon_v3":
+        expected_inheritance = {
+            "runtime_contract_id": SCORE_AWARE_V2_PROFILE.runtime_contract_id,
+            "path": str(
+                SCORE_AWARE_V2_PROFILE.runtime_contract_path.relative_to(
+                    REPOSITORY_ROOT
+                )
+            ),
+            "sha256": SCORE_AWARE_V2_PROFILE.runtime_contract_sha256,
+        }
+        if _canonical_json(contract.get("inherits")) != _canonical_json(
+            expected_inheritance
+        ):
+            raise QualificationError("full-horizon contract inheritance changed")
+        if (
+            _sha256_file(SCORE_AWARE_V2_PROFILE.runtime_contract_path)
+            != SCORE_AWARE_V2_PROFILE.runtime_contract_sha256
+        ):
+            raise QualificationError("inherited score-aware contract checksum changed")
+        inherited = _read_json(SCORE_AWARE_V2_PROFILE.runtime_contract_path)
+        expected_v2_inheritance = {
+            "runtime_contract_id": RUNTIME_CONTRACT_ID,
+            "path": str(RUNTIME_CONTRACT_PATH.relative_to(REPOSITORY_ROOT)),
+            "sha256": RUNTIME_CONTRACT_SHA256,
+        }
+        if (
+            inherited.get("runtime_contract_id")
+            != SCORE_AWARE_V2_PROFILE.runtime_contract_id
+            or _canonical_json(inherited.get("inherits"))
+            != _canonical_json(expected_v2_inheritance)
+            or _sha256_file(RUNTIME_CONTRACT_PATH) != RUNTIME_CONTRACT_SHA256
+        ):
+            raise QualificationError("full-horizon inherited source closure changed")
+        analyzer_contract = _read_json(RUNTIME_CONTRACT_PATH)
+        if (
+            analyzer_contract.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
+            or analyzer_contract.get("selected_policy_contract", {}).get("policy_name")
+            != POLICY_NAME
+            or contract.get("unchanged_contract", {}).get("policy_name")
+            != POLICY_NAME
+        ):
+            raise QualificationError("full-horizon inherited policy identity changed")
+        carryover = contract.get("carryover_override", {})
+        if (
+            carryover.get("profile_id") != "score_aware_full_horizon_v3"
+            or carryover.get("budget_max_horizon_us") != 60_000_000
+            or carryover.get("budget_capacity_us") != 360_000
+            or carryover.get("budget_initial_horizon_us") != 2_000_000
+            or carryover.get("budget_initial_credit_us") != 12_000
+            or carryover.get("initial_credit_is_not_capacity") is not True
+            or carryover.get("no_unearned_full_horizon_credit_at_startup") is not True
+            or carryover.get("long_run_refill_rate_changed") is not False
+            or carryover.get("emergency_tier_changed") is not False
+        ):
+            raise QualificationError("full-horizon carry-over override changed")
+        boundary = contract.get("evaluation_boundary", {})
+        expected_seeds = [seed for seed, _ in profile.expected_seed_run_units]
+        expected_primary_gates = [
+            "paired all-generated deadline-miss difference confidence interval below zero",
+            (
+                "paired mean per-run completed-frame HF7 P99 difference "
+                "confidence interval below zero"
+            ),
+        ]
+        if (
+            boundary.get("engineering_seed_start") != min(expected_seeds)
+            or boundary.get("engineering_seed_stop_inclusive") != max(expected_seeds)
+            or boundary.get("engineering_seeds_previously_opened") is not True
+            or boundary.get("reserved_confirmation_seed_start")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[0]
+            or boundary.get("reserved_confirmation_seed_stop_inclusive")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[-1]
+            or boundary.get("reserved_confirmation_seeds_must_remain_unopened")
+            is not True
+            or boundary.get("reference") != "STR MLO NMaxInflights=1"
+            or boundary.get("primary_gates") != expected_primary_gates
+            or boundary.get("resource_gates", {}).get(
+                "sender_airtime_ratio_strictly_below"
+            )
+            != MAXIMUM_AIRTIME_RATIO
+            or boundary.get("resource_gates", {}).get(
+                "background_throughput_loss_fraction_at_most"
+            )
+            != MAXIMUM_BACKGROUND_LOSS
+        ):
+            raise QualificationError("full-horizon evaluation boundary changed")
     else:
         raise QualificationError(f"unsupported qualification profile {profile.key!r}")
 
