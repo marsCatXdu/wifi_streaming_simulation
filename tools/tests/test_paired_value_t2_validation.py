@@ -22,6 +22,13 @@ if str(TOOLS) not in sys.path:
 
 from validate_outputs import (  # noqa: E402
     PAIRED_VALUE_T2_CONFIG,
+    PAIRED_VALUE_T2_COST_FREE_CONFIG,
+    PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID,
+    PAIRED_VALUE_T2_COST_FREE_CONTRACT_SHA256,
+    PAIRED_VALUE_T2_COST_FREE_DECISION_SUFFIX,
+    PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD,
+    PAIRED_VALUE_T2_COST_FREE_MODEL_METADATA,
+    PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD,
     PAIRED_VALUE_T2_DECISION_COLUMNS,
     PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
     PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
@@ -380,7 +387,10 @@ class PairedValueT2Fixture:
         *,
         full_horizon: bool = False,
         remaining_refill: bool = False,
+        cost_free: bool = False,
     ) -> None:
+        if cost_free and (full_horizon or remaining_refill):
+            raise ValueError("cost-free fixture inherits V2 admission only")
         if remaining_refill:
             full_horizon = True
         self.decision_columns = (
@@ -391,23 +401,30 @@ class PairedValueT2Fixture:
                 if remaining_refill
                 else ()
             )
+            + (PAIRED_VALUE_T2_COST_FREE_DECISION_SUFFIX if cost_free else ())
         )
         runtime_contract_id = (
-            PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID
+            PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID
+            if cost_free
+            else PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID
             if remaining_refill
             else PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID
             if full_horizon
             else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID
         )
         runtime_contract_sha256 = (
-            PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256
+            PAIRED_VALUE_T2_COST_FREE_CONTRACT_SHA256
+            if cost_free
+            else PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256
             if remaining_refill
             else PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256
             if full_horizon
             else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256
         )
         admission_profile_id = (
-            "score_aware_remaining_refill_v4"
+            "cost_free_score_aware_v5"
+            if cost_free
+            else "score_aware_remaining_refill_v4"
             if remaining_refill
             else "score_aware_full_horizon_v3"
             if full_horizon
@@ -422,25 +439,59 @@ class PairedValueT2Fixture:
         self.decision_profile = {
             "score_aware": True,
             "remaining_refill": remaining_refill,
-            "decision_schema_version": 3 if remaining_refill else 2,
-            "summary_schema_version": 3 if remaining_refill else 2,
+            "cost_free": cost_free,
+            "decision_schema_version": 4 if cost_free else 3 if remaining_refill else 2,
+            "summary_schema_version": 4 if cost_free else 3 if remaining_refill else 2,
             "runtime_contract_id": runtime_contract_id,
             "runtime_contract_sha256": runtime_contract_sha256,
             "decision_columns": self.decision_columns,
             "admission_profile_id": admission_profile_id,
             "guard_max_horizon_us": guard_max_horizon_us,
             "guard_capacity_us": guard_capacity_us,
+            "model_metadata": (
+                PAIRED_VALUE_T2_COST_FREE_MODEL_METADATA
+                if cost_free
+                else PAIRED_VALUE_T2_MODEL_METADATA
+            ),
+            "score_threshold": (
+                PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD
+                if cost_free
+                else PAIRED_VALUE_T2_SCORE_THRESHOLD
+            ),
+            "score_threshold_bits": (
+                0x3E3F68CF if cost_free else 0x38BBC0E5
+            ),
+            "emergency_score_threshold": (
+                PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD
+                if cost_free
+                else PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+            ),
+            "emergency_score_threshold_bits": (
+                0x3E9D2AC5 if cost_free else 0x391D4952
+            ),
         }
         for row in self.decisions:
             strict = row["guard_admitted"] == "1"
             row.update({
-                "schema_version": "3" if remaining_refill else "2",
+                "schema_version": "4" if cost_free else "3" if remaining_refill else "2",
                 "admission_profile_id": admission_profile_id,
+                "ranker": (
+                    "legacy_bad12_value"
+                    if cost_free
+                    else "legacy_bad12_value_per_cost"
+                ),
+                "score_threshold_float32": repr(
+                    PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD
+                    if cost_free
+                    else PAIRED_VALUE_T2_SCORE_THRESHOLD
+                ),
                 "guard_max_horizon_us": str(guard_max_horizon_us),
                 "guard_capacity_us": repr(guard_capacity_us),
                 "strict_guard_admitted": "1" if strict else "0",
                 "emergency_score_threshold_float32": repr(
-                    PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+                    PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD
+                    if cost_free
+                    else PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
                 ),
                 "passes_emergency_score_threshold": "0",
                 "emergency_admission_considered": "0",
@@ -450,6 +501,12 @@ class PairedValueT2Fixture:
                 "emergency_admitted": "0",
                 "admission_tier": "strict" if strict else "none",
             })
+            if cost_free:
+                row["policy_score_float32"] = (
+                    repr(f32(float(row["nonnegative_bad12_value"])))
+                    if row["feature_evaluated"] == "1"
+                    else ""
+                )
             if remaining_refill:
                 sample_ns = int(row["primary_sample_time_ns"])
                 remaining_credit_us = 0.006 * (
@@ -621,10 +678,21 @@ class PairedValueT2Fixture:
                 "max_horizon_us": self.decision_profile["guard_max_horizon_us"],
                 "capacity_us": self.decision_profile["guard_capacity_us"],
                 "emergency_score_threshold_float32":
-                    PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
-                "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+                    self.decision_profile["emergency_score_threshold"],
+                "emergency_score_threshold_float32_bits_hex": (
+                    "0x3e9d2ac5"
+                    if self.decision_profile["cost_free"]
+                    else "0x391d4952"
+                ),
                 "emergency_maximum_debt_us": 60_000,
             })
+            if self.decision_profile["cost_free"]:
+                summary["model"].update({
+                    "ranker": "legacy_bad12_value",
+                    "score_threshold_float32":
+                        PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD,
+                    "score_threshold_float32_bits_hex": "0x3e3f68cf",
+                })
             summary["counts"].update({
                 "strict_guard_admitted": evidence["strict_guard_admitted"],
                 "emergency_score_threshold_passed": evidence["emergency_score_passed"],
@@ -764,6 +832,37 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             fixture.decisions[8]["strict_guard_admitted"] = "0"
             fixture._write_inputs()
             with self.assertRaisesRegex(ValidationError, "emergency admission differs"):
+                fixture.validate_decisions()
+
+    def test_accepts_cost_free_schema_and_replays_active_score(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.use_score_aware_profile(cost_free=True)
+            evidence = fixture.validate_decisions()
+            self.assertTrue(evidence["profile"]["cost_free"])
+            self.assertEqual(evidence["strict_guard_admitted"], 1)
+            self.assertEqual(
+                float(fixture.decisions[8]["policy_score_float32"]),
+                f32(float(fixture.decisions[8]["nonnegative_bad12_value"])),
+            )
+            meter_summary = fixture.write_summary(evidence)
+            _validate_paired_value_t2_summary(
+                fixture.root,
+                RUN_ID,
+                9,
+                evidence,
+                fixture.events,
+                fixture.settlements,
+                meter_summary,
+            )
+            fixture.decisions[8]["policy_score_float32"] = repr(
+                math.nextafter(
+                    float(fixture.decisions[8]["policy_score_float32"]),
+                    math.inf,
+                )
+            )
+            fixture._write_inputs()
+            with self.assertRaisesRegex(ValidationError, "cost-free policy score"):
                 fixture.validate_decisions()
 
     def test_accepts_full_horizon_profile_without_startup_credit_inflation(self) -> None:
@@ -1519,6 +1618,15 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         self.assertTrue(profile["score_aware"])
         self.assertTrue(profile["remaining_refill"])
         self.assertEqual(profile["decision_schema_version"], 3)
+        cost_free_config = copy.deepcopy(config)
+        cost_free_config["pairedValueDuplicationT2"] = copy.deepcopy(
+            PAIRED_VALUE_T2_COST_FREE_CONFIG
+        )
+        profile = _validate_paired_value_t2_config(cost_free_config)
+        self.assertTrue(profile["score_aware"])
+        self.assertTrue(profile["cost_free"])
+        self.assertFalse(profile["remaining_refill"])
+        self.assertEqual(profile["decision_schema_version"], 4)
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
         with self.assertRaisesRegex(ValidationError, "neutral environment projection"):

@@ -704,6 +704,43 @@ class PairedValueT2StrQualificationTest(unittest.TestCase):
         self.assertIn(f"# {profile.markdown_title}", markdown)
         self.assertIn(f"| Metric | {profile.policy_label} | STR MLO |", markdown)
 
+    def test_cost_free_profile_reuses_opened_engineering_boundary(self) -> None:
+        profile = qualification.COST_FREE_V5_PROFILE
+        matrix_path = (
+            qualification.REPOSITORY_ROOT
+            / "experiments/configs/paired_value_t2_cost_free_str_engineering_v5.yaml"
+        )
+        document = qualification._load_yaml(matrix_path)
+        specs = qualification._expand_config(document)
+        self.assertEqual(len(specs), qualification.EXPECTED_RUN_COUNT)
+        self.assertEqual(
+            sorted({(spec["seed"], spec["run"]) for spec in specs}),
+            list(profile.expected_seed_run_units),
+        )
+        self.assertEqual(
+            document["runtime_contract"],
+            {
+                "id": profile.runtime_contract_id,
+                "path": str(
+                    profile.runtime_contract_path.relative_to(
+                        qualification.REPOSITORY_ROOT
+                    )
+                ),
+                "sha256": profile.runtime_contract_sha256,
+                "source_artifacts": qualification.SOURCE_ARTIFACTS,
+            },
+        )
+        contract, _, _ = qualification._verify_source_closure(profile)
+        self.assertEqual(contract["score_override"]["ranker"], "legacy_bad12_value")
+        self.assertEqual(
+            contract["score_override"]["primary_score_threshold_float32_bits_hex"],
+            "0x3e3f68cf",
+        )
+        self.assertEqual(
+            contract["score_override"]["emergency_score_threshold_float32_bits_hex"],
+            "0x3e9d2ac5",
+        )
+
     def test_runner_built_manifest_rejects_count_membership_and_entry_drift(self) -> None:
         import run_experiments as runner
 

@@ -58,6 +58,12 @@ REMAINING_REFILL_PREFLIGHT = (
 REMAINING_REFILL_ENGINEERING = (
     ROOT / "experiments/configs/paired_value_t2_remaining_refill_str_engineering_v4.yaml"
 )
+COST_FREE_PREFLIGHT = (
+    ROOT / "experiments/configs/paired_value_t2_cost_free_str_preflight_v5.yaml"
+)
+COST_FREE_ENGINEERING = (
+    ROOT / "experiments/configs/paired_value_t2_cost_free_str_engineering_v5.yaml"
+)
 RUNTIME_CONTRACT = (
     ROOT / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
 )
@@ -72,6 +78,10 @@ FULL_HORIZON_RUNTIME_CONTRACT = (
 REMAINING_REFILL_RUNTIME_CONTRACT = (
     ROOT
     / "experiments/model-selection/paired-value-duplication-t2-remaining-refill-borrowing-v4.json"
+)
+COST_FREE_RUNTIME_CONTRACT = (
+    ROOT
+    / "experiments/model-selection/paired-value-duplication-t2-cost-free-score-aware-v5.json"
 )
 
 
@@ -409,6 +419,63 @@ class PairedValueT2RunnerTest(unittest.TestCase):
         self.assertIn(
             "--pairedValueT2AdmissionProfile=score_aware_remaining_refill_v4",
             cli_arguments(policy, REMAINING_REFILL_ENGINEERING.parent),
+        )
+
+    def test_cost_free_configs_freeze_ranker_and_reuse_opened_seeds(self) -> None:
+        preflight_raw = yaml.safe_load(
+            COST_FREE_PREFLIGHT.read_text(encoding="utf-8")
+        )
+        engineering_raw = yaml.safe_load(
+            COST_FREE_ENGINEERING.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            preflight_raw["extends"], "paired_value_t2_str_qualification_v1.yaml"
+        )
+        self.assertEqual(
+            engineering_raw["extends"],
+            "paired_value_t2_cost_free_str_preflight_v5.yaml",
+        )
+
+        preflight = load_yaml(COST_FREE_PREFLIGHT)
+        engineering = load_yaml(COST_FREE_ENGINEERING)
+        self.assertEqual(preflight["seeds"], [43])
+        self.assertEqual(engineering["seeds"], list(range(1251, 1299)))
+        self.assertTrue(set(engineering["seeds"]).isdisjoint(range(1301, 1349)))
+        self.assertEqual(
+            matrix_sha256(preflight),
+            "43d80e6b0ac1cf8c6f7471333c00e3a19f99c189f9921adb4d12c4cebd609311",
+        )
+        self.assertEqual(
+            matrix_sha256(engineering),
+            "fcac4ba30d3c8cd2394880e9550d9f40dc7b7c2ed56b66cb5293b3d91b8be363",
+        )
+        self.assertEqual(len(expand_config(preflight)), 2)
+        specs = expand_config(engineering)
+        self.assertEqual(len(specs), 96)
+
+        contract = validate_runtime_contract(engineering)
+        self.assertIsNotNone(contract)
+        assert contract is not None
+        self.assertEqual(
+            contract["runtime_contract_id"],
+            "paired-value-duplication-t2-cost-free-score-aware-v5",
+        )
+        self.assertEqual(
+            contract["runtime_contract_sha256"],
+            hashlib.sha256(COST_FREE_RUNTIME_CONTRACT.read_bytes()).hexdigest(),
+        )
+        policy = next(
+            spec["config"]
+            for spec in specs
+            if spec["config"]["policy"] == "paired_value_duplication_t2"
+        )
+        self.assertEqual(
+            policy["prediction"]["paired_value_t2_admission_profile"],
+            "cost_free_score_aware_v5",
+        )
+        self.assertIn(
+            "--pairedValueT2AdmissionProfile=cost_free_score_aware_v5",
+            cli_arguments(policy, COST_FREE_ENGINEERING.parent),
         )
 
     def test_runtime_contract_rejects_contract_and_source_hash_drift(self) -> None:

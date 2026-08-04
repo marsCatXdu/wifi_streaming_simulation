@@ -418,6 +418,17 @@ PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_PATH = (
     / "experiments/model-selection/"
     "paired-value-duplication-t2-remaining-refill-borrowing-v4.json"
 )
+PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID = (
+    "paired-value-duplication-t2-cost-free-score-aware-v5"
+)
+PAIRED_VALUE_T2_COST_FREE_CONTRACT_SHA256 = (
+    "b7fb00982ae090fe1142b39adf0ad6d26d253741dd5059ed95637dd86047ba96"
+)
+PAIRED_VALUE_T2_COST_FREE_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "paired-value-duplication-t2-cost-free-score-aware-v5.json"
+)
 PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH = (
     Path(__file__).resolve().parent / "analyze_primary_tail_t4_campaign.py"
 )
@@ -455,6 +466,15 @@ PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD = struct.unpack(
     ">f", PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
 )[0]
 PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US = 60_000.0
+PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD_BITS = 0x3E3F68CF
+PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD = struct.unpack(
+    ">f", PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+)[0]
+PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD_BITS = 0x3E9D2AC5
+PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD = struct.unpack(
+    ">f",
+    PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+)[0]
 
 PAIRED_VALUE_T2_DECISION_COLUMNS = (
     "schema_version", "run_id", "frame_id", "policy", "decision_status",
@@ -495,6 +515,7 @@ PAIRED_VALUE_T2_REMAINING_REFILL_DECISION_SUFFIX = (
     "remaining_refill_credit_us", "remaining_refill_admission_considered",
     "remaining_refill_admitted",
 )
+PAIRED_VALUE_T2_COST_FREE_DECISION_SUFFIX = ("policy_score_float32",)
 PAIRED_VALUE_T2_STATUSES = (
     "outside_decision_window", "history_warmup", "frame_type_restricted",
     "not_actionable", "descriptor_unavailable", "below_score_threshold",
@@ -514,6 +535,10 @@ PAIRED_VALUE_T2_MODEL_METADATA = {
     "frame_gate": "p_frames_only",
     "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
     "learned_cost_token_accounting": "0",
+}
+PAIRED_VALUE_T2_COST_FREE_MODEL_METADATA = {
+    **PAIRED_VALUE_T2_MODEL_METADATA,
+    "ranker": "legacy_bad12_value",
 }
 PAIRED_VALUE_T2_CONFIG = {
     "csv_schema_version": 1,
@@ -569,6 +594,16 @@ PAIRED_VALUE_T2_REMAINING_REFILL_CONFIG = {
     "admission_profile_id": "score_aware_remaining_refill_v4",
     "remaining_refill_borrowing_enabled": True,
     "remaining_refill_repayment_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+}
+PAIRED_VALUE_T2_COST_FREE_CONFIG = {
+    **PAIRED_VALUE_T2_SCORE_AWARE_CONFIG,
+    "csv_schema_version": 4,
+    "summary_schema_version": 4,
+    "runtime_contract_id": PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID,
+    "runtime_contract_sha256": PAIRED_VALUE_T2_COST_FREE_CONTRACT_SHA256,
+    "admission_profile_id": "cost_free_score_aware_v5",
+    "emergency_score_threshold_float32": 0.306966930628,
+    "emergency_score_threshold_float32_bits_hex": "0x3e9d2ac5",
 }
 PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "enabled": True,
@@ -2377,6 +2412,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
         profile = {
             "score_aware": False,
             "remaining_refill": False,
+            "cost_free": False,
             "decision_schema_version": 1,
             "summary_schema_version": 1,
             "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
@@ -2387,6 +2423,13 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
             "admission_profile_id": None,
             "guard_max_horizon_us": 10_000_000,
             "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
+            "model_metadata": PAIRED_VALUE_T2_MODEL_METADATA,
+            "score_threshold": PAIRED_VALUE_T2_SCORE_THRESHOLD,
+            "score_threshold_bits": PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS,
+            "emergency_score_threshold":
+                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+            "emergency_score_threshold_bits":
+                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS,
         }
     elif runtime_id == PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID:
         profile = {
@@ -2448,10 +2491,56 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
                 PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US
             ),
         }
+    elif runtime_id == PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID:
+        profile = {
+            "score_aware": True,
+            "remaining_refill": False,
+            "cost_free": True,
+            "decision_schema_version": 4,
+            "summary_schema_version": 4,
+            "runtime_contract_id": PAIRED_VALUE_T2_COST_FREE_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_COST_FREE_CONTRACT_SHA256,
+            "runtime_contract_path": PAIRED_VALUE_T2_COST_FREE_CONTRACT_PATH,
+            "resolved_config": PAIRED_VALUE_T2_COST_FREE_CONFIG,
+            "decision_columns": (
+                PAIRED_VALUE_T2_DECISION_COLUMNS
+                + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+                + PAIRED_VALUE_T2_COST_FREE_DECISION_SUFFIX
+            ),
+            "admission_profile_id": "cost_free_score_aware_v5",
+            "guard_max_horizon_us": 10_000_000,
+            "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
+        }
     else:
         raise ValidationError(
             "resolved_config.json: unsupported paired-value runtime contract"
         )
+    profile.setdefault("cost_free", False)
+    profile["model_metadata"] = (
+        PAIRED_VALUE_T2_COST_FREE_MODEL_METADATA
+        if profile["cost_free"]
+        else PAIRED_VALUE_T2_MODEL_METADATA
+    )
+    profile["score_threshold"] = (
+        PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD
+        if profile["cost_free"]
+        else PAIRED_VALUE_T2_SCORE_THRESHOLD
+    )
+    profile["score_threshold_bits"] = (
+        PAIRED_VALUE_T2_COST_FREE_SCORE_THRESHOLD_BITS
+        if profile["cost_free"]
+        else PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS
+    )
+    profile["emergency_score_threshold"] = (
+        PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD
+        if profile["cost_free"]
+        else PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+    )
+    profile["emergency_score_threshold_bits"] = (
+        PAIRED_VALUE_T2_COST_FREE_EMERGENCY_SCORE_THRESHOLD_BITS
+        if profile["cost_free"]
+        else PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS
+    )
     _require(
         _sha256_file(profile["runtime_contract_path"], "paired-value runtime contract")
         == profile["runtime_contract_sha256"],
@@ -2487,7 +2576,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
                     float(configured_emergency_threshold),
                     "paired-value resolved emergency threshold",
                 ),
-            ) == PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+            ) == profile["emergency_score_threshold_bits"].to_bytes(4, "big"),
             "resolved_config.json: emergency float32 threshold differs",
         )
     prediction = config.get("predictionTelemetry")
@@ -2781,7 +2870,9 @@ def _paired_value_t2_ordered_cost_log(features: Any) -> float:
     return predicted_log
 
 
-def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> None:
+def _validate_paired_value_t2_model_replays(
+    records: list[dict[str, Any]], profile: dict[str, Any]
+) -> None:
     """Batch-replay and compare every evaluated row with the canonical model."""
     if not records:
         return
@@ -2819,6 +2910,11 @@ def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> No
         predicted_cost = max(math.expm1(adjusted_log), 1.0)
         nonnegative_value = max(primary_probability - treated_probability, 0.0)
         score = float(np.float32(nonnegative_value / predicted_cost))
+        policy_score = (
+            float(np.float32(nonnegative_value))
+            if profile["cost_free"]
+            else score
+        )
         expected = {
             "primary_bad12_logit": float(primary_logits[index]),
             "primary_bad12_probability": primary_probability,
@@ -2852,9 +2948,12 @@ def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> No
             "paired_value_t2_decisions.csv: canonical model replay differs for "
             f"frame {record['frame_id']}",
         )
-        expected_pass = score >= _float32(
-            context["threshold"], "paired-value model replay threshold"
+        _require(
+            record["policy_score"] == policy_score,
+            "paired_value_t2_decisions.csv: active model score differs for "
+            f"frame {record['frame_id']}",
         )
+        expected_pass = policy_score >= profile["score_threshold"]
         _require(record["passes"] == expected_pass,
                  "paired_value_t2_decisions.csv: canonical model gate differs for "
                  f"frame {record['frame_id']}")
@@ -3081,6 +3180,7 @@ def _validate_paired_value_t2_decisions(
         profile = {
             "score_aware": False,
             "remaining_refill": False,
+            "cost_free": False,
             "decision_schema_version": 1,
             "summary_schema_version": 1,
             "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
@@ -3089,6 +3189,13 @@ def _validate_paired_value_t2_decisions(
             "admission_profile_id": None,
             "guard_max_horizon_us": 10_000_000,
             "guard_capacity_us": int(PAIRED_VALUE_T2_GUARD_CAPACITY_US),
+            "model_metadata": PAIRED_VALUE_T2_MODEL_METADATA,
+            "score_threshold": PAIRED_VALUE_T2_SCORE_THRESHOLD,
+            "score_threshold_bits": PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS,
+            "emergency_score_threshold":
+                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+            "emergency_score_threshold_bits":
+                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS,
         }
     file_name = "paired_value_t2_decisions.csv"
     rows = _csv(
@@ -3143,11 +3250,12 @@ def _validate_paired_value_t2_decisions(
         _require(_integer(row, "schema_version", file_name) ==
                  profile["decision_schema_version"] and
                  row["run_id"] == run_id and
-                 all(row[key] == value for key, value in PAIRED_VALUE_T2_MODEL_METADATA.items()),
+                 all(row[key] == value
+                     for key, value in profile["model_metadata"].items()),
                  f"{file_name}: fixed schema, policy, or model metadata differs")
         threshold = _number(row, "score_threshold_float32", file_name)
         _require(struct.pack(">f", _float32(threshold, file_name)) ==
-                 PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+                 profile["score_threshold_bits"].to_bytes(4, "big"),
                  f"{file_name}: frozen float32 threshold differs")
         _require(row["primary_path_id"] == "1" and row["primary_copy_id"] == "0" and
                  row["secondary_path_id"] == "0" and row["secondary_copy_id"] == "1",
@@ -3257,6 +3365,7 @@ def _validate_paired_value_t2_decisions(
                  f"{file_name}: model evaluation bypassed ordered gates")
         passes: bool | None
         observed_score: float | None = None
+        policy_score: float | None = None
         predicted_cost: float | None = None
         if feature_evaluated:
             values = {key: _signed_number(row, key, file_name)
@@ -3286,8 +3395,24 @@ def _validate_paired_value_t2_decisions(
             _require(_float32(observed_score, file_name) == observed_score and
                      struct.pack(">f", observed_score) == struct.pack(">f", expected_score),
                      f"{file_name}: value-per-cost score is not exact float32")
+            policy_score = (
+                _float32(nonnegative_value, file_name)
+                if profile["cost_free"]
+                else observed_score
+            )
+            if profile["cost_free"]:
+                serialized_policy_score = _signed_number(
+                    row, "policy_score_float32", file_name
+                )
+                _require(
+                    _float32(serialized_policy_score, file_name)
+                    == serialized_policy_score
+                    and struct.pack(">f", serialized_policy_score)
+                    == struct.pack(">f", policy_score),
+                    f"{file_name}: cost-free policy score is not exact float32",
+                )
             passes = _flag(row, "passes_score_threshold", file_name)
-            _require(passes == (observed_score >= PAIRED_VALUE_T2_SCORE_THRESHOLD),
+            _require(passes == (policy_score >= profile["score_threshold"]),
                      f"{file_name}: float32 score-threshold result differs")
             model_replay_records.append({
                 "frame_id": frame_id,
@@ -3302,6 +3427,7 @@ def _validate_paired_value_t2_decisions(
                 ),
                 "values": values,
                 "passes": passes,
+                "policy_score": policy_score,
             })
             learned_evaluated += predicted_cost
             if passes:
@@ -3310,7 +3436,11 @@ def _validate_paired_value_t2_decisions(
             _require(all(row[key] == "" for key in model_numeric_columns) and
                      row["passes_score_threshold"] == "",
                      f"{file_name}: unevaluated model diagnostics must be null")
+            if profile["cost_free"]:
+                _require(row["policy_score_float32"] == "",
+                         f"{file_name}: unevaluated policy score must be null")
             passes = None
+            policy_score = None
 
         _require(_paired_close(_number(row, "guard_fraction", file_name), 0.006) and
                  _integer(row, "guard_max_horizon_us", file_name) ==
@@ -3360,7 +3490,7 @@ def _validate_paired_value_t2_decisions(
                 row["admission_profile_id"] == profile["admission_profile_id"]
                 and struct.pack(
                     ">f", _float32(serialized_emergency_threshold, file_name)
-                ) == PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+                ) == profile["emergency_score_threshold_bits"].to_bytes(4, "big")
                 and _paired_close(
                     _number(row, "emergency_maximum_debt_us", file_name),
                     PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
@@ -3370,8 +3500,8 @@ def _validate_paired_value_t2_decisions(
             expected_emergency_score_pass = bool(
                 considered
                 and not strict_admitted
-                and observed_score is not None
-                and observed_score >= PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+                and policy_score is not None
+                and policy_score >= profile["emergency_score_threshold"]
             )
             observed_emergency_score_pass = _flag(
                 row, "passes_emergency_score_threshold", file_name
@@ -3492,7 +3622,7 @@ def _validate_paired_value_t2_decisions(
                  f"{file_name}: decision status differs from ordered gates")
         status_counts[expected_status] += 1
 
-    _validate_paired_value_t2_model_replays(model_replay_records)
+    _validate_paired_value_t2_model_replays(model_replay_records, profile)
     _require(
         not profile["remaining_refill"]
         or remaining_refill_admission_considered_count
@@ -4331,11 +4461,13 @@ def _validate_paired_value_t2_summary(
         "feature_count": 246,
         "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
         "ordered_feature_names_sha256": PAIRED_VALUE_T2_FEATURE_NAMES_SHA256,
-        "ranker": "legacy_bad12_value_per_cost",
+        "ranker": profile["model_metadata"]["ranker"],
         "frame_gate": "p_frames_only",
         "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
-        "score_threshold_float32": PAIRED_VALUE_T2_SCORE_THRESHOLD,
-        "score_threshold_float32_bits_hex": "0x38bbc0e5",
+        "score_threshold_float32": profile["score_threshold"],
+        "score_threshold_float32_bits_hex": (
+            "0x3e3f68cf" if profile["cost_free"] else "0x38bbc0e5"
+        ),
     }
     model = summary.get("model")
     _require(isinstance(model, dict) and set(model) == set(expected_model),
@@ -4348,7 +4480,7 @@ def _validate_paired_value_t2_summary(
             value = model.get(key)
             _require(isinstance(value, (int, float)) and not isinstance(value, bool) and
                      struct.pack(">f", _float32(float(value), "paired summary model")) ==
-                     PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+                     profile["score_threshold_bits"].to_bytes(4, "big"),
                      "paired_value_t2_summary.json: model threshold differs")
         else:
             _require(model.get(key) == expected,
@@ -4389,8 +4521,10 @@ def _validate_paired_value_t2_summary(
         expected_guard.update({
             "admission_profile_id": profile["admission_profile_id"],
             "emergency_score_threshold_float32":
-                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
-            "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+                profile["emergency_score_threshold"],
+            "emergency_score_threshold_float32_bits_hex": (
+                "0x3e9d2ac5" if profile["cost_free"] else "0x391d4952"
+            ),
             "emergency_maximum_debt_us": 60_000,
         })
     if profile["remaining_refill"]:

@@ -251,6 +251,23 @@ REMAINING_REFILL_V4_PROFILE = QualificationProfile(
     markdown_title="Remaining-refill T2 V4 engineering against STR MLO",
     contract_kind="remaining_refill_v4",
 )
+COST_FREE_V5_PROFILE = QualificationProfile(
+    key="cost-free-v5",
+    runtime_contract_path=(
+        REPOSITORY_ROOT
+        / "experiments/model-selection/"
+        "paired-value-duplication-t2-cost-free-score-aware-v5.json"
+    ),
+    runtime_contract_id="paired-value-duplication-t2-cost-free-score-aware-v5",
+    runtime_contract_sha256=(
+        "b7fb00982ae090fe1142b39adf0ad6d26d253741dd5059ed95637dd86047ba96"
+    ),
+    expected_seed_run_units=tuple((seed, 1) for seed in range(1251, 1299)),
+    policy_label="Cost-free T2 V5",
+    analysis_id="paired_value_t2_cost_free_str_engineering",
+    markdown_title="Cost-free T2 V5 engineering against STR MLO",
+    contract_kind="cost_free_v5",
+)
 PROFILES = {
     profile.key: profile
     for profile in (
@@ -258,6 +275,7 @@ PROFILES = {
         SCORE_AWARE_V2_PROFILE,
         FULL_HORIZON_V3_PROFILE,
         REMAINING_REFILL_V4_PROFILE,
+        COST_FREE_V5_PROFILE,
     )
 }
 
@@ -733,6 +751,143 @@ def _verify_source_closure(
             != MAXIMUM_BACKGROUND_LOSS
         ):
             raise QualificationError("remaining-refill evaluation boundary changed")
+    elif profile.contract_kind == "cost_free_v5":
+        expected_inheritance = {
+            "runtime_contract_id": SCORE_AWARE_V2_PROFILE.runtime_contract_id,
+            "path": str(
+                SCORE_AWARE_V2_PROFILE.runtime_contract_path.relative_to(
+                    REPOSITORY_ROOT
+                )
+            ),
+            "sha256": SCORE_AWARE_V2_PROFILE.runtime_contract_sha256,
+        }
+        if _canonical_json(contract.get("inherits")) != _canonical_json(
+            expected_inheritance
+        ):
+            raise QualificationError("cost-free contract inheritance changed")
+        if (
+            _sha256_file(SCORE_AWARE_V2_PROFILE.runtime_contract_path)
+            != SCORE_AWARE_V2_PROFILE.runtime_contract_sha256
+            or _sha256_file(RUNTIME_CONTRACT_PATH) != RUNTIME_CONTRACT_SHA256
+        ):
+            raise QualificationError("cost-free inherited source closure changed")
+        analyzer_contract = _read_json(RUNTIME_CONTRACT_PATH)
+        if (
+            analyzer_contract.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
+            or analyzer_contract.get("selected_policy_contract", {}).get(
+                "policy_name"
+            )
+            != POLICY_NAME
+            or contract.get("unchanged_contract", {}).get("policy_name")
+            != POLICY_NAME
+        ):
+            raise QualificationError("cost-free inherited policy identity changed")
+
+        score = contract.get("score_override", {})
+        if (
+            score.get("profile_id") != "cost_free_score_aware_v5"
+            or score.get("ranker") != "legacy_bad12_value"
+            or score.get("formula")
+            != (
+                "float32(max(primary_bad12_probability - "
+                "treated_bad12_probability, 0))"
+            )
+            or score.get("learned_cost_denominator_removed") is not True
+            or score.get("learned_cost_retained_as_diagnostic") is not True
+            or score.get("learned_cost_used_for_token_accounting") is not False
+            or score.get("primary_score_threshold_float32")
+            != 0.18692325055599213
+            or score.get("primary_score_threshold_float32_bits_hex")
+            != "0x3e3f68cf"
+            or score.get("primary_requested_global_action_fraction") != 0.165
+            or score.get("emergency_score_threshold_float32")
+            != 0.3069669306278229
+            or score.get("emergency_score_threshold_float32_bits_hex")
+            != "0x3e9d2ac5"
+            or score.get("emergency_requested_global_action_fraction") != 0.0825
+            or score.get("closed_loop_v2_outcomes_not_used_in_threshold_formula")
+            is not True
+        ):
+            raise QualificationError("cost-free score override changed")
+        admission = contract.get("admission_inheritance", {})
+        if (
+            admission.get("v2_strict_admission_changed") is not False
+            or admission.get("v2_emergency_debt_limit_changed") is not False
+            or admission.get("v2_guard_horizon_or_capacity_changed") is not False
+            or admission.get("v2_startup_credit_changed") is not False
+            or admission.get("v2_long_run_refill_rate_changed") is not False
+            or admission.get("canonical_reserved_cost_used_for_both_tiers")
+            is not True
+            or admission.get("admission_is_query_only") is not True
+        ):
+            raise QualificationError("cost-free admission inheritance changed")
+        telemetry = contract.get("telemetry_override", {})
+        if (
+            telemetry.get("decision_csv_schema_version") != 4
+            or telemetry.get("controller_summary_schema_version") != 4
+            or telemetry.get("v2_columns_retained_in_order") is not True
+            or telemetry.get("decision_columns_appended")
+            != ["policy_score_float32"]
+            or telemetry.get("value_per_cost_score_float32_is_diagnostic_only")
+            is not True
+            or telemetry.get("admission_tier_values")
+            != ["none", "strict", "emergency"]
+        ):
+            raise QualificationError("cost-free telemetry contract changed")
+        evidence = contract.get("selection_evidence", {})
+        selection_files = (
+            (
+                evidence.get("cost_ablation_manifest_path"),
+                evidence.get("cost_ablation_manifest_sha256"),
+            ),
+            (
+                evidence.get("cost_ablation_metrics_path"),
+                evidence.get("cost_ablation_metrics_sha256"),
+            ),
+            (
+                evidence.get("cost_ablation_candidates_path"),
+                evidence.get("cost_ablation_candidates_sha256"),
+            ),
+        )
+        for relative, expected_sha256 in selection_files:
+            if (
+                not isinstance(relative, str)
+                or not isinstance(expected_sha256, str)
+                or _sha256_file(REPOSITORY_ROOT / relative) != expected_sha256
+            ):
+                raise QualificationError("cost-free selection evidence changed")
+
+        boundary = contract.get("evaluation_boundary", {})
+        expected_seeds = [seed for seed, _ in profile.expected_seed_run_units]
+        expected_primary_gates = [
+            "paired all-generated deadline-miss difference confidence interval below zero",
+            (
+                "paired mean per-run completed-frame HF7 P99 difference "
+                "confidence interval below zero"
+            ),
+        ]
+        if (
+            boundary.get("engineering_seed_start") != min(expected_seeds)
+            or boundary.get("engineering_seed_stop_inclusive") != max(expected_seeds)
+            or boundary.get("engineering_seeds_previously_opened") is not True
+            or boundary.get("reserved_confirmation_seed_start")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[0]
+            or boundary.get("reserved_confirmation_seed_stop_inclusive")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[-1]
+            or boundary.get("reserved_confirmation_seeds_must_remain_unopened")
+            is not True
+            or boundary.get("reference") != "STR MLO NMaxInflights=1"
+            or boundary.get("primary_gates") != expected_primary_gates
+            or boundary.get("resource_gates", {}).get(
+                "sender_airtime_ratio_strictly_below"
+            )
+            != MAXIMUM_AIRTIME_RATIO
+            or boundary.get("resource_gates", {}).get(
+                "background_throughput_loss_fraction_at_most"
+            )
+            != MAXIMUM_BACKGROUND_LOSS
+        ):
+            raise QualificationError("cost-free evaluation boundary changed")
     else:
         raise QualificationError(f"unsupported qualification profile {profile.key!r}")
 
