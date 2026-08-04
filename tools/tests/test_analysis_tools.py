@@ -816,6 +816,16 @@ class MatrixTests(unittest.TestCase):
         }
         self.assertEqual(_approach_label(adaptive), "Adaptive airtime duplication")
 
+    def test_paired_value_t2_has_a_distinct_plot_label(self) -> None:
+        paired = {
+            "topology": "dual_interface",
+            "policy": "paired_value_duplication_t2",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        self.assertEqual(
+            _approach_label(paired), "Temporal-T2 selective duplication"
+        )
+
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({
             "propagation": {
