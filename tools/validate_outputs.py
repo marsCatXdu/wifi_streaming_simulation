@@ -672,6 +672,16 @@ def _paired_meter_close(actual: float, expected: float) -> bool:
     )
 
 
+def _paired_meter_sum_close(actual: float, serialized_values: list[str]) -> bool:
+    """Compare an exact total with the bounded sum of 12-digit meter rows."""
+    expected = sum(float(value) for value in serialized_values)
+    tolerance = (
+        PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+        + sum(_paired_meter_quantization_us(value) for value in serialized_values)
+    )
+    return math.isfinite(actual) and abs(actual - expected) <= tolerance
+
+
 def _integer(row: dict[str, str], key: str, file_name: str) -> int:
     try:
         value = int(row[key])
@@ -3675,6 +3685,7 @@ def _validate_paired_value_t2_summary(
     measured_total = sum(_number(
         row, "ppdu_duration_us", "secondary_airtime_events.csv"
     ) for row in events)
+    serialized_event_durations = [row["ppdu_duration_us"] for row in events]
     for key, expected in {
         "learned_predicted_cost_sum_evaluated_us": evidence["learned_evaluated"],
         "learned_predicted_cost_sum_launched_us": evidence["learned_launched"],
@@ -3683,9 +3694,16 @@ def _validate_paired_value_t2_summary(
         "measured_secondary_airtime_debited_us": measured_total,
     }.items():
         value = airtime.get(key)
+        matches = (
+            _paired_meter_sum_close(float(value), serialized_event_durations)
+            if key == "measured_secondary_airtime_debited_us" and
+            isinstance(value, (int, float)) and not isinstance(value, bool)
+            else isinstance(value, (int, float)) and not isinstance(value, bool) and
+            _paired_close(float(value), expected)
+        )
         _require(isinstance(value, (int, float)) and not isinstance(value, bool) and
                  math.isfinite(float(value)) and float(value) >= 0 and
-                 _paired_close(float(value), expected),
+                 matches,
                  f"paired_value_t2_summary.json: airtime.{key} differs")
     _require(_paired_meter_close(
                  _summary_number(meter_summary, "estimated_action_airtime_us"),

@@ -33,6 +33,7 @@ from validate_outputs import (  # noqa: E402
     ValidationError,
     _adaptive_nominal_airtime_us,
     _csv,
+    _paired_meter_sum_close,
     _replay_paired_value_t2_meter,
     _rolling_column,
     _validate_paired_value_t2_config,
@@ -809,24 +810,34 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             )
 
     def test_rejects_submillisecond_controller_summary_airtime_drift(self) -> None:
-        temporary, fixture = self.fixture(action=True)
-        with temporary:
-            evidence = fixture.validate_decisions()
-            meter_summary = fixture.write_summary(evidence)
-            path = fixture.root / "paired_value_t2_summary.json"
-            summary = json.loads(path.read_text(encoding="utf-8"))
-            summary["airtime"]["canonical_reserved_launched_sum_us"] += 0.0001
-            path.write_text(json.dumps(summary), encoding="utf-8")
-            with self.assertRaisesRegex(ValidationError, "airtime.*differs"):
-                _validate_paired_value_t2_summary(
-                    fixture.root,
-                    RUN_ID,
-                    9,
-                    evidence,
-                    fixture.events,
-                    fixture.settlements,
-                    meter_summary,
-                )
+        for key in (
+            "canonical_reserved_launched_sum_us",
+            "measured_secondary_airtime_debited_us",
+        ):
+            with self.subTest(key=key):
+                temporary, fixture = self.fixture(action=True)
+                with temporary:
+                    evidence = fixture.validate_decisions()
+                    meter_summary = fixture.write_summary(evidence)
+                    path = fixture.root / "paired_value_t2_summary.json"
+                    summary = json.loads(path.read_text(encoding="utf-8"))
+                    summary["airtime"][key] += 0.0001
+                    path.write_text(json.dumps(summary), encoding="utf-8")
+                    with self.assertRaisesRegex(ValidationError, "airtime.*differs"):
+                        _validate_paired_value_t2_summary(
+                            fixture.root,
+                            RUN_ID,
+                            9,
+                            evidence,
+                            fixture.events,
+                            fixture.settlements,
+                            meter_summary,
+                        )
+
+    def test_accepts_accumulated_meter_serialization_envelope(self) -> None:
+        serialized = ["4"] * 224
+        self.assertTrue(_paired_meter_sum_close(896.0 - 1.4e-9, serialized))
+        self.assertFalse(_paired_meter_sum_close(896.0 - 0.0001, serialized))
 
     def test_rejects_action_settlement_and_summary_count_drift(self) -> None:
         action_temporary, action_fixture = self.fixture(action=True)
