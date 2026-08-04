@@ -48,6 +48,7 @@ class PairedValueT2Controller : public Object
     {
         BASELINE_V1 = 0,              ///< Strict measured-airtime admission.
         SCORE_AWARE_EMERGENCY_V2 = 1, ///< Bounded high-score future credit.
+        SCORE_AWARE_FULL_HORIZON_V3 = 2, ///< Full-horizon causal carry-over.
     };
 
     /** Baseline decision CSV schema version. */
@@ -95,8 +96,20 @@ class PairedValueT2Controller : public Object
     /** Frozen maximum budget horizon in microseconds. */
     static constexpr uint64_t BUDGET_MAX_HORIZON_US = 10000000;
 
+    /** Full-horizon V3 maximum budget horizon in microseconds. */
+    static constexpr uint64_t FULL_HORIZON_BUDGET_MAX_HORIZON_US = 60000000;
+
     /** Frozen startup-credit horizon in microseconds. */
     static constexpr uint64_t BUDGET_INITIAL_HORIZON_US = 2000000;
+
+    /** Baseline and V2 maximum token balance in microseconds. */
+    static constexpr uint64_t BUDGET_CAPACITY_US = 60000;
+
+    /** Full-horizon V3 maximum token balance in microseconds. */
+    static constexpr uint64_t FULL_HORIZON_BUDGET_CAPACITY_US = 360000;
+
+    /** Startup token balance shared by every profile in microseconds. */
+    static constexpr uint64_t BUDGET_INITIAL_CREDIT_US = 12000;
 
     /** Frozen canonical-cost safety factor. */
     static constexpr double COST_SAFETY_FACTOR = 1.25;
@@ -158,6 +171,30 @@ class PairedValueT2Controller : public Object
      * @return Frozen controller summary schema version.
      */
     static uint32_t GetSummarySchemaVersion(AdmissionProfile profile);
+
+    /**
+     * Return whether a profile uses the frozen score-aware emergency tier.
+     *
+     * @param profile Admission profile.
+     * @return True for V2 and V3.
+     */
+    static bool UsesScoreAwareEmergency(AdmissionProfile profile);
+
+    /**
+     * Return the maximum causal carry-over horizon for one profile.
+     *
+     * @param profile Admission profile.
+     * @return Maximum horizon in microseconds.
+     */
+    static uint64_t GetBudgetMaxHorizonUs(AdmissionProfile profile);
+
+    /**
+     * Return the maximum token balance for one profile.
+     *
+     * @param profile Admission profile.
+     * @return Token capacity in microseconds.
+     */
+    static uint64_t GetBudgetCapacityUs(AdmissionProfile profile);
 
     /**
      * Set the sender that owns canonical delayed copies.

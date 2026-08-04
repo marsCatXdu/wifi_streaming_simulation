@@ -38,8 +38,6 @@ constexpr uint32_t I_FRAME_SIZE_BYTES = 48000;
 constexpr uint32_t PACKET_PAYLOAD_BYTES = 1200;
 constexpr uint32_t QUEUE_MAX_DELAY_MS = 500;
 constexpr uint32_t POST_SOCKET_MAC_OVERHEAD_BYTES = 36;
-constexpr uint64_t BUDGET_CAPACITY_US = 60000;
-constexpr uint64_t BUDGET_INITIAL_CREDIT_US = 12000;
 constexpr uint64_t DECISION_STOP_GUARD_US = 534000;
 constexpr uint32_t REQUIRED_SUPPORT_MASK_VERSION = 2;
 constexpr uint32_t REQUIRED_POLLING_SCHEMA_VERSION = 1;
@@ -65,6 +63,10 @@ constexpr std::string_view SCORE_AWARE_RUNTIME_CONTRACT_ID =
     "paired-value-duplication-t2-score-aware-emergency-v2";
 constexpr std::string_view SCORE_AWARE_RUNTIME_CONTRACT_SHA256 =
     "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda";
+constexpr std::string_view FULL_HORIZON_RUNTIME_CONTRACT_ID =
+    "paired-value-duplication-t2-full-horizon-carryover-v3";
+constexpr std::string_view FULL_HORIZON_RUNTIME_CONTRACT_SHA256 =
+    "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8";
 constexpr std::string_view COST_ESTIMATOR_ID =
     "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1";
 constexpr std::string_view LAUNCH_REASON = "paired temporal value full copy at T2";
@@ -197,8 +199,21 @@ PairedValueT2Controller::SetAdmissionProfile(AdmissionProfile profile)
     NS_ABORT_MSG_IF(m_started || m_decisions.is_open() || !m_summaryFile.empty(),
                     "Cannot change paired-value admission profile after output setup");
     NS_ABORT_MSG_IF(profile != AdmissionProfile::BASELINE_V1 &&
-                        profile != AdmissionProfile::SCORE_AWARE_EMERGENCY_V2,
+                        profile != AdmissionProfile::SCORE_AWARE_EMERGENCY_V2 &&
+                        profile != AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3,
                     "Unknown paired-value admission profile");
+    const uint64_t maximumHorizonUs = GetBudgetMaxHorizonUs(profile);
+    const uint64_t capacityUs = GetBudgetCapacityUs(profile);
+    NS_ABORT_MSG_IF(
+        !m_guard.Configure(SecondaryAirtimeBudgetGuard::Configuration{
+            BUDGET_FRACTION,
+            maximumHorizonUs,
+            BUDGET_INITIAL_HORIZON_US}) ||
+            !m_guard.Initialize(MEASUREMENT_START_NS) ||
+            m_guard.GetCapacityUs() != static_cast<double>(capacityUs) ||
+            m_guard.GetInitialCreditUs() !=
+                static_cast<double>(BUDGET_INITIAL_CREDIT_US),
+        "Paired-value profile guard failed initialization");
     m_admissionProfile = profile;
 }
 
@@ -217,6 +232,8 @@ PairedValueT2Controller::AdmissionProfileName(AdmissionProfile profile)
         return "baseline_v1";
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
         return "score_aware_emergency_v2";
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return "score_aware_full_horizon_v3";
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -233,6 +250,10 @@ PairedValueT2Controller::ParseAdmissionProfile(std::string_view name)
     {
         return AdmissionProfile::SCORE_AWARE_EMERGENCY_V2;
     }
+    if (name == AdmissionProfileName(AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3))
+    {
+        return AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3;
+    }
     return std::nullopt;
 }
 
@@ -244,6 +265,7 @@ PairedValueT2Controller::GetCsvSchemaVersion(AdmissionProfile profile)
     case AdmissionProfile::BASELINE_V1:
         return CSV_SCHEMA_VERSION;
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return SCORE_AWARE_CSV_SCHEMA_VERSION;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
@@ -258,7 +280,53 @@ PairedValueT2Controller::GetSummarySchemaVersion(AdmissionProfile profile)
     case AdmissionProfile::BASELINE_V1:
         return SUMMARY_SCHEMA_VERSION;
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
         return SCORE_AWARE_SUMMARY_SCHEMA_VERSION;
+    }
+    NS_ABORT_MSG("Unknown paired-value admission profile");
+    return 0;
+}
+
+bool
+PairedValueT2Controller::UsesScoreAwareEmergency(AdmissionProfile profile)
+{
+    switch (profile)
+    {
+    case AdmissionProfile::BASELINE_V1:
+        return false;
+    case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return true;
+    }
+    NS_ABORT_MSG("Unknown paired-value admission profile");
+    return false;
+}
+
+uint64_t
+PairedValueT2Controller::GetBudgetMaxHorizonUs(AdmissionProfile profile)
+{
+    switch (profile)
+    {
+    case AdmissionProfile::BASELINE_V1:
+    case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+        return BUDGET_MAX_HORIZON_US;
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return FULL_HORIZON_BUDGET_MAX_HORIZON_US;
+    }
+    NS_ABORT_MSG("Unknown paired-value admission profile");
+    return 0;
+}
+
+uint64_t
+PairedValueT2Controller::GetBudgetCapacityUs(AdmissionProfile profile)
+{
+    switch (profile)
+    {
+    case AdmissionProfile::BASELINE_V1:
+    case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+        return BUDGET_CAPACITY_US;
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return FULL_HORIZON_BUDGET_CAPACITY_US;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
@@ -331,6 +399,8 @@ PairedValueT2Controller::GetRuntimeContractId(AdmissionProfile profile)
         return BASELINE_RUNTIME_CONTRACT_ID;
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
         return SCORE_AWARE_RUNTIME_CONTRACT_ID;
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return FULL_HORIZON_RUNTIME_CONTRACT_ID;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -351,6 +421,8 @@ PairedValueT2Controller::GetRuntimeContractSha256(AdmissionProfile profile)
         return BASELINE_RUNTIME_CONTRACT_SHA256;
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
         return SCORE_AWARE_RUNTIME_CONTRACT_SHA256;
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+        return FULL_HORIZON_RUNTIME_CONTRACT_SHA256;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -753,8 +825,7 @@ PairedValueT2Controller::ProcessPair(const PredictionSample& primary,
                 {
                     ++m_strictGuardAdmitted;
                 }
-                else if (m_admissionProfile ==
-                         AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+                else if (UsesScoreAwareEmergency(m_admissionProfile))
                 {
                     evidence.passesEmergencyScore =
                         evidence.model->valuePerCostScore >=
@@ -999,7 +1070,7 @@ PairedValueT2Controller::WriteDecisionHeader()
            "guard_admitted,launch_attempted,secondary_launched,guard_balance_after_us,"
            "meter_reserved_after_us,guard_available_after_us,guard_debt_after_us,"
            "learned_cost_token_accounting";
-    if (m_admissionProfile == AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+    if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         m_decisions
             << ",admission_profile_id,strict_guard_admitted,"
@@ -1101,8 +1172,10 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
     {
         m_decisions << ',';
     }
-    m_decisions << ',' << BUDGET_FRACTION << ',' << BUDGET_MAX_HORIZON_US << ','
-                << BUDGET_INITIAL_HORIZON_US << ',' << BUDGET_CAPACITY_US << ','
+    m_decisions << ',' << BUDGET_FRACTION << ','
+                << GetBudgetMaxHorizonUs(m_admissionProfile) << ','
+                << BUDGET_INITIAL_HORIZON_US << ','
+                << GetBudgetCapacityUs(m_admissionProfile) << ','
                 << BUDGET_INITIAL_CREDIT_US << ',' << evidence.guardBalanceBeforeUs << ','
                 << evidence.meterReservedBeforeUs << ','
                 << evidence.guardAvailableBeforeUs << ',' << evidence.guardDebtBeforeUs << ','
@@ -1111,7 +1184,7 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
                 << evidence.guardBalanceAfterUs << ',' << evidence.meterReservedAfterUs << ','
                 << evidence.guardAvailableAfterUs << ',' << evidence.guardDebtAfterUs << ','
                 << 0;
-    if (m_admissionProfile == AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+    if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         const std::string_view admissionTier =
             evidence.strictGuardAdmitted
@@ -1167,7 +1240,7 @@ PairedValueT2Controller::WriteSummary(
                         m_emergencyScorePassed !=
                             m_emergencyAdmissionConsidered ||
                         m_emergencyAdmitted > m_emergencyAdmissionConsidered ||
-                        (m_admissionProfile == AdmissionProfile::BASELINE_V1 &&
+                        (!UsesScoreAwareEmergency(m_admissionProfile) &&
                          (m_emergencyScorePassed != 0 ||
                           m_emergencyAdmissionConsidered != 0 ||
                           m_emergencyAdmitted != 0)) ||
@@ -1285,13 +1358,15 @@ PairedValueT2Controller::WriteSummary(
         << "    \"canonical_estimator_id\": \"" << COST_ESTIMATOR_ID << "\",\n"
         << "    \"cost_safety_factor\": " << COST_SAFETY_FACTOR << ",\n"
         << "    \"fraction\": " << BUDGET_FRACTION << ",\n"
-        << "    \"max_horizon_us\": " << BUDGET_MAX_HORIZON_US << ",\n"
+        << "    \"max_horizon_us\": "
+        << GetBudgetMaxHorizonUs(m_admissionProfile) << ",\n"
         << "    \"initial_horizon_us\": " << BUDGET_INITIAL_HORIZON_US << ",\n"
-        << "    \"capacity_us\": " << BUDGET_CAPACITY_US << ",\n"
+        << "    \"capacity_us\": " << GetBudgetCapacityUs(m_admissionProfile)
+        << ",\n"
         << "    \"initial_credit_us\": " << BUDGET_INITIAL_CREDIT_US << ",\n"
         << "    \"initialization_time_ns\": " << MEASUREMENT_START_NS << ",\n"
         << "    \"accounting_absolute_tolerance_us\": " << ACCOUNTING_TOLERANCE_US;
-    if (m_admissionProfile == AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+    if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         summary
             << ",\n"
@@ -1334,7 +1409,7 @@ PairedValueT2Controller::WriteSummary(
         << m_statusCounts[StatusIndex(DecisionStatus::LAUNCH_REJECTED)] << ",\n"
         << "    \"secondary_launched\": " << m_launchedFrameIds.size() << ",\n"
         << "    \"secondary_settled\": " << m_secondarySettled;
-    if (m_admissionProfile == AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+    if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         summary << ",\n"
                 << "    \"strict_guard_admitted\": "
@@ -1372,7 +1447,7 @@ PairedValueT2Controller::WriteSummary(
         << "    \"meter_reserved_final_raw_us\": " << meterReservedRawUs << ",\n"
         << "    \"meter_reserved_final_normalized_us\": 0,\n"
         << "    \"learned_cost_used_for_token_accounting\": false";
-    if (m_admissionProfile == AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+    if (UsesScoreAwareEmergency(m_admissionProfile))
     {
         summary
             << ",\n"

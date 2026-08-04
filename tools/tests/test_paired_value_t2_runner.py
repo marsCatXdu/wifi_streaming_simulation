@@ -46,12 +46,22 @@ SCORE_AWARE_PREFLIGHT = (
 SCORE_AWARE_ENGINEERING = (
     ROOT / "experiments/configs/paired_value_t2_score_aware_str_engineering_v2.yaml"
 )
+FULL_HORIZON_PREFLIGHT = (
+    ROOT / "experiments/configs/paired_value_t2_full_horizon_str_preflight_v3.yaml"
+)
+FULL_HORIZON_ENGINEERING = (
+    ROOT / "experiments/configs/paired_value_t2_full_horizon_str_engineering_v3.yaml"
+)
 RUNTIME_CONTRACT = (
     ROOT / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
 )
 SCORE_AWARE_RUNTIME_CONTRACT = (
     ROOT
     / "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json"
+)
+FULL_HORIZON_RUNTIME_CONTRACT = (
+    ROOT
+    / "experiments/model-selection/paired-value-duplication-t2-full-horizon-carryover-v3.json"
 )
 
 
@@ -272,6 +282,65 @@ class PairedValueT2RunnerTest(unittest.TestCase):
         ]
         self.assertEqual(identity["source_artifacts"], expected_sources)
         self.assertEqual(len(identity["source_artifacts"]), 5)
+
+    def test_full_horizon_configs_change_only_profile_and_reuse_engineering_seeds(
+        self,
+    ) -> None:
+        preflight_raw = yaml.safe_load(
+            FULL_HORIZON_PREFLIGHT.read_text(encoding="utf-8")
+        )
+        engineering_raw = yaml.safe_load(
+            FULL_HORIZON_ENGINEERING.read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            preflight_raw["extends"], "paired_value_t2_str_qualification_v1.yaml"
+        )
+        self.assertEqual(
+            engineering_raw["extends"],
+            "paired_value_t2_full_horizon_str_preflight_v3.yaml",
+        )
+
+        preflight = load_yaml(FULL_HORIZON_PREFLIGHT)
+        engineering = load_yaml(FULL_HORIZON_ENGINEERING)
+        self.assertEqual(preflight["seeds"], [43])
+        self.assertEqual(engineering["seeds"], list(range(1251, 1299)))
+        self.assertTrue(set(engineering["seeds"]).isdisjoint(range(1301, 1349)))
+        self.assertEqual(
+            matrix_sha256(preflight),
+            "b0c05785062b569ecca8fbe1b53120994e5423a6f5d6d654da45e442bfd8fb4f",
+        )
+        self.assertEqual(
+            matrix_sha256(engineering),
+            "d2671600dc9be5e60910de74aa15c7bd73852cd981eb602967d4cd628b4262ad",
+        )
+        self.assertEqual(len(expand_config(preflight)), 2)
+        specs = expand_config(engineering)
+        self.assertEqual(len(specs), 96)
+
+        contract = validate_runtime_contract(engineering)
+        self.assertIsNotNone(contract)
+        assert contract is not None
+        self.assertEqual(
+            contract["runtime_contract_id"],
+            "paired-value-duplication-t2-full-horizon-carryover-v3",
+        )
+        self.assertEqual(
+            contract["runtime_contract_sha256"],
+            hashlib.sha256(FULL_HORIZON_RUNTIME_CONTRACT.read_bytes()).hexdigest(),
+        )
+        policy = next(
+            spec["config"]
+            for spec in specs
+            if spec["config"]["policy"] == "paired_value_duplication_t2"
+        )
+        self.assertEqual(
+            policy["prediction"]["paired_value_t2_admission_profile"],
+            "score_aware_full_horizon_v3",
+        )
+        self.assertIn(
+            "--pairedValueT2AdmissionProfile=score_aware_full_horizon_v3",
+            cli_arguments(policy, FULL_HORIZON_ENGINEERING.parent),
+        )
 
     def test_runtime_contract_rejects_contract_and_source_hash_drift(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

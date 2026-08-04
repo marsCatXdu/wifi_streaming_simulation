@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "paired-value-duplication-t2-full-horizon-carryover-v3",
+  "status": "frozen_engineering_candidate",
+  "purpose": "Test whether retaining causally earned credit across the full measurement horizon converts unused average airtime into additional rescues without changing score-aware admission, prediction, action, environment, or startup credit.",
+  "inherits": {
+    "runtime_contract_id": "paired-value-duplication-t2-score-aware-emergency-v2",
+    "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+    "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+  },
+  "unchanged_contract": {
+    "policy_name": "paired_value_duplication_t2",
+    "environment": "unchanged_neutral_mixed4x4",
+    "predictor": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "primary_score_threshold_float32_bits_hex": "0x38bbc0e5",
+    "frame_gate": "p_frames_only",
+    "decision_stage": "T2",
+    "decision_offset_us": 2000,
+    "action": "canonical_full_secondary_copy",
+    "canonical_cost_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+    "cost_safety_factor": 1.25,
+    "budget_fraction": 0.006,
+    "budget_initial_horizon_us": 2000000,
+    "budget_initial_credit_us": 12000,
+    "emergency_score_threshold_float32": 0.0001500000071246177,
+    "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+    "emergency_maximum_debt_us": 60000,
+    "measurement_window_ns": [
+      1000000000,
+      61000000000
+    ],
+    "decision_window_ns": [
+      1000000000,
+      60466000000
+    ]
+  },
+  "carryover_override": {
+    "profile_id": "score_aware_full_horizon_v3",
+    "budget_max_horizon_us": 60000000,
+    "budget_capacity_us": 360000,
+    "budget_initial_horizon_us": 2000000,
+    "budget_initial_credit_us": 12000,
+    "ordered_semantics": [
+      "Initialize at measurement start with only the inherited two-second credit of 12000 us.",
+      "Refill causally at the inherited 0.6 percent rate through each event timestamp, never beyond measurement stop.",
+      "Cap positive earned balance at 360000 us, the credit generated during one 60-second measurement horizon.",
+      "Apply inherited strict admission, score-aware emergency admission, conservative reservation, measured-airtime debit, settlement, and debt repayment without change."
+    ],
+    "initial_credit_is_not_capacity": true,
+    "no_unearned_full_horizon_credit_at_startup": true,
+    "long_run_refill_rate_changed": false,
+    "emergency_tier_changed": false,
+    "learned_cost_used_for_token_accounting": false
+  },
+  "telemetry_contract": {
+    "decision_csv_schema_version": 2,
+    "controller_summary_schema_version": 2,
+    "decision_columns_unchanged_from_v2": true,
+    "summary_keys_unchanged_from_v2": true,
+    "changed_values": [
+      "admission_profile_id",
+      "guard_max_horizon_us",
+      "guard_capacity_us",
+      "runtime_contract_id",
+      "runtime_contract_sha256"
+    ]
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        }
+      }
+    }
+  },
+  "selection_evidence": {
+    "qualification_path": "key_experiment_results/07_score_aware_t2_str_engineering_v2/qualification.json",
+    "qualification_sha256": "75b8797ade357d9877a594be8972fb7a68a84ff197cdea47baca02df6000773a",
+    "admission_diagnostics_path": "key_experiment_results/07_score_aware_t2_str_engineering_v2/policy_admission_diagnostics.json",
+    "admission_diagnostics_sha256": "fb3b2731d3579f6ea8345b9a21ee3cecd56afadebcc760d9e108c253eec035b7",
+    "observed_policy_misses": 495,
+    "observed_str_misses": 691,
+    "observed_actions": 4944,
+    "observed_action_primary_misses": 771,
+    "observed_action_primary_miss_rescues": 737,
+    "observed_guard_rejected_frames": 2540,
+    "observed_guard_rejected_primary_misses": 162,
+    "mean_measured_secondary_airtime_us_per_run": 240428.683,
+    "mean_all_threshold_passers_canonical_reserved_airtime_us_per_run": 309301.0,
+    "mean_all_threshold_passers_learned_predicted_airtime_us_per_run": 355252.0,
+    "capacity_rationale": "All threshold passers fit below the 360000 us generated during the measurement horizon under both frozen cost summaries. The 10-second cap can discard earned credit during easy intervals, so the full-horizon cap isolates carry-over while preserving causal refill and startup credit. Only a closed-loop run can establish actual airtime and contention."
+  },
+  "evaluation_boundary": {
+    "pilot_seeds": [
+      43
+    ],
+    "engineering_seed_start": 1251,
+    "engineering_seed_stop_inclusive": 1298,
+    "engineering_seeds_previously_opened": true,
+    "reserved_confirmation_seed_start": 1301,
+    "reserved_confirmation_seed_stop_inclusive": 1348,
+    "reserved_confirmation_seeds_must_remain_unopened": true,
+    "reference": "STR MLO NMaxInflights=1",
+    "primary_gates": [
+      "paired all-generated deadline-miss difference confidence interval below zero",
+      "paired mean per-run completed-frame HF7 P99 difference confidence interval below zero"
+    ],
+    "resource_gates": {
+      "sender_airtime_ratio_strictly_below": 1.2,
+      "background_throughput_loss_fraction_at_most": 0.01
+    }
+  },
+  "interpretation_limits": [
+    "The same 1251-1298 engineering seeds motivated this intervention and cannot independently confirm it.",
+    "A V3-versus-V2 comparison on reused seeds is development evidence, not a fresh paired causal qualification.",
+    "Predicted and canonical reservation totals do not include the contention induced by newly admitted copies.",
+    "The predictor, threshold, P-frame gate, startup behavior, and emergency tier must not be tuned in this experiment.",
+    "EMLSR completed-frame P99 is survivor-conditioned and is not an optimization gate."
+  ]
+}

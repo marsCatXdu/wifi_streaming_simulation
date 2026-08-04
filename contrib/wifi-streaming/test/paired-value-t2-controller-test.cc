@@ -101,6 +101,41 @@ class PairedValueT2ControllerTestAccess
         NS_ABORT_MSG_IF(!controller->m_guard.DebitMeasuredAirtime(nowNs, measuredUs),
                         "Test-only paired-value guard debit failed");
     }
+
+    /**
+     * Return the configured maximum guard horizon.
+     *
+     * @param controller Controller under test.
+     * @return Maximum horizon in microseconds.
+     */
+    static uint64_t GetGuardMaxHorizonUs(
+        Ptr<PairedValueT2Controller> controller)
+    {
+        return controller->m_guard.GetMaxHorizonUs();
+    }
+
+    /**
+     * Return the configured maximum guard balance.
+     *
+     * @param controller Controller under test.
+     * @return Maximum balance in microseconds.
+     */
+    static double GetGuardCapacityUs(Ptr<PairedValueT2Controller> controller)
+    {
+        return controller->m_guard.GetCapacityUs();
+    }
+
+    /**
+     * Return the configured startup credit.
+     *
+     * @param controller Controller under test.
+     * @return Startup credit in microseconds.
+     */
+    static double GetGuardInitialCreditUs(
+        Ptr<PairedValueT2Controller> controller)
+    {
+        return controller->m_guard.GetInitialCreditUs();
+    }
 };
 
 namespace
@@ -1654,17 +1689,22 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::ParseAdmissionProfile("baseline_v1");
         const auto scoreAware = PairedValueT2Controller::ParseAdmissionProfile(
             "score_aware_emergency_v2");
+        const auto fullHorizon = PairedValueT2Controller::ParseAdmissionProfile(
+            "score_aware_full_horizon_v3");
         NS_TEST_ASSERT_MSG_EQ(baseline.has_value(),
                               true,
                               "Baseline admission profile did not parse");
         NS_TEST_ASSERT_MSG_EQ(scoreAware.has_value(),
                               true,
                               "Score-aware admission profile did not parse");
+        NS_TEST_ASSERT_MSG_EQ(fullHorizon.has_value(),
+                              true,
+                              "Full-horizon admission profile did not parse");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::ParseAdmissionProfile("unsupported").has_value(),
             false,
             "Unsupported admission profile parsed");
-        if (!baseline || !scoreAware)
+        if (!baseline || !scoreAware || !fullHorizon)
         {
             return;
         }
@@ -1674,12 +1714,20 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(static_cast<uint32_t>(*scoreAware),
                               static_cast<uint32_t>(Profile::SCORE_AWARE_EMERGENCY_V2),
                               "Score-aware profile ordinal changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint32_t>(*fullHorizon),
+            static_cast<uint32_t>(Profile::SCORE_AWARE_FULL_HORIZON_V3),
+            "Full-horizon profile ordinal changed");
         NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*baseline),
                               1,
                               "Baseline decision schema changed");
         NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*scoreAware),
                               2,
                               "Score-aware decision schema changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetCsvSchemaVersion(*fullHorizon),
+            2,
+            "Full-horizon decision schema changed");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::GetRuntimeContractId(*scoreAware),
             "paired-value-duplication-t2-score-aware-emergency-v2",
@@ -1688,6 +1736,50 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::GetRuntimeContractSha256(*scoreAware),
             "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda",
             "Score-aware runtime digest changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractId(*fullHorizon),
+            "paired-value-duplication-t2-full-horizon-carryover-v3",
+            "Full-horizon runtime identity changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractSha256(*fullHorizon),
+            "16ccbbfc19ac5c6b824c65b5f00fd0a8792610ea9239e9277390f51eda83f9d8",
+            "Full-horizon runtime digest changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetMaxHorizonUs(*scoreAware),
+            10000000,
+            "V2 carry-over horizon changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetCapacityUs(*scoreAware),
+            60000,
+            "V2 carry-over capacity changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetMaxHorizonUs(*fullHorizon),
+            60000000,
+            "V3 carry-over horizon differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetCapacityUs(*fullHorizon),
+            360000,
+            "V3 carry-over capacity differs");
+        auto fullHorizonController = CreateObject<PairedValueT2Controller>();
+        fullHorizonController->SetAdmissionProfile(*fullHorizon);
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2ControllerTestAccess::GetGuardMaxHorizonUs(
+                fullHorizonController),
+            60000000,
+            "V3 runtime guard did not retain the full horizon");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            PairedValueT2ControllerTestAccess::GetGuardCapacityUs(
+                fullHorizonController),
+            360000.0,
+            1e-12,
+            "V3 runtime guard capacity differs");
+        NS_TEST_ASSERT_MSG_EQ_TOL(
+            PairedValueT2ControllerTestAccess::GetGuardInitialCreditUs(
+                fullHorizonController),
+            12000.0,
+            1e-12,
+            "V3 must not receive full-horizon startup credit");
+        fullHorizonController->Dispose();
 
         auto setup = ConfigureBareController("score-aware-profile",
                                              "paired-value-score-aware-profile",

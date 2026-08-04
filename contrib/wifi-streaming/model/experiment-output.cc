@@ -605,11 +605,11 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                << "    \"budget_fraction\": " << PairedValueT2Controller::BUDGET_FRACTION
                << ",\n"
                << "    \"budget_max_horizon_us\": "
-               << PairedValueT2Controller::BUDGET_MAX_HORIZON_US << ",\n"
+               << PairedValueT2Controller::GetBudgetMaxHorizonUs(*admissionProfile)
+               << ",\n"
                << "    \"budget_initial_horizon_us\": "
                << PairedValueT2Controller::BUDGET_INITIAL_HORIZON_US;
-        if (*admissionProfile ==
-            PairedValueT2Controller::AdmissionProfile::SCORE_AWARE_EMERGENCY_V2)
+        if (PairedValueT2Controller::UsesScoreAwareEmergency(*admissionProfile))
         {
             output
                 << ",\n"

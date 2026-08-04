@@ -606,7 +606,7 @@ main(int argc, char* argv[])
                      predictionOracleFeaturesEnabled);
     command.AddValue("pairedValueT2AdmissionProfile",
                      "Paired-value admission profile: baseline_v1 or "
-                     "score_aware_emergency_v2",
+                     "score_aware_emergency_v2 or score_aware_full_horizon_v3",
                      pairedValueT2AdmissionProfile);
     command.AddValue("selectiveDuplicationThreshold",
                      "Calibrated miss-probability action threshold",
