@@ -161,6 +161,9 @@ class MyClass
 - Do not combine unrelated fixes in one commit. Run the relevant focused checks
   before committing each boundary, then run the broader required test set
   before final handoff.
+- Push tested milestone commits regularly so remote history does not lag far
+  behind local work. Also push when several reviewable local commits have
+  accumulated; never include unfinished working-tree changes merely to push.
 - Present tense, imperative mood ("Add feature" not "Added feature")
 - Reference modules: "core, network: Add new feature"
   - if list of edited modules spans more than two, suppress listing
