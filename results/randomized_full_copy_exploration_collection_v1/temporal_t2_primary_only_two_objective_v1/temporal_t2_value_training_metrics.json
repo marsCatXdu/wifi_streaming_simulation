@@ -1,0 +1,1192 @@
+{
+  "conditional_ratio_caveat": "the DR ratio is nonlinear; numerator and denominator are reported separately and training fails on non-positive point/bootstrap denominators",
+  "dataset_artifacts_sha256": {
+    "dataset_metadata.json": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+    "randomized_t2_temporal.csv": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+  },
+  "dataset_dir": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+  "decisive_confirmation": "fresh closed-loop seeds 1301+ on one final build",
+  "engineering_test_policy": {
+    "completed_late18_relative_improvement": 0.6228451290926702,
+    "deadline_miss_relative_improvement": 0.8124322277811035,
+    "dr_airtime_us_per_eligible_frame": 365.4943789175455,
+    "dr_bad12_benefit": 0.06455264115833217,
+    "dr_deadline_miss_benefit": 0.02264734576853525,
+    "dr_policy_bad12": 0.05687755818366923,
+    "dr_policy_completed_late18_numerator": 0.015834617228113385,
+    "dr_policy_completed_late18_ratio": 0.01591784584600297,
+    "dr_policy_completion_probability": 0.9947713642477268,
+    "dr_policy_deadline_miss": 0.005228635752273159,
+    "dr_treat_none_bad12": 0.1214301993420014,
+    "dr_treat_none_completed_late18_numerator": 0.0410285573990395,
+    "dr_treat_none_completed_late18_ratio": 0.042205065011381285,
+    "dr_treat_none_completion_probability": 0.9721240184791916,
+    "dr_treat_none_deadline_miss": 0.027875981520808408,
+    "frozen_feature_family": "primary_compact_physics_temporal",
+    "frozen_float32_score_threshold": 8.952784264693037e-05,
+    "frozen_frame_gate": "p_frames_only",
+    "frozen_ranker": "legacy_bad12_value_per_cost",
+    "realized_action_fraction": 0.16186841450261347,
+    "row_count": 12053,
+    "run_cluster_uncertainty": {
+      "confidence_level": 0.95,
+      "estimands": {
+        "completed_late18_relative_improvement": {
+          "ci_lower": 0.5363752969417503,
+          "ci_upper": 0.6765751738697052,
+          "estimate": 0.6228451290926702
+        },
+        "deadline_miss_relative_improvement": {
+          "ci_lower": 0.749725698744535,
+          "ci_upper": 0.8587539749107707,
+          "estimate": 0.8124322277811035
+        },
+        "dr_airtime_us_per_eligible_frame": {
+          "ci_lower": 259.02186573102955,
+          "ci_upper": 476.13152331365256,
+          "estimate": 365.4943789175455
+        },
+        "dr_policy_completed_late18_numerator": {
+          "ci_lower": 0.011714555738921158,
+          "ci_upper": 0.019566278212463595,
+          "estimate": 0.015834617228113385
+        },
+        "dr_policy_completed_late18_ratio": {
+          "ci_lower": 0.011763599738313845,
+          "ci_upper": 0.019688587573459627,
+          "estimate": 0.01591784584600297
+        },
+        "dr_policy_completion_probability": {
+          "ci_lower": 0.9932640529927194,
+          "ci_upper": 0.9965644351080313,
+          "estimate": 0.9947713642477268
+        },
+        "dr_policy_deadline_miss": {
+          "ci_lower": 0.0034355648919687093,
+          "ci_upper": 0.006735947007280633,
+          "estimate": 0.005228635752273159
+        },
+        "realized_action_fraction": {
+          "ci_lower": 0.12346579020076393,
+          "ci_upper": 0.1933585183637815,
+          "estimate": 0.16186841450261347
+        }
+      },
+      "evidence_role": "previously_opened_engineering_test",
+      "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+      "replications": 2000,
+      "run_count": 16,
+      "unit": "(seed, run_number)"
+    },
+    "run_count": 16
+  },
+  "estimands": {
+    "completed_late18_numerator": "P(frame completes and completion latency exceeds 18000 us)",
+    "completed_late18_ratio": "completed-late18 numerator divided by completion probability",
+    "completion_denominator": "P(frame completes), not P(frame meets deadline)",
+    "deadline_miss": "unconditional; incomplete frames are misses",
+    "legacy_bad12": "unconditional incomplete-or-later-than-12000 us; descriptive only",
+    "population": "action-clean common-T2-eligible frames; mapping to all-generated-frame P99 requires closed-loop reconstruction/confirmation"
+  },
+  "evidence_status": "previously_opened_run_group_test_engineering_evidence_not_confirmation",
+  "feature_families": {
+    "primary_base": {
+      "feature_count": 68,
+      "fit_counts": {
+        "training_rows": 50999,
+        "treated_launched_rows": 4562,
+        "treated_rows": 4562
+      },
+      "ordered_feature_names": [
+        "x_f0_frame_age_us",
+        "x_f0_deadline_slack_us",
+        "x_f0_frame_size_bytes",
+        "x_f0_frame_packet_count",
+        "x_f0_packets_submitted",
+        "x_f0_application_socket_packet_bytes_submitted",
+        "x_f0_packets_remaining_to_submit",
+        "x_primary_frame_packets_mac_enqueued",
+        "x_primary_frame_packets_mac_dequeued",
+        "x_primary_frame_packets_tx_succeeded",
+        "x_primary_frame_mpdu_attempt_failures",
+        "x_primary_frame_packets_terminally_dropped",
+        "x_primary_frame_packets_currently_queued",
+        "x_primary_frame_mac_service_bytes_currently_queued",
+        "x_primary_mac_queue_packets",
+        "x_primary_mac_queue_service_bytes",
+        "x_primary_packets_ahead_of_frame",
+        "x_primary_mac_service_bytes_ahead_of_frame",
+        "x_primary_frame_packets_pending_primary",
+        "x_primary_frame_mac_service_bytes_not_acknowledged",
+        "x_primary_frame_mac_service_bytes_pending_primary",
+        "x_primary_mpdu_attempts_1ms",
+        "x_primary_mpdu_positive_acks_1ms",
+        "x_primary_mpdu_attempt_failures_1ms",
+        "x_primary_mpdu_retries_1ms",
+        "x_primary_mpdu_retry_ratio_1ms",
+        "x_primary_acknowledged_mac_service_bytes_1ms",
+        "x_primary_mpdu_queue_to_ack_mean_1ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_1ms_us",
+        "x_primary_phy_tx_fraction_1ms",
+        "x_primary_phy_rx_fraction_1ms",
+        "x_primary_phy_busy_fraction_1ms",
+        "x_primary_phy_idle_fraction_1ms",
+        "x_primary_phy_other_fraction_1ms",
+        "x_primary_mpdu_attempts_5ms",
+        "x_primary_mpdu_positive_acks_5ms",
+        "x_primary_mpdu_attempt_failures_5ms",
+        "x_primary_mpdu_retries_5ms",
+        "x_primary_mpdu_retry_ratio_5ms",
+        "x_primary_acknowledged_mac_service_bytes_5ms",
+        "x_primary_mpdu_queue_to_ack_mean_5ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_5ms_us",
+        "x_primary_phy_tx_fraction_5ms",
+        "x_primary_phy_rx_fraction_5ms",
+        "x_primary_phy_busy_fraction_5ms",
+        "x_primary_phy_idle_fraction_5ms",
+        "x_primary_phy_other_fraction_5ms",
+        "x_primary_mpdu_attempts_20ms",
+        "x_primary_mpdu_positive_acks_20ms",
+        "x_primary_mpdu_attempt_failures_20ms",
+        "x_primary_mpdu_retries_20ms",
+        "x_primary_mpdu_retry_ratio_20ms",
+        "x_primary_acknowledged_mac_service_bytes_20ms",
+        "x_primary_mpdu_queue_to_ack_mean_20ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_20ms_us",
+        "x_primary_phy_tx_fraction_20ms",
+        "x_primary_phy_rx_fraction_20ms",
+        "x_primary_phy_busy_fraction_20ms",
+        "x_primary_phy_idle_fraction_20ms",
+        "x_primary_phy_other_fraction_20ms",
+        "x_f0_frame_type=I_FRAME",
+        "x_f0_frame_type=P_FRAME"
+      ],
+      "training_risk_normalizers": {
+        "bad_tail_12000us": {
+          "normalizer": 0.1317268557400349,
+          "training_control_primary_risk": 0.1317268557400349
+        },
+        "completed_late_18000us": {
+          "normalizer": 0.043952021017722935,
+          "training_control_primary_risk": 0.043952021017722935
+        },
+        "deadline_miss": {
+          "normalizer": 0.029911492990503264,
+          "training_control_primary_risk": 0.029911492990503264
+        }
+      }
+    },
+    "primary_compact_physics": {
+      "feature_count": 75,
+      "fit_counts": {
+        "training_rows": 50999,
+        "treated_launched_rows": 4562,
+        "treated_rows": 4562
+      },
+      "ordered_feature_names": [
+        "x_f0_frame_age_us",
+        "x_f0_deadline_slack_us",
+        "x_f0_frame_size_bytes",
+        "x_f0_frame_packet_count",
+        "x_f0_packets_submitted",
+        "x_f0_application_socket_packet_bytes_submitted",
+        "x_f0_packets_remaining_to_submit",
+        "x_primary_frame_packets_mac_enqueued",
+        "x_primary_frame_packets_mac_dequeued",
+        "x_primary_frame_packets_tx_succeeded",
+        "x_primary_frame_mpdu_attempt_failures",
+        "x_primary_frame_packets_terminally_dropped",
+        "x_primary_frame_packets_currently_queued",
+        "x_primary_frame_mac_service_bytes_currently_queued",
+        "x_primary_mac_queue_packets",
+        "x_primary_mac_queue_service_bytes",
+        "x_primary_packets_ahead_of_frame",
+        "x_primary_mac_service_bytes_ahead_of_frame",
+        "x_primary_frame_packets_pending_primary",
+        "x_primary_frame_mac_service_bytes_not_acknowledged",
+        "x_primary_frame_mac_service_bytes_pending_primary",
+        "x_primary_mpdu_attempts_1ms",
+        "x_primary_mpdu_positive_acks_1ms",
+        "x_primary_mpdu_attempt_failures_1ms",
+        "x_primary_mpdu_retries_1ms",
+        "x_primary_mpdu_retry_ratio_1ms",
+        "x_primary_acknowledged_mac_service_bytes_1ms",
+        "x_primary_mpdu_queue_to_ack_mean_1ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_1ms_us",
+        "x_primary_phy_tx_fraction_1ms",
+        "x_primary_phy_rx_fraction_1ms",
+        "x_primary_phy_busy_fraction_1ms",
+        "x_primary_phy_idle_fraction_1ms",
+        "x_primary_phy_other_fraction_1ms",
+        "x_primary_mpdu_attempts_5ms",
+        "x_primary_mpdu_positive_acks_5ms",
+        "x_primary_mpdu_attempt_failures_5ms",
+        "x_primary_mpdu_retries_5ms",
+        "x_primary_mpdu_retry_ratio_5ms",
+        "x_primary_acknowledged_mac_service_bytes_5ms",
+        "x_primary_mpdu_queue_to_ack_mean_5ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_5ms_us",
+        "x_primary_phy_tx_fraction_5ms",
+        "x_primary_phy_rx_fraction_5ms",
+        "x_primary_phy_busy_fraction_5ms",
+        "x_primary_phy_idle_fraction_5ms",
+        "x_primary_phy_other_fraction_5ms",
+        "x_primary_mpdu_attempts_20ms",
+        "x_primary_mpdu_positive_acks_20ms",
+        "x_primary_mpdu_attempt_failures_20ms",
+        "x_primary_mpdu_retries_20ms",
+        "x_primary_mpdu_retry_ratio_20ms",
+        "x_primary_acknowledged_mac_service_bytes_20ms",
+        "x_primary_mpdu_queue_to_ack_mean_20ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_20ms_us",
+        "x_primary_phy_tx_fraction_20ms",
+        "x_primary_phy_rx_fraction_20ms",
+        "x_primary_phy_busy_fraction_20ms",
+        "x_primary_phy_idle_fraction_20ms",
+        "x_primary_phy_other_fraction_20ms",
+        "x_f0_frame_type=I_FRAME",
+        "x_f0_frame_type=P_FRAME",
+        "x_compact_primary_working_rate_margin_1ms_bytes_per_us",
+        "x_compact_primary_working_rate_margin_5ms_bytes_per_us",
+        "x_compact_primary_working_rate_margin_20ms_bytes_per_us",
+        "x_compact_primary_ahead_clearance_us_at_5ms_rate",
+        "x_compact_primary_ahead_clearance_over_slack_at_5ms_rate",
+        "x_compact_primary_ack_rate_trend_1ms_minus_20ms",
+        "x_compact_primary_busy_trend_1ms_minus_20ms"
+      ],
+      "training_risk_normalizers": {
+        "bad_tail_12000us": {
+          "normalizer": 0.1317268557400349,
+          "training_control_primary_risk": 0.1317268557400349
+        },
+        "completed_late_18000us": {
+          "normalizer": 0.043952021017722935,
+          "training_control_primary_risk": 0.043952021017722935
+        },
+        "deadline_miss": {
+          "normalizer": 0.029911492990503264,
+          "training_control_primary_risk": 0.029911492990503264
+        }
+      }
+    },
+    "primary_compact_physics_temporal": {
+      "feature_count": 246,
+      "fit_counts": {
+        "training_rows": 50999,
+        "treated_launched_rows": 4562,
+        "treated_rows": 4562
+      },
+      "ordered_feature_names": [
+        "x_f0_frame_age_us",
+        "x_f0_deadline_slack_us",
+        "x_f0_frame_size_bytes",
+        "x_f0_frame_packet_count",
+        "x_f0_packets_submitted",
+        "x_f0_application_socket_packet_bytes_submitted",
+        "x_f0_packets_remaining_to_submit",
+        "x_primary_frame_packets_mac_enqueued",
+        "x_primary_frame_packets_mac_dequeued",
+        "x_primary_frame_packets_tx_succeeded",
+        "x_primary_frame_mpdu_attempt_failures",
+        "x_primary_frame_packets_terminally_dropped",
+        "x_primary_frame_packets_currently_queued",
+        "x_primary_frame_mac_service_bytes_currently_queued",
+        "x_primary_mac_queue_packets",
+        "x_primary_mac_queue_service_bytes",
+        "x_primary_packets_ahead_of_frame",
+        "x_primary_mac_service_bytes_ahead_of_frame",
+        "x_primary_frame_packets_pending_primary",
+        "x_primary_frame_mac_service_bytes_not_acknowledged",
+        "x_primary_frame_mac_service_bytes_pending_primary",
+        "x_primary_mpdu_attempts_1ms",
+        "x_primary_mpdu_positive_acks_1ms",
+        "x_primary_mpdu_attempt_failures_1ms",
+        "x_primary_mpdu_retries_1ms",
+        "x_primary_mpdu_retry_ratio_1ms",
+        "x_primary_acknowledged_mac_service_bytes_1ms",
+        "x_primary_mpdu_queue_to_ack_mean_1ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_1ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_1ms_us",
+        "x_primary_phy_tx_fraction_1ms",
+        "x_primary_phy_rx_fraction_1ms",
+        "x_primary_phy_busy_fraction_1ms",
+        "x_primary_phy_idle_fraction_1ms",
+        "x_primary_phy_other_fraction_1ms",
+        "x_primary_mpdu_attempts_5ms",
+        "x_primary_mpdu_positive_acks_5ms",
+        "x_primary_mpdu_attempt_failures_5ms",
+        "x_primary_mpdu_retries_5ms",
+        "x_primary_mpdu_retry_ratio_5ms",
+        "x_primary_acknowledged_mac_service_bytes_5ms",
+        "x_primary_mpdu_queue_to_ack_mean_5ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_5ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_5ms_us",
+        "x_primary_phy_tx_fraction_5ms",
+        "x_primary_phy_rx_fraction_5ms",
+        "x_primary_phy_busy_fraction_5ms",
+        "x_primary_phy_idle_fraction_5ms",
+        "x_primary_phy_other_fraction_5ms",
+        "x_primary_mpdu_attempts_20ms",
+        "x_primary_mpdu_positive_acks_20ms",
+        "x_primary_mpdu_attempt_failures_20ms",
+        "x_primary_mpdu_retries_20ms",
+        "x_primary_mpdu_retry_ratio_20ms",
+        "x_primary_acknowledged_mac_service_bytes_20ms",
+        "x_primary_mpdu_queue_to_ack_mean_20ms_us",
+        "x_primary_mpdu_queue_to_ack_p95_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_mean_20ms_us",
+        "x_primary_mpdu_first_attempt_to_ack_p95_20ms_us",
+        "x_primary_phy_tx_fraction_20ms",
+        "x_primary_phy_rx_fraction_20ms",
+        "x_primary_phy_busy_fraction_20ms",
+        "x_primary_phy_idle_fraction_20ms",
+        "x_primary_phy_other_fraction_20ms",
+        "x_f0_frame_type=I_FRAME",
+        "x_f0_frame_type=P_FRAME",
+        "x_compact_primary_working_rate_margin_1ms_bytes_per_us",
+        "x_compact_primary_working_rate_margin_5ms_bytes_per_us",
+        "x_compact_primary_working_rate_margin_20ms_bytes_per_us",
+        "x_compact_primary_ahead_clearance_us_at_5ms_rate",
+        "x_compact_primary_ahead_clearance_over_slack_at_5ms_rate",
+        "x_compact_primary_ack_rate_trend_1ms_minus_20ms",
+        "x_compact_primary_busy_trend_1ms_minus_20ms",
+        "x_primary_delayed_current_mcs",
+        "x_primary_delayed_current_mcs_missing",
+        "x_primary_delayed_current_nss",
+        "x_primary_delayed_current_nss_missing",
+        "x_primary_delayed_current_channel_width_mhz",
+        "x_primary_delayed_current_channel_width_mhz_missing",
+        "x_primary_delayed_current_guard_interval_ns",
+        "x_primary_delayed_current_guard_interval_ns_missing",
+        "x_primary_delayed_current_last_tx_age_us",
+        "x_primary_delayed_current_last_tx_age_us_missing",
+        "x_primary_delayed_current_last_ack_age_us",
+        "x_primary_delayed_current_last_ack_age_us_missing",
+        "x_primary_lag1_mpdu_attempts_1ms",
+        "x_primary_lag1_mpdu_positive_acks_1ms",
+        "x_primary_lag1_mpdu_attempt_failures_1ms",
+        "x_primary_lag1_mpdu_retries_1ms",
+        "x_primary_lag1_acknowledged_mac_service_bytes_1ms",
+        "x_primary_lag1_phy_tx_fraction_1ms",
+        "x_primary_lag1_phy_rx_fraction_1ms",
+        "x_primary_lag1_phy_busy_fraction_1ms",
+        "x_primary_lag1_phy_idle_fraction_1ms",
+        "x_primary_lag1_phy_other_fraction_1ms",
+        "x_primary_lag1_mpdu_retry_ratio_1ms",
+        "x_primary_lag1_mpdu_retry_structural_zero_1ms",
+        "x_primary_lag1_mpdu_attempts_5ms",
+        "x_primary_lag1_mpdu_positive_acks_5ms",
+        "x_primary_lag1_mpdu_attempt_failures_5ms",
+        "x_primary_lag1_mpdu_retries_5ms",
+        "x_primary_lag1_acknowledged_mac_service_bytes_5ms",
+        "x_primary_lag1_phy_tx_fraction_5ms",
+        "x_primary_lag1_phy_rx_fraction_5ms",
+        "x_primary_lag1_phy_busy_fraction_5ms",
+        "x_primary_lag1_phy_idle_fraction_5ms",
+        "x_primary_lag1_phy_other_fraction_5ms",
+        "x_primary_lag1_mpdu_retry_ratio_5ms",
+        "x_primary_lag1_mpdu_retry_structural_zero_5ms",
+        "x_primary_lag1_mpdu_attempts_20ms",
+        "x_primary_lag1_mpdu_positive_acks_20ms",
+        "x_primary_lag1_mpdu_attempt_failures_20ms",
+        "x_primary_lag1_mpdu_retries_20ms",
+        "x_primary_lag1_acknowledged_mac_service_bytes_20ms",
+        "x_primary_lag1_phy_tx_fraction_20ms",
+        "x_primary_lag1_phy_rx_fraction_20ms",
+        "x_primary_lag1_phy_busy_fraction_20ms",
+        "x_primary_lag1_phy_idle_fraction_20ms",
+        "x_primary_lag1_phy_other_fraction_20ms",
+        "x_primary_lag1_mpdu_retry_ratio_20ms",
+        "x_primary_lag1_mpdu_retry_structural_zero_20ms",
+        "x_primary_lag1_mcs",
+        "x_primary_lag1_mcs_missing",
+        "x_primary_lag1_nss",
+        "x_primary_lag1_nss_missing",
+        "x_primary_lag1_channel_width_mhz",
+        "x_primary_lag1_channel_width_mhz_missing",
+        "x_primary_lag1_guard_interval_ns",
+        "x_primary_lag1_guard_interval_ns_missing",
+        "x_primary_lag1_last_tx_age_us",
+        "x_primary_lag1_last_tx_age_us_missing",
+        "x_primary_lag1_last_ack_age_us",
+        "x_primary_lag1_last_ack_age_us_missing",
+        "x_primary_since_lag1_mpdu_attempts_per_ms",
+        "x_primary_since_lag1_mpdu_positive_acks_per_ms",
+        "x_primary_since_lag1_mpdu_attempt_failures_per_ms",
+        "x_primary_since_lag1_mpdu_retries_per_ms",
+        "x_primary_since_lag1_ppdu_tx_count_per_ms",
+        "x_primary_lag3_mpdu_attempts_1ms",
+        "x_primary_lag3_mpdu_positive_acks_1ms",
+        "x_primary_lag3_mpdu_attempt_failures_1ms",
+        "x_primary_lag3_mpdu_retries_1ms",
+        "x_primary_lag3_acknowledged_mac_service_bytes_1ms",
+        "x_primary_lag3_phy_tx_fraction_1ms",
+        "x_primary_lag3_phy_rx_fraction_1ms",
+        "x_primary_lag3_phy_busy_fraction_1ms",
+        "x_primary_lag3_phy_idle_fraction_1ms",
+        "x_primary_lag3_phy_other_fraction_1ms",
+        "x_primary_lag3_mpdu_retry_ratio_1ms",
+        "x_primary_lag3_mpdu_retry_structural_zero_1ms",
+        "x_primary_lag3_mpdu_attempts_5ms",
+        "x_primary_lag3_mpdu_positive_acks_5ms",
+        "x_primary_lag3_mpdu_attempt_failures_5ms",
+        "x_primary_lag3_mpdu_retries_5ms",
+        "x_primary_lag3_acknowledged_mac_service_bytes_5ms",
+        "x_primary_lag3_phy_tx_fraction_5ms",
+        "x_primary_lag3_phy_rx_fraction_5ms",
+        "x_primary_lag3_phy_busy_fraction_5ms",
+        "x_primary_lag3_phy_idle_fraction_5ms",
+        "x_primary_lag3_phy_other_fraction_5ms",
+        "x_primary_lag3_mpdu_retry_ratio_5ms",
+        "x_primary_lag3_mpdu_retry_structural_zero_5ms",
+        "x_primary_lag3_mpdu_attempts_20ms",
+        "x_primary_lag3_mpdu_positive_acks_20ms",
+        "x_primary_lag3_mpdu_attempt_failures_20ms",
+        "x_primary_lag3_mpdu_retries_20ms",
+        "x_primary_lag3_acknowledged_mac_service_bytes_20ms",
+        "x_primary_lag3_phy_tx_fraction_20ms",
+        "x_primary_lag3_phy_rx_fraction_20ms",
+        "x_primary_lag3_phy_busy_fraction_20ms",
+        "x_primary_lag3_phy_idle_fraction_20ms",
+        "x_primary_lag3_phy_other_fraction_20ms",
+        "x_primary_lag3_mpdu_retry_ratio_20ms",
+        "x_primary_lag3_mpdu_retry_structural_zero_20ms",
+        "x_primary_lag3_mcs",
+        "x_primary_lag3_mcs_missing",
+        "x_primary_lag3_nss",
+        "x_primary_lag3_nss_missing",
+        "x_primary_lag3_channel_width_mhz",
+        "x_primary_lag3_channel_width_mhz_missing",
+        "x_primary_lag3_guard_interval_ns",
+        "x_primary_lag3_guard_interval_ns_missing",
+        "x_primary_lag3_last_tx_age_us",
+        "x_primary_lag3_last_tx_age_us_missing",
+        "x_primary_lag3_last_ack_age_us",
+        "x_primary_lag3_last_ack_age_us_missing",
+        "x_primary_since_lag3_mpdu_attempts_per_ms",
+        "x_primary_since_lag3_mpdu_positive_acks_per_ms",
+        "x_primary_since_lag3_mpdu_attempt_failures_per_ms",
+        "x_primary_since_lag3_mpdu_retries_per_ms",
+        "x_primary_since_lag3_ppdu_tx_count_per_ms",
+        "x_primary_lag8_mpdu_attempts_1ms",
+        "x_primary_lag8_mpdu_positive_acks_1ms",
+        "x_primary_lag8_mpdu_attempt_failures_1ms",
+        "x_primary_lag8_mpdu_retries_1ms",
+        "x_primary_lag8_acknowledged_mac_service_bytes_1ms",
+        "x_primary_lag8_phy_tx_fraction_1ms",
+        "x_primary_lag8_phy_rx_fraction_1ms",
+        "x_primary_lag8_phy_busy_fraction_1ms",
+        "x_primary_lag8_phy_idle_fraction_1ms",
+        "x_primary_lag8_phy_other_fraction_1ms",
+        "x_primary_lag8_mpdu_retry_ratio_1ms",
+        "x_primary_lag8_mpdu_retry_structural_zero_1ms",
+        "x_primary_lag8_mpdu_attempts_5ms",
+        "x_primary_lag8_mpdu_positive_acks_5ms",
+        "x_primary_lag8_mpdu_attempt_failures_5ms",
+        "x_primary_lag8_mpdu_retries_5ms",
+        "x_primary_lag8_acknowledged_mac_service_bytes_5ms",
+        "x_primary_lag8_phy_tx_fraction_5ms",
+        "x_primary_lag8_phy_rx_fraction_5ms",
+        "x_primary_lag8_phy_busy_fraction_5ms",
+        "x_primary_lag8_phy_idle_fraction_5ms",
+        "x_primary_lag8_phy_other_fraction_5ms",
+        "x_primary_lag8_mpdu_retry_ratio_5ms",
+        "x_primary_lag8_mpdu_retry_structural_zero_5ms",
+        "x_primary_lag8_mpdu_attempts_20ms",
+        "x_primary_lag8_mpdu_positive_acks_20ms",
+        "x_primary_lag8_mpdu_attempt_failures_20ms",
+        "x_primary_lag8_mpdu_retries_20ms",
+        "x_primary_lag8_acknowledged_mac_service_bytes_20ms",
+        "x_primary_lag8_phy_tx_fraction_20ms",
+        "x_primary_lag8_phy_rx_fraction_20ms",
+        "x_primary_lag8_phy_busy_fraction_20ms",
+        "x_primary_lag8_phy_idle_fraction_20ms",
+        "x_primary_lag8_phy_other_fraction_20ms",
+        "x_primary_lag8_mpdu_retry_ratio_20ms",
+        "x_primary_lag8_mpdu_retry_structural_zero_20ms",
+        "x_primary_lag8_mcs",
+        "x_primary_lag8_mcs_missing",
+        "x_primary_lag8_nss",
+        "x_primary_lag8_nss_missing",
+        "x_primary_lag8_channel_width_mhz",
+        "x_primary_lag8_channel_width_mhz_missing",
+        "x_primary_lag8_guard_interval_ns",
+        "x_primary_lag8_guard_interval_ns_missing",
+        "x_primary_lag8_last_tx_age_us",
+        "x_primary_lag8_last_tx_age_us_missing",
+        "x_primary_lag8_last_ack_age_us",
+        "x_primary_lag8_last_ack_age_us_missing",
+        "x_primary_since_lag8_mpdu_attempts_per_ms",
+        "x_primary_since_lag8_mpdu_positive_acks_per_ms",
+        "x_primary_since_lag8_mpdu_attempt_failures_per_ms",
+        "x_primary_since_lag8_mpdu_retries_per_ms",
+        "x_primary_since_lag8_ppdu_tx_count_per_ms"
+      ],
+      "training_risk_normalizers": {
+        "bad_tail_12000us": {
+          "normalizer": 0.1317268557400349,
+          "training_control_primary_risk": 0.1317268557400349
+        },
+        "completed_late_18000us": {
+          "normalizer": 0.043952021017722935,
+          "training_control_primary_risk": 0.043952021017722935
+        },
+        "deadline_miss": {
+          "normalizer": 0.029911492990503264,
+          "training_control_primary_risk": 0.029911492990503264
+        }
+      }
+    }
+  },
+  "input_v1_artifacts_sha256": {
+    "artifact_manifest.json": "1c532dbf931c7dfe58ffa227de2447da0e71ee80043b9f913ce3fb2e90613a00",
+    "dataset_metadata.json": "29648c19992b565ad855030452f65aeef8e36f6f4e9230a6f623eb1793112e50",
+    "randomized_t2.csv": "26bec3b9ff5ed7df80b5b8bc5c7e95d28af3b4d519850a6841568279ed31b995",
+    "randomized_t4_wait.csv": "3eed0fc5752ba300dab3a6061b99e4ffa214fa54fe6ab1eeb2bda0b0e3f0452f"
+  },
+  "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+  "provenance": {
+    "local_dependency_source_sha256": {
+      "build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+      "build_randomized_temporal_dataset.py": "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3",
+      "train_randomized_value.py": "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911"
+    },
+    "repository_git_commit": "9b9ee02edc0b289b0ba4187c3f5567087c1d977f",
+    "repository_worktree_clean": true,
+    "repository_worktree_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "trainer_source_path": "tools/train_temporal_t2_value.py",
+    "trainer_source_sha256": "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9"
+  },
+  "random_seed": 20260804,
+  "selected_calibration_policy": {
+    "admissible": 1,
+    "balanced_min_relative_improvement": 0.617871894252154,
+    "candidate_ordinal": 188,
+    "completed_late18_relative_improvement": 0.617871894252154,
+    "deadline_miss_relative_improvement": 0.7999462122430246,
+    "dr_airtime_us_per_eligible_frame": 372.6293880499633,
+    "dr_bad12_benefit": 0.05395404197013452,
+    "dr_deadline_miss_benefit": 0.016171520861561334,
+    "dr_policy_bad12": 0.05065305534747558,
+    "dr_policy_completed_late18_numerator": 0.013795504741712924,
+    "dr_policy_completed_late18_ratio": 0.013851523619505078,
+    "dr_policy_completion_probability": 0.9959557605841085,
+    "dr_policy_deadline_miss": 0.004044239415891427,
+    "dr_treat_none_bad12": 0.1046070973176101,
+    "dr_treat_none_completed_late18_numerator": 0.035515588448998006,
+    "dr_treat_none_completed_late18_ratio": 0.036248376947821924,
+    "dr_treat_none_completion_probability": 0.9797842397225471,
+    "dr_treat_none_deadline_miss": 0.02021576027745276,
+    "feature_family": "primary_compact_physics_temporal",
+    "frame_gate": "p_frames_only",
+    "mean_relative_improvement": 0.7089090532475893,
+    "ranker": "legacy_bad12_value_per_cost",
+    "realized_action_fraction": 0.1500773096250483,
+    "rejection_reason": "",
+    "requested_action_fraction": 0.15,
+    "run_cluster_uncertainty": {
+      "confidence_level": 0.95,
+      "estimands": {
+        "completed_late18_relative_improvement": {
+          "ci_lower": 0.5142421776088626,
+          "ci_upper": 0.6663273788348865,
+          "estimate": 0.6178718942521543
+        },
+        "deadline_miss_relative_improvement": {
+          "ci_lower": 0.7008057323449164,
+          "ci_upper": 0.8514705992671172,
+          "estimate": 0.7999462122430246
+        },
+        "dr_airtime_us_per_eligible_frame": {
+          "ci_lower": 227.78967298563384,
+          "ci_upper": 499.60789208078387,
+          "estimate": 372.6293880499633
+        },
+        "dr_policy_completed_late18_numerator": {
+          "ci_lower": 0.009919601998410134,
+          "ci_upper": 0.016640267591935317,
+          "estimate": 0.013795504741712917
+        },
+        "dr_policy_completed_late18_ratio": {
+          "ci_lower": 0.009946845946592429,
+          "ci_upper": 0.0167331189762494,
+          "estimate": 0.01385152361950507
+        },
+        "dr_policy_completion_probability": {
+          "ci_lower": 0.9941744664535638,
+          "ci_upper": 0.9979251234542913,
+          "estimate": 0.9959557605841086
+        },
+        "dr_policy_deadline_miss": {
+          "ci_lower": 0.002074876545708652,
+          "ci_upper": 0.005825533546436147,
+          "estimate": 0.004044239415891428
+        },
+        "realized_action_fraction": {
+          "ci_lower": 0.0966895248793689,
+          "ci_upper": 0.18859343330828263,
+          "estimate": 0.1500773096250483
+        }
+      },
+      "evidence_role": "selection_reused_descriptive",
+      "method": "deterministic_run_cluster_percentile_bootstrap_ratio_v1",
+      "replications": 2000,
+      "run_count": 16,
+      "unit": "(seed, run_number)"
+    },
+    "score_threshold": 8.952784264693037e-05
+  },
+  "selection": {
+    "candidate_count": 192,
+    "feature_family_order": [
+      "primary_base",
+      "primary_compact_physics",
+      "primary_compact_physics_temporal"
+    ],
+    "frame_gate_order": [
+      "all_frames",
+      "p_frames_only"
+    ],
+    "maximum_action_fraction": 0.2,
+    "maximum_dr_airtime_us_per_eligible_frame": 400.0,
+    "minimum_relative_improvement_each_objective": 0.5,
+    "primary_rule": "maximize the smaller calibrated relative improvement across deadline miss and conditional completed-late18",
+    "ranker_order": [
+      "deadline_value_per_cost",
+      "completed_late18_value_per_cost",
+      "balanced_normalized_value_per_cost",
+      "legacy_bad12_value_per_cost"
+    ],
+    "requested_action_fractions": [
+      0.05,
+      0.075,
+      0.1,
+      0.125,
+      0.15,
+      0.165,
+      0.18,
+      0.2
+    ],
+    "role": "calibration",
+    "selection_id": "calibration_two_objective_50pct_maximin_v1",
+    "tie_break": "larger mean relative improvement, lower DR airtime, lower action fraction, stable predeclared ordinal"
+  },
+  "software": {
+    "numpy": "1.26.4",
+    "python": "3.12.13",
+    "scikit_learn": "1.4.1.post1"
+  },
+  "split": {
+    "algorithm": "sha256_seed_run_exact_64_16_16_v1",
+    "assignments": [
+      {
+        "run_number": 1,
+        "seed": 1101,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1102,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1103,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1104,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1105,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1106,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1107,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1108,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1109,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1110,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1111,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1112,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1113,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1114,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1115,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1116,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1117,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1118,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1119,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1120,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1121,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1122,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1123,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1124,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1125,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1126,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1127,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1128,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1129,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1130,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1131,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1132,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1133,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1134,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1135,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1136,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1137,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1138,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1139,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1140,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1141,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1142,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1143,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1144,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1145,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1146,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1147,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1148,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1149,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1150,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1151,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1152,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1153,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1154,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1155,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1156,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1157,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1158,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1159,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1160,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1161,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1162,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1163,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1164,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1165,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1166,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1167,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1168,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1169,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1170,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1171,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1172,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1173,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1174,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1175,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1176,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1177,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1178,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1179,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1180,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1181,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1182,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1183,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1184,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1185,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1186,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1187,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1188,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1189,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1190,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1191,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1192,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1193,
+        "split_role": "test"
+      },
+      {
+        "run_number": 1,
+        "seed": 1194,
+        "split_role": "calibration"
+      },
+      {
+        "run_number": 1,
+        "seed": 1195,
+        "split_role": "train"
+      },
+      {
+        "run_number": 1,
+        "seed": 1196,
+        "split_role": "calibration"
+      }
+    ],
+    "counts": {
+      "calibration": 16,
+      "test": 16,
+      "train": 64
+    },
+    "target_ratio": {
+      "calibration": 16,
+      "test": 16,
+      "train": 64
+    },
+    "unit": "(seed, run_number)"
+  },
+  "test_role_used_during_selection": false,
+  "test_threshold_source": "single frozen calibration float32 threshold",
+  "training_schema_version": 1
+}
