@@ -407,6 +407,17 @@ PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_PATH = (
     / "experiments/model-selection/"
     "paired-value-duplication-t2-full-horizon-carryover-v3.json"
 )
+PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID = (
+    "paired-value-duplication-t2-remaining-refill-borrowing-v4"
+)
+PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256 = (
+    "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd"
+)
+PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "paired-value-duplication-t2-remaining-refill-borrowing-v4.json"
+)
 PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH = (
     Path(__file__).resolve().parent / "analyze_primary_tail_t4_campaign.py"
 )
@@ -480,6 +491,10 @@ PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX = (
     "emergency_admission_considered", "emergency_maximum_debt_us",
     "emergency_admitted", "admission_tier",
 )
+PAIRED_VALUE_T2_REMAINING_REFILL_DECISION_SUFFIX = (
+    "remaining_refill_credit_us", "remaining_refill_admission_considered",
+    "remaining_refill_admitted",
+)
 PAIRED_VALUE_T2_STATUSES = (
     "outside_decision_window", "history_warmup", "frame_type_restricted",
     "not_actionable", "descriptor_unavailable", "below_score_threshold",
@@ -544,6 +559,16 @@ PAIRED_VALUE_T2_FULL_HORIZON_CONFIG = {
     "runtime_contract_sha256": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256,
     "admission_profile_id": "score_aware_full_horizon_v3",
     "budget_max_horizon_us": 60_000_000,
+}
+PAIRED_VALUE_T2_REMAINING_REFILL_CONFIG = {
+    **PAIRED_VALUE_T2_FULL_HORIZON_CONFIG,
+    "csv_schema_version": 3,
+    "summary_schema_version": 3,
+    "runtime_contract_id": PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID,
+    "runtime_contract_sha256": PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256,
+    "admission_profile_id": "score_aware_remaining_refill_v4",
+    "remaining_refill_borrowing_enabled": True,
+    "remaining_refill_repayment_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
 }
 PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "enabled": True,
@@ -2351,6 +2376,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     if runtime_id == PAIRED_VALUE_T2_CONTRACT_ID:
         profile = {
             "score_aware": False,
+            "remaining_refill": False,
             "decision_schema_version": 1,
             "summary_schema_version": 1,
             "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
@@ -2365,6 +2391,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     elif runtime_id == PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID:
         profile = {
             "score_aware": True,
+            "remaining_refill": False,
             "decision_schema_version": 2,
             "summary_schema_version": 2,
             "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
@@ -2382,6 +2409,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     elif runtime_id == PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID:
         profile = {
             "score_aware": True,
+            "remaining_refill": False,
             "decision_schema_version": 2,
             "summary_schema_version": 2,
             "runtime_contract_id": PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID,
@@ -2393,6 +2421,28 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
                 + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
             ),
             "admission_profile_id": "score_aware_full_horizon_v3",
+            "guard_max_horizon_us": 60_000_000,
+            "guard_capacity_us": int(
+                PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US
+            ),
+        }
+    elif runtime_id == PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID:
+        profile = {
+            "score_aware": True,
+            "remaining_refill": True,
+            "decision_schema_version": 3,
+            "summary_schema_version": 3,
+            "runtime_contract_id": PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID,
+            "runtime_contract_sha256":
+                PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256,
+            "runtime_contract_path": PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_PATH,
+            "resolved_config": PAIRED_VALUE_T2_REMAINING_REFILL_CONFIG,
+            "decision_columns": (
+                PAIRED_VALUE_T2_DECISION_COLUMNS
+                + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+                + PAIRED_VALUE_T2_REMAINING_REFILL_DECISION_SUFFIX
+            ),
+            "admission_profile_id": "score_aware_remaining_refill_v4",
             "guard_max_horizon_us": 60_000_000,
             "guard_capacity_us": int(
                 PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US
@@ -3030,6 +3080,7 @@ def _validate_paired_value_t2_decisions(
     if profile is None:
         profile = {
             "score_aware": False,
+            "remaining_refill": False,
             "decision_schema_version": 1,
             "summary_schema_version": 1,
             "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
@@ -3072,6 +3123,8 @@ def _validate_paired_value_t2_decisions(
     emergency_score_passed_count = 0
     emergency_admission_considered_count = 0
     emergency_admitted_count = 0
+    remaining_refill_admission_considered_count = 0
+    remaining_refill_admitted_count = 0
     maximum_observed_debt = 0.0
     previous_meter_reserved_after: float | None = None
     model_replay_records: list[dict[str, Any]] = []
@@ -3298,6 +3351,7 @@ def _validate_paired_value_t2_decisions(
         strict_admitted = bool(considered and reserved is not None and
                                reserved <= available_before)
         emergency_admitted = False
+        remaining_refill_admitted = False
         if profile["score_aware"]:
             serialized_emergency_threshold = _number(
                 row, "emergency_score_threshold_float32", file_name
@@ -3333,24 +3387,66 @@ def _validate_paired_value_t2_decisions(
             observed_emergency_admitted = _flag(
                 row, "emergency_admitted", file_name
             )
-            expected_tier = (
-                "strict" if strict_admitted
-                else "emergency" if emergency_admitted
-                else "none"
-            )
             _require(
                 _flag(row, "strict_guard_admitted", file_name) == strict_admitted
                 and observed_emergency_score_pass == expected_emergency_score_pass
                 and emergency_considered == expected_emergency_score_pass
-                and observed_emergency_admitted == emergency_admitted
-                and row["admission_tier"] == expected_tier,
+                and observed_emergency_admitted == emergency_admitted,
                 f"{file_name}: emergency admission differs from reconstructed decision",
             )
             strict_guard_admitted_count += int(strict_admitted)
             emergency_score_passed_count += int(expected_emergency_score_pass)
             emergency_admission_considered_count += int(emergency_considered)
             emergency_admitted_count += int(emergency_admitted)
-        expected_admitted = strict_admitted or emergency_admitted
+        if profile["remaining_refill"]:
+            last_refill_ns = max(
+                PAIRED_VALUE_T2_DECISION_START_NS,
+                min(sample_ns, PAIRED_VALUE_T2_MEASUREMENT_STOP_NS),
+            )
+            expected_remaining_refill_us = PAIRED_VALUE_T2_GUARD_FRACTION * (
+                (PAIRED_VALUE_T2_MEASUREMENT_STOP_NS - last_refill_ns) / 1000.0
+            )
+            observed_remaining_refill_us = _number(
+                row, "remaining_refill_credit_us", file_name
+            )
+            remaining_refill_considered = bool(
+                considered and not strict_admitted and not emergency_admitted
+            )
+            remaining_refill_admitted = bool(
+                remaining_refill_considered
+                and reserved is not None
+                and reserved <= available_before + expected_remaining_refill_us
+            )
+            _require(
+                _paired_close(
+                    observed_remaining_refill_us, expected_remaining_refill_us
+                )
+                and _flag(
+                    row, "remaining_refill_admission_considered", file_name
+                ) == remaining_refill_considered
+                and _flag(row, "remaining_refill_admitted", file_name)
+                == remaining_refill_admitted,
+                f"{file_name}: remaining-refill admission differs from reconstructed "
+                "decision",
+            )
+            remaining_refill_admission_considered_count += int(
+                remaining_refill_considered
+            )
+            remaining_refill_admitted_count += int(remaining_refill_admitted)
+        if profile["score_aware"]:
+            expected_tier = (
+                "strict" if strict_admitted
+                else "emergency" if emergency_admitted
+                else "remaining_refill" if remaining_refill_admitted
+                else "none"
+            )
+            _require(
+                row["admission_tier"] == expected_tier,
+                f"{file_name}: admission tier differs from reconstructed decision",
+            )
+        expected_admitted = (
+            strict_admitted or emergency_admitted or remaining_refill_admitted
+        )
         _require(admitted == expected_admitted and launch_attempted == admitted and
                  (launch_attempted or not launched),
                  f"{file_name}: guard or launch flags differ from reconstructed decision")
@@ -3397,6 +3493,13 @@ def _validate_paired_value_t2_decisions(
         status_counts[expected_status] += 1
 
     _validate_paired_value_t2_model_replays(model_replay_records)
+    _require(
+        not profile["remaining_refill"]
+        or remaining_refill_admission_considered_count
+        == remaining_refill_admitted_count
+        + status_counts["airtime_guard_rejected"],
+        f"{file_name}: remaining-refill consideration count does not reconcile",
+    )
     _require(action_frames == duplicated_frame_ids,
              f"{file_name}: actions do not match duplicated frames")
     policy_action_frames = {
@@ -3431,6 +3534,9 @@ def _validate_paired_value_t2_decisions(
         "emergency_score_passed": emergency_score_passed_count,
         "emergency_admission_considered": emergency_admission_considered_count,
         "emergency_admitted": emergency_admitted_count,
+        "remaining_refill_admission_considered":
+            remaining_refill_admission_considered_count,
+        "remaining_refill_admitted": remaining_refill_admitted_count,
         "maximum_observed_debt": maximum_observed_debt,
         "profile": profile,
     }
@@ -4287,6 +4393,16 @@ def _validate_paired_value_t2_summary(
             "emergency_score_threshold_float32_bits_hex": "0x391d4952",
             "emergency_maximum_debt_us": 60_000,
         })
+    if profile["remaining_refill"]:
+        expected_guard.update({
+            "remaining_refill_borrowing_enabled": True,
+            "remaining_refill_repayment_stop_ns":
+                PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+            "remaining_refill_credit_formula": (
+                "fraction * (repayment_stop_ns - "
+                "last_causal_guard_refill_ns) / 1000"
+            ),
+        })
     for key, expected in (
         ("telemetry", expected_telemetry),
         ("decision_window", expected_window),
@@ -4309,6 +4425,11 @@ def _validate_paired_value_t2_summary(
             "emergency_score_threshold_passed",
             "emergency_admission_considered",
             "emergency_admitted",
+        })
+    if profile["remaining_refill"]:
+        count_keys.update({
+            "remaining_refill_admission_considered",
+            "remaining_refill_admitted",
         })
     # ACTION is serialized as secondary_launched, not as a separate count key.
     counts = summary.get("counts")
@@ -4346,6 +4467,12 @@ def _validate_paired_value_t2_summary(
                 evidence["emergency_admission_considered"],
             "emergency_admitted": evidence["emergency_admitted"],
         })
+    if profile["remaining_refill"]:
+        expected_counts.update({
+            "remaining_refill_admission_considered":
+                evidence["remaining_refill_admission_considered"],
+            "remaining_refill_admitted": evidence["remaining_refill_admitted"],
+        })
     _require(counts == expected_counts,
              "paired_value_t2_summary.json: counts differ from reconstructed rows")
     _require(frame_count == sum(status_counts[status]
@@ -4358,7 +4485,8 @@ def _validate_paired_value_t2_summary(
              evidence["launch_attempted"] ==
              status_counts["launch_rejected"] + status_counts["action"] and
              (not profile["score_aware"] or
-              evidence["strict_guard_admitted"] + evidence["emergency_admitted"] ==
+              evidence["strict_guard_admitted"] + evidence["emergency_admitted"] +
+              evidence["remaining_refill_admitted"] ==
               evidence["launch_attempted"]) and
              len(evidence["action_frames"]) == status_counts["action"] == len(settlements),
              "paired_value_t2_summary.json: reconstructed counts do not reconcile")
@@ -4416,7 +4544,12 @@ def _validate_paired_value_t2_summary(
         "meter_reserved_final_normalized_us": 0,
         "learned_cost_used_for_token_accounting": False,
     }
-    if profile["score_aware"]:
+    if profile["remaining_refill"]:
+        expected_integrity[
+            "strict_plus_emergency_plus_remaining_refill_admitted_equals_"
+            "launch_attempted"
+        ] = True
+    elif profile["score_aware"]:
         expected_integrity[
             "strict_plus_emergency_admitted_equals_launch_attempted"
         ] = True

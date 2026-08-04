@@ -33,6 +33,10 @@ from validate_outputs import (  # noqa: E402
     PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
     PAIRED_VALUE_T2_MODEL_METADATA,
     PAIRED_VALUE_T2_PREDICTION_CONFIG,
+    PAIRED_VALUE_T2_REMAINING_REFILL_CONFIG,
+    PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID,
+    PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256,
+    PAIRED_VALUE_T2_REMAINING_REFILL_DECISION_SUFFIX,
     PAIRED_VALUE_T2_SCORE_THRESHOLD,
     PAIRED_VALUE_T2_SCORE_AWARE_CONFIG,
     PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
@@ -371,23 +375,41 @@ class PairedValueT2Fixture:
             self.decisions,
         )
 
-    def use_score_aware_profile(self, *, full_horizon: bool = False) -> None:
+    def use_score_aware_profile(
+        self,
+        *,
+        full_horizon: bool = False,
+        remaining_refill: bool = False,
+    ) -> None:
+        if remaining_refill:
+            full_horizon = True
         self.decision_columns = (
             PAIRED_VALUE_T2_DECISION_COLUMNS
             + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+            + (
+                PAIRED_VALUE_T2_REMAINING_REFILL_DECISION_SUFFIX
+                if remaining_refill
+                else ()
+            )
         )
         runtime_contract_id = (
-            PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID
+            PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_ID
+            if remaining_refill
+            else PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_ID
             if full_horizon
             else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID
         )
         runtime_contract_sha256 = (
-            PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256
+            PAIRED_VALUE_T2_REMAINING_REFILL_CONTRACT_SHA256
+            if remaining_refill
+            else PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256
             if full_horizon
             else PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256
         )
         admission_profile_id = (
-            "score_aware_full_horizon_v3"
+            "score_aware_remaining_refill_v4"
+            if remaining_refill
+            else "score_aware_full_horizon_v3"
             if full_horizon
             else "score_aware_emergency_v2"
         )
@@ -399,8 +421,9 @@ class PairedValueT2Fixture:
         )
         self.decision_profile = {
             "score_aware": True,
-            "decision_schema_version": 2,
-            "summary_schema_version": 2,
+            "remaining_refill": remaining_refill,
+            "decision_schema_version": 3 if remaining_refill else 2,
+            "summary_schema_version": 3 if remaining_refill else 2,
             "runtime_contract_id": runtime_contract_id,
             "runtime_contract_sha256": runtime_contract_sha256,
             "decision_columns": self.decision_columns,
@@ -411,7 +434,7 @@ class PairedValueT2Fixture:
         for row in self.decisions:
             strict = row["guard_admitted"] == "1"
             row.update({
-                "schema_version": "2",
+                "schema_version": "3" if remaining_refill else "2",
                 "admission_profile_id": admission_profile_id,
                 "guard_max_horizon_us": str(guard_max_horizon_us),
                 "guard_capacity_us": repr(guard_capacity_us),
@@ -427,6 +450,16 @@ class PairedValueT2Fixture:
                 "emergency_admitted": "0",
                 "admission_tier": "strict" if strict else "none",
             })
+            if remaining_refill:
+                sample_ns = int(row["primary_sample_time_ns"])
+                remaining_credit_us = 0.006 * (
+                    (61_000_000_000 - sample_ns) / 1000.0
+                )
+                row.update({
+                    "remaining_refill_credit_us": repr(remaining_credit_us),
+                    "remaining_refill_admission_considered": "0",
+                    "remaining_refill_admitted": "0",
+                })
         self._write_inputs()
 
     def validate_decisions(self) -> dict[str, object]:
@@ -577,7 +610,7 @@ class PairedValueT2Fixture:
         }
         if self.decision_profile is not None:
             summary.update({
-                "schema_version": 2,
+                "schema_version": self.decision_profile["summary_schema_version"],
                 "runtime_contract_id": self.decision_profile["runtime_contract_id"],
                 "runtime_contract_sha256":
                     self.decision_profile["runtime_contract_sha256"],
@@ -599,9 +632,28 @@ class PairedValueT2Fixture:
                     evidence["emergency_admission_considered"],
                 "emergency_admitted": evidence["emergency_admitted"],
             })
-            summary["integrity"][
-                "strict_plus_emergency_admitted_equals_launch_attempted"
-            ] = True
+            if self.decision_profile["remaining_refill"]:
+                summary["budget_guard"].update({
+                    "remaining_refill_borrowing_enabled": True,
+                    "remaining_refill_repayment_stop_ns": 61_000_000_000,
+                    "remaining_refill_credit_formula": (
+                        "fraction * (repayment_stop_ns - "
+                        "last_causal_guard_refill_ns) / 1000"
+                    ),
+                })
+                summary["counts"].update({
+                    "remaining_refill_admission_considered":
+                        evidence["remaining_refill_admission_considered"],
+                    "remaining_refill_admitted": evidence["remaining_refill_admitted"],
+                })
+                summary["integrity"][
+                    "strict_plus_emergency_plus_remaining_refill_admitted_equals_"
+                    "launch_attempted"
+                ] = True
+            else:
+                summary["integrity"][
+                    "strict_plus_emergency_admitted_equals_launch_attempted"
+                ] = True
         (self.root / "paired_value_t2_summary.json").write_text(
             json.dumps(summary), encoding="utf-8"
         )
@@ -735,6 +787,83 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             fixture._write_inputs()
             with self.assertRaisesRegex(ValidationError, "guard metadata differs"):
                 fixture.validate_decisions()
+
+    def test_accepts_remaining_refill_schema_and_summary(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.use_score_aware_profile(remaining_refill=True)
+            evidence = fixture.validate_decisions()
+            self.assertEqual(evidence["strict_guard_admitted"], 1)
+            self.assertEqual(evidence["remaining_refill_admission_considered"], 0)
+            self.assertEqual(evidence["remaining_refill_admitted"], 0)
+            meter_summary = fixture.write_summary(evidence)
+            _validate_paired_value_t2_summary(
+                fixture.root,
+                RUN_ID,
+                9,
+                evidence,
+                fixture.events,
+                fixture.settlements,
+                meter_summary,
+            )
+
+    def test_reconstructs_remaining_refill_admission_after_inherited_tiers_fail(
+        self,
+    ) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.use_score_aware_profile(remaining_refill=True)
+            row = fixture.decisions[8]
+            primary_probability = 0.2
+            treated_probability = 0.1
+            predicted_cost = 1000.0
+            nonnegative_value = primary_probability - treated_probability
+            row.update({
+                "primary_bad12_logit": repr(
+                    math.log(primary_probability / (1.0 - primary_probability))
+                ),
+                "primary_bad12_probability": repr(primary_probability),
+                "treated_bad12_logit": repr(
+                    math.log(treated_probability / (1.0 - treated_probability))
+                ),
+                "treated_bad12_probability": repr(treated_probability),
+                "predicted_log_airtime": repr(
+                    math.log1p(predicted_cost) - PAIRED_VALUE_T2_LOG_SMEARING_FACTOR
+                ),
+                "predicted_secondary_airtime_us": repr(predicted_cost),
+                "nonnegative_bad12_value": repr(nonnegative_value),
+                "value_per_cost_score_float32": repr(
+                    f32(nonnegative_value / predicted_cost)
+                ),
+                "guard_balance_before_us": "0",
+                "guard_available_before_us": "0",
+                "guard_balance_after_us": "0",
+                "guard_available_after_us": repr(
+                    -float(row["canonical_reserved_airtime_us"])
+                ),
+                "strict_guard_admitted": "0",
+                "passes_emergency_score_threshold": "0",
+                "emergency_admission_considered": "0",
+                "emergency_admitted": "0",
+                "remaining_refill_admission_considered": "1",
+                "remaining_refill_admitted": "1",
+                "admission_tier": "remaining_refill",
+            })
+            fixture._write_inputs()
+            with mock.patch(
+                "validate_outputs._validate_paired_value_t2_model_replays"
+            ):
+                evidence = fixture.validate_decisions()
+                self.assertEqual(evidence["strict_guard_admitted"], 0)
+                self.assertEqual(evidence["emergency_admitted"], 0)
+                self.assertEqual(evidence["remaining_refill_admission_considered"], 1)
+                self.assertEqual(evidence["remaining_refill_admitted"], 1)
+                fixture.decisions[8]["remaining_refill_admitted"] = "0"
+                fixture._write_inputs()
+                with self.assertRaisesRegex(
+                    ValidationError, "remaining-refill admission differs"
+                ):
+                    fixture.validate_decisions()
 
     def test_rejects_header_order_and_row_width_drift(self) -> None:
         for mutation in ("header", "extra width", "short width"):
@@ -1382,6 +1511,14 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         self.assertTrue(profile["score_aware"])
         self.assertEqual(profile["guard_max_horizon_us"], 60_000_000)
         self.assertEqual(profile["guard_capacity_us"], 360_000)
+        remaining_refill_config = copy.deepcopy(config)
+        remaining_refill_config["pairedValueDuplicationT2"] = copy.deepcopy(
+            PAIRED_VALUE_T2_REMAINING_REFILL_CONFIG
+        )
+        profile = _validate_paired_value_t2_config(remaining_refill_config)
+        self.assertTrue(profile["score_aware"])
+        self.assertTrue(profile["remaining_refill"])
+        self.assertEqual(profile["decision_schema_version"], 3)
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
         with self.assertRaisesRegex(ValidationError, "neutral environment projection"):

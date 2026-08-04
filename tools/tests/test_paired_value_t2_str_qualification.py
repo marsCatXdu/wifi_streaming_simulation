@@ -654,6 +654,56 @@ class PairedValueT2StrQualificationTest(unittest.TestCase):
         self.assertIn(f"# {profile.markdown_title}", markdown)
         self.assertIn(f"| Metric | {profile.policy_label} | STR MLO |", markdown)
 
+    def test_remaining_refill_profile_reuses_opened_engineering_boundary(self) -> None:
+        profile = qualification.REMAINING_REFILL_V4_PROFILE
+        matrix_path = (
+            qualification.REPOSITORY_ROOT
+            / "experiments/configs/paired_value_t2_remaining_refill_str_engineering_v4.yaml"
+        )
+        document = qualification._load_yaml(matrix_path)
+        specs = qualification._expand_config(document)
+        self.assertEqual(len(specs), qualification.EXPECTED_RUN_COUNT)
+        self.assertEqual(
+            sorted({(spec["seed"], spec["run"]) for spec in specs}),
+            list(profile.expected_seed_run_units),
+        )
+        self.assertEqual(
+            document["runtime_contract"],
+            {
+                "id": profile.runtime_contract_id,
+                "path": str(
+                    profile.runtime_contract_path.relative_to(
+                        qualification.REPOSITORY_ROOT
+                    )
+                ),
+                "sha256": profile.runtime_contract_sha256,
+                "source_artifacts": qualification.SOURCE_ARTIFACTS,
+            },
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            campaign = SyntheticCampaign(Path(temporary), profile)
+            with mock.patch.object(
+                qualification, "validate_run", side_effect=_strict_validation_stub
+            ) as validator:
+                report = qualification.analyze_campaign(campaign.root, profile)
+        self.assertEqual(validator.call_count, qualification.EXPECTED_RUN_COUNT)
+        self.assertEqual(report["qualification_profile"], profile.key)
+        self.assertEqual(report["analysis"], profile.analysis_id)
+        self.assertEqual(report["paired_unit_count"], qualification.EXPECTED_PAIR_COUNT)
+        self.assertEqual(
+            [unit["seed"] for unit in report["paired_units"]],
+            list(range(1251, 1299)),
+        )
+        self.assertEqual(report["treatments"]["policy"]["label"], profile.policy_label)
+        self.assertEqual(
+            report["source_closure"]["runtime_contract"]["sha256"],
+            profile.runtime_contract_sha256,
+        )
+        markdown = qualification.render_markdown(report)
+        self.assertIn(f"# {profile.markdown_title}", markdown)
+        self.assertIn(f"| Metric | {profile.policy_label} | STR MLO |", markdown)
+
     def test_runner_built_manifest_rejects_count_membership_and_entry_drift(self) -> None:
         import run_experiments as runner
 

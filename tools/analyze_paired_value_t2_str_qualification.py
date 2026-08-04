@@ -234,9 +234,31 @@ FULL_HORIZON_V3_PROFILE = QualificationProfile(
     markdown_title="Full-horizon T2 V3 engineering against STR MLO",
     contract_kind="full_horizon_v3",
 )
+REMAINING_REFILL_V4_PROFILE = QualificationProfile(
+    key="remaining-refill-v4",
+    runtime_contract_path=(
+        REPOSITORY_ROOT
+        / "experiments/model-selection/"
+        "paired-value-duplication-t2-remaining-refill-borrowing-v4.json"
+    ),
+    runtime_contract_id="paired-value-duplication-t2-remaining-refill-borrowing-v4",
+    runtime_contract_sha256=(
+        "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd"
+    ),
+    expected_seed_run_units=tuple((seed, 1) for seed in range(1251, 1299)),
+    policy_label="Remaining-refill T2 V4",
+    analysis_id="paired_value_t2_remaining_refill_str_engineering",
+    markdown_title="Remaining-refill T2 V4 engineering against STR MLO",
+    contract_kind="remaining_refill_v4",
+)
 PROFILES = {
     profile.key: profile
-    for profile in (V1_PROFILE, SCORE_AWARE_V2_PROFILE, FULL_HORIZON_V3_PROFILE)
+    for profile in (
+        V1_PROFILE,
+        SCORE_AWARE_V2_PROFILE,
+        FULL_HORIZON_V3_PROFILE,
+        REMAINING_REFILL_V4_PROFILE,
+    )
 }
 
 
@@ -575,6 +597,142 @@ def _verify_source_closure(
             != MAXIMUM_BACKGROUND_LOSS
         ):
             raise QualificationError("full-horizon evaluation boundary changed")
+    elif profile.contract_kind == "remaining_refill_v4":
+        expected_inheritance = {
+            "runtime_contract_id": FULL_HORIZON_V3_PROFILE.runtime_contract_id,
+            "path": str(
+                FULL_HORIZON_V3_PROFILE.runtime_contract_path.relative_to(
+                    REPOSITORY_ROOT
+                )
+            ),
+            "sha256": FULL_HORIZON_V3_PROFILE.runtime_contract_sha256,
+        }
+        if _canonical_json(contract.get("inherits")) != _canonical_json(
+            expected_inheritance
+        ):
+            raise QualificationError("remaining-refill contract inheritance changed")
+        if (
+            _sha256_file(FULL_HORIZON_V3_PROFILE.runtime_contract_path)
+            != FULL_HORIZON_V3_PROFILE.runtime_contract_sha256
+        ):
+            raise QualificationError("inherited full-horizon contract checksum changed")
+        inherited = _read_json(FULL_HORIZON_V3_PROFILE.runtime_contract_path)
+        expected_v3_inheritance = {
+            "runtime_contract_id": SCORE_AWARE_V2_PROFILE.runtime_contract_id,
+            "path": str(
+                SCORE_AWARE_V2_PROFILE.runtime_contract_path.relative_to(
+                    REPOSITORY_ROOT
+                )
+            ),
+            "sha256": SCORE_AWARE_V2_PROFILE.runtime_contract_sha256,
+        }
+        if (
+            inherited.get("runtime_contract_id")
+            != FULL_HORIZON_V3_PROFILE.runtime_contract_id
+            or _canonical_json(inherited.get("inherits"))
+            != _canonical_json(expected_v3_inheritance)
+            or _sha256_file(SCORE_AWARE_V2_PROFILE.runtime_contract_path)
+            != SCORE_AWARE_V2_PROFILE.runtime_contract_sha256
+            or _sha256_file(RUNTIME_CONTRACT_PATH) != RUNTIME_CONTRACT_SHA256
+        ):
+            raise QualificationError("remaining-refill inherited source closure changed")
+        analyzer_contract = _read_json(RUNTIME_CONTRACT_PATH)
+        if (
+            analyzer_contract.get("runtime_contract_id") != RUNTIME_CONTRACT_ID
+            or analyzer_contract.get("selected_policy_contract", {}).get("policy_name")
+            != POLICY_NAME
+            or contract.get("unchanged_contract", {}).get("policy_name")
+            != POLICY_NAME
+        ):
+            raise QualificationError("remaining-refill inherited policy identity changed")
+        remaining_refill = contract.get("remaining_refill_override", {})
+        expected_semantics = [
+            "Apply inherited strict admission without change.",
+            (
+                "If strict admission fails, apply the inherited high-score emergency "
+                "threshold and 60000 us debt limit without change."
+            ),
+            (
+                "If neither inherited tier admits, consider every primary-score-"
+                "threshold passer for the remaining-refill tier."
+            ),
+            (
+                "Admit the final tier only when current available balance plus refill "
+                "causally remaining before measurement stop covers the conservative "
+                "canonical reservation."
+            ),
+            (
+                "Do not mutate the guard balance or install future credit at decision "
+                "time; measured secondary airtime remains the only debit and later "
+                "refill repays any realized debt."
+            ),
+        ]
+        if (
+            remaining_refill.get("profile_id")
+            != "score_aware_remaining_refill_v4"
+            or remaining_refill.get("repayment_stop_ns") != 61_000_000_000
+            or remaining_refill.get("remaining_refill_credit_formula")
+            != (
+                "budget_fraction * (repayment_stop_ns - "
+                "last_causal_guard_refill_ns) / 1000"
+            )
+            or remaining_refill.get("ordered_admission_semantics")
+            != expected_semantics
+            or remaining_refill.get("strict_admission_changed") is not False
+            or remaining_refill.get("high_score_emergency_changed") is not False
+            or remaining_refill.get("primary_score_threshold_changed") is not False
+            or remaining_refill.get("long_run_refill_rate_changed") is not False
+            or remaining_refill.get("startup_credit_changed") is not False
+            or remaining_refill.get("learned_cost_used_for_token_accounting") is not False
+            or remaining_refill.get("new_tier_can_only_add_actions") is not True
+        ):
+            raise QualificationError("remaining-refill admission override changed")
+        telemetry = contract.get("telemetry_contract", {})
+        if (
+            telemetry.get("decision_csv_schema_version") != 3
+            or telemetry.get("controller_summary_schema_version") != 3
+            or telemetry.get("v2_columns_retained_in_order") is not True
+            or telemetry.get("decision_columns_appended")
+            != [
+                "remaining_refill_credit_us",
+                "remaining_refill_admission_considered",
+                "remaining_refill_admitted",
+            ]
+            or telemetry.get("admission_tier_values")
+            != ["none", "strict", "emergency", "remaining_refill"]
+        ):
+            raise QualificationError("remaining-refill telemetry contract changed")
+        boundary = contract.get("evaluation_boundary", {})
+        expected_seeds = [seed for seed, _ in profile.expected_seed_run_units]
+        expected_primary_gates = [
+            "paired all-generated deadline-miss difference confidence interval below zero",
+            (
+                "paired mean per-run completed-frame HF7 P99 difference "
+                "confidence interval below zero"
+            ),
+        ]
+        if (
+            boundary.get("engineering_seed_start") != min(expected_seeds)
+            or boundary.get("engineering_seed_stop_inclusive") != max(expected_seeds)
+            or boundary.get("engineering_seeds_previously_opened") is not True
+            or boundary.get("reserved_confirmation_seed_start")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[0]
+            or boundary.get("reserved_confirmation_seed_stop_inclusive")
+            != RESERVED_FINAL_CONFIRMATION_SEEDS[-1]
+            or boundary.get("reserved_confirmation_seeds_must_remain_unopened")
+            is not True
+            or boundary.get("reference") != "STR MLO NMaxInflights=1"
+            or boundary.get("primary_gates") != expected_primary_gates
+            or boundary.get("resource_gates", {}).get(
+                "sender_airtime_ratio_strictly_below"
+            )
+            != MAXIMUM_AIRTIME_RATIO
+            or boundary.get("resource_gates", {}).get(
+                "background_throughput_loss_fraction_at_most"
+            )
+            != MAXIMUM_BACKGROUND_LOSS
+        ):
+            raise QualificationError("remaining-refill evaluation boundary changed")
     else:
         raise QualificationError(f"unsupported qualification profile {profile.key!r}")
 
