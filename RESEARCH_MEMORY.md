@@ -208,6 +208,50 @@ airtime interval below 1.20, stop admission tuning and move to better
 treated-outcome/cost ranking, startup fallback, and an I-frame-specific rule.
 Reserved confirmation seeds `1301` through `1348` remain unopened.
 
+## Remaining-refill borrowing V4 negative result
+
+V4 tested a final admission tier that, after inherited strict and high-score
+emergency admission fail, may reserve against refill causally remaining before
+the measurement stop.  It kept V3's predictor, threshold, P-frame gate,
+reservation estimator, 0.6% refill, startup credit, action, and environment
+fixed.  The frozen contract is
+`experiments/model-selection/paired-value-duplication-t2-remaining-refill-borrowing-v4.json`.
+
+The 48-pair campaign reused opened seeds `1251` through `1298`; all 96 raw
+runs passed strict validation both on the VM and after local restoration.  V4
+still passes every frozen gate against STR: 585/86,400 misses (0.6771%) versus
+691 (0.7998%), 17.395 ms mean per-run completed P99 versus 18.875 ms, sender
+airtime ratio 1.1255, and background loss 0.0050%.  It is nevertheless worse
+than V2/V3's 495 misses and 17.192 ms P99, so it is a negative policy
+iteration.  The compact evidence is
+`key_experiment_results/09_remaining_refill_t2_str_engineering_v4`.
+
+The exact V3/V4 comparison isolates admission chronology:
+
+- all 86,400 predictor scores and threshold memberships are identical;
+- primary-copy outcome changes on only one frame;
+- V4 has 5,272 actions versus V3's 4,944, but only 3,910 are common;
+- 1,034 V3-only actions contain 172 primary misses (16.63%), while 1,362
+  V4-only actions contain only 76 (5.58%);
+- the V3-only median score and frame time are `1.7865e-4` and 46.45 s, versus
+  `1.1684e-4` and 15.27 s for V4-only actions;
+- V4 fixes 82 V3 misses but creates 172 new misses, for a net increase of 90.
+
+Conditional rescue remains excellent: V4 rescues 646 of 675 acted primary
+misses (95.70%), essentially the same as V3's 737 of 771 (95.59%).  The new
+tier locally adds an action, but the early reservation changes later balance
+and globally displaces higher-score actions.  Do not infer an action superset
+from the contract's pointwise `new_tier_can_only_add_actions` statement.
+
+Do not promote or rerun V4 on new seeds.  The guard-isolation sequence is now
+closed: bounded high-score emergency borrowing is useful, more stored capacity
+is inert, and chronological borrowing against all remaining refill is harmful.
+Return to V2 as the best implementation and move next to predictor/ranker
+quality.  Prioritize the 170 V2 below-threshold misses and airtime spent on
+on-time primaries.  Keep startup fallback and an I-frame-specific policy as
+separate later interventions.  Reserved confirmation seeds `1301` through
+`1348` remain unopened.
+
 ## Randomized-policy population mapping
 
 The randomized T2 intervention dataset estimates effects only among frames

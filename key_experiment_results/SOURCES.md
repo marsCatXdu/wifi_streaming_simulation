@@ -25,16 +25,17 @@ following ignored result roots:
 | `06_paired_value_t2_str_qualification_v1` | `results/paired_value_t2_str_qualification_da48d7d` |
 | `07_score_aware_t2_str_engineering_v2` | `results/paired_value_t2_score_aware_str_engineering_v2/runs` |
 | `08_full_horizon_t2_str_engineering_v3` | `results/paired_value_t2_full_horizon_str_engineering_v3/runs` |
+| `09_remaining_refill_t2_str_engineering_v4` | `results/paired_value_t2_remaining_refill_str_engineering_v4/runs` plus the exact V3/V4 comparison in its result-root directory |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
 without modifying the original replay directory.
 
-The complete V2 and V3 raw archives are intentionally not committed because
-they are 94,939,663 and 95,546,464 compressed bytes, respectively.  Their
-local paths and SHA-256 identities are recorded in each snapshot README;
-publishing those exact archives as release assets remains a reproducibility
-task.
+The complete V2, V3, and V4 raw archives are intentionally not committed
+because they are 94,939,663, 95,546,464, and 96,983,224 compressed bytes,
+respectively.  Their local paths and SHA-256 identities are recorded in each
+snapshot README; publishing those exact archives as release assets remains a
+reproducibility task.
 
 `SHA256SUMS` covers every curated artifact except itself. It can be checked
 from the repository root with:

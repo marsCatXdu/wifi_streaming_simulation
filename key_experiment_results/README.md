@@ -36,6 +36,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `06_paired_value_t2_str_qualification_v1` | Primary-only temporal-T2 selective duplication versus STR MLO | Strict 48-pair report, compact aggregates, admission diagnostics, and qualification plus standard figures |
 | `07_score_aware_t2_str_engineering_v2` | Score-aware temporal-T2 V2 versus STR MLO | First all-gate engineering pass, 48-pair report, admission diagnostics, raw-archive identity, and qualification plus standard figures |
 | `08_full_horizon_t2_str_engineering_v3` | Full-horizon carry-over V3 versus STR MLO | Strict 48-pair null result, exact V2/V3 decision comparison, raw-archive identity, and qualification plus standard figures |
+| `09_remaining_refill_t2_str_engineering_v4` | Remaining-refill borrowing V4 versus STR MLO | Strict 48-pair pass against STR but regression from V2/V3, exact admission-shift diagnosis, raw-archive identity, and qualification plus standard figures |
 
 ## Current best STR result
 
@@ -51,10 +52,14 @@ This is engineering evidence, not final confirmation.  Seeds `1301` through
 `1348` remain unopened, and the longer-term target of more than 50% fewer
 misses than STR has not yet been reached.  Full-horizon V3 changes guard
 balances but reproduces every V2 admission and frame outcome exactly, so the
-simpler V2 remains the current best implementation.  See
+simpler V2 remains the current best implementation.  Remaining-refill V4
+still passes against STR but regresses to 0.6771% misses and 17.395 ms P99: it
+spends future refill on earlier, lower-score frames and displaces later,
+higher-risk V2 actions.  See
 `07_score_aware_t2_str_engineering_v2/README.md` for the victory and
-`08_full_horizon_t2_str_engineering_v3/README.md` for the negative carry-over
-test and next mechanism.
+`08_full_horizon_t2_str_engineering_v3/README.md` and
+`09_remaining_refill_t2_str_engineering_v4/README.md` for the two negative
+guard-isolation tests.
 
 ## Principal streaming results
 

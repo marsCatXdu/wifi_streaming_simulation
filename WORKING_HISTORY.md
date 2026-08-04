@@ -34,9 +34,9 @@ P99.
 - Fresh score-aware V2 engineering units: seeds `1251` through `1298`, ns-3
   run `1`.  The matrix has one policy run and one STR MLO run per seed, for
   48 matched pairs and 96 runs.
-- Any carry-over V3 engineering iteration must reuse already-open development
-  units rather than opening confirmation units.  Record the reuse explicitly;
-  it is candidate-development evidence, not an independent confirmation.
+- Carry-over V3 and remaining-refill V4 reuse the already-opened V2
+  development units.  They are candidate-development mechanism tests, not
+  independent confirmation.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -66,14 +66,15 @@ P99.
 | Qualify and archive score-aware V2 | `d114f65` | Strict 48-pair all-gate pass, compact snapshot, and raw-archive identity |
 | Add full-horizon carry-over V3 | `1774d5b` | Isolated runtime profile with unchanged startup credit and opened-seed matrices |
 | Validate full-horizon evidence | `ad16a84` | Profile-bound raw replay and qualification closure |
+| Archive full-horizon V3 | `05f3e4a` | Strict null result and exact V2/V3 behavioral comparison |
+| Add remaining-refill V4 | `c08468a` | Final causal borrowing tier with unchanged inherited policy settings |
+| Validate remaining-refill evidence | `28c2b1b` | Schema-V3 replay of remaining credit, tier order, and repayment telemetry |
+| Diagnose V3/V4 admission shift | `6fed1ca` | Exact 86,400-frame action and outcome transition tool |
 
-The latest validator milestone is `cff64f7`.  It exactly replays the compiled
-ridge reduction order and proves one integer per-frame byte allocation can
-jointly satisfy PPDU totals, settlements, and every outstanding reservation
-checkpoint.  It normalizes sub-nanosecond rows to exact integer lattices,
-splits independent MILP components, reconstructs dependent variables, and
-accepts only integer witnesses that pass an independent exact constraint
-recheck.
+The latest T2 validator milestone is `28c2b1b`.  It retains `cff64f7`'s exact
+compiled-ridge and integer airtime-feasibility replay, and adds independent
+schema-V3 reconstruction of causally remaining refill, ordered admission
+tiers, summary counts, and repayment telemetry.
 
 ## One authoritative TODO checklist
 
@@ -98,10 +99,15 @@ recheck.
   tier, refill, reservation, action, and environment.  V3 changed guard state
   but zero decisions or frame outcomes; archive the negative result under
   `key_experiment_results/08_full_horizon_t2_str_engineering_v3`.
-- [ ] Replace ineffective storage capacity with bounded reservation against
+- [x] Replace ineffective storage capacity with bounded reservation against
   causally remaining refill, preserving conservative accounting and enforcing
-  repayment by measurement stop.  Evaluate only on opened seeds before
-  deciding whether to proceed to predictor, startup, or I-frame work.
+  repayment by measurement stop.  V4 passes against STR but regresses from
+  V2/V3 because early lower-risk actions displace later higher-risk actions;
+  archive it as a negative result and do not promote it.
+- [ ] Return to V2 and develop one better predictor/ranker from existing
+  randomized-intervention evidence.  Target deadline rescue and tail benefit
+  directly, use secondary-path state where causally available, and evaluate
+  only on opened development data before defining another runtime campaign.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -132,21 +138,31 @@ appears on none of 2,116 emergency actions and none of 2,540 guard rejections.
 Increasing capacity therefore cannot expose the projected admission headroom
 for this chronology.
 
-The next boundary is one causal future-refill experiment, not another bucket
-size or predictor search.  Permit a reservation to borrow only credit that is
-known to refill before measurement stop, decrease that allowance as the stop
-approaches, retain conservative reservation and measured settlement, and
-prove repayment at the boundary.  The current all-passer canonical
-reservation is 309.3 ms/run versus 360 ms/run of generated refill, but actual
-closed-loop airtime and contention remain unknown until measured.
+Remaining-refill V4 closes the future-credit question with a negative result.
+It passes all four STR gates at 585/86,400 misses (0.6771%), 17.395 ms P99,
+1.1255 sender-airtime ratio, and 0.0050% background loss, but it is worse than
+V2/V3's 495 misses and 17.192 ms P99.  The regression is not a predictor
+change: all 86,400 scores and threshold memberships are identical between V3
+and V4, and primary-copy outcomes differ on only one frame.
 
-If bounded future refill still cannot improve admission within the airtime
-gate, shift immediately to the predictor/outcome problem.  Its specific
-targets are 170 below-threshold misses and the substantial airtime spent
-accelerating already-on-time frames or giving no benefit.  Startup and
-I-frames remain separate semantic changes: choose a causal non-temporal
-startup fallback or consistent pre-roll, and test an I-specific policy rather
-than indiscriminate I-frame duplication.
+V4 launches 5,272 copies versus V3's 4,944.  Only 3,910 actions are common;
+1,034 displaced V3 actions contain 172 primary misses (16.63%), while 1,362
+V4-only actions contain 76 (5.58%).  The displaced actions occur much later
+and have higher scores.  V4 fixes 82 V3 misses but creates 172 new misses.
+Conditional rescue remains about 95.7%, so chronological future-credit
+spending, not duplication, causes the loss.  Do not run another bucket or
+remaining-refill variant.
+
+The next boundary is the predictor/outcome problem under the V2 controller.
+Use the existing randomized full-copy evidence to rank expected deadline
+rescue and completed-tail benefit directly, incorporating causally available
+secondary-path state instead of relying only on primary bad12 benefit divided
+by a poorly ranking learned cost head.  First quantify improvement on the
+already-opened splits and measure whether it captures the 170 V2
+below-threshold misses without increasing action cost.  Startup and I-frames
+remain separate semantic changes: choose a causal non-temporal startup
+fallback or consistent pre-roll, and test an I-specific policy rather than
+indiscriminate I-frame duplication.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -232,8 +248,48 @@ Do not repeat an entry unless relevant code changed after it ran.
   at 95,546,464 compressed bytes.
 - Exact V2/V3 comparison found zero changed admission rows and zero changed
   frame-outcome rows despite 29,673 changed guard-balance rows.
+- Remaining-refill V4 implementation through `28c2b1b`: C++ controller and
+  broad wifi-streaming suites passed, as did 54 focused Python tests and 7
+  plotter tests.  The seed-43 preflight passed strict validation.
+- The 96-run V4 campaign completed at commit `28c2b1b` on the 64-vCPU VM,
+  consuming 10 h 57 min of CPU time with 5.4 GB peak memory.  Analysis and
+  plotting strictly validated all 96 runs; local restored-archive analysis
+  independently passed the same checks.
+- V4 manifest SHA-256:
+  `1bf8ffe0b3550ad39ff1df43ade8d71ae691aa2f78ac70d7a7d48361eff8d4e6`.
+  Strict report SHA-256:
+  `26bafbb66c54f060ce6556f7d4ca329f3b6e7e43f436edeb3dcf060c438234d2`.
+  Aggregate SHA-256:
+  `a6ac67796cfd5c7fcf3d80b92422634fe27c5f47be703377b148cce3c5c12d51`.
+- The V4 raw archive passes `zstd -t` locally and remotely and has SHA-256
+  `94a440bcf2ca2cb255fe8393ea2b18600196d692411bc97d0d8999a0ace51301`
+  at 96,983,224 compressed bytes.
+- Final V4 48-pair report: policy 0.6771% misses and 17.395 ms P99; STR
+  0.7998% and 18.875 ms; sender-airtime ratio 1.1255; background loss
+  0.0050%; performance, resource, and overall status all `pass`.
+- Exact V3/V4 comparison at `6fed1ca` found zero changed scores or threshold
+  results, 1,034 displaced V3 actions, 1,362 V4-only actions, and a net 90
+  additional misses.  All 63 related Python tests passed.
 
 ## Work log
+
+### 2026-08-05 - Falsify chronological remaining-refill borrowing
+
+- Added and pushed the remaining-refill V4 guard primitive, runtime profile,
+  frozen contract, and schema-V3 strict replay through `28c2b1b`.
+- Ran the local seed-43 preflight, then completed all 96 opened-seed runs on
+  the 64-vCPU VM.  Fetched and checksum-verified the 96.98 MB raw archive and
+  independently reran strict qualification after local restoration.
+- Generated the four paired qualification figures, all eight requested
+  historical figures, and an exact V3/V4 admission-shift figure.
+- Established that V4 still defeats STR but regresses from V2/V3 because
+  earlier lower-score actions displace later higher-risk actions.  Rescue
+  efficacy remains unchanged; predictor scores are exactly identical.
+- Added and pushed the reusable action-transition diagnostic as `6fed1ca`,
+  archived the V4 negative result under
+  `key_experiment_results/09_remaining_refill_t2_str_engineering_v4`, and
+  returned the next work boundary to predictor/ranker quality.  Reserved
+  confirmation seeds remain unopened.
 
 ### 2026-08-05 - Falsify full-horizon stored-credit carry-over
 
