@@ -28,10 +28,9 @@ Consequences for analysis and claims:
 - Do not describe EMLSR as unconditionally low latency on the basis of its
   completed-frame P99.
 - The primary victory gates are lower miss rate and lower completed-frame P99
-  than STR MLO, plus a decisively lower miss rate than EMLSR MLO.  EMLSR's
-  completed-frame P99 is descriptive only and is not a victory gate because
-  its selected denominator rewards the high miss rate.  EMLSR remains the
-  harder sender-airtime baseline.
+  than STR MLO.  EMLSR is not an optimization target or qualification gate;
+  its completed-frame P99 is descriptive only because the selected denominator
+  rewards its high miss rate.
 - If a latency comparison against EMLSR is needed, prefer an explicitly
   defined all-generated-frame deadline-censored metric that cannot improve by
   dropping difficult frames.
@@ -114,28 +113,64 @@ frames, versus STR's 57 episodes and 164 frames.  Absolute miss reduction
 remains the objective; replacing rare long bursts with more frequent shorter
 bursts is not sufficient.
 
-## Score-aware emergency V2 preflight
+## Score-aware emergency V2 engineering qualification
 
-The next candidate changes admission only.  If ordinary measured-airtime
-admission rejects a threshold-passing frame, an exact high-score tier may
-borrow at most `60000 us` against later refill.  Predictor, primary score,
-P-frame gate, action, conservative reservation, 0.6% refill, 10-second bucket,
-and environment remain unchanged.  The frozen contract is
+V2 changes admission only.  If ordinary measured-airtime admission rejects a
+threshold-passing frame, an exact high-score tier may borrow at most `60000 us`
+against later refill.  Predictor, primary score, P-frame gate, action,
+conservative reservation, 0.6% refill, 10-second bucket, and environment are
+unchanged.  The frozen contract is
 `experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json`
 with SHA-256
 `bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda`.
 
-On the reused seed-43 preflight, V2 recorded 8 misses and 21.419 ms completed
-P99, versus the prior V1 policy's 16 misses and 22.024 ms and the exactly
-reproduced STR arm's 10 misses and 23.086 ms.  V2 used 216 actions versus 212
-for V1; its 70 emergency admissions largely displaced later strict actions
-rather than simply adding 70 copies.  This is evidence that chronological
-allocation matters, not evidence that V2 passes.  The same seed's sender
-airtime ratio against STR was 1.261, above the 1.20 target.
+The 48-pair campaign on fresh engineering seeds `1251` through `1298` passes
+all four frozen gates:
 
-Judge V2 only on fresh engineering seeds `1251` through `1298`.  Keep seeds
-`1301` through `1348` unopened unless V2 passes both paired performance gates
-and both resource gates.  Do not tune the predictor from this pilot.
+| Metric | Score-aware T2 V2 | STR MLO | Paired policy-minus-STR result |
+| --- | ---: | ---: | ---: |
+| All-generated miss rate | 0.5729% | 0.7998% | -0.2269 pp, 95% interval [-0.3194, -0.1377] pp |
+| Mean per-run completed P99 | 17.192 ms | 18.875 ms | -1.682 ms, 95% interval [-2.643, -0.795] ms |
+| Sender-airtime ratio | - | - | 1.1217, 95% interval [1.0847, 1.1565] |
+| Background-throughput loss | - | - | 0.0054%, 95% interval [0.0027%, 0.0081%] |
+
+This is the first clear engineering victory against STR.  It reduces misses
+by 28.36% and P99 by 8.91% relative to the matched STR points, but it is not
+final confirmation and is still short of the longer-term aspiration of more
+than 50% fewer misses.  Seeds `1301` through `1348` remain unopened.  The
+authoritative compact snapshot is
+`key_experiment_results/07_score_aware_t2_str_engineering_v2`.
+
+The mechanism diagnosis is decisive.  Reconstructed primary-copy misses are
+1,232 and final union misses are 495.  Actions cover 771 primary misses and
+rescue 737 (95.59%).  V2 admits 4,944 threshold passers with 15.59% primary
+miss risk and rejects 2,540 with only 6.38% risk, correcting V1's reversed
+ordering.  Its emergency tier covers 453 primary misses among 2,116 actions
+(21.41% risk), versus 318 among 2,828 strict actions (11.24%).
+
+Remaining final misses are: 170 below threshold, 162 guard rejected, 72
+history warmup, 48 I-frame restricted, 34 acted but still late/incomplete,
+and 9 outside the decision window.  Mean measured secondary airtime is only
+240.43 ms/run.  All score passers carry 355.25 ms/run of learned predicted
+cost, below the 360 ms/run generated over 60 seconds, while rejected
+candidates account for 120.84 ms/run.  This supports one more isolated guard
+experiment: increase causal carry-over toward the full experiment horizon
+while freezing the predictor, threshold, emergency tier, conservative
+reservation, refill, action, and environment.  Use only already-open
+engineering seeds for development; a sensitivity projection is not evidence
+until closed-loop contention is measured.
+
+After that guard isolation, prioritize a better treated-outcome/cost ranker
+for the 170 below-threshold misses and wasted action airtime.  Make startup
+semantics explicit: the first eight frames per run have 72 misses among 384
+frames because temporal history is unavailable.  Use either a causal
+non-temporal fallback or consistent pre-roll.  Treat the 48 I-frame misses
+with an I-specific rule rather than duplicating every large I-frame.
+
+The checksum-bound raw 96-run archive has SHA-256
+`382e4a3508cd013dc028b849301096054c12eef4cb302ed101f14d0434d6da3f`.
+Its local and experiment-host paths are recorded in the compact snapshot.  It
+still needs durable external publication before a release-quality handoff.
 
 ## Randomized-policy population mapping
 
@@ -170,8 +205,10 @@ rate by only 0.0116 percentage points and shifting the point P99 by roughly
 runtime implementation.
 
 These numbers are post-selection engineering diagnostics, not confirmation
-evidence.  The final decision must come from the untouched 1301+ seeds with
-the compiled T2 policy, STR MLO, and EMLSR MLO built from the same commit.
+evidence.  The final STR decision must come from the untouched 1301+ seeds
+with the compiled policy and STR MLO built from the same commit.  An EMLSR arm
+may be retained as a descriptive reference, but it must not steer or block
+the STR-focused iteration.
 When revisiting the offline audit, retain every generated frame, keep the
 completed-tail numerator and completion denominator explicit, and use
 whole-run resampling.

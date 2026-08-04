@@ -34,6 +34,9 @@ P99.
 - Fresh score-aware V2 engineering units: seeds `1251` through `1298`, ns-3
   run `1`.  The matrix has one policy run and one STR MLO run per seed, for
   48 matched pairs and 96 runs.
+- Any carry-over V3 engineering iteration must reuse already-open development
+  units rather than opening confirmation units.  Record the reuse explicitly;
+  it is candidate-development evidence, not an independent confirmation.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -59,12 +62,16 @@ P99.
 | Add bounded-debt guard primitive | `3740694` | Generic debt-limited admission and fail-closed unit tests |
 | Add score-aware V2 profile | `a8f6d5a` | Frozen contract, runtime telemetry, and fresh-seed matrices |
 | Validate V2 evidence | `24a5774` | Strict replay including serialized float32 profile identity |
+| Make paired-meter replay robust | `cff64f7` | Component MILP, exact lattices, and independently rechecked integer witnesses |
+| Qualify and archive score-aware V2 | `d114f65` | Strict 48-pair all-gate pass, compact snapshot, and raw-archive identity |
 
-The latest validator milestone is `6b822a4`.  It exactly replays the
-compiled ridge reduction order and proves one integer per-frame byte
-allocation can jointly satisfy PPDU totals, settlements, and every outstanding
-reservation checkpoint.  It also accepts only solver-rounded integer
-witnesses that pass an independent exact constraint recheck.
+The latest validator milestone is `cff64f7`.  It exactly replays the compiled
+ridge reduction order and proves one integer per-frame byte allocation can
+jointly satisfy PPDU totals, settlements, and every outstanding reservation
+checkpoint.  It normalizes sub-nanosecond rows to exact integer lattices,
+splits independent MILP components, reconstructs dependent variables, and
+accepts only integer witnesses that pass an independent exact constraint
+recheck.
 
 ## One authoritative TODO checklist
 
@@ -79,39 +86,59 @@ witnesses that pass an independent exact constraint recheck.
   artifacts, validate every run locally, analyze against STR MLO, and record
   the result and next scientific decision here (`6b822a4`; compact result
   archived under `key_experiment_results/06_paired_value_t2_str_qualification_v1`).
-- [ ] Implement and evaluate a score-aware measured-airtime admission policy
-  on development seeds, preserving seeds `1301` through `1348` for final
-  confirmation.  Replace the predictor only after admission is no longer the
-  dominant failure.
+- [x] Implement and evaluate score-aware emergency admission V2 on fresh
+  engineering seeds, recover and strictly validate all 96 completed runs,
+  archive the all-gate STR victory, and preserve seeds `1301` through `1348`
+  (`d114f65`; simulation build `eb7f960`, final validator `cff64f7`; result under
+  `key_experiment_results/07_score_aware_t2_str_engineering_v2`).
+- [ ] Isolate full-horizon causal carry-over as admission V3 on already-open
+  engineering seeds while freezing the V2 predictor, threshold, emergency
+  tier, refill, reservation, action, and environment.  Do not replace the
+  predictor or open final-confirmation seeds until this guard question is
+  resolved.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-Score-aware emergency admission V2 is implemented and pushed through
-`24a5774`.  It leaves the predictor, score threshold, P-frame gate, action,
-0.6% refill, 10-second carry-over, conservative reservation, and neutral
-environment unchanged.  After strict admission fails, only scores at least
-the exact float32 value `0.0001500000071246177` may borrow at most one bucket
-depth (`60000 us`) against future refill.  Its frozen runtime-contract SHA-256
-is `bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda`.
+Score-aware emergency admission V2 is complete and is the first candidate to
+pass every frozen engineering gate against STR.  On seeds `1251` through
+`1298`, it records 495/86,400 misses (0.5729%) versus STR's 691 (0.7998%), and
+17.192 ms mean per-run completed P99 versus 18.875 ms.  The policy-minus-STR
+95% intervals are `[-0.3194, -0.1377]` percentage points for misses and
+`[-2.643, -0.795]` ms for P99.  Sender airtime is 1.1217 of STR with interval
+`[1.0847, 1.1565]`; background loss is 0.0054%.  All four gates pass.
 
-A fresh same-commit seed-43 preflight at
-`/tmp/paired-value-t2-score-aware-preflight-24a5774` completed and strictly
-validated both arms.  V2 recorded 8/1,800 misses and 21.419 ms P99, versus
-16 misses and 22.024 ms for the prior V1 preflight and 10 misses and
-23.086 ms for the exactly reproduced STR arm.  V2 made 216 actions versus
-V1's 212: 146 strict and 70 emergency admissions.  This supports the intended
-allocation mechanism, but it is one reused pilot seed and makes no
-qualification claim.  Its sender-airtime ratio was 1.261, so the resource
-gate remains a live risk.
+The mechanism evidence supports the score-aware guard.  Of 4,944 actions,
+771 primary copies miss and 737 are rescued.  Admitted candidates have 15.59%
+primary miss risk versus 6.38% among the 2,540 guard rejections, correcting
+V1's admission inversion.  Emergency admissions carry 21.41% primary risk
+versus 11.24% for strict admissions.  The remaining 495 misses decompose into
+170 below threshold, 162 guard rejected, 72 startup history, 48 restricted
+I-frames, 34 acted but still late/incomplete, and 9 outside the window.
 
-Before launching the fresh 48-pair V2 campaign, extend the strict
-qualification analyzer to bind the V2 runtime contract and seeds `1251`
-through `1298` while preserving the V1 report path.  Then run the 96-run
-matrix on the 64-vCPU VM, fetch/checksum/validate every raw run, and apply the
-unchanged paired gates.  Do not open reserved final-confirmation seeds.
+The current boundary is one controlled V3 guard test, not an open-ended model
+search.  Increase the causal token-bucket capacity/carry-over from 10 seconds
+toward the full 60-second experiment horizon while keeping the V2 predictor,
+threshold, P-frame gate, emergency tier/debt, 0.6% refill, conservative cost
+reservation, duplicate action, and environment fixed.  Use already-open
+engineering seeds only.  All threshold passers have 355.25 ms/run of learned
+predicted cost versus 360 ms/run of generated credit, but the 120.84 ms/run
+assigned to rejected candidates is only a projection until closed-loop
+contention is measured.
+
+After this isolation, shift to the predictor/outcome problem unless the guard
+still clearly dominates.  The specific targets are 170 below-threshold
+misses and the substantial airtime spent accelerating already-on-time frames
+or giving no benefit.  Startup and I-frames are separate semantic changes:
+choose a causal non-temporal startup fallback or consistent pre-roll, and
+test an I-specific policy instead of indiscriminate I-frame duplication.
+
+Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
+pass, not final confirmation, and its 28.36% relative miss reduction is still
+short of the longer-term greater-than-50% aspiration.  Freeze the final
+candidate and final analyzer before consuming those seeds.
 
 The V1 event schema does not record its per-frame byte split or equal-time
 callback sequence, and the portable compiled cost path does not freeze FMA
@@ -159,8 +186,49 @@ Do not repeat an entry unless relevant code changed after it ran.
   `e6141c6bfe6729a7a003ba408d01f00a4291845aa936ebf4b2216b8640001b24`.
   Policy run `c88bb4ff52b2dbe72507` and STR run `0e075faa14035bb7dc22`
   each passed strict validation with 1,800 frames.
+- Robust validator at `cff64f7`: `77/77` focused and compatibility tests
+  passed.  Both formerly hard real attempts validate in under five seconds;
+  a balanced `+0.01/-0.01 us` settlement mutation is rejected by exact
+  integer feasibility.
+- All 11 preserved V2 attempts passed the final validator and were promoted
+  without rerunning simulations.  All 96 canonical run directories then
+  passed fresh strict validation for both analysis and plot generation.
+- V2 manifest SHA-256:
+  `24a87c9ec02e7564116992367754bdcf6ffc7845a1fa26908b8dea92fe316ef2`.
+  Strict report SHA-256:
+  `75b8797ade357d9877a594be8972fb7a68a84ff197cdea47baca02df6000773a`.
+  Aggregate SHA-256:
+  `7b4777f423072cd635a00261ff23a5ce17dc460020cab9082acc704750098c6d`.
+- The V2 raw archive passes `zstd -t`, contains 96 canonical run directories,
+  and has SHA-256
+  `382e4a3508cd013dc028b849301096054c12eef4cb302ed101f14d0434d6da3f`
+  at 94,939,663 compressed bytes.
+- Final V2 48-pair report: policy 0.5729% misses and 17.192 ms P99; STR
+  0.7998% and 18.875 ms; sender-airtime ratio 1.1217; background loss
+  0.0054%; performance, resource, and overall status all `pass`.
 
 ## Work log
+
+### 2026-08-04 - Establish and archive the first STR engineering victory
+
+- Completed all 96 score-aware V2 simulations on the 64-vCPU VM.  Eleven
+  validator-retained attempts were recovered without simulation reruns after
+  the final exact feasibility validator accepted them.
+- Reconstructed and checksum-bound the complete manifest, freshly strictly
+  validated every raw run twice through analysis and plotting, and produced
+  both the paired qualification figures and the standard CDF/PDF/burst suite.
+- Established decisive paired improvements in all-generated miss rate and
+  completed-frame P99 while passing the sender-airtime and background gates.
+- Confirmed that score-aware emergency admission reverses V1's risk ordering:
+  admitted candidates are materially riskier than rejected ones, with 737
+  factual primary-miss rescues.
+- Created the compact archive under
+  `key_experiment_results/07_score_aware_t2_str_engineering_v2` and retained a
+  checksum-bound 96-run raw archive outside Git history; committed the compact
+  evidence as `d114f65`.
+- Chose full-horizon causal carry-over as the next single-variable guard
+  experiment on already-open engineering seeds.  Reserved confirmation seeds
+  remain untouched.
 
 ### 2026-08-04 - Implement and preflight score-aware admission V2
 
