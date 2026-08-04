@@ -107,6 +107,27 @@ SecondaryAirtimeBudgetGuard::CanReserve(
 }
 
 bool
+SecondaryAirtimeBudgetGuard::CanReserveWithDebtLimit(
+    double estimatedUs,
+    double outstandingReservationsUs,
+    double maximumDebtUs) const noexcept
+{
+    if (!std::isfinite(estimatedUs) || !(estimatedUs > 0) ||
+        !std::isfinite(maximumDebtUs) || maximumDebtUs < 0)
+    {
+        return false;
+    }
+    const auto availableUs = GetAvailableBalanceUs(outstandingReservationsUs);
+    if (!availableUs)
+    {
+        return false;
+    }
+    const double debtAdjustedAvailableUs = *availableUs + maximumDebtUs;
+    return std::isfinite(debtAdjustedAvailableUs) &&
+           debtAdjustedAvailableUs >= estimatedUs;
+}
+
+bool
 SecondaryAirtimeBudgetGuard::DebitMeasuredAirtime(uint64_t nowNs,
                                                   double measuredUs) noexcept
 {

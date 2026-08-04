@@ -135,6 +135,21 @@ class SecondaryAirtimeBudgetGuardAccountingTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(guard.CanReserve(10000.001, 2000.0),
                               false,
                               "Reservation beyond available balance was admitted");
+        NS_TEST_ASSERT_MSG_EQ(guard.CanReserveWithDebtLimit(13000.0,
+                                                            2000.0,
+                                                            3000.0),
+                              true,
+                              "Exact bounded-debt reservation was rejected");
+        NS_TEST_ASSERT_MSG_EQ(guard.CanReserveWithDebtLimit(13000.001,
+                                                            2000.0,
+                                                            3000.0),
+                              false,
+                              "Reservation beyond the debt limit was admitted");
+        NS_TEST_ASSERT_MSG_EQ(guard.CanReserveWithDebtLimit(10000.0,
+                                                            2000.0,
+                                                            0.0),
+                              guard.CanReserve(10000.0, 2000.0),
+                              "Zero debt limit differs from strict admission");
 
         NS_TEST_ASSERT_MSG_EQ(guard.DebitMeasuredAirtime(startNs, 15000.0),
                               true,
@@ -232,6 +247,15 @@ class SecondaryAirtimeBudgetGuardFailClosedTestCase : public TestCase
             guard.CanReserve(std::numeric_limits<double>::quiet_NaN(), 0.0),
             false,
             "NaN reservation estimate was admitted");
+        NS_TEST_ASSERT_MSG_EQ(
+            guard.CanReserveWithDebtLimit(1.0,
+                                          0.0,
+                                          std::numeric_limits<double>::quiet_NaN()),
+            false,
+            "NaN debt limit was admitted");
+        NS_TEST_ASSERT_MSG_EQ(guard.CanReserveWithDebtLimit(1.0, 0.0, -1.0),
+                              false,
+                              "Negative debt limit was admitted");
 
         NS_TEST_ASSERT_MSG_EQ(guard.Refill(1999),
                               false,

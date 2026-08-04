@@ -91,6 +91,22 @@ class SecondaryAirtimeBudgetGuard
                     double outstandingReservationsUs) const noexcept;
 
     /**
+     * Test whether one estimate fits after bounded future-credit borrowing.
+     *
+     * The debt limit applies to the balance remaining after both active
+     * external reservations and the proposed reservation.  This query does
+     * not mutate guard state; measured airtime remains the only debit.
+     *
+     * @param estimatedUs Proposed reservation in microseconds.
+     * @param outstandingReservationsUs Active external reservations.
+     * @param maximumDebtUs Maximum permitted negative available balance.
+     * @return True only for a valid, initialized reservation within the limit.
+     */
+    bool CanReserveWithDebtLimit(double estimatedUs,
+                                 double outstandingReservationsUs,
+                                 double maximumDebtUs) const noexcept;
+
+    /**
      * Debit measured airtime after refilling through its timestamp.
      *
      * @param nowNs Measurement timestamp in nanoseconds.
