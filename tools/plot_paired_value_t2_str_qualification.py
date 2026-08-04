@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import csv
 import hashlib
 import json
 import math
 import statistics
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
@@ -20,8 +22,11 @@ import numpy as np
 
 from analyze_paired_value_t2_str_qualification import (
     ARM_IDENTITIES,
+    EXPECTED_PAIR_COUNT,
+    EXPECTED_SEED_RUN_UNITS,
     QualificationError,
     _background_metrics,
+    _canonical_json,
     _finite,
     _flag,
     _frame_metrics,
@@ -31,7 +36,9 @@ from analyze_paired_value_t2_str_qualification import (
     _resolve_aggregate,
     _run_directory,
     _sender_airtime_us,
+    _validate_manifest,
 )
+from validate_outputs import ValidationError, validate_run
 
 
 ANALYSIS_NAME = "paired_value_t2_str_qualification"
@@ -47,8 +54,10 @@ DECISION_STATUS_ORDER = (
     "history_warmup",
     "outside_decision_window",
     "frame_type_restricted",
+    "descriptor_unavailable",
     "below_score_threshold",
     "airtime_guard_rejected",
+    "launch_rejected",
     "action",
 )
 DECISION_STATUS_LABELS = {
@@ -56,10 +65,87 @@ DECISION_STATUS_LABELS = {
     "history_warmup": "History warmup",
     "outside_decision_window": "Outside window",
     "frame_type_restricted": "Frame type restricted",
+    "descriptor_unavailable": "Descriptor unavailable",
     "below_score_threshold": "Below score threshold",
     "airtime_guard_rejected": "Airtime guard rejected",
+    "launch_rejected": "Launch rejected",
     "action": "Action",
 }
+
+ACTION_OUTCOME_ORDER = (
+    "Primary on time, accelerated",
+    "Primary on time, no benefit",
+    "Primary miss rescued",
+    "Primary miss late/incomplete",
+)
+
+DECISION_GATE_FLAGS = {
+    "outside_decision_window": (False,) * 9,
+    "history_warmup": (False,) * 9,
+    "frame_type_restricted": (False,) * 9,
+    "not_actionable": (False,) * 9,
+    "descriptor_unavailable": (
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+        False,
+    ),
+    "below_score_threshold": (
+        True,
+        True,
+        True,
+        True,
+        False,
+        False,
+        False,
+        False,
+        False,
+    ),
+    "airtime_guard_rejected": (
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        False,
+        False,
+        False,
+    ),
+    "launch_rejected": (
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        False,
+    ),
+    "action": (True,) * 9,
+}
+
+
+@dataclass(frozen=True)
+class _TestOnlyContract:
+    """Explicit test-only escape hatch for small synthetic campaign fixtures."""
+
+    expected_pairs: tuple[tuple[int, int], ...]
+    skip_strict_run_validation: bool = True
+
+    def __post_init__(self) -> None:
+        if (
+            not self.expected_pairs
+            or tuple(sorted(set(self.expected_pairs))) != self.expected_pairs
+        ):
+            raise ValueError("test-only expected pairs must be nonempty, unique, and ordered")
+
 
 PAIR_COLUMNS = (
     "seed",
@@ -110,49 +196,123 @@ def _report(path: Path) -> dict[str, Any]:
     return report
 
 
-def _manifest_run_ids(manifest: dict[str, Any], path: Path) -> set[str]:
-    runs = manifest.get("runs")
-    if not isinstance(runs, list):
-        raise QualificationError(f"{path}: manifest runs are not a list")
-    run_ids: list[str] = []
-    for run in runs:
-        if not isinstance(run, dict) or not isinstance(run.get("run_id"), str):
-            raise QualificationError(f"{path}: manifest has an invalid run identity")
-        run_ids.append(run["run_id"])
-    if len(run_ids) != len(set(run_ids)):
-        raise QualificationError(f"{path}: duplicate manifest run identity")
-    return set(run_ids)
+def _validate_test_manifest(
+    aggregate: dict[str, Any], manifest_path: Path
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Bind a deliberately small synthetic fixture without weakening production."""
+    manifest = _read_json(manifest_path)
+    manifest_runs = manifest.get("runs")
+    aggregate_runs = aggregate.get("runs")
+    if not isinstance(manifest_runs, list) or not isinstance(aggregate_runs, list):
+        raise QualificationError("test manifest and aggregate require run lists")
+    manifest_by_id: dict[str, dict[str, Any]] = {}
+    for item in manifest_runs:
+        if not isinstance(item, dict):
+            raise QualificationError("test manifest run entry is not an object")
+        run_id = item.get("run_id")
+        if not isinstance(run_id, str) or not run_id or run_id in manifest_by_id:
+            raise QualificationError("test manifest has a duplicate or invalid run ID")
+        if item.get("status") != "complete" or item.get("directory") != run_id:
+            raise QualificationError(f"test manifest run {run_id} is not canonical/complete")
+        manifest_by_id[run_id] = item
+    aggregate_by_id: dict[str, dict[str, Any]] = {}
+    for item in aggregate_runs:
+        if not isinstance(item, dict):
+            raise QualificationError("test aggregate run entry is not an object")
+        run_id = item.get("run_id")
+        if not isinstance(run_id, str) or not run_id or run_id in aggregate_by_id:
+            raise QualificationError("test aggregate has a duplicate or invalid run ID")
+        aggregate_by_id[run_id] = item
+    if set(manifest_by_id) != set(aggregate_by_id):
+        raise QualificationError("test manifest and aggregate run identities differ")
+    for run_id, declared in manifest_by_id.items():
+        observed = aggregate_by_id[run_id]
+        if (
+            declared.get("seed") != observed.get("seed")
+            or declared.get("run") != observed.get("run")
+            or declared.get("topology") != observed.get("topology")
+            or declared.get("policy") != observed.get("policy")
+            or _canonical_json(declared.get("config"))
+            != _canonical_json(observed.get("config"))
+        ):
+            raise QualificationError(f"test manifest run {run_id} identity mismatch")
+    project_commit = manifest.get("project_commit")
+    ns3_commit = manifest.get("ns3_upstream_commit")
+    if not isinstance(project_commit, str) or not isinstance(ns3_commit, str):
+        raise QualificationError("test manifest omits commit identities")
+    return {
+        "path": str(manifest_path.resolve()),
+        "sha256": _sha256_file(manifest_path),
+        "project_commit": project_commit,
+        "ns3_upstream_commit": ns3_commit,
+    }, aggregate_by_id
+
+
+def _strictly_validate_runs(
+    runs: Sequence[dict[str, Any]],
+    aggregate_path: Path,
+    manifest_identity: dict[str, Any],
+) -> None:
+    """Revalidate raw run bytes after the qualification report was written."""
+
+    def validate_one(run: dict[str, Any]) -> None:
+        run_dir = _run_directory(run, aggregate_path)
+        try:
+            result = validate_run(
+                run_dir,
+                expected_run_id=run["run_id"],
+                expected_project_commit=manifest_identity["project_commit"],
+                expected_ns3_commit=manifest_identity["ns3_upstream_commit"],
+            )
+        except ValidationError as error:
+            raise QualificationError(
+                f"{run_dir}: strict plot-input validation failed: {error}"
+            ) from error
+        if result.get("valid") is not True or result.get("run_id") != run["run_id"]:
+            raise QualificationError(f"{run_dir}: strict validator returned invalid identity")
+
+    workers = min(8, len(runs))
+    if workers == 0:
+        raise QualificationError("plotting requires at least one campaign run")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        list(executor.map(validate_one, runs))
 
 
 def _bind_report_to_aggregate(
     aggregate: dict[str, Any],
     aggregate_path: Path,
     report: dict[str, Any],
+    test_contract: _TestOnlyContract | None,
 ) -> list[dict[str, Any]]:
-    runs = aggregate.get("runs")
-    if not isinstance(runs, list):
-        raise QualificationError(f"{aggregate_path}: aggregate runs are not a list")
-    aggregate_run_ids: list[str] = []
-    for run in runs:
-        if not isinstance(run, dict) or not isinstance(run.get("run_id"), str):
-            raise QualificationError(f"{aggregate_path}: aggregate has an invalid run")
-        aggregate_run_ids.append(run["run_id"])
-    if len(aggregate_run_ids) != len(set(aggregate_run_ids)):
-        raise QualificationError(f"{aggregate_path}: duplicate aggregate run identity")
-
     manifests = report["campaign_checks"].get("manifests")
     if not isinstance(manifests, list) or len(manifests) != 1:
         raise QualificationError("plotting requires one manifest-bound qualification report")
     manifest_path = aggregate_path.parent / "experiment_manifest.json"
-    manifest = _read_json(manifest_path)
     if _sha256_file(manifest_path) != manifests[0].get("sha256"):
         raise QualificationError("analysis report is not bound to this campaign manifest")
-    if _manifest_run_ids(manifest, manifest_path) != set(aggregate_run_ids):
-        raise QualificationError("aggregate and manifest run identities differ")
+    if test_contract is None:
+        manifest_identity, runs_by_id = _validate_manifest(aggregate_path, aggregate)
+    else:
+        manifest_identity, runs_by_id = _validate_test_manifest(aggregate, manifest_path)
+    if manifest_identity.get("sha256") != manifests[0].get("sha256"):
+        raise QualificationError("validated manifest identity differs from analysis report")
+    runs = list(runs_by_id.values())
+    for run in runs:
+        run_dir = _run_directory(run, aggregate_path)
+        config = run.get("config")
+        if not isinstance(config, dict):
+            raise QualificationError(f"{aggregate_path}: run {run['run_id']} has no config")
+        resolved = _read_json(run_dir / "resolved_config.json")
+        if _canonical_json(config) != _canonical_json(resolved):
+            raise QualificationError(f"{run_dir}: aggregate and resolved config differ")
+    if test_contract is None or not test_contract.skip_strict_run_validation:
+        _strictly_validate_runs(runs, aggregate_path, manifest_identity)
     return runs
 
 
-def _expected_pairs(report: dict[str, Any]) -> list[tuple[int, int]]:
+def _expected_pairs(
+    report: dict[str, Any], test_contract: _TestOnlyContract | None
+) -> list[tuple[int, int]]:
     units = report.get("paired_units")
     if not isinstance(units, list) or len(units) != report.get("paired_unit_count"):
         raise QualificationError("analysis report has invalid paired units")
@@ -167,6 +327,18 @@ def _expected_pairs(report: dict[str, Any]) -> list[tuple[int, int]]:
         pairs.append(pair)
     if len(pairs) != len(set(pairs)) or pairs != sorted(pairs):
         raise QualificationError("analysis report paired units are not unique and ordered")
+    expected = (
+        list(EXPECTED_SEED_RUN_UNITS)
+        if test_contract is None
+        else list(test_contract.expected_pairs)
+    )
+    if pairs != expected:
+        description = (
+            f"the frozen {EXPECTED_PAIR_COUNT}-unit contract"
+            if test_contract is None
+            else "the explicit test-only contract"
+        )
+        raise QualificationError(f"analysis report paired units differ from {description}")
     return pairs
 
 
@@ -230,15 +402,12 @@ def _verify_report_summaries(
             _assert_close(mean, summary.get("mean"), f"{arm} {report_field} mean")
 
 
-def paired_rows(
-    aggregate_input: Path, report_path: Path
-) -> tuple[list[dict[str, Any]], dict[str, Any], Path]:
-    """Reconstruct paired plot rows and bind them to one strict report."""
-    aggregate_path = _resolve_aggregate(aggregate_input)
-    aggregate = _read_json(aggregate_path)
-    report = _report(report_path)
-    runs = _bind_report_to_aggregate(aggregate, aggregate_path, report)
-    pairs = _expected_pairs(report)
+def _paired_rows_from_runs(
+    runs: Sequence[dict[str, Any]],
+    aggregate_path: Path,
+    pairs: list[tuple[int, int]],
+    report: dict[str, Any],
+) -> list[dict[str, Any]]:
     indexes: dict[str, dict[tuple[int, int], dict[str, int | float | str]]] = {
         arm: {} for arm in ARM_IDENTITIES
     }
@@ -298,17 +467,36 @@ def paired_rows(
                 - policy_background / str_background,
             }
         )
-    return rows, report, aggregate_path
+    return rows
 
 
-def policy_admission_diagnostics(
-    aggregate_path: Path, report: dict[str, Any]
+def paired_rows(
+    aggregate_input: Path,
+    report_path: Path,
+    *,
+    _test_contract: _TestOnlyContract | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, Any], Path]:
+    """Reconstruct paired plot rows and bind them to one strict report."""
+    aggregate_path = _resolve_aggregate(aggregate_input)
+    aggregate = _read_json(aggregate_path)
+    report = _report(report_path)
+    pairs = _expected_pairs(report, _test_contract)
+    runs = _bind_report_to_aggregate(
+        aggregate, aggregate_path, report, _test_contract
+    )
+    return (
+        _paired_rows_from_runs(runs, aggregate_path, pairs, report),
+        report,
+        aggregate_path,
+    )
+
+
+def _policy_admission_diagnostics_from_runs(
+    aggregate_path: Path,
+    report: dict[str, Any],
+    runs: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
     """Summarize policy admission and primary-copy outcomes for diagnosis only."""
-    aggregate = _read_json(aggregate_path)
-    runs = aggregate.get("runs")
-    if not isinstance(runs, list):
-        raise QualificationError(f"{aggregate_path}: aggregate runs are not a list")
     policy_runs = [
         run
         for run in runs
@@ -328,11 +516,7 @@ def policy_admission_diagnostics(
     }
     status_counts = {status: 0 for status in DECISION_STATUS_ORDER}
     status_primary_misses = {status: 0 for status in DECISION_STATUS_ORDER}
-    action_outcomes = {
-        "Primary met deadline": 0,
-        "Primary miss rescued": 0,
-        "Primary miss not rescued": 0,
-    }
+    action_outcomes = {outcome: 0 for outcome in ACTION_OUTCOME_ORDER}
     seen_frames: set[tuple[str, int]] = set()
     for run in policy_runs:
         run_dir = _run_directory(run, aggregate_path)
@@ -343,8 +527,11 @@ def policy_admission_diagnostics(
                 "frame_id",
                 "generation_time_us",
                 "deadline_us",
+                "duplicated",
+                "union_completion_us",
                 "copy_0_completion_us",
                 "deadline_miss",
+                "incomplete",
             },
         )
         decisions = _read_csv(
@@ -359,6 +546,8 @@ def policy_admission_diagnostics(
                 "primary_actionable",
                 "inside_decision_window",
                 "history_ready",
+                "descriptor_checked",
+                "descriptor_available",
                 "feature_evaluated",
                 "passes_score_threshold",
                 "guard_admission_considered",
@@ -408,11 +597,19 @@ def policy_admission_diagnostics(
             history_ready = _flag(
                 decision.get("history_ready"), f"{run_dir}: history_ready"
             )
+            descriptor_checked = _flag(
+                decision.get("descriptor_checked"), f"{run_dir}: descriptor_checked"
+            )
+            descriptor_available = _flag(
+                decision.get("descriptor_available"),
+                f"{run_dir}: descriptor_available",
+            )
             feature_evaluated = _flag(
                 decision.get("feature_evaluated"), f"{run_dir}: feature_evaluated"
             )
             score_value = decision.get("passes_score_threshold")
-            score_passed = False if score_value == "" else _flag(
+            score_recorded = score_value != ""
+            score_passed = score_recorded and _flag(
                 score_value, f"{run_dir}: passes_score_threshold"
             )
             guard_considered = _flag(
@@ -429,14 +626,57 @@ def policy_admission_diagnostics(
                 decision.get("secondary_launched"), f"{run_dir}: secondary_launched"
             )
             if (
-                score_passed and not feature_evaluated
+                descriptor_available and not descriptor_checked
+                or feature_evaluated and not descriptor_available
+                or score_passed and not feature_evaluated
                 or guard_considered != score_passed
                 or guard_admitted and not guard_considered
                 or launch_attempted != guard_admitted
-                or launched != launch_attempted
-                or launched != (status == "action")
+                or launched and not launch_attempted
             ):
                 raise QualificationError(f"{run_dir}: inconsistent admission funnel flags")
+
+            frame_type = decision.get("frame_type")
+            if not inside_window:
+                expected_status = "outside_decision_window"
+            elif not history_ready:
+                expected_status = "history_warmup"
+            elif frame_type != "P_FRAME":
+                expected_status = "frame_type_restricted"
+            elif not actionable:
+                expected_status = "not_actionable"
+            elif not descriptor_checked:
+                raise QualificationError(f"{run_dir}: actionable frame skipped descriptor gate")
+            elif not descriptor_available:
+                expected_status = "descriptor_unavailable"
+            elif not feature_evaluated:
+                raise QualificationError(f"{run_dir}: available descriptor skipped model gate")
+            elif not score_passed:
+                expected_status = "below_score_threshold"
+            elif not guard_admitted:
+                expected_status = "airtime_guard_rejected"
+            elif not launched:
+                expected_status = "launch_rejected"
+            else:
+                expected_status = "action"
+            observed_late_flags = (
+                descriptor_checked,
+                descriptor_available,
+                feature_evaluated,
+                score_recorded,
+                score_passed,
+                guard_considered,
+                guard_admitted,
+                launch_attempted,
+                launched,
+            )
+            if (
+                status != expected_status
+                or observed_late_flags != DECISION_GATE_FLAGS[status]
+            ):
+                raise QualificationError(
+                    f"{run_dir}: decision status and gate evidence disagree"
+                )
 
             generation = _finite(
                 frame.get("generation_time_us"),
@@ -446,19 +686,57 @@ def policy_admission_diagnostics(
             deadline = _finite(
                 frame.get("deadline_us"), f"{run_dir}: deadline_us", nonnegative=True
             )
-            primary_completion = frame.get("copy_0_completion_us", "")
-            primary_miss = primary_completion == "" or (
-                _finite(
-                    primary_completion,
+            primary_serialized = frame.get("copy_0_completion_us", "")
+            primary_completion = (
+                None
+                if primary_serialized == ""
+                else _finite(
+                    primary_serialized,
                     f"{run_dir}: copy_0_completion_us",
                     nonnegative=True,
                 )
-                - generation
-                > deadline
+            )
+            union_serialized = frame.get("union_completion_us", "")
+            union_completion = (
+                None
+                if union_serialized == ""
+                else _finite(
+                    union_serialized,
+                    f"{run_dir}: union_completion_us",
+                    nonnegative=True,
+                )
+            )
+            incomplete = _flag(frame.get("incomplete"), f"{run_dir}: incomplete")
+            duplicated = _flag(frame.get("duplicated"), f"{run_dir}: duplicated")
+            if (
+                incomplete != (union_completion is None)
+                or (union_completion is None and primary_completion is not None)
+                or (
+                    primary_completion is not None
+                    and primary_completion < generation
+                )
+                or (union_completion is not None and union_completion < generation)
+                or (
+                    primary_completion is not None
+                    and union_completion is not None
+                    and union_completion > primary_completion
+                )
+                or launched != duplicated
+            ):
+                raise QualificationError(f"{run_dir}: inconsistent frame/action evidence")
+            primary_miss = (
+                primary_completion is None
+                or primary_completion - generation > deadline
             )
             union_miss = _flag(
                 frame.get("deadline_miss"), f"{run_dir}: deadline_miss"
             )
+            computed_union_miss = (
+                union_completion is None
+                or union_completion - generation > deadline
+            )
+            if union_miss != computed_union_miss:
+                raise QualificationError(f"{run_dir}: union deadline evidence disagrees")
 
             funnel_counts["All generated frames"] += 1
             funnel_counts["Primary actionable"] += actionable
@@ -472,12 +750,14 @@ def policy_admission_diagnostics(
             status_counts[status] += 1
             status_primary_misses[status] += primary_miss
             if launched:
-                if not primary_miss:
-                    action_outcomes["Primary met deadline"] += 1
-                elif not union_miss:
+                if primary_miss and not union_miss:
                     action_outcomes["Primary miss rescued"] += 1
+                elif primary_miss:
+                    action_outcomes["Primary miss late/incomplete"] += 1
+                elif union_completion < primary_completion:
+                    action_outcomes["Primary on time, accelerated"] += 1
                 else:
-                    action_outcomes["Primary miss not rescued"] += 1
+                    action_outcomes["Primary on time, no benefit"] += 1
 
     funnel = list(funnel_counts.items())
     if any(right > left for (_, left), (_, right) in zip(funnel, funnel[1:])):
@@ -516,6 +796,24 @@ def policy_admission_diagnostics(
             for label, count in action_outcomes.items()
         ],
     }
+
+
+def policy_admission_diagnostics(
+    aggregate_path: Path,
+    report: dict[str, Any],
+    *,
+    _test_contract: _TestOnlyContract | None = None,
+) -> dict[str, Any]:
+    """Return freshly validated diagnostic-only policy admission evidence."""
+    aggregate_path = _resolve_aggregate(aggregate_path)
+    aggregate = _read_json(aggregate_path)
+    _expected_pairs(report, _test_contract)
+    runs = _bind_report_to_aggregate(
+        aggregate, aggregate_path, report, _test_contract
+    )
+    return _policy_admission_diagnostics_from_runs(
+        aggregate_path, report, runs
+    )
 
 
 def _colors(values: Iterable[float]) -> list[str]:
@@ -713,7 +1011,7 @@ def _tradeoff_plot(rows: list[dict[str, Any]], output: Path) -> None:
     axis.set_ylabel("Completed-frame HF7 P99 delta (ms)")
     axis.set_title(
         "Matched-seed performance tradeoff: temporal-T2 minus STR MLO\n"
-        "Lower-left improves both metrics; labels mark five statistical outliers"
+        "Lower-left improves both metrics; labels mark five most distant points"
     )
     axis.grid(color="#dddddd", linewidth=0.7)
     figure.tight_layout()
@@ -777,7 +1075,13 @@ def _policy_admission_plot(diagnostics: dict[str, Any], output: Path) -> None:
     outcome_rates = 100.0 * np.asarray(
         [item["count"] / action_total for item in outcomes][::-1]
     )
-    outcome_colors = [UNFAVORABLE_COLOR, FAVORABLE_COLOR, BASELINE_COLOR]
+    outcome_color_by_label = {
+        "Primary on time, accelerated": FAVORABLE_COLOR,
+        "Primary on time, no benefit": BASELINE_COLOR,
+        "Primary miss rescued": FAVORABLE_COLOR,
+        "Primary miss late/incomplete": UNFAVORABLE_COLOR,
+    }
+    outcome_colors = [outcome_color_by_label[label] for label in outcome_labels]
     axes[2].barh(outcome_labels, outcome_rates, color=outcome_colors, alpha=0.9)
     for index, (rate, item) in enumerate(zip(outcome_rates, outcomes[::-1])):
         axes[2].text(
@@ -813,10 +1117,23 @@ def _write_pair_csv(path: Path, rows: Sequence[dict[str, Any]]) -> None:
         raise QualificationError(f"cannot write {path}: {error}") from error
 
 
+def _write_json(path: Path, value: dict[str, Any]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
+    except (OSError, TypeError, ValueError) as error:
+        raise QualificationError(f"cannot write {path}: {error}") from error
+
+
 def generate_plots(
     aggregate_input: Path,
     report_path: Path | None = None,
     output_directory: Path | None = None,
+    *,
+    _test_contract: _TestOnlyContract | None = None,
 ) -> list[Path]:
     """Generate raw-backed paired diagnostic plots without recalculating gates."""
     aggregate_path = _resolve_aggregate(aggregate_input)
@@ -825,21 +1142,47 @@ def generate_plots(
     output_directory = output_directory or (
         campaign_root / "plots" / DEFAULT_PLOT_DIRECTORY
     )
-    rows, report, _ = paired_rows(aggregate_path, report_path)
-    diagnostics = policy_admission_diagnostics(aggregate_path, report)
+    aggregate = _read_json(aggregate_path)
+    report = _report(report_path)
+    pairs = _expected_pairs(report, _test_contract)
+    runs = _bind_report_to_aggregate(
+        aggregate, aggregate_path, report, _test_contract
+    )
+    rows = _paired_rows_from_runs(runs, aggregate_path, pairs, report)
+    diagnostics = _policy_admission_diagnostics_from_runs(
+        aggregate_path, report, runs
+    )
+    freshly_validated = (
+        _test_contract is None or not _test_contract.skip_strict_run_validation
+    )
+    diagnostic_document = {
+        "schema_version": 1,
+        "analysis": "paired_value_t2_policy_admission_diagnostics",
+        **diagnostics,
+        "provenance": {
+            "strict_report_path": str(report_path.resolve()),
+            "strict_report_sha256": _sha256_file(report_path.resolve()),
+            "manifest_sha256": report["campaign_checks"]["manifests"][0]["sha256"],
+            "expected_paired_unit_count": len(pairs),
+            "validated_run_count": len(runs) if freshly_validated else 0,
+            "all_runs_freshly_strict_validated": freshly_validated,
+        },
+    }
     output_directory.mkdir(parents=True, exist_ok=True)
     outputs = [
         output_directory / "paired_metric_deltas.png",
         output_directory / "resource_gates.png",
         output_directory / "paired_performance_tradeoff.png",
         output_directory / "policy_admission_diagnostics.png",
+        output_directory / "policy_admission_diagnostics.json",
         output_directory / "paired_metrics.csv",
     ]
     _paired_delta_plot(rows, report, outputs[0])
     _resource_plot(rows, report, outputs[1])
     _tradeoff_plot(rows, outputs[2])
     _policy_admission_plot(diagnostics, outputs[3])
-    _write_pair_csv(outputs[4], rows)
+    _write_json(outputs[4], diagnostic_document)
+    _write_pair_csv(outputs[5], rows)
     return outputs
 
 
