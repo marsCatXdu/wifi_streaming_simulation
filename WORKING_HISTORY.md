@@ -37,6 +37,9 @@ P99.
 - Carry-over V3 and remaining-refill V4 reuse the already-opened V2
   development units.  They are candidate-development mechanism tests, not
   independent confirmation.
+- Cost-free score-aware V5 also reuses opened seeds `1251` through `1298`.
+  It changes only the active ranking score and its calibrated primary and
+  emergency thresholds; the V2 guard and environment remain fixed.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -71,11 +74,13 @@ P99.
 | Validate remaining-refill evidence | `28c2b1b` | Schema-V3 replay of remaining credit, tier order, and repayment telemetry |
 | Diagnose V3/V4 admission shift | `6fed1ca` | Exact 86,400-frame action and outcome transition tool |
 | Evaluate frozen-head cost divisor | `8d8f246` | Paired cost-free ranking grid and whole-run delta uncertainty |
+| Add cost-free score-aware V5 | `179a283` | Raw-value runtime profile with V2 admission semantics |
+| Validate cost-free V5 evidence | `c61fa98` | Schema-V4 replay of both diagnostic and active scores |
 
-The latest T2 validator milestone is `28c2b1b`.  It retains `cff64f7`'s exact
-compiled-ridge and integer airtime-feasibility replay, and adds independent
-schema-V3 reconstruction of causally remaining refill, ordered admission
-tiers, summary counts, and repayment telemetry.
+The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
+compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
+profiles, and adds schema-V4 reconstruction of the diagnostic divided score
+and active raw float32 score used by V5.
 
 ## One authoritative TODO checklist
 
@@ -105,12 +110,15 @@ tiers, summary counts, and repayment telemetry.
   repayment by measurement stop.  V4 passes against STR but regresses from
   V2/V3 because early lower-risk actions displace later higher-risk actions;
   archive it as a negative result and do not promote it.
-- [ ] Return to V2 and develop one better predictor/ranker from existing
-  randomized-intervention evidence.  The frozen-head ablation now establishes
-  raw value as a better baseline than value divided by learned cost
-  (`8d8f246`).  Next add causally available action-clean secondary-path state
-  to the treated-outcome model and compare the finite candidates only on
-  opened development data before defining another runtime campaign.
+- [x] Return to V2 and export the cost-free raw-value winner without changing
+  its measured-airtime guard or conservative reservation.  Freeze and
+  independently validate the resulting V5 runtime contract, then pass a
+  same-commit local preflight (`179a283`, `c61fa98`).
+- [ ] Run cost-free V5 against STR on the 48 already-opened engineering seeds,
+  fetch and checksum the 96 raw runs, strictly revalidate them locally, then
+  generate the qualification and historical CDF/PDF/burst/resource figures.
+  Archive the result and decide whether V5 replaces V2.  Do not consume seeds
+  `1301` through `1348`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -166,15 +174,22 @@ points.  Completed-late18 also improves, while action fraction rises by 1.49
 percentage points and DR airtime by 30.47 us per eligible frame.  This is
 development evidence, not a closed-loop STR result.
 
-The next boundary is a causal dual-link treated-outcome model.  Reuse the
-action-clean temporal dataset's delayed 2.4 GHz state to predict whether the
-identical secondary copy rescues deadline and completed-tail outcomes, with
-raw value as the baseline ranker.  Keep the finite calibration grid and all
-opened-test caveats explicit.  Only after that comparison should one candidate
-be exported to the V2 controller and tested on opened closed-loop seeds.
-Startup and I-frames remain separate semantic changes: choose a causal
-non-temporal startup fallback or consistent pre-roll, and test an I-specific
-policy rather than indiscriminate I-frame duplication.
+Cost-free score-aware V5 is now the next closed-loop experiment.  It keeps
+V2's exact 10-second measured-airtime guard, 0.6% refill, startup credit,
+60,000 us emergency debt, conservative canonical reservation, P-frame gate,
+action timing, and environment.  It replaces the learned-cost-divided ranker
+with raw legacy-bad12 value.  Its primary threshold is the calibrated top
+16.5% cutoff `0.18692325055599213`; its emergency threshold is the calibrated
+top 8.25% cutoff `0.3069669306278229`.  Learned cost remains serialized only
+as a diagnostic and is never used for admission accounting.
+
+The clean `c61fa98` seed-43 preflight produced 9/1,800 misses versus STR's
+10/1,800 and completed-frame P99s of 21.363 ms versus 23.086 ms.  V5 evaluated
+1,244 frames, passed 311 scores, admitted 105 strictly and 110 through the
+high-score emergency tier, and rejected 96 at the guard.  Its measured
+secondary airtime was 363,556.8 us.  This single pair establishes runtime and
+evidence integrity only; it does not qualify performance or resources.  Run
+the 48 opened pairs next and plot immediately after local restoration.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -293,8 +308,31 @@ Do not repeat an entry unless relevant code changed after it ran.
   `[-0.1861, -0.0313]` percentage points for completed-late18, and
   `[+20.65, +39.52]` us per eligible frame for DR airtime.  This split was
   already open and remains descriptive.
+- Cost-free V5 through `c61fa98`: focused C++ controller and broad
+  wifi-streaming suites passed, as did 64 focused Python
+  runner/validator/analyzer/plot tests.  Full tool discovery passed all 397
+  tests; `py_compile`, line-length, diff, and ASCII checks also passed.
+- Same-commit V5 preflight runs `0614d3114e945a784648` and
+  `c56c7a0864a01b166def` each passed strict validation with 1,800 frames.
+  Schema V4 records and independently replays the raw float32 policy score;
+  the policy summary reports all integrity checks true.
 
 ## Work log
+
+### 2026-08-05 - Export and preflight cost-free score-aware V5
+
+- Added and pushed the raw legacy-bad12 runtime score and calibrated primary
+  and emergency cutoffs as an isolated profile in `179a283`; V1 through V4
+  behavior remains preserved.
+- Added schema-V4 telemetry and independent replay of both the historical
+  learned-cost-divided diagnostic score and the active raw float32 score, then
+  pushed the validation boundary as `c61fa98`.
+- Passed the focused and full Python suites, the focused and broad C++ suites,
+  and the clean same-commit seed-43 preflight.
+- Kept the learned cost head diagnostic-only and retained V2's conservative
+  canonical airtime reservation.  The next action is the 48-pair campaign on
+  opened seeds followed immediately by strict local validation and plotting.
+- Reserved confirmation seeds `1301` through `1348` remain unopened.
 
 ### 2026-08-05 - Remove the harmful score cost divisor
 
