@@ -617,9 +617,14 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
                 << PairedValueT2Controller::AdmissionProfileName(*admissionProfile)
                 << "\",\n"
                 << "    \"emergency_score_threshold_float32\": "
-                << PairedValueT2Controller::EMERGENCY_SCORE_THRESHOLD << ",\n"
+                << PairedValueT2Controller::GetEmergencyScoreThreshold(
+                       *admissionProfile)
+                << ",\n"
                 << "    \"emergency_score_threshold_float32_bits_hex\": "
-                   "\"0x391d4952\",\n"
+                << (PairedValueT2Controller::UsesCostFreeScore(*admissionProfile)
+                        ? "\"0x3e9d2ac5\""
+                        : "\"0x391d4952\"")
+                << ",\n"
                 << "    \"emergency_maximum_debt_us\": "
                 << PairedValueT2Controller::EMERGENCY_MAXIMUM_DEBT_US;
             if (PairedValueT2Controller::UsesRemainingRefillBorrowing(

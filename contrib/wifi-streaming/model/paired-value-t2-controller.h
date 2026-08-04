@@ -50,6 +50,7 @@ class PairedValueT2Controller : public Object
         SCORE_AWARE_EMERGENCY_V2 = 1, ///< Bounded high-score future credit.
         SCORE_AWARE_FULL_HORIZON_V3 = 2, ///< Full-horizon causal carry-over.
         SCORE_AWARE_REMAINING_REFILL_V4 = 3, ///< Final remaining-refill borrowing tier.
+        COST_FREE_SCORE_AWARE_V5 = 4, ///< Cost-free ranking with V2 admission.
     };
 
     /** Baseline decision CSV schema version. */
@@ -69,6 +70,12 @@ class PairedValueT2Controller : public Object
 
     /** Remaining-refill controller summary schema version. */
     static constexpr uint32_t REMAINING_REFILL_SUMMARY_SCHEMA_VERSION = 3;
+
+    /** Cost-free decision CSV schema version. */
+    static constexpr uint32_t COST_FREE_CSV_SCHEMA_VERSION = 4;
+
+    /** Cost-free controller summary schema version. */
+    static constexpr uint32_t COST_FREE_SUMMARY_SCHEMA_VERSION = 4;
 
     /** Frozen primary path identifier. */
     static constexpr uint8_t PRIMARY_PATH_ID = 1;
@@ -123,6 +130,13 @@ class PairedValueT2Controller : public Object
 
     /** Frozen float32 emergency-tier score threshold. */
     static constexpr float EMERGENCY_SCORE_THRESHOLD = 0.0001500000071246177F;
+
+    /** Calibration-selected V5 float32 cost-free primary threshold. */
+    static constexpr float COST_FREE_SCORE_THRESHOLD = 0.18692325055599213F;
+
+    /** Calibration-median V5 float32 cost-free emergency threshold. */
+    static constexpr float COST_FREE_EMERGENCY_SCORE_THRESHOLD =
+        0.3069669306278229F;
 
     /** Frozen emergency-tier maximum negative available balance. */
     static constexpr double EMERGENCY_MAXIMUM_DEBT_US = 60000.0;
@@ -183,9 +197,17 @@ class PairedValueT2Controller : public Object
      * Return whether a profile uses the frozen score-aware emergency tier.
      *
      * @param profile Admission profile.
-     * @return True for V2, V3, and V4.
+     * @return True for V2 through V5.
      */
     static bool UsesScoreAwareEmergency(AdmissionProfile profile);
+
+    /**
+     * Return whether a profile ranks by raw nonnegative bad12 value.
+     *
+     * @param profile Admission profile.
+     * @return True only for V5.
+     */
+    static bool UsesCostFreeScore(AdmissionProfile profile);
 
     /**
      * Return whether a profile uses final remaining-refill borrowing.
@@ -210,6 +232,40 @@ class PairedValueT2Controller : public Object
      * @return Token capacity in microseconds.
      */
     static uint64_t GetBudgetCapacityUs(AdmissionProfile profile);
+
+    /**
+     * Return the active policy-ranker identifier.
+     *
+     * @param profile Admission profile.
+     * @return Stable ranker identifier.
+     */
+    static std::string_view GetPolicyRanker(AdmissionProfile profile);
+
+    /**
+     * Return the active float32 primary score threshold.
+     *
+     * @param profile Admission profile.
+     * @return Frozen primary score threshold.
+     */
+    static float GetPolicyScoreThreshold(AdmissionProfile profile);
+
+    /**
+     * Return the active float32 emergency score threshold.
+     *
+     * @param profile Admission profile.
+     * @return Frozen emergency score threshold.
+     */
+    static float GetEmergencyScoreThreshold(AdmissionProfile profile);
+
+    /**
+     * Select and quantize the active score from frozen model diagnostics.
+     *
+     * @param profile Admission profile.
+     * @param model Frozen model result.
+     * @return Active float32 policy score.
+     */
+    static float GetPolicyScore(AdmissionProfile profile,
+                                const TemporalT2ValueModelResult& model);
 
     /**
      * Set the sender that owns canonical delayed copies.
@@ -338,6 +394,8 @@ class PairedValueT2Controller : public Object
         bool insideDecisionWindow{false}; ///< First gate result.
         bool featureEvaluated{false};      ///< Whether model diagnostics are populated.
         std::optional<TemporalT2ValueModelResult> model; ///< Frozen model diagnostics.
+        std::optional<float> policyScore; ///< Active profile-specific float32 score.
+        bool passesScoreThreshold{false}; ///< Whether the active primary gate passed.
         bool descriptorChecked{false};   ///< Whether the descriptor gate was reached.
         std::optional<DelayedCopyDescriptor> descriptor; ///< Valid canonical descriptor.
         double canonicalNominalAirtimeUs{0}; ///< Descriptor cost before safety factor.

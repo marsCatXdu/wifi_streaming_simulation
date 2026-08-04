@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "paired-value-duplication-t2-cost-free-score-aware-v5",
+  "status": "frozen_engineering_candidate",
+  "purpose": "Test whether removing the learned secondary-airtime denominator improves closed-loop temporal-T2 admission ordering while preserving the proven V2 guard and action semantics.",
+  "inherits": {
+    "runtime_contract_id": "paired-value-duplication-t2-score-aware-emergency-v2",
+    "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+    "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+  },
+  "unchanged_contract": {
+    "policy_name": "paired_value_duplication_t2",
+    "environment": "unchanged_neutral_mixed4x4",
+    "predictor_heads": "hgb64_depth3_7leaf_bad12_primary_and_treated_heads_v1",
+    "feature_family": "primary_compact_physics_temporal",
+    "frame_gate": "p_frames_only",
+    "decision_stage": "T2",
+    "decision_offset_us": 2000,
+    "action": "canonical_full_secondary_copy",
+    "canonical_cost_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+    "cost_safety_factor": 1.25,
+    "budget_fraction": 0.006,
+    "budget_max_horizon_us": 10000000,
+    "budget_initial_horizon_us": 2000000,
+    "budget_capacity_us": 60000,
+    "budget_initial_credit_us": 12000,
+    "emergency_maximum_debt_us": 60000,
+    "measurement_window_ns": [
+      1000000000,
+      61000000000
+    ],
+    "decision_window_ns": [
+      1000000000,
+      60466000000
+    ]
+  },
+  "score_override": {
+    "profile_id": "cost_free_score_aware_v5",
+    "ranker": "legacy_bad12_value",
+    "formula": "float32(max(primary_bad12_probability - treated_bad12_probability, 0))",
+    "learned_cost_denominator_removed": true,
+    "learned_cost_retained_as_diagnostic": true,
+    "learned_cost_used_for_token_accounting": false,
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+    "primary_score_threshold_float32": 0.18692325055599213,
+    "primary_score_threshold_float32_bits_hex": "0x3e3f68cf",
+    "primary_requested_global_action_fraction": 0.165,
+    "primary_threshold_role": "calibration",
+    "emergency_score_threshold_float32": 0.3069669306278229,
+    "emergency_score_threshold_float32_bits_hex": "0x3e9d2ac5",
+    "emergency_requested_global_action_fraction": 0.0825,
+    "emergency_threshold_role": "calibration_median_of_primary_threshold_passers",
+    "threshold_comparison": "greater_than_or_equal",
+    "closed_loop_v2_outcomes_not_used_in_threshold_formula": true
+  },
+  "admission_inheritance": {
+    "ordered_steps": [
+      "Apply every inherited gate through model evaluation, but compare the cost-free float32 score with the V5 primary threshold.",
+      "Attempt inherited V2 strict admission using the unchanged conservative canonical reservation.",
+      "Only if strict admission fails, compare the cost-free float32 score with the V5 emergency threshold.",
+      "Only if the V5 emergency threshold passes, apply the inherited 60000 us bounded-debt query.",
+      "Launch, reserve, debit measured airtime, settle, and repay debt exactly as in V2."
+    ],
+    "v2_strict_admission_changed": false,
+    "v2_emergency_debt_limit_changed": false,
+    "v2_guard_horizon_or_capacity_changed": false,
+    "v2_startup_credit_changed": false,
+    "v2_long_run_refill_rate_changed": false,
+    "canonical_reserved_cost_used_for_both_tiers": true,
+    "admission_is_query_only": true
+  },
+  "telemetry_override": {
+    "decision_csv_schema_version": 4,
+    "controller_summary_schema_version": 4,
+    "v2_columns_retained_in_order": true,
+    "decision_columns_appended": [
+      "policy_score_float32"
+    ],
+    "value_per_cost_score_float32_is_diagnostic_only": true,
+    "ranker_and_threshold_fields_describe_the_active_cost_free_score": true,
+    "admission_tier_values": [
+      "none",
+      "strict",
+      "emergency"
+    ]
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        }
+      }
+    }
+  },
+  "selection_evidence": {
+    "cost_ablation_manifest_path": "key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1/artifact_manifest.json",
+    "cost_ablation_manifest_sha256": "1b082c5d908e00067256512b037871233350ca07df2d6fba9b7fe3f9ddb0b549",
+    "cost_ablation_metrics_path": "key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1/temporal_t2_cost_ablation_metrics.json",
+    "cost_ablation_metrics_sha256": "e7a4452738e940e2a28ad475fc6213fc4a4c5ea9c195e5b5a8d60b2f4cca2574",
+    "cost_ablation_candidates_path": "key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1/temporal_t2_cost_ablation_candidates.csv",
+    "cost_ablation_candidates_sha256": "dac3ee0e34f39f0bb89a05d1c15b280ff92fda38f2ad2070c63e6bc20b8d66b7",
+    "evaluator_commit": "8d8f2460781c65c8a735a49e974c5358a6813097",
+    "model_refit": false,
+    "selected_feature_family": "primary_compact_physics_temporal",
+    "selected_frame_gate": "p_frames_only",
+    "selected_ranker": "legacy_bad12_value",
+    "calibration_balanced_min_relative_improvement": 0.6842970342335413,
+    "opened_test_deadline_miss_probability": 0.00472304622104899,
+    "opened_test_evidence_is_descriptive": true,
+    "secondary_feature_and_larger_model_prototypes_were_null": true
+  },
+  "evaluation_boundary": {
+    "pilot_seeds": [
+      43
+    ],
+    "engineering_seed_start": 1251,
+    "engineering_seed_stop_inclusive": 1298,
+    "engineering_seeds_previously_opened": true,
+    "reserved_confirmation_seed_start": 1301,
+    "reserved_confirmation_seed_stop_inclusive": 1348,
+    "reserved_confirmation_seeds_must_remain_unopened": true,
+    "reference": "STR MLO NMaxInflights=1",
+    "primary_gates": [
+      "paired all-generated deadline-miss difference confidence interval below zero",
+      "paired mean per-run completed-frame HF7 P99 difference confidence interval below zero"
+    ],
+    "resource_gates": {
+      "sender_airtime_ratio_strictly_below": 1.2,
+      "background_throughput_loss_fraction_at_most": 0.01
+    }
+  },
+  "interpretation_limits": [
+    "The reused 1251-1298 seeds are development evidence and cannot independently confirm V5.",
+    "The cost-free ablation used randomized action-clean data and does not establish a closed-loop effect.",
+    "The learned cost prediction remains serialized for diagnostics but cannot affect scoring, reservation, or token accounting.",
+    "Reserved seeds 1301-1348 remain untouched unless an engineering candidate passes and is frozen for confirmation.",
+    "EMLSR completed-frame P99 is survivor-conditioned and is not an optimization gate."
+  ]
+}

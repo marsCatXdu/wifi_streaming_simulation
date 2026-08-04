@@ -52,7 +52,9 @@ constexpr std::string_view FEATURE_ADAPTER =
     "finite_numeric_float32_then_float64_one_hot_v1";
 constexpr std::string_view FEATURE_NAMES_SHA256 =
     "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e";
-constexpr std::string_view RANKER = "legacy_bad12_value_per_cost";
+constexpr std::string_view VALUE_PER_COST_RANKER =
+    "legacy_bad12_value_per_cost";
+constexpr std::string_view COST_FREE_RANKER = "legacy_bad12_value";
 constexpr std::string_view FRAME_GATE = "p_frames_only";
 constexpr std::string_view SCORE_ADAPTER = "final_candidate_float32_threshold_ge_v1";
 constexpr std::string_view BASELINE_RUNTIME_CONTRACT_ID =
@@ -71,6 +73,10 @@ constexpr std::string_view REMAINING_REFILL_RUNTIME_CONTRACT_ID =
     "paired-value-duplication-t2-remaining-refill-borrowing-v4";
 constexpr std::string_view REMAINING_REFILL_RUNTIME_CONTRACT_SHA256 =
     "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd";
+constexpr std::string_view COST_FREE_RUNTIME_CONTRACT_ID =
+    "paired-value-duplication-t2-cost-free-score-aware-v5";
+constexpr std::string_view COST_FREE_RUNTIME_CONTRACT_SHA256 =
+    "b7fb00982ae090fe1142b39adf0ad6d26d253741dd5059ed95637dd86047ba96";
 constexpr std::string_view COST_ESTIMATOR_ID =
     "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1";
 constexpr std::string_view LAUNCH_REASON = "paired temporal value full copy at T2";
@@ -86,6 +92,13 @@ static_assert(FEATURE_SUPPORT_MASK_VERSION == REQUIRED_SUPPORT_MASK_VERSION,
 static_assert(std::bit_cast<uint32_t>(PairedValueT2Controller::EMERGENCY_SCORE_THRESHOLD) ==
                   0x391d4952U,
               "Frozen emergency score threshold differs");
+static_assert(std::bit_cast<uint32_t>(PairedValueT2Controller::COST_FREE_SCORE_THRESHOLD) ==
+                  0x3e3f68cfU,
+              "Frozen cost-free score threshold differs");
+static_assert(std::bit_cast<uint32_t>(
+                  PairedValueT2Controller::COST_FREE_EMERGENCY_SCORE_THRESHOLD) ==
+                  0x3e9d2ac5U,
+              "Frozen cost-free emergency score threshold differs");
 
 bool
 ContainsCsvDelimiter(const std::string& value)
@@ -205,7 +218,8 @@ PairedValueT2Controller::SetAdmissionProfile(AdmissionProfile profile)
     NS_ABORT_MSG_IF(profile != AdmissionProfile::BASELINE_V1 &&
                         profile != AdmissionProfile::SCORE_AWARE_EMERGENCY_V2 &&
                         profile != AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3 &&
-                        profile != AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4,
+                        profile != AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4 &&
+                        profile != AdmissionProfile::COST_FREE_SCORE_AWARE_V5,
                     "Unknown paired-value admission profile");
     const uint64_t maximumHorizonUs = GetBudgetMaxHorizonUs(profile);
     const uint64_t capacityUs = GetBudgetCapacityUs(profile);
@@ -241,6 +255,8 @@ PairedValueT2Controller::AdmissionProfileName(AdmissionProfile profile)
         return "score_aware_full_horizon_v3";
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return "score_aware_remaining_refill_v4";
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return "cost_free_score_aware_v5";
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -265,6 +281,10 @@ PairedValueT2Controller::ParseAdmissionProfile(std::string_view name)
     {
         return AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4;
     }
+    if (name == AdmissionProfileName(AdmissionProfile::COST_FREE_SCORE_AWARE_V5))
+    {
+        return AdmissionProfile::COST_FREE_SCORE_AWARE_V5;
+    }
     return std::nullopt;
 }
 
@@ -280,6 +300,8 @@ PairedValueT2Controller::GetCsvSchemaVersion(AdmissionProfile profile)
         return SCORE_AWARE_CSV_SCHEMA_VERSION;
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return REMAINING_REFILL_CSV_SCHEMA_VERSION;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return COST_FREE_CSV_SCHEMA_VERSION;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
@@ -297,6 +319,8 @@ PairedValueT2Controller::GetSummarySchemaVersion(AdmissionProfile profile)
         return SCORE_AWARE_SUMMARY_SCHEMA_VERSION;
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return REMAINING_REFILL_SUMMARY_SCHEMA_VERSION;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return COST_FREE_SUMMARY_SCHEMA_VERSION;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
@@ -312,6 +336,24 @@ PairedValueT2Controller::UsesScoreAwareEmergency(AdmissionProfile profile)
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return true;
+    }
+    NS_ABORT_MSG("Unknown paired-value admission profile");
+    return false;
+}
+
+bool
+PairedValueT2Controller::UsesCostFreeScore(AdmissionProfile profile)
+{
+    switch (profile)
+    {
+    case AdmissionProfile::BASELINE_V1:
+    case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
+    case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
+        return false;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
         return true;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
@@ -329,6 +371,8 @@ PairedValueT2Controller::UsesRemainingRefillBorrowing(AdmissionProfile profile)
         return false;
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return true;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return false;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return false;
@@ -341,6 +385,7 @@ PairedValueT2Controller::GetBudgetMaxHorizonUs(AdmissionProfile profile)
     {
     case AdmissionProfile::BASELINE_V1:
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
         return BUDGET_MAX_HORIZON_US;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
@@ -357,6 +402,7 @@ PairedValueT2Controller::GetBudgetCapacityUs(AdmissionProfile profile)
     {
     case AdmissionProfile::BASELINE_V1:
     case AdmissionProfile::SCORE_AWARE_EMERGENCY_V2:
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
         return BUDGET_CAPACITY_US;
     case AdmissionProfile::SCORE_AWARE_FULL_HORIZON_V3:
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
@@ -364,6 +410,38 @@ PairedValueT2Controller::GetBudgetCapacityUs(AdmissionProfile profile)
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return 0;
+}
+
+std::string_view
+PairedValueT2Controller::GetPolicyRanker(AdmissionProfile profile)
+{
+    return UsesCostFreeScore(profile) ? COST_FREE_RANKER : VALUE_PER_COST_RANKER;
+}
+
+float
+PairedValueT2Controller::GetPolicyScoreThreshold(AdmissionProfile profile)
+{
+    return UsesCostFreeScore(profile)
+               ? COST_FREE_SCORE_THRESHOLD
+               : TemporalT2ValueModelEvaluator::GetScoreThreshold();
+}
+
+float
+PairedValueT2Controller::GetEmergencyScoreThreshold(AdmissionProfile profile)
+{
+    return UsesCostFreeScore(profile)
+               ? COST_FREE_EMERGENCY_SCORE_THRESHOLD
+               : EMERGENCY_SCORE_THRESHOLD;
+}
+
+float
+PairedValueT2Controller::GetPolicyScore(
+    AdmissionProfile profile,
+    const TemporalT2ValueModelResult& model)
+{
+    return UsesCostFreeScore(profile)
+               ? static_cast<float>(model.nonnegativeBad12Value)
+               : model.valuePerCostScore;
 }
 
 void
@@ -437,6 +515,8 @@ PairedValueT2Controller::GetRuntimeContractId(AdmissionProfile profile)
         return FULL_HORIZON_RUNTIME_CONTRACT_ID;
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return REMAINING_REFILL_RUNTIME_CONTRACT_ID;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return COST_FREE_RUNTIME_CONTRACT_ID;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -461,6 +541,8 @@ PairedValueT2Controller::GetRuntimeContractSha256(AdmissionProfile profile)
         return FULL_HORIZON_RUNTIME_CONTRACT_SHA256;
     case AdmissionProfile::SCORE_AWARE_REMAINING_REFILL_V4:
         return REMAINING_REFILL_RUNTIME_CONTRACT_SHA256;
+    case AdmissionProfile::COST_FREE_SCORE_AWARE_V5:
+        return COST_FREE_RUNTIME_CONTRACT_SHA256;
     }
     NS_ABORT_MSG("Unknown paired-value admission profile");
     return {};
@@ -852,12 +934,19 @@ PairedValueT2Controller::ProcessPair(const PredictionSample& primary,
 
             evidence.model = m_predictor.Evaluate(primary.key.frameId);
             evidence.featureEvaluated = true;
+            evidence.policyScore =
+                GetPolicyScore(m_admissionProfile, *evidence.model);
+            NS_ABORT_MSG_IF(!std::isfinite(*evidence.policyScore),
+                            "Paired-value active score is non-finite");
+            evidence.passesScoreThreshold =
+                *evidence.policyScore >=
+                GetPolicyScoreThreshold(m_admissionProfile);
             ++m_featureEvaluated;
             m_learnedCostSumEvaluatedUs +=
                 evidence.model->predictedSecondaryAirtimeUs;
             NS_ABORT_MSG_IF(!std::isfinite(m_learnedCostSumEvaluatedUs),
                             "Paired-value learned evaluated-cost sum overflowed");
-            if (!evidence.model->passesScoreThreshold)
+            if (!evidence.passesScoreThreshold)
             {
                 evidence.status = DecisionStatus::BELOW_SCORE_THRESHOLD;
             }
@@ -875,8 +964,8 @@ PairedValueT2Controller::ProcessPair(const PredictionSample& primary,
                 else if (UsesScoreAwareEmergency(m_admissionProfile))
                 {
                     evidence.passesEmergencyScore =
-                        evidence.model->valuePerCostScore >=
-                        EMERGENCY_SCORE_THRESHOLD;
+                        *evidence.policyScore >=
+                        GetEmergencyScoreThreshold(m_admissionProfile);
                     if (evidence.passesEmergencyScore)
                     {
                         ++m_emergencyScorePassed;
@@ -1147,6 +1236,10 @@ PairedValueT2Controller::WriteDecisionHeader()
             << ",remaining_refill_credit_us,remaining_refill_admission_considered,"
                "remaining_refill_admitted";
     }
+    if (UsesCostFreeScore(m_admissionProfile))
+    {
+        m_decisions << ",policy_score_float32";
+    }
     m_decisions << '\n';
     m_decisions.flush();
 }
@@ -1164,6 +1257,8 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
                     "Paired-value decision row has invalid exact-lag evidence");
     NS_ABORT_MSG_IF(evidence.featureEvaluated != evidence.model.has_value(),
                     "Paired-value decision model evidence is inconsistent");
+    NS_ABORT_MSG_IF(evidence.featureEvaluated != evidence.policyScore.has_value(),
+                    "Paired-value decision policy-score evidence is inconsistent");
     NS_ABORT_MSG_IF(evidence.descriptor.has_value() && !evidence.descriptorChecked,
                     "Paired-value descriptor evidence bypassed its gate");
 
@@ -1197,9 +1292,10 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
     m_decisions << ',' << evidence.featureEvaluated << ',' << MODEL_SPEC_ID << ','
                 << MODEL_ARTIFACT_SHA256 << ',' << FEATURE_FAMILY << ','
                 << TemporalT2ValuePredictor::FEATURE_COUNT << ',' << FEATURE_ADAPTER << ','
-                << FEATURE_NAMES_SHA256 << ',' << RANKER << ',' << FRAME_GATE << ','
+                << FEATURE_NAMES_SHA256 << ','
+                << GetPolicyRanker(m_admissionProfile) << ',' << FRAME_GATE << ','
                 << SCORE_ADAPTER << ','
-                << TemporalT2ValueModelEvaluator::GetScoreThreshold() << ',';
+                << GetPolicyScoreThreshold(m_admissionProfile) << ',';
 
     if (evidence.model)
     {
@@ -1211,7 +1307,7 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
                     << evidence.model->predictedSecondaryAirtimeUs << ','
                     << evidence.model->nonnegativeBad12Value << ','
                     << evidence.model->valuePerCostScore << ','
-                    << evidence.model->passesScoreThreshold;
+                    << evidence.passesScoreThreshold;
     }
     else
     {
@@ -1263,7 +1359,7 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
                        : (evidence.remainingRefillAdmitted ? "remaining_refill" : "none"));
         m_decisions << ',' << AdmissionProfileName(m_admissionProfile) << ','
                     << evidence.strictGuardAdmitted << ','
-                    << EMERGENCY_SCORE_THRESHOLD << ','
+                    << GetEmergencyScoreThreshold(m_admissionProfile) << ','
                     << evidence.passesEmergencyScore << ','
                     << evidence.emergencyAdmissionConsidered << ','
                     << EMERGENCY_MAXIMUM_DEBT_US << ','
@@ -1274,6 +1370,14 @@ PairedValueT2Controller::WriteDecision(const DecisionEvidence& evidence)
         m_decisions << ',' << evidence.remainingRefillCreditUs << ','
                     << evidence.remainingRefillAdmissionConsidered << ','
                     << evidence.remainingRefillAdmitted;
+    }
+    if (UsesCostFreeScore(m_admissionProfile))
+    {
+        m_decisions << ',';
+        if (evidence.policyScore)
+        {
+            m_decisions << *evidence.policyScore;
+        }
     }
     m_decisions << '\n';
     m_decisions.flush();
@@ -1412,12 +1516,15 @@ PairedValueT2Controller::WriteSummary(
         << "    \"feature_count\": " << TemporalT2ValuePredictor::FEATURE_COUNT << ",\n"
         << "    \"feature_adapter_id\": \"" << FEATURE_ADAPTER << "\",\n"
         << "    \"ordered_feature_names_sha256\": \"" << FEATURE_NAMES_SHA256 << "\",\n"
-        << "    \"ranker\": \"" << RANKER << "\",\n"
+        << "    \"ranker\": \"" << GetPolicyRanker(m_admissionProfile)
+        << "\",\n"
         << "    \"frame_gate\": \"" << FRAME_GATE << "\",\n"
         << "    \"score_adapter_id\": \"" << SCORE_ADAPTER << "\",\n"
         << "    \"score_threshold_float32\": "
-        << TemporalT2ValueModelEvaluator::GetScoreThreshold() << ",\n"
-        << "    \"score_threshold_float32_bits_hex\": \"0x38bbc0e5\"\n"
+        << GetPolicyScoreThreshold(m_admissionProfile) << ",\n"
+        << "    \"score_threshold_float32_bits_hex\": \""
+        << (UsesCostFreeScore(m_admissionProfile) ? "0x3e3f68cf" : "0x38bbc0e5")
+        << "\"\n"
         << "  },\n"
         << "  \"telemetry\": {\n"
         << "    \"telemetry_schema_version\": " << PREDICTION_TELEMETRY_SCHEMA_VERSION
@@ -1461,9 +1568,11 @@ PairedValueT2Controller::WriteSummary(
             << "    \"admission_profile_id\": \""
             << AdmissionProfileName(m_admissionProfile) << "\",\n"
             << "    \"emergency_score_threshold_float32\": "
-            << EMERGENCY_SCORE_THRESHOLD << ",\n"
+            << GetEmergencyScoreThreshold(m_admissionProfile) << ",\n"
             << "    \"emergency_score_threshold_float32_bits_hex\": "
-               "\"0x391d4952\",\n"
+            << (UsesCostFreeScore(m_admissionProfile) ? "\"0x3e9d2ac5\""
+                                                      : "\"0x391d4952\"")
+            << ",\n"
             << "    \"emergency_maximum_debt_us\": "
             << EMERGENCY_MAXIMUM_DEBT_US;
         if (UsesRemainingRefillBorrowing(m_admissionProfile))

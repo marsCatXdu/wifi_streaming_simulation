@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
@@ -1611,10 +1612,16 @@ class PairedValueT2OrderedModelGatesTestCase : public TestCase
                    const std::string& label,
                    uint16_t port,
                    bool exhaustGuard,
-                   const std::string& expectedStatus)
+                   const std::string& expectedStatus,
+                   PairedValueT2Controller::AdmissionProfile admissionProfile =
+                       PairedValueT2Controller::AdmissionProfile::BASELINE_V1)
     {
         const std::string runId = "paired-value-" + label;
-        auto setup = ConfigureGoldenSender(golden, label, runId, port);
+        auto setup = ConfigureGoldenSender(golden,
+                                           label,
+                                           runId,
+                                           port,
+                                           admissionProfile);
         for (uint64_t frameId = 0; frameId <= 8; ++frameId)
         {
             if (exhaustGuard && frameId == 8)
@@ -1646,6 +1653,24 @@ class PairedValueT2OrderedModelGatesTestCase : public TestCase
             NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "launch_attempted")],
                                   "0",
                                   "Rejected model/guard gate attempted a launch");
+            if (PairedValueT2Controller::UsesCostFreeScore(admissionProfile))
+            {
+                NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "ranker")],
+                                      "legacy_bad12_value",
+                                      "Cost-free ranker metadata differs");
+                NS_TEST_ASSERT_MSG_EQ(row[FindColumn(header, "passes_score_threshold")],
+                                      "1",
+                                      "Cost-free primary threshold rejected the fixture");
+                NS_TEST_ASSERT_MSG_EQ(
+                    row[FindColumn(header, "passes_emergency_score_threshold")],
+                    "0",
+                    "Cost-free emergency threshold accepted the fixture");
+                NS_TEST_ASSERT_MSG_EQ_TOL(
+                    std::stof(row[FindColumn(header, "policy_score_float32")]),
+                    static_cast<float>(golden.expectedModelResult.nonnegativeBad12Value),
+                    0.0,
+                    "Serialized cost-free policy score differs");
+            }
         }
         NS_TEST_ASSERT_MSG_EQ(setup.controller->GetLaunchCount(),
                               0,
@@ -1668,6 +1693,13 @@ class PairedValueT2OrderedModelGatesTestCase : public TestCase
                   9293,
                   true,
                   "airtime_guard_rejected");
+        RunGolden(cases[0],
+                  "cost-free-guard",
+                  9295,
+                  true,
+                  "airtime_guard_rejected",
+                  PairedValueT2Controller::AdmissionProfile::
+                      COST_FREE_SCORE_AWARE_V5);
     }
 };
 
@@ -1696,6 +1728,8 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             "score_aware_full_horizon_v3");
         const auto remainingRefill = PairedValueT2Controller::ParseAdmissionProfile(
             "score_aware_remaining_refill_v4");
+        const auto costFree = PairedValueT2Controller::ParseAdmissionProfile(
+            "cost_free_score_aware_v5");
         NS_TEST_ASSERT_MSG_EQ(baseline.has_value(),
                               true,
                               "Baseline admission profile did not parse");
@@ -1708,11 +1742,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(remainingRefill.has_value(),
                               true,
                               "Remaining-refill admission profile did not parse");
+        NS_TEST_ASSERT_MSG_EQ(costFree.has_value(),
+                              true,
+                              "Cost-free admission profile did not parse");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::ParseAdmissionProfile("unsupported").has_value(),
             false,
             "Unsupported admission profile parsed");
-        if (!baseline || !scoreAware || !fullHorizon || !remainingRefill)
+        if (!baseline || !scoreAware || !fullHorizon || !remainingRefill || !costFree)
         {
             return;
         }
@@ -1730,6 +1767,10 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             static_cast<uint32_t>(*remainingRefill),
             static_cast<uint32_t>(Profile::SCORE_AWARE_REMAINING_REFILL_V4),
             "Remaining-refill profile ordinal changed");
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint32_t>(*costFree),
+            static_cast<uint32_t>(Profile::COST_FREE_SCORE_AWARE_V5),
+            "Cost-free profile ordinal differs");
         NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*baseline),
                               1,
                               "Baseline decision schema changed");
@@ -1748,6 +1789,13 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::GetSummarySchemaVersion(*remainingRefill),
             3,
             "Remaining-refill summary schema differs");
+        NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetCsvSchemaVersion(*costFree),
+                              4,
+                              "Cost-free decision schema differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetSummarySchemaVersion(*costFree),
+            4,
+            "Cost-free summary schema differs");
         NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::GetRuntimeContractId(*scoreAware),
             "paired-value-duplication-t2-score-aware-emergency-v2",
@@ -1773,6 +1821,27 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             "0b5d31861c862e1b4fb31231936ecd144958939308b21566e97405a29de0d9dd",
             "Remaining-refill runtime digest differs");
         NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractId(*costFree),
+            "paired-value-duplication-t2-cost-free-score-aware-v5",
+            "Cost-free runtime identity differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetRuntimeContractSha256(*costFree),
+            "b7fb00982ae090fe1142b39adf0ad6d26d253741dd5059ed95637dd86047ba96",
+            "Cost-free runtime digest differs");
+        NS_TEST_ASSERT_MSG_EQ(PairedValueT2Controller::GetPolicyRanker(*costFree),
+                              "legacy_bad12_value",
+                              "Cost-free ranker differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            std::bit_cast<uint32_t>(
+                PairedValueT2Controller::GetPolicyScoreThreshold(*costFree)),
+            0x3e3f68cfU,
+            "Cost-free primary threshold differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            std::bit_cast<uint32_t>(
+                PairedValueT2Controller::GetEmergencyScoreThreshold(*costFree)),
+            0x3e9d2ac5U,
+            "Cost-free emergency threshold differs");
+        NS_TEST_ASSERT_MSG_EQ(
             PairedValueT2Controller::GetBudgetMaxHorizonUs(*scoreAware),
             10000000,
             "V2 carry-over horizon changed");
@@ -1796,6 +1865,14 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
             PairedValueT2Controller::GetBudgetCapacityUs(*remainingRefill),
             360000,
             "V4 carry-over capacity differs");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetMaxHorizonUs(*costFree),
+            10000000,
+            "V5 must retain the V2 carry-over horizon");
+        NS_TEST_ASSERT_MSG_EQ(
+            PairedValueT2Controller::GetBudgetCapacityUs(*costFree),
+            60000,
+            "V5 must retain the V2 carry-over capacity");
         auto fullHorizonController = CreateObject<PairedValueT2Controller>();
         fullHorizonController->SetAdmissionProfile(*fullHorizon);
         NS_TEST_ASSERT_MSG_EQ(
@@ -1881,6 +1958,27 @@ class PairedValueT2AdmissionProfileTestCase : public TestCase
         remainingSetup.controller->Dispose();
         Simulator::Destroy();
         RemovePaths(remainingSetup.paths);
+
+        auto costFreeSetup = ConfigureBareController("cost-free-profile",
+                                                     "paired-value-cost-free-profile",
+                                                     *costFree);
+        const auto costFreeLines = ReadLines(costFreeSetup.paths.decisions);
+        NS_TEST_ASSERT_MSG_EQ(costFreeLines.size(),
+                              1,
+                              "Cost-free decision header count differs");
+        if (costFreeLines.size() == 1)
+        {
+            const auto header = SplitCsv(costFreeLines[0]);
+            NS_TEST_ASSERT_MSG_EQ(header.size(),
+                                  DECISION_COLUMNS.size() + 9,
+                                  "Cost-free decision column count differs");
+            NS_TEST_ASSERT_MSG_EQ(header.back(),
+                                  "policy_score_float32",
+                                  "Cost-free policy score is not the appended column");
+        }
+        costFreeSetup.controller->Dispose();
+        Simulator::Destroy();
+        RemovePaths(costFreeSetup.paths);
     }
 };
 
