@@ -92,3 +92,45 @@ the compiled T2 policy, STR MLO, and EMLSR MLO built from the same commit.
 When revisiting the offline audit, retain every generated frame, keep the
 completed-tail numerator and completion denominator explicit, and use
 whole-run resampling.
+
+## Frozen primary-only temporal T2 policy
+
+The canonical offline fit was run from clean commit `9b9ee02` after freezing
+`experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json`.
+Its on-disk artifact is
+`results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1`.
+The artifact-manifest SHA-256 is
+`b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f`.
+The model, candidate table, and metrics hashes recorded by that manifest are:
+
+- model: `dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8`
+- candidates: `7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb`
+- metrics: `35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014`
+
+The selected policy uses the 246-input primary-only compact temporal family,
+the legacy-bad12 value-per-cost ranker, a P-frame-only gate, and a float32
+score threshold of `8.952784264693037e-05`.  The bad12 ranker is only a way to
+rank eligible frames to construct candidate policies; calibration admission
+and selection were still governed by the separate deadline-miss and
+completed-late18 objectives.
+
+On calibration runs it acts on 15.0077% of eligible frames, estimates 372.63
+us of secondary airtime per eligible frame, reduces deadline misses from
+2.0216% to 0.4044%, and reduces the completion-conditioned late18 ratio from
+3.6248% to 1.3852%.  On the previously opened engineering test runs it acts on
+16.1868%, estimates 365.49 us per eligible frame, reduces misses from 2.7876%
+to 0.5229%, and reduces the late18 ratio from 4.2205% to 1.5918%.  Test
+run-cluster 95% intervals are 0.3436--0.6736% for policy misses,
+1.1764--1.9689% for its late18 ratio, and 259.02--476.13 us per eligible frame
+for airtime.
+
+Interpret these as engineering evidence only.  The raw values still apply to
+the action-clean common-T2-eligible population, not all generated frames.  The
+airtime point estimate passes the 400 us selection ceiling but its uncertainty
+interval does not.  The selected P-only candidate beat the corresponding
+all-frame candidate by only about `1.7e-5` in the maximin objective, so that
+gate is fragile.  The compiled policy must therefore be judged on fresh paired
+seeds 1301+ with the 0.6% measured-airtime guard.  Apply the frozen confirmation
+contract: beat STR decisively on all-frame miss rate and mean per-run
+completed-frame P99, beat EMLSR decisively on miss rate only, and never use
+EMLSR's survivor-conditioned completed P99 as a target.
