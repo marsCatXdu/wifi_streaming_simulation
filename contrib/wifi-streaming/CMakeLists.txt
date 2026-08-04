@@ -11,6 +11,7 @@ build_lib(
     model/primary-tail-t4-model-evaluator.cc
     model/temporal-t2-value-model-data-v1.cc
     model/temporal-t2-value-model-evaluator.cc
+    model/temporal-t2-value-predictor.cc
     model/closed-loop-risk-predictor.cc
     model/prediction-telemetry-collector.cc
     model/selective-duplication-controller.cc
@@ -39,6 +40,7 @@ build_lib(
     model/primary-tail-t4-model-evaluator.h
     model/temporal-t2-value-model-data-v1.h
     model/temporal-t2-value-model-evaluator.h
+    model/temporal-t2-value-predictor.h
     model/closed-loop-risk-predictor.h
     model/prediction-telemetry-collector.h
     model/selective-duplication-controller.h
@@ -64,6 +66,7 @@ build_lib(
   TEST_SOURCES
     test/primary-tail-t4-model-evaluator-test.cc
     test/temporal-t2-value-model-evaluator-test.cc
+    test/temporal-t2-value-predictor-test.cc
     test/randomized-intervention-controller-test.cc
     test/secondary-airtime-primitives-test.cc
     test/wifi-streaming-test-suite.cc
