@@ -1,0 +1,1172 @@
+{
+  "runtime_contract_schema_version": 1,
+  "runtime_contract_id": "paired-value-duplication-t2-runtime-v1",
+  "status": "frozen_before_closed_loop_policy_implementation_and_confirmation",
+  "immutability": {
+    "rule": "Runtime implementation, validation, campaign configuration, and analysis must implement this exact contract. Any material change requires a new runtime_contract_id and fresh confirmation seeds.",
+    "model_refit_allowed": false,
+    "threshold_reselection_allowed": false,
+    "post_confirmation_tuning_allowed": false
+  },
+  "source_closure": {
+    "hash_algorithm": "sha256",
+    "frozen_selection": {
+      "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+      "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f",
+      "selection_schema_version": 1,
+      "selection_id": "temporal-t2-primary-only-two-objective-v1"
+    },
+    "canonical_fit": {
+      "directory": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1",
+      "repository_git_commit": "9b9ee02edc0b289b0ba4187c3f5567087c1d977f",
+      "repository_worktree_clean": true,
+      "repository_worktree_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "trainer_source_path": "tools/train_temporal_t2_value.py",
+      "trainer_source_sha256": "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9",
+      "local_dependency_source_sha256": {
+        "build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+        "build_randomized_temporal_dataset.py": "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3",
+        "train_randomized_value.py": "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911"
+      },
+      "manifest": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+        "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f",
+        "manifest_schema_version": 1
+      },
+      "artifacts_sha256": {
+        "temporal_t2_value_models.pkl": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8",
+        "temporal_t2_value_policy_candidates.csv": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb",
+        "temporal_t2_value_training_metrics.json": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+      },
+      "dataset_artifacts_sha256": {
+        "artifact_manifest.json": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+        "dataset_metadata.json": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+        "randomized_t2_temporal.csv": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+      }
+    },
+    "forbidden_model_sources": [
+      "/tmp/temporal-t2-two-objective-final",
+      "/tmp/temporal-t2-two-objective-v1"
+    ],
+    "closure_rule": "Only the hash-verified repository canonical_fit directory may generate or validate compiled model data. Temporary fits are not interchangeable even when selected scalar metrics happen to match."
+  },
+  "selected_policy_contract": {
+    "policy_name": "paired_value_duplication_t2",
+    "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "random_seed": 20260804,
+    "candidate_ordinal": 188,
+    "feature_family": "primary_compact_physics_temporal",
+    "frame_gate": "p_frames_only",
+    "ranker": "legacy_bad12_value_per_cost",
+    "requested_action_fraction": 0.15,
+    "calibration_realized_action_fraction": 0.1500773096250483,
+    "score_threshold_float32": 8.952784264693037e-05,
+    "score_threshold_float32_bits_hex": "0x38bbc0e5",
+    "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+    "threshold_comparator": "float32(value_per_cost_score) >= float32(score_threshold)",
+    "stage": "T2",
+    "sample_offset_us": 2000,
+    "sequential_policy": "T2_only",
+    "action": "canonical_full_secondary_copy",
+    "runtime_model_heads": {
+      "primary_need": "bad_tail_12000us HGB probability fit on all training rows",
+      "treated_bad": "bad_tail_12000us HGB probability fit on treated and launched training rows",
+      "cost": "Ridge prediction of log1p measured secondary airtime given treated launch with Duan smearing"
+    },
+    "nonnegative_value_formula": "max(primary_bad12_probability - treated_bad12_probability, 0)",
+    "predicted_cost_formula": "max(expm1(clamp(predicted_log_airtime + log(Duan_smearing_factor), 0, log1p(1000000))), 1)",
+    "ranker_formula": "nonnegative_bad12_value / predicted_secondary_airtime_us",
+    "learned_cost_role": "ranking_only_never_token_accounting",
+    "legacy_bad12_confirmation_role": "none",
+    "model_preprocessing": {
+      "raw_feature_count": 246,
+      "transformed_feature_count": 262,
+      "appended_missing_indicator_raw_indices_in_order": [
+        25,
+        27,
+        28,
+        29,
+        30,
+        40,
+        42,
+        43,
+        44,
+        45,
+        55,
+        57,
+        58,
+        59,
+        60,
+        239
+      ],
+      "imputation": "Each model head uses its own frozen training-only median vector; NaN is median-imputed and never replaced with zero.",
+      "head_separation": "The primary-need median vector differs from the treated-bad and cost vectors. Treated-bad and cost preprocessing may share compiled constants only after the exporter proves bitwise equality in the canonical artifact.",
+      "missing_indicator_rule": "Append one binary indicator for each listed raw index, in the listed order, after the 246 imputed values.",
+      "classifier_head_sequence": "Head-specific median imputation plus the 16 missing indicators, then direct HistGradientBoostingClassifier evaluation without standard scaling.",
+      "cost_head_sequence": "Cost-head median imputation plus the 16 missing indicators, StandardScaler(with_mean=true, with_std=true), then Ridge(alpha=10, fit_intercept=true).",
+      "cost_head_scaler_contract": "The exporter must preserve all 262 finite training-only StandardScaler mean_ values and all 262 finite strictly-positive scale_ values from the canonical pickle. Raw log-airtime equals the Ridge intercept plus the sum of each Ridge coefficient times ((imputed_feature - scaler_mean) / scaler_scale), in transformed-feature order.",
+      "cost_head_affine_folding": "The exporter may fold StandardScaler and Ridge into an equivalent affine vector only after proving parity against the unfused canonical pipeline on deterministic finite, missing, and real-ledger golden inputs; the evaluator's reported predicted_log_airtime remains the raw pre-smearing Ridge output."
+    },
+    "test_role_used_during_selection": false,
+    "evidence_status_before_confirmation": "previously_opened_run_group_test_engineering_evidence_not_confirmation"
+  },
+  "training_population_transfer": {
+    "candidate_v1_t2_rows": 76526,
+    "excluded_lag8_warmup": 498,
+    "excluded_secondary_action_dirty": 2628,
+    "fitted_rows": 73400,
+    "selected_inputs_include_secondary_or_cleanliness_state": false,
+    "runtime_action_cleanliness_gate_enabled": false,
+    "runtime_rule": "After schema and causal validation, store and score eligible primary-only history even when prior policy actions made a secondary endpoint dirty under the offline builder's filter. Do not add a cooldown or cleanliness gate.",
+    "transfer_caveat": "This behavior is causal and uses only frozen primary inputs, but histories following policy actions are outside the frozen calibration population. Offline action fractions and effects need not transfer to closed loop.",
+    "decision_rule": "Only the fresh closed-loop confirmation campaign decides whether this population transfer is acceptable. Adding an action-cleanliness or cooldown gate later requires a new runtime_contract_id and fresh confirmation seeds."
+  },
+  "primary_only_feature_contract": {
+    "scope": "strictly_primary_only",
+    "receiver_prior_outcomes_allowed": false,
+    "secondary_feature_count": 0,
+    "total_encoded_feature_count": 246,
+    "ordered_feature_names": {
+      "authoritative_source": "canonical artifact_manifest.json selected_policy_contract.ordered_feature_names",
+      "authoritative_source_sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f",
+      "serialization_for_hash": "UTF-8 JSON array with ensure_ascii=true and separators comma/colon and no trailing newline",
+      "sha256": "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e",
+      "count": 246,
+      "first": "x_f0_frame_age_us",
+      "last": "x_primary_since_lag8_ppdu_tx_count_per_ms",
+      "runtime_rule": "The independent runtime feature-name array must equal the authoritative array element-for-element before the first decision."
+    },
+    "numeric_adapter": {
+      "external_numeric": "Convert each finite external numeric to IEEE-754 binary32, reject infinity or binary32 overflow, then widen exactly to binary64.",
+      "missing_optional": "Use quiet NaN for a missing optional value. Never serialize NaN as a JSON number.",
+      "categorical": "Append exact binary32 I_FRAME and P_FRAME one-hot values in that order.",
+      "derived": "Use the formula-specific inputs described below, then round every derived output to binary32 and widen to binary64 before evaluation.",
+      "exact_derivation_inputs": "Poll capture/event timestamps and cumulative counters used by age, retry-ratio, structural-zero, and since-lag formulas remain exact integers until the derived double is formed. Do not first round absolute timestamps or cumulative counters to binary32. Compact-physics formulas are the exception explicitly defined to derive from widened binary32 primary-base values."
+    },
+    "groups_in_exact_order": [
+      {
+        "id": "primary_base",
+        "start_index": 0,
+        "end_index_inclusive": 67,
+        "count": 68,
+        "segments_in_exact_order": [
+          {
+            "id": "f0_numeric",
+            "count": 7,
+            "fields": [
+              "frame_age_us",
+              "deadline_slack_us",
+              "frame_size_bytes",
+              "frame_packet_count",
+              "packets_submitted",
+              "application_socket_packet_bytes_submitted",
+              "packets_remaining_to_submit"
+            ]
+          },
+          {
+            "id": "live_current_primary",
+            "count": 14,
+            "fields": [
+              "frame_packets_mac_enqueued",
+              "frame_packets_mac_dequeued",
+              "frame_packets_tx_succeeded",
+              "frame_mpdu_attempt_failures",
+              "frame_packets_terminally_dropped",
+              "frame_packets_currently_queued",
+              "frame_mac_service_bytes_currently_queued",
+              "mac_queue_packets",
+              "mac_queue_service_bytes",
+              "packets_ahead_of_frame",
+              "mac_service_bytes_ahead_of_frame",
+              "frame_packets_pending_primary",
+              "frame_mac_service_bytes_not_acknowledged",
+              "frame_mac_service_bytes_pending_primary"
+            ]
+          },
+          {
+            "id": "genuine_delayed_primary_rolling",
+            "count": 45,
+            "windows_us_in_order": [
+              1000,
+              5000,
+              20000
+            ],
+            "fields_per_window_in_order": [
+              "mpdu_attempts",
+              "mpdu_positive_acks",
+              "mpdu_attempt_failures",
+              "mpdu_retries",
+              "mpdu_retry_ratio",
+              "acknowledged_mac_service_bytes",
+              "mpdu_queue_to_ack_mean_us",
+              "mpdu_queue_to_ack_p95_us",
+              "mpdu_first_attempt_to_ack_mean_us",
+              "mpdu_first_attempt_to_ack_p95_us",
+              "phy_tx_fraction",
+              "phy_rx_fraction",
+              "phy_busy_fraction",
+              "phy_idle_fraction",
+              "phy_other_fraction"
+            ],
+            "source": "current primary T2 sample pollingReport rolling values, never top-level live rolling values"
+          },
+          {
+            "id": "frame_type_one_hot",
+            "count": 2,
+            "fields": [
+              "x_f0_frame_type=I_FRAME",
+              "x_f0_frame_type=P_FRAME"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "compact_primary_physics",
+        "start_index": 68,
+        "end_index_inclusive": 74,
+        "count": 7,
+        "input_precision": "derive from widened binary32 primary_base values",
+        "formulas_in_exact_order": [
+          {
+            "name": "x_compact_primary_working_rate_margin_1ms_bytes_per_us",
+            "formula": "acknowledged_mac_service_bytes_1ms / 1000 - frame_mac_service_bytes_pending_primary / max(deadline_slack_us, 1)"
+          },
+          {
+            "name": "x_compact_primary_working_rate_margin_5ms_bytes_per_us",
+            "formula": "acknowledged_mac_service_bytes_5ms / 5000 - frame_mac_service_bytes_pending_primary / max(deadline_slack_us, 1)"
+          },
+          {
+            "name": "x_compact_primary_working_rate_margin_20ms_bytes_per_us",
+            "formula": "acknowledged_mac_service_bytes_20ms / 20000 - frame_mac_service_bytes_pending_primary / max(deadline_slack_us, 1)"
+          },
+          {
+            "name": "x_compact_primary_ahead_clearance_us_at_5ms_rate",
+            "formula": "NaN if ahead bytes or 5ms acknowledged bytes is missing; 0 if ahead_bytes <= 0; min(ahead_bytes * 5000 / acknowledged_bytes_5ms, 1000000) if ahead_bytes > 0 and acknowledged_bytes_5ms > 0; otherwise 1000000"
+          },
+          {
+            "name": "x_compact_primary_ahead_clearance_over_slack_at_5ms_rate",
+            "formula": "NaN if clearance or max(deadline_slack_us, 1) is nonfinite; otherwise clamp(clearance / max(deadline_slack_us, 1), -100, 100)"
+          },
+          {
+            "name": "x_compact_primary_ack_rate_trend_1ms_minus_20ms",
+            "formula": "acknowledged_mac_service_bytes_1ms / 1000 - acknowledged_mac_service_bytes_20ms / 20000"
+          },
+          {
+            "name": "x_compact_primary_busy_trend_1ms_minus_20ms",
+            "formula": "primary_phy_busy_fraction_1ms - primary_phy_busy_fraction_20ms"
+          }
+        ]
+      },
+      {
+        "id": "delayed_current_primary_radio",
+        "start_index": 75,
+        "end_index_inclusive": 86,
+        "count": 12,
+        "source": "current primary T2 pollingReport",
+        "value_missing_pairs_in_exact_order": [
+          "mcs",
+          "nss",
+          "channel_width_mhz",
+          "guard_interval_ns",
+          "last_tx_age_us",
+          "last_ack_age_us"
+        ],
+        "age_formula": "Reject a future or negative event timestamp; otherwise min((exact poll_capture_time_ns - exact event_time_ns) / 1000, 1000000), then round to binary32.",
+        "missing_formula": "missing value gives value=NaN and missing=1; present value gives converted value and missing=0"
+      },
+      {
+        "id": "exact_frame_keyed_primary_history",
+        "start_index": 87,
+        "end_index_inclusive": 245,
+        "count": 159,
+        "lags_in_exact_order": [
+          1,
+          3,
+          8
+        ],
+        "count_per_lag": 53,
+        "per_lag_segments_in_exact_order": [
+          {
+            "id": "lagged_rolling",
+            "count": 36,
+            "windows_us_in_order": [
+              1000,
+              5000,
+              20000
+            ],
+            "fields_per_window_in_order": [
+              "mpdu_attempts",
+              "mpdu_positive_acks",
+              "mpdu_attempt_failures",
+              "mpdu_retries",
+              "acknowledged_mac_service_bytes",
+              "phy_tx_fraction",
+              "phy_rx_fraction",
+              "phy_busy_fraction",
+              "phy_idle_fraction",
+              "phy_other_fraction",
+              "mpdu_retry_ratio",
+              "mpdu_retry_structural_zero"
+            ],
+            "retry_formula": "if attempts == 0 then ratio=0 and structural_zero=1; otherwise ratio=retries/attempts and structural_zero=0"
+          },
+          {
+            "id": "lagged_radio",
+            "count": 12,
+            "value_missing_pairs_in_exact_order": [
+              "mcs",
+              "nss",
+              "channel_width_mhz",
+              "guard_interval_ns",
+              "last_tx_age_us",
+              "last_ack_age_us"
+            ],
+            "missing_and_age_rule": "Use the same value/missing and capped-age formulas as delayed_current_primary_radio, using each exact-lag report's own poll capture time."
+          },
+          {
+            "id": "since_lag_rates",
+            "count": 5,
+            "fields_in_exact_order": [
+              "mpdu_attempts_per_ms",
+              "mpdu_positive_acks_per_ms",
+              "mpdu_attempt_failures_per_ms",
+              "mpdu_retries_per_ms",
+              "ppdu_tx_count_per_ms"
+            ],
+            "polling_report_fields_in_exact_order": [
+              "mpduTxAttemptsTotal",
+              "mpduPositiveAcksTotal",
+              "mpduTxAttemptFailuresTotal",
+              "mpduRetriesTotal",
+              "ppduTxCountTotal"
+            ],
+            "formula": "(current cumulative counter - exact-lag cumulative counter) / ((current poll capture ns - exact-lag poll capture ns) / 1000000)",
+            "source": "Current and lagged primary PredictionPollingReport cumulative counters, never PredictionSample live totals.",
+            "fixed_frame_period_denominator_forbidden": true
+          }
+        ]
+      }
+    ],
+    "dimension_arithmetic": "68 + 7 + 12 + 3 * 53 = 246",
+    "forbidden_inputs": [
+      "secondary radio state",
+      "secondary queue state",
+      "secondary rolling history",
+      "secondary polling report values",
+      "secondary ACK or delivery outcomes",
+      "receiver union outcomes",
+      "receiver copy outcomes",
+      "deadline-miss labels"
+    ]
+  },
+  "telemetry_contract": {
+    "telemetry_schema_version": 3,
+    "polling_schema_version": 1,
+    "feature_support_mask_version": 2,
+    "primary_required_support_mask_hex": "0x3ffffffffdffff",
+    "primary_support_mask_comparison": "Parse the hexadecimal masks and require exact numeric equality, not subset inclusion.",
+    "primary_support_mask_applies_to": [
+      "primary PredictionSample",
+      "primary PredictionPollingReport"
+    ],
+    "sample_offsets_us": [
+      0,
+      2000
+    ],
+    "controller_ignored_offsets_us": [
+      0
+    ],
+    "history_windows_us": [
+      1000,
+      5000,
+      20000
+    ],
+    "polling_interval_us": 1000,
+    "polling_report_delay_us": 1000,
+    "raw_prediction_event_log_enabled": false,
+    "oracle_features_enabled": false,
+    "primary_polling_requirements": {
+      "report_required": true,
+      "capture_time_alignment_ns": 1000000,
+      "available_time_formula": "capture_time_ns + 1000000",
+      "available_no_later_than_sample": true,
+      "staleness_ns_half_open": [
+        1000000,
+        2000000
+      ],
+      "rolling_window_order_exact": true,
+      "full_history_coverage_required": true,
+      "history_coverage_us_exact_in_window_order": [
+        1000,
+        5000,
+        20000
+      ],
+      "retry_ratio_rule": "For every current or lagged primary rolling sample, retries must not exceed attempts; retry ratio is missing if and only if attempts are zero, and otherwise it equals retries divided by attempts.",
+      "ack_latency_missing_rule": "For every current or lagged primary rolling sample, queue-to-ACK mean/P95 and first-attempt-to-ACK mean/P95 are all missing if and only if positive ACK count is zero.",
+      "phy_fraction_presence_rule": "All five PHY fractions are present for every current or lagged rolling window.",
+      "phy_fraction_bounds_inclusive": [
+        0,
+        1
+      ],
+      "phy_fraction_sum_absolute_tolerance": 2e-06,
+      "causal_watermark_rules": {
+        "zero_absence_equivalence": "For both a primary PredictionSample and a primary PredictionPollingReport, latestFeatureEventTimeNs is absent if and only if latestFeatureEventSequence is zero.",
+        "endpoint_time_bound": "A present sample watermark time must not exceed sampleTimeNs; a present report watermark time must not exceed captureTimeNs.",
+        "monotonicity": "For primary sample endpoints in frame order and, independently, primary polling reports in capture-time order, latestFeatureEventTimeNs and latestFeatureEventSequence must each be nondecreasing."
+      },
+      "cumulative_counter_fields_required": [
+        "mpduTxAttemptsTotal",
+        "mpduPositiveAcksTotal",
+        "mpduTxAttemptFailuresTotal",
+        "mpduRetriesTotal",
+        "mpduTerminalDropsTotal",
+        "mpduRetryLimitDropsTotal",
+        "mpduLifetimeDropsTotal",
+        "mpduQueueDropsTotal",
+        "ppduTxCountTotal"
+      ],
+      "cumulative_counter_rule": "Every listed primary polling-report counter must be present, nonnegative, and nondecreasing in capture-time order; resets and decreases are forbidden."
+    }
+  },
+  "paired_snapshot_contract": {
+    "primary": {
+      "path_id": 1,
+      "copy_id": 0,
+      "registration_and_binding_order": 0
+    },
+    "hypothetical_secondary": {
+      "path_id": 0,
+      "copy_id": 1,
+      "registration_and_binding_order": 1
+    },
+    "relevant_stage": "T2",
+    "relevant_offset_us": 2000,
+    "callback_order": "primary immediately followed by matching secondary at the same simulation timestamp",
+    "single_pending_primary_pair": true,
+    "immutable_pair_fields": [
+      "run_id",
+      "telemetry_schema_version",
+      "frame_id",
+      "sample_stage",
+      "sample_offset_us",
+      "sample_time_ns",
+      "generation_time_ns",
+      "deadline_time_ns",
+      "frame_age_us",
+      "deadline_slack_us",
+      "frame_size_bytes",
+      "frame_packet_count",
+      "frame_type"
+    ],
+    "untreated_secondary_progress_requirements": {
+      "packets_submitted": 0,
+      "application_socket_packet_bytes_submitted": 0,
+      "packets_remaining_to_submit": "frame_packet_count",
+      "sender_mac_complete": false,
+      "actionable": true,
+      "optional_per_frame_mac_fields_if_present_must_equal_zero": [
+        "frame_packets_mac_enqueued",
+        "frame_packets_mac_dequeued",
+        "frame_packets_tx_succeeded",
+        "frame_mpdu_attempt_failures",
+        "frame_packets_terminally_dropped",
+        "frame_packets_currently_queued",
+        "frame_mac_service_bytes_currently_queued"
+      ]
+    },
+    "secondary_feature_read_rule": "The controller may validate only immutable pair metadata and untreated per-frame progress. It must not read secondary path-wide queue, radio, rolling, polling, watermark, support-mask, ACK, or receiver outcome values.",
+    "fail_closed_abort_conditions": [
+      "unsupported schema or primary support mask",
+      "wrong path, copy, stage, offset, or timestamp",
+      "duplicate, missing, reversed, or interleaved pair",
+      "immutable metadata mismatch",
+      "secondary application or per-frame MAC progress",
+      "noncontiguous frame identifiers or a missing exact lag after frame 7",
+      "future or reordered primary watermark",
+      "invalid primary rolling coverage or fractions",
+      "primary cumulative counter reset",
+      "feature-name, feature-count, adapter, ranker, gate, threshold, or artifact provenance drift",
+      "invalid or noncanonical delayed-copy descriptor",
+      "nonfinite model output, guard state, cost, or accounting value",
+      "launch, reservation, measurement, or settlement reconciliation failure"
+    ]
+  },
+  "history_contract": {
+    "storage": "fixed 9-slot ring keyed by frame_id modulo 9 with exact frame_id validation",
+    "first_frame_id": 0,
+    "frame_ids_must_be_contiguous": true,
+    "exact_lags": [
+      1,
+      3,
+      8
+    ],
+    "history_ready_first_frame_id": 8,
+    "store_before_gating": "After all schema, timing, support-mask, rolling, watermark, and cumulative-counter validation succeeds, store an owned copy of the exact primary polling report before every policy gate.",
+    "store_for_frame_types": [
+      "I_FRAME",
+      "P_FRAME"
+    ],
+    "store_nonactionable_frames": true,
+    "store_outside_decision_window_frames": true,
+    "store_after_prior_secondary_actions": true,
+    "positional_or_time_nearest_lags_forbidden": true
+  },
+  "runtime_window_and_gates": {
+    "measurement_window_ns_half_open": [
+      1000000000,
+      61000000000
+    ],
+    "decision_window_ns_half_open": [
+      1000000000,
+      60466000000
+    ],
+    "decision_window_seconds_half_open": [
+      1.0,
+      60.466
+    ],
+    "decision_stop_guard_us": 534000,
+    "decision_stop_guard_provenance": "Same assignment stop guard used by the randomized training population.",
+    "decision_stop_guard_rationale": {
+      "deadline_us": 33333,
+      "t2_offset_us": 2000,
+      "queue_max_delay_us": 500000,
+      "meter_fallback_padding_us": 1000,
+      "maximum_t2_to_fallback_settlement_us": 532333,
+      "guard_margin_us": 1667,
+      "rule": "A sample strictly before 60.466 s settles strictly before the 61 s meter stop even on the fallback path. This prevents frame outcomes from including an action whose PHY cost is outside the meter window."
+    },
+    "guard_refill_time_rule": "Refill through min(current event time, measurement stop); never advance the guard beyond measurement stop.",
+    "decision_status_order": [
+      "outside_decision_window",
+      "history_warmup",
+      "frame_type_restricted",
+      "not_actionable",
+      "descriptor_unavailable",
+      "below_score_threshold",
+      "airtime_guard_rejected",
+      "launch_rejected",
+      "action"
+    ],
+    "ordered_gate_semantics": [
+      "Require the paired T2 sample time in the half-open decision window.",
+      "Require exact frame-keyed lags 1, 3, and 8.",
+      "Require P_FRAME; I_FRAME is stored in history but never evaluated or acted upon.",
+      "Require the primary copy to remain actionable.",
+      "Require an available canonical full delayed-copy descriptor.",
+      "Evaluate the 246 features and require the frozen float32 score threshold.",
+      "Require the canonical safety-adjusted estimate to fit the measured-airtime guard after outstanding meter reservations.",
+      "Call RequestSecondaryCopy exactly once and require acceptance.",
+      "Register the accepted canonical full copy with the meter and report action."
+    ],
+    "model_evaluation_allowed_only_after_first_five_gates": true,
+    "descriptor_contract": {
+      "frame_id_matches": true,
+      "deadline_time_ns_matches": true,
+      "frame_packet_count_matches": true,
+      "packet_count_equals_frame_packet_count": true,
+      "packet_indices": "exact ascending sequence 0 through packet_count - 1",
+      "expected_mac_service_bytes_positive": true,
+      "streaming_header_bytes_per_packet": 50,
+      "post_socket_mac_service_overhead_bytes_per_packet": 36,
+      "expected_mac_service_bytes_formula": "frame_size_bytes + packet_count * (50 + 36)",
+      "expected_mac_service_bytes_recompute_required": true,
+      "invalid_descriptor_handling": "abort",
+      "absent_descriptor_handling": "descriptor_unavailable"
+    }
+  },
+  "canonical_cost_and_guard_contract": {
+    "canonical_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+    "canonical_nominal_profile": {
+      "wifi_standard": "802.11be",
+      "data_mode": "EhtMcs5",
+      "channel_width_mhz": 20,
+      "guard_interval_ns": 800,
+      "nss": 1,
+      "aggregation": "one_ppdu"
+    },
+    "estimator_source_closure": {
+      "implementation_path": "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.cc",
+      "implementation_sha256": "67d61c6da75e676752fede0af3eafeccc43048597d947b7af3215a33afbfab31",
+      "interface_path": "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.h",
+      "interface_sha256": "a40842c0dec03e949b723190049ca158eee73f96ce35a241add88e6be972167b"
+    },
+    "estimator_formula_contract": {
+      "preamble": "WIFI_PREAMBLE_EHT_MU duration from WifiPhy::CalculatePhyPreambleAndHeaderDuration for EhtMcs5, 20 MHz, 800 ns guard interval, NSS 1.",
+      "data_rate_bps": "EhtPhy::GetEhtMcs5().GetDataRate(MHz_u{20}, NanoSeconds(800), 1)",
+      "wifi_mac_overhead_bytes_per_packet": 38,
+      "nominal_airtime_us": "preamble_us + 8 * (expected_mac_service_bytes + 38 * packet_count) / data_rate_bps * 1000000",
+      "retry_multiplier": 1
+    },
+    "runtime_wifi_requirements": {
+      "source": "synthetic",
+      "emission_mode": "burst",
+      "payload_size_bytes": 1200,
+      "frame_size_bytes": 12000,
+      "keyframe_size_multiplier": 4,
+      "gop_length": 60,
+      "fps": 30,
+      "deadline_us": 33333,
+      "queue_max_delay_ms": 500,
+      "max_ampdu_size_bytes": 65535,
+      "max_amsdu_size_bytes": 0,
+      "txop_limit_us": 0,
+      "rts_cts_threshold_bytes": 4692480,
+      "fragmentation_threshold_bytes": 65535,
+      "largest_eligible_launched_p_frame_must_fit_one_ppdu": true,
+      "scope_note": "The frozen policy gates out I-frames before model evaluation or launch. The 48000-byte I-frame exceeds the EHT PPDU duration limit and is intentionally outside this one-PPDU invariant; the eligible 12000-byte P-frame must fit."
+    },
+    "reservation_formula": "canonical_reserved_airtime_us = 1.25 * canonical_nominal_airtime_us",
+    "cost_safety_factor": 1.25,
+    "learned_predicted_cost_may_set_reservation": false,
+    "budget_guard": {
+      "fraction": 0.006,
+      "max_horizon_us": 10000000,
+      "initial_horizon_us": 2000000,
+      "capacity_us": 60000,
+      "initial_credit_us": 12000,
+      "initialization_time_ns": 1000000000,
+      "earned_balance_formula": "min(capacity_us, prior_balance_us + fraction * elapsed_us)",
+      "available_formula": "earned_balance_us - meter_outstanding_reservations_us",
+      "admission_formula": "canonical_reserved_airtime_us <= available_us",
+      "estimated_airtime_debit_allowed": false,
+      "balance_may_be_negative": true,
+      "negative_balance_semantics": "Measured overrun remains visible as debt and suppresses new actions until causal refill repays it."
+    },
+    "launch_and_meter_order": [
+      "Refill the guard through the causal T2 timestamp.",
+      "Read guard balance and meter reservation before the decision.",
+      "If the learned score passes, test the canonical reservation against balance minus outstanding reservations.",
+      "Call MultipathSender::RequestSecondaryCopy.",
+      "Only after a successful synchronous return, register the launched copy with SecondaryAirtimeMeter.",
+      "Complete registration before any zero-delay packet-send event can execute.",
+      "Write the decision row with before and after accounting values."
+    ],
+    "decision_row_accounting_proofs": {
+      "action": "Within accounting_absolute_tolerance_us: guard_balance_after_us equals guard_balance_before_us; meter_reserved_after_us equals meter_reserved_before_us plus canonical_reserved_airtime_us; guard_available_after_us equals guard_balance_after_us minus meter_reserved_after_us.",
+      "non_action_or_launch_rejection": "Within accounting_absolute_tolerance_us, guard balance and meter reservation are unchanged across the decision.",
+      "learned_cost_token_accounting_flag": 0
+    },
+    "accounting_absolute_tolerance_us": 1e-09,
+    "exact_equality_scope": "Integer counts, flags, frame IDs, packet-index sets, and artifact identifiers remain exact; the accounting tolerance applies only to floating-point microsecond arithmetic.",
+    "measurement_callback_order": "The meter first reduces the outstanding reservation by measured allocation, then invokes the controller callback; the controller debits that measured allocation from the guard at Simulator::Now and reports debt.",
+    "settlement_semantics": "Settlement validates the launched frame and nominal cost and releases only the meter reservation remainder. It never credits or debits guard balance.",
+    "retry_ewma_allowed": false,
+    "secondary_ack_or_delivery_feedback_allowed": false
+  },
+  "runtime_outputs": {
+    "decision_csv": {
+      "file": "paired_value_t2_decisions.csv",
+      "schema_version": 1,
+      "cardinality": "exactly one row for every generated frame after its paired T2 snapshots",
+      "ordered_columns": [
+        "schema_version",
+        "run_id",
+        "frame_id",
+        "policy",
+        "decision_status",
+        "primary_path_id",
+        "primary_copy_id",
+        "secondary_path_id",
+        "secondary_copy_id",
+        "sample_stage",
+        "sample_offset_us",
+        "generation_time_ns",
+        "deadline_time_ns",
+        "primary_sample_time_ns",
+        "secondary_sample_time_ns",
+        "primary_feature_watermark_time_ns",
+        "primary_feature_watermark_sequence",
+        "frame_type",
+        "frame_size_bytes",
+        "frame_packet_count",
+        "primary_actionable",
+        "decision_window_start_ns",
+        "decision_window_stop_ns",
+        "inside_decision_window",
+        "history_ready",
+        "current_poll_capture_time_ns",
+        "current_poll_available_time_ns",
+        "lag1_frame_id",
+        "lag1_poll_capture_time_ns",
+        "lag3_frame_id",
+        "lag3_poll_capture_time_ns",
+        "lag8_frame_id",
+        "lag8_poll_capture_time_ns",
+        "feature_evaluated",
+        "model_spec_id",
+        "model_artifact_sha256",
+        "feature_family",
+        "feature_count",
+        "feature_adapter_id",
+        "ordered_feature_names_sha256",
+        "ranker",
+        "frame_gate",
+        "score_adapter_id",
+        "score_threshold_float32",
+        "primary_bad12_logit",
+        "primary_bad12_probability",
+        "treated_bad12_logit",
+        "treated_bad12_probability",
+        "predicted_log_airtime",
+        "predicted_secondary_airtime_us",
+        "nonnegative_bad12_value",
+        "value_per_cost_score_float32",
+        "passes_score_threshold",
+        "descriptor_checked",
+        "descriptor_available",
+        "descriptor_frame_packet_count",
+        "descriptor_packet_count",
+        "descriptor_packet_indices",
+        "descriptor_expected_mac_service_bytes",
+        "descriptor_deadline_time_ns",
+        "canonical_cost_estimator_id",
+        "cost_safety_factor",
+        "canonical_nominal_airtime_us",
+        "canonical_reserved_airtime_us",
+        "guard_fraction",
+        "guard_max_horizon_us",
+        "guard_initial_horizon_us",
+        "guard_capacity_us",
+        "guard_initial_credit_us",
+        "guard_balance_before_us",
+        "meter_reserved_before_us",
+        "guard_available_before_us",
+        "guard_debt_before_us",
+        "guard_admission_considered",
+        "guard_admitted",
+        "launch_attempted",
+        "secondary_launched",
+        "guard_balance_after_us",
+        "meter_reserved_after_us",
+        "guard_available_after_us",
+        "guard_debt_after_us",
+        "learned_cost_token_accounting"
+      ],
+      "nullable_columns_when_feature_evaluated_is_zero": [
+        "primary_bad12_logit",
+        "primary_bad12_probability",
+        "treated_bad12_logit",
+        "treated_bad12_probability",
+        "predicted_log_airtime",
+        "predicted_secondary_airtime_us",
+        "nonnegative_bad12_value",
+        "value_per_cost_score_float32",
+        "passes_score_threshold"
+      ],
+      "model_diagnostic_semantics": {
+        "predicted_log_airtime": "Raw Ridge prediction of log1p measured airtime before adding log(Duan smearing), clipping, or expm1.",
+        "predicted_secondary_airtime_us": "Final smeared, clipped, expm1-transformed prediction with the frozen 1 us ranking floor.",
+        "value_per_cost_score_float32": "Float32 cast of nonnegative_bad12_value divided by predicted_secondary_airtime_us."
+      },
+      "fixed_model_metadata_values": {
+        "policy": "paired_value_duplication_t2",
+        "sample_stage": "T2",
+        "sample_offset_us": 2000,
+        "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+        "model_artifact_sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8",
+        "feature_family": "primary_compact_physics_temporal",
+        "feature_count": 246,
+        "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+        "ordered_feature_names_sha256": "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e",
+        "ranker": "legacy_bad12_value_per_cost",
+        "frame_gate": "p_frames_only",
+        "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+        "score_threshold_float32": 8.952784264693037e-05,
+        "learned_cost_token_accounting": 0
+      },
+      "additional_conditional_null_rules": {
+        "missing_history_slot": "The corresponding lag frame_id and lag poll capture time are empty; never encode an absent lag as zero.",
+        "descriptor_checked_is_zero": "Descriptor evidence and canonical numeric cost fields are empty and descriptor_available is 0.",
+        "descriptor_checked_is_one_and_descriptor_available_is_zero": "Descriptor evidence and canonical numeric cost fields are empty.",
+        "descriptor_available_is_one": "All descriptor evidence and canonical numeric cost fields are populated and finite.",
+        "model_metadata": "Model and feature-contract metadata are populated on every row even when feature_evaluated is 0.",
+        "guard_state": "Guard before and after state is populated and finite on every row. Admission and launch flags are 0 unless their ordered gate was reached."
+      },
+      "null_encoding": "empty CSV field",
+      "decision_status_values_in_order": [
+        "outside_decision_window",
+        "history_warmup",
+        "frame_type_restricted",
+        "not_actionable",
+        "descriptor_unavailable",
+        "below_score_threshold",
+        "airtime_guard_rejected",
+        "launch_rejected",
+        "action"
+      ],
+      "row_flush_required": true
+    },
+    "controller_summary_json": {
+      "file": "paired_value_t2_summary.json",
+      "schema_version": 1,
+      "required_top_level_keys": [
+        "schema_version",
+        "run_id",
+        "policy",
+        "runtime_contract_id",
+        "runtime_contract_sha256",
+        "source_artifacts",
+        "model",
+        "telemetry",
+        "decision_window",
+        "budget_guard",
+        "counts",
+        "airtime",
+        "integrity"
+      ],
+      "runtime_contract_sha256_rule": "SHA-256 of the exact committed runtime-contract file bytes; this value is computed after the contract is frozen and must match the campaign manifest rather than being self-embedded in this JSON.",
+      "required_scalar_values": {
+        "schema_version": 1,
+        "policy": "paired_value_duplication_t2",
+        "runtime_contract_id": "paired-value-duplication-t2-runtime-v1"
+      },
+      "required_source_artifacts_exact": {
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        }
+      },
+      "required_model_values_exact": {
+        "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+        "artifact_sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8",
+        "feature_family": "primary_compact_physics_temporal",
+        "feature_count": 246,
+        "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+        "ordered_feature_names_sha256": "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e",
+        "ranker": "legacy_bad12_value_per_cost",
+        "frame_gate": "p_frames_only",
+        "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+        "score_threshold_float32": 8.952784264693037e-05,
+        "score_threshold_float32_bits_hex": "0x38bbc0e5"
+      },
+      "required_telemetry_values_exact": {
+        "telemetry_schema_version": 3,
+        "polling_schema_version": 1,
+        "feature_support_mask_version": 2,
+        "primary_required_support_mask_hex": "0x3ffffffffdffff",
+        "sample_offsets_us": [
+          0,
+          2000
+        ],
+        "history_windows_us": [
+          1000,
+          5000,
+          20000
+        ],
+        "polling_interval_us": 1000,
+        "polling_report_delay_us": 1000,
+        "raw_prediction_event_log_enabled": false,
+        "oracle_features_enabled": false
+      },
+      "required_decision_window_values_exact": {
+        "measurement_start_ns": 1000000000,
+        "measurement_stop_ns": 61000000000,
+        "decision_start_ns": 1000000000,
+        "decision_stop_ns": 60466000000,
+        "interval_semantics": "half_open",
+        "decision_stop_guard_us": 534000
+      },
+      "required_budget_guard_values_exact": {
+        "canonical_estimator_id": "eht_mcs5_20mhz_gi800_nss1_one_ppdu_safety125_v1",
+        "cost_safety_factor": 1.25,
+        "fraction": 0.006,
+        "max_horizon_us": 10000000,
+        "initial_horizon_us": 2000000,
+        "capacity_us": 60000,
+        "initial_credit_us": 12000,
+        "initialization_time_ns": 1000000000,
+        "accounting_absolute_tolerance_us": 1e-09
+      },
+      "required_count_keys": [
+        "generated_frames",
+        "paired_t2_frames",
+        "outside_decision_window",
+        "history_warmup",
+        "frame_type_restricted",
+        "not_actionable",
+        "descriptor_unavailable",
+        "feature_evaluated",
+        "below_score_threshold",
+        "score_threshold_passed",
+        "airtime_guard_rejected",
+        "launch_attempted",
+        "launch_rejected",
+        "secondary_launched",
+        "secondary_settled"
+      ],
+      "required_airtime_keys": [
+        "learned_predicted_cost_sum_evaluated_us",
+        "learned_predicted_cost_sum_launched_us",
+        "canonical_nominal_launched_sum_us",
+        "canonical_reserved_launched_sum_us",
+        "measured_secondary_airtime_debited_us"
+      ],
+      "required_integrity_values": {
+        "pending_pair_empty": true,
+        "generated_equals_paired": true,
+        "status_counts_reconcile": true,
+        "launches_equal_settlements": true,
+        "launched_frame_ids_equal_duplicated_frame_ids": true,
+        "meter_reserved_final_within_tolerance": true,
+        "meter_reserved_final_normalized_us": 0,
+        "learned_cost_used_for_token_accounting": false
+      },
+      "required_integrity_numeric_rules": {
+        "meter_reserved_final_raw_us": "finite and absolute value <= 1e-9 us; serialize meter_reserved_final_normalized_us as exact zero only after this check passes"
+      },
+      "count_reconciliation": [
+        "generated_frames equals paired_t2_frames",
+        "paired_t2_frames equals the sum of all nine decision-status counts",
+        "feature_evaluated equals below_score_threshold plus score_threshold_passed",
+        "score_threshold_passed equals airtime_guard_rejected plus launch_rejected plus secondary_launched",
+        "launch_attempted equals launch_rejected plus secondary_launched",
+        "secondary_launched equals the action status count and secondary_settled"
+      ],
+      "write_order": "Write SecondaryAirtimeMeter summary first so forced residual settlements invoke the controller, then write and validate the controller summary."
+    },
+    "existing_meter_outputs_required": [
+      "secondary_airtime_events.csv",
+      "secondary_airtime_settlements.csv",
+      "secondary_airtime_summary.json"
+    ],
+    "forbidden_policy_outputs": [
+      "selective_duplication_decisions.csv",
+      "adaptive_airtime_decisions.csv",
+      "randomized_intervention_assignments.csv",
+      "randomized_intervention_executions.csv"
+    ]
+  },
+  "neutral_environment_closure": {
+    "authoritative_source_path": "tools/analyze_primary_tail_t4_campaign.py",
+    "authoritative_source_sha256": "667c43df8a5f9dc57a22647eef6dc8fcad02d19c7dc187a17227bf5cb1b02d47",
+    "serialization": "UTF-8 JSON with sort_keys=true, separators comma/colon, allow_nan=false, and no trailing newline",
+    "neutral_environment_projection": {
+      "authoritative_constant": "DECLARED_NEUTRAL_ENVIRONMENT",
+      "sha256": "5d1774e3b38f27908de3d845953cad825e3f4207d738996952315e63097382dc"
+    },
+    "topology_wifi_projection": {
+      "authoritative_constant": "DECLARED_TOPOLOGY_WIFI",
+      "sha256": "5d42bd03cc5efa2d42465b10da61207e5ddf0386121d9e125c1b5afc44462107"
+    },
+    "required_topology_keys": [
+      "dual_interface",
+      "mlo_str",
+      "mlo_emlsr"
+    ],
+    "validation_rule": "Every run must exactly match the hash-verified neutral environment projection and the projection for its topology. A matching environment label alone is insufficient."
+  },
+  "resolved_runtime_configuration": {
+    "topology": "dual_interface",
+    "policy": "paired_value_duplication_t2",
+    "duration_s": 60,
+    "warmup_s": 1,
+    "environment": "unchanged_neutral_mixed4x4",
+    "primary_path": 1,
+    "secondary_path": 0,
+    "delayed_secondary_prediction_tracking_enabled": true,
+    "receiver_hold_for_delayed_secondary": true,
+    "secondary_airtime_meter_enabled": true,
+    "runtime_constants_are_not_tunable_cli_parameters": [
+      "model artifact",
+      "feature family",
+      "frame gate",
+      "ranker",
+      "score threshold",
+      "stage offset",
+      "decision stop guard",
+      "canonical cost profile",
+      "cost safety factor",
+      "budget fraction",
+      "maximum horizon",
+      "initial horizon"
+    ],
+    "fail_if_resolved_configuration_differs": true
+  },
+  "fresh_confirmation_contract": {
+    "evidence_role": "fresh_closed_loop_confirmation",
+    "same_final_build_required": true,
+    "ns3_rng_runs": [
+      1
+    ],
+    "seeds": [
+      1301,
+      1302,
+      1303,
+      1304,
+      1305,
+      1306,
+      1307,
+      1308,
+      1309,
+      1310,
+      1311,
+      1312,
+      1313,
+      1314,
+      1315,
+      1316,
+      1317,
+      1318,
+      1319,
+      1320,
+      1321,
+      1322,
+      1323,
+      1324,
+      1325,
+      1326,
+      1327,
+      1328,
+      1329,
+      1330,
+      1331,
+      1332,
+      1333,
+      1334,
+      1335,
+      1336,
+      1337,
+      1338,
+      1339,
+      1340,
+      1341,
+      1342,
+      1343,
+      1344,
+      1345,
+      1346,
+      1347,
+      1348
+    ],
+    "seed_count": 48,
+    "matched_policy_triplet": [
+      {
+        "name": "paired_value_duplication_t2",
+        "topology": "dual_interface",
+        "policy": "paired_value_duplication_t2"
+      },
+      {
+        "name": "mlo_str",
+        "topology": "mlo_str",
+        "policy": "fixed_link_0",
+        "mlo_sta_max_inflights": 1
+      },
+      {
+        "name": "mlo_emlsr",
+        "topology": "mlo_emlsr",
+        "policy": "fixed_link_0",
+        "mlo_sta_max_inflights": 1
+      }
+    ],
+    "pairing_unit": "(seed, run_number)",
+    "expected_triplet_count": 48,
+    "expected_total_run_count": 144,
+    "missing_or_duplicate_triplet_handling": "fail the campaign without excluding or replacing a unit",
+    "environment_pairing": "Every member of a seed/run triplet must use the identical neutral mixed4x4 environment realization and common non-policy configuration.",
+    "allowed_headline_policies_only": true
+  },
+  "confirmation_analyzer_contract": {
+    "evidence_validation_prerequisites": {
+      "core_run_validation": "tools/validate_outputs.py validate_run must pass for every one of the 144 runs using the final policy-aware validator.",
+      "runtime_contract_identity": "Every policy run's summary and campaign manifest must contain this runtime_contract_id and the SHA-256 of the exact committed runtime-contract file; all values must agree with the analyzer's hash-verified contract input.",
+      "controller_evidence": "Every policy run must pass the exact source-artifact, model, telemetry, decision-window, budget-guard, count, airtime, floating-accounting-tolerance, and integrity requirements in runtime_outputs.controller_summary_json.",
+      "decision_evidence": "The decision CSV must satisfy its exact ordered schema, have exactly one row per generated frame, and have an exact one-to-one frame-ID set match with frames.csv; duplicated or truncated rows are fatal.",
+      "meter_evidence": "All required SecondaryAirtimeMeter outputs must pass their existing schema, event/settlement, measured-airtime, and reservation reconciliation checks.",
+      "environment_and_topology": "Each run must exactly match neutral_environment_closure and its topology-specific Wi-Fi projection; labels or policy names alone are insufficient.",
+      "build_identity": "All 144 runs must use one identical final build identity, including ns-3 version/upstream commit, project commit, compiler, and build profile.",
+      "triplet_pairing": "The exact 48 declared (seed, run_number) triplets and only their three declared policy members must be present before any statistic is computed.",
+      "failure_semantics": "If any prerequisite fails, abort without confidence intervals, victory gates, resource-target status, ranking, or overall status. Never silently drop or replace a run, frame, or policy member."
+    },
+    "method": "deterministic_paired_whole_run_percentile_bootstrap_v1",
+    "random_seed": 20260804,
+    "replications": 10000,
+    "confidence_level": 0.95,
+    "resampling_unit": "matched (seed, run_number) policy triplet",
+    "point_statistic": "mean of the 48 paired per-run policy-minus-baseline differences",
+    "bootstrap_rule": "For each replication, draw 48 matched triplet units with replacement and recompute the paired statistic. Use the two-sided percentile interval.",
+    "bootstrap_determinism": {
+      "unit_order": "sort matched units by ascending seed then ascending run_number",
+      "prng": "Python random.Random initialized directly with integer 20260804",
+      "draw": "call randrange(48) exactly 48 times per replication",
+      "replication_order": "10000 consecutive replications from one PRNG instance",
+      "index_matrix_reuse": "Generate the complete 10000 by 48 resampled-unit index matrix exactly once, then reuse that identical matrix for every metric and both baselines; do not reset or continue the PRNG separately per comparison.",
+      "interval_endpoint_quantile": "empirical Hyndman-Fan type-7 quantiles at 0.025 and 0.975"
+    },
+    "deadline_miss": {
+      "per_run_denominator": "all generated frames in the measurement window",
+      "per_run_numerator": "all frames that are incomplete or whose union completion latency exceeds the deadline",
+      "baselines": [
+        "mlo_str",
+        "mlo_emlsr"
+      ],
+      "decisively_lower_rule": "upper endpoint of the paired 95% interval for policy-minus-baseline miss rate is strictly below zero"
+    },
+    "completed_frame_p99": {
+      "baseline_used_for_victory": "mlo_str",
+      "per_run_population": "frames with finite receiver union completion latency, including completions after the deadline",
+      "per_run_quantile": "empirical Hyndman-Fan type-7 0.99 quantile",
+      "minimum_completed_frames_per_run": 100,
+      "insufficient_completion_handling": "fail the STR comparison; do not exclude the run and do not pool frames across runs",
+      "campaign_estimator": "mean of the 48 per-run P99 values",
+      "decisively_lower_rule": "upper endpoint of the paired 95% interval for policy-minus-STR per-run P99 is strictly below zero",
+      "pooled_frame_p99_forbidden": true
+    },
+    "victory_gates": {
+      "against_str_mlo": [
+        "decisively lower all-generated-frame deadline-miss rate",
+        "decisively lower mean per-run completed-frame P99 with miss rate reported beside it"
+      ],
+      "against_emlsr_mlo": [
+        "decisively lower all-generated-frame deadline-miss rate"
+      ],
+      "emlsr_completed_frame_p99": "descriptive_only_survivor_conditioned_never_a_gate"
+    },
+    "emlsr_p99_prohibitions": [
+      "must not contribute to victory, defeat, ideal, Pareto, ambition, rank, or overall status",
+      "must not be used as a target for threshold or model selection",
+      "must not be described as unconditional latency"
+    ],
+    "optional_emlsr_latency_context": "If needed, report an explicitly defined all-generated-frame deadline-censored latency metric, never substitute survivor-conditioned completed P99.",
+    "sender_airtime_target": {
+      "exclusive_ratio_upper_bound": 1.2,
+      "statistic": "policy summed sender PHY TX airtime divided by baseline summed sender PHY TX airtime using the ratio of matched run means",
+      "baselines": [
+        "mlo_str",
+        "mlo_emlsr"
+      ]
+    },
+    "background_throughput_target": {
+      "inclusive_loss_fraction_upper_bound": 0.01,
+      "statistic": "1 - policy background-throughput mean / baseline background-throughput mean over matched runs",
+      "baselines": [
+        "mlo_str",
+        "mlo_emlsr"
+      ]
+    },
+    "reported_status_hierarchy": {
+      "performance_victory_against_str": "composite of the two STR victory gates only",
+      "performance_victory_against_emlsr": "EMLSR all-generated deadline-miss gate only",
+      "resource_target_against_each_baseline": "sender-airtime and background-throughput targets",
+      "overall_target_against_each_baseline": "performance victory and resource target for that baseline",
+      "emlsr_completed_p99_membership": "none"
+    },
+    "current_analyzer_reuse_rule": "Do not reuse an analyzer path that requires completed-frame P99 improvement against EMLSR or uses an unpaired Student-t interval."
+  }
+}
