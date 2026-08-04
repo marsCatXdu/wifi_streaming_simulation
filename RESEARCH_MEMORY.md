@@ -27,9 +27,14 @@ Consequences for analysis and claims:
   beside it.
 - Do not describe EMLSR as unconditionally low latency on the basis of its
   completed-frame P99.
-- The controller must beat both baselines simultaneously: STR is currently
-  the harder miss-rate baseline, while EMLSR is the harder completed-P99 and
-  sender-airtime baseline.
+- The primary victory gates are lower miss rate and lower completed-frame P99
+  than STR MLO, plus a decisively lower miss rate than EMLSR MLO.  EMLSR's
+  completed-frame P99 is descriptive only and is not a victory gate because
+  its selected denominator rewards the high miss rate.  EMLSR remains the
+  harder sender-airtime baseline.
+- If a latency comparison against EMLSR is needed, prefer an explicitly
+  defined all-generated-frame deadline-censored metric that cannot improve by
+  dropping difficult frames.
 - Keep missed and intentionally abandoned frames in the generated-frame
   denominator.  They must not improve latency metrics by disappearing from
   the evaluated population.

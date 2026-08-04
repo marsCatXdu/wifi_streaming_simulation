@@ -5,10 +5,13 @@ Immediate objective
 -------------------
 
 Demonstrate that deadline-aware, budgeted multipath control produces both a
-lower deadline-miss ratio and lower P99 frame-completion latency than native
-STR MLO and EMLSR MLO, while paying a bounded and explicitly reported airtime
-cost.  Miss-burst measurements remain supporting evidence, but a reduction in
-burst length alone is not sufficient.
+lower deadline-miss ratio and lower completed-frame P99 latency than native
+STR MLO, and a decisively lower deadline-miss ratio than EMLSR MLO, while
+paying a bounded and explicitly reported airtime cost.  EMLSR completed-frame
+P99 remains descriptive rather than a victory gate because it excludes the
+roughly ten percent of frames that EMLSR currently misses.  Miss-burst
+measurements remain supporting evidence, but a reduction in burst length
+alone is not sufficient.
 
 The ideal Pareto operating point uses less than 20 percent additional summed
 target PHY TX airtime relative to the matched MLO treatment while reducing
@@ -16,14 +19,17 @@ both deadline-miss ratio and P99 latency by more than 50 percent.  Treat these
 as separate per-metric ambitions rather than combining them into one score;
 progress toward one target must not conceal regression in the other.
 
-The final comparison must use paired runs.  A result counts as a defeat of an
-MLO treatment only when the paired confidence intervals for both the
-deadline-miss-ratio difference and the P99-latency difference lie below zero
-and the improvements are practically meaningful.  Before the final campaign,
-freeze a numerical limit for reasonable extra airtime and a maximum acceptable
-loss of background throughput.  Report summed target PHY TX airtime, the
-per-band airtime change, and background throughput alongside the two primary
-outcomes.
+The final comparison must use paired runs.  A result counts as a defeat of STR
+only when the paired confidence intervals for both the deadline-miss-ratio
+difference and the completed-P99 difference lie below zero and the
+improvements are practically meaningful.  EMLSR defeat requires a decisive
+paired miss-rate win; its survivor-conditioned completed P99 must still be
+reported beside that miss rate but is not an acceptance criterion.  When an
+all-frame EMLSR latency comparison is useful, predeclare a deadline-censored
+metric that retains missed frames.  Before the final campaign, freeze a
+numerical limit for reasonable extra airtime and a maximum acceptable loss of
+background throughput.  Report summed target PHY TX airtime, the per-band
+airtime change, and background throughput alongside the primary outcomes.
 
 Headline treatments and controls
 --------------------------------
