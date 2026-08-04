@@ -5,10 +5,16 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import copy
 import csv
+import hashlib
+import importlib.util
 import json
 import math
+import pickle
 import re
+import struct
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -364,6 +370,203 @@ PREDICTION_FIELD_SUPPORT_BITS = {
 }
 ACCESS_STATUSES = {"NOT_REQUESTED", "REQUESTED", "GRANTED"}
 
+PAIRED_VALUE_T2_POLICY = "paired_value_duplication_t2"
+PAIRED_VALUE_T2_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+PAIRED_VALUE_T2_CONTRACT_ID = "paired-value-duplication-t2-runtime-v1"
+PAIRED_VALUE_T2_CONTRACT_SHA256 = (
+    "b9b9caf6cf49e73cb0669107576a17790f59bda4875c43f676caa426393dbf41"
+)
+PAIRED_VALUE_T2_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
+)
+PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH = (
+    Path(__file__).resolve().parent / "analyze_primary_tail_t4_campaign.py"
+)
+PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256 = (
+    "667c43df8a5f9dc57a22647eef6dc8fcad02d19c7dc187a17227bf5cb1b02d47"
+)
+PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256 = (
+    "5d1774e3b38f27908de3d845953cad825e3f4207d738996952315e63097382dc"
+)
+PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256 = (
+    "26698328ca7dde07a6ad283e05f84ad8406de4b1f50d0d8863da500f14140c90"
+)
+PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256 = (
+    "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+)
+PAIRED_VALUE_T2_FEATURE_NAMES_SHA256 = (
+    "a00ebbb9807f99972f2cd009d1b2a20bf0b001cee123ac60d5121b2b1c07209e"
+)
+PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS = 0x38BBC0E5
+PAIRED_VALUE_T2_SCORE_THRESHOLD = struct.unpack(
+    ">f", PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+)[0]
+PAIRED_VALUE_T2_LOG_SMEARING_FACTOR = 0.087899462834571604
+PAIRED_VALUE_T2_LOG_COST_CAP = 13.815511557963774
+PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US = 1e-9
+PAIRED_VALUE_T2_DECISION_START_NS = 1_000_000_000
+PAIRED_VALUE_T2_DECISION_STOP_NS = 60_466_000_000
+PAIRED_VALUE_T2_MEASUREMENT_STOP_NS = 61_000_000_000
+PAIRED_VALUE_T2_GUARD_FRACTION = 0.006
+PAIRED_VALUE_T2_GUARD_CAPACITY_US = 60_000.0
+PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US = 12_000.0
+
+PAIRED_VALUE_T2_DECISION_COLUMNS = (
+    "schema_version", "run_id", "frame_id", "policy", "decision_status",
+    "primary_path_id", "primary_copy_id", "secondary_path_id", "secondary_copy_id",
+    "sample_stage", "sample_offset_us", "generation_time_ns", "deadline_time_ns",
+    "primary_sample_time_ns", "secondary_sample_time_ns",
+    "primary_feature_watermark_time_ns", "primary_feature_watermark_sequence",
+    "frame_type", "frame_size_bytes", "frame_packet_count", "primary_actionable",
+    "decision_window_start_ns", "decision_window_stop_ns", "inside_decision_window",
+    "history_ready", "current_poll_capture_time_ns", "current_poll_available_time_ns",
+    "lag1_frame_id", "lag1_poll_capture_time_ns", "lag3_frame_id",
+    "lag3_poll_capture_time_ns", "lag8_frame_id", "lag8_poll_capture_time_ns",
+    "feature_evaluated", "model_spec_id", "model_artifact_sha256", "feature_family",
+    "feature_count", "feature_adapter_id", "ordered_feature_names_sha256", "ranker",
+    "frame_gate", "score_adapter_id", "score_threshold_float32",
+    "primary_bad12_logit", "primary_bad12_probability", "treated_bad12_logit",
+    "treated_bad12_probability", "predicted_log_airtime",
+    "predicted_secondary_airtime_us", "nonnegative_bad12_value",
+    "value_per_cost_score_float32", "passes_score_threshold", "descriptor_checked",
+    "descriptor_available", "descriptor_frame_packet_count", "descriptor_packet_count",
+    "descriptor_packet_indices", "descriptor_expected_mac_service_bytes",
+    "descriptor_deadline_time_ns", "canonical_cost_estimator_id", "cost_safety_factor",
+    "canonical_nominal_airtime_us", "canonical_reserved_airtime_us", "guard_fraction",
+    "guard_max_horizon_us", "guard_initial_horizon_us", "guard_capacity_us",
+    "guard_initial_credit_us", "guard_balance_before_us", "meter_reserved_before_us",
+    "guard_available_before_us", "guard_debt_before_us", "guard_admission_considered",
+    "guard_admitted", "launch_attempted", "secondary_launched",
+    "guard_balance_after_us", "meter_reserved_after_us", "guard_available_after_us",
+    "guard_debt_after_us", "learned_cost_token_accounting",
+)
+PAIRED_VALUE_T2_STATUSES = (
+    "outside_decision_window", "history_warmup", "frame_type_restricted",
+    "not_actionable", "descriptor_unavailable", "below_score_threshold",
+    "airtime_guard_rejected", "launch_rejected", "action",
+)
+PAIRED_VALUE_T2_MODEL_METADATA = {
+    "policy": PAIRED_VALUE_T2_POLICY,
+    "sample_stage": "T2",
+    "sample_offset_us": "2000",
+    "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+    "model_artifact_sha256": PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
+    "feature_family": "primary_compact_physics_temporal",
+    "feature_count": "246",
+    "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+    "ordered_feature_names_sha256": PAIRED_VALUE_T2_FEATURE_NAMES_SHA256,
+    "ranker": "legacy_bad12_value_per_cost",
+    "frame_gate": "p_frames_only",
+    "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+    "learned_cost_token_accounting": "0",
+}
+PAIRED_VALUE_T2_CONFIG = {
+    "csv_schema_version": 1,
+    "summary_schema_version": 1,
+    "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
+    "runtime_contract_sha256": PAIRED_VALUE_T2_CONTRACT_SHA256,
+    "primary_path": 1,
+    "primary_copy_id": 0,
+    "secondary_path": 0,
+    "secondary_copy_id": 1,
+    "stage": "T2",
+    "sample_offset_us": 2000,
+    "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+    "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+    "decision_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+    "decision_stop_ns": PAIRED_VALUE_T2_DECISION_STOP_NS,
+    "decision_stop_guard_us": 534000,
+    "delayed_secondary_prediction_tracking_enabled": True,
+    "receiver_hold_for_delayed_secondary": True,
+    "action": "canonical_full_secondary_copy",
+    "cost_estimator_id": RANDOMIZED_COST_ESTIMATOR,
+    "cost_safety_factor": 1.25,
+    "budget_fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
+    "budget_max_horizon_us": 10_000_000,
+    "budget_initial_horizon_us": 2_000_000,
+}
+PAIRED_VALUE_T2_PREDICTION_CONFIG = {
+    "enabled": True,
+    "sample_offsets_us": [0, 2000],
+    "history_windows_us": [1000, 5000, 20000],
+    "polling_interval_us": 1000,
+    "polling_report_delay_us": 1000,
+    "polling_schema_version": 1,
+    "event_log_enabled": False,
+    "oracle_features_enabled": False,
+    "telemetry_schema_version": 3,
+    "event_schema_version": 2,
+    "feature_support_mask_version": 2,
+}
+PAIRED_VALUE_T2_METER_CONFIG = {
+    "enabled": True,
+    "path_id": 0,
+    "copy_id": 1,
+    "definition": "secondary_sender_phy_tx_airtime",
+    "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+    "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+}
+PAIRED_VALUE_T2_ENVIRONMENT_KEYS = (
+    "duration_s", "warmup_s", "measurement_start_s", "measurement_stop_s",
+    "stream", "propagation", "background",
+)
+PAIRED_VALUE_T2_SHARED_WIFI_KEYS = (
+    "standard", "station_manager", "data_mode", "control_mode", "guard_interval",
+    "channel_settings", "frequency_ranges", "data_modes_per_link", "queue_max_packets",
+    "queue_max_delay_ms", "max_ampdu_size_bytes", "max_amsdu_size_bytes",
+    "sta_max_inflights", "ul_ofdma_enabled", "ul_ofdma_scope",
+    "ul_ofdma_access_interval_ms", "ul_ofdma_bsrp_enabled", "ul_ofdma_max_stations",
+    "ul_ofdma_psdu_size_bytes", "block_ack_enabled", "frame_retry_limit",
+    "rts_cts_threshold_bytes", "fragmentation_threshold_bytes", "access_category",
+    "txop_limit_us", "application_duplication",
+)
+PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS = (
+    "static_association", "tid_to_link_mapping_ul", "str_mode", "multi_link_mode",
+    "application_socket_count", "emlsr",
+)
+PAIRED_VALUE_T2_SOURCE_FILES = {
+    "tools/build_randomized_intervention_dataset.py": (
+        "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea"
+    ),
+    "tools/build_randomized_temporal_dataset.py": (
+        "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3"
+    ),
+    "tools/train_randomized_value.py": (
+        "118efb2c10ea8a0fd4e99f382ee2a9686f9d7f291041ad3f811b58dcdbace911"
+    ),
+    "tools/train_temporal_t2_value.py": (
+        "ffe024b88dd7b70bab34873ac59ba7abb748db5af564be8526fb205ec94ddfa9"
+    ),
+    "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json": (
+        "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+    ),
+    "results/randomized_full_copy_exploration_collection_v1/"
+    "temporal_t2_primary_only_two_objective_v1/artifact_manifest.json": (
+        "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+    ),
+    "results/randomized_full_copy_exploration_collection_v1/"
+    "temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl": (
+        PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256
+    ),
+    "results/randomized_full_copy_exploration_collection_v1/"
+    "temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv": (
+        "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+    ),
+    "results/randomized_full_copy_exploration_collection_v1/"
+    "temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json": (
+        "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+    ),
+    "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.cc": (
+        "67d61c6da75e676752fede0af3eafeccc43048597d947b7af3215a33afbfab31"
+    ),
+    "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.h": (
+        "a40842c0dec03e949b723190049ca158eee73f96ce35a241add88e6be972167b"
+    ),
+}
+
+_PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT: dict[str, Any] | None = None
+
 
 class ValidationError(ValueError):
     pass
@@ -383,15 +586,90 @@ def _json(path: Path) -> dict[str, Any]:
     return value
 
 
-def _csv(path: Path, required: set[str]) -> list[dict[str, str]]:
+def _csv(
+    path: Path,
+    required: set[str],
+    *,
+    ordered_columns: tuple[str, ...] | None = None,
+) -> list[dict[str, str]]:
+    """Read a CSV with required columns and an optional exact ordered schema."""
     try:
         with path.open(newline="", encoding="utf-8") as source:
             reader = csv.DictReader(source)
             _require(reader.fieldnames is not None, f"{path.name}: missing header")
-            _require(required <= set(reader.fieldnames), f"{path.name}: missing columns")
-            return list(reader)
+            if ordered_columns is None:
+                _require(required <= set(reader.fieldnames), f"{path.name}: missing columns")
+            else:
+                _require(reader.fieldnames == list(ordered_columns),
+                         f"{path.name}: header differs from frozen ordered schema")
+            rows = list(reader)
     except OSError as error:
         raise ValidationError(f"{path.name}: cannot read: {error}") from error
+    if ordered_columns is None:
+        _require(all(None not in row for row in rows),
+                 f"{path.name}: row has more values than the header")
+    else:
+        _require(all(set(row) == set(ordered_columns) and
+                     None not in row and
+                     all(value is not None for value in row.values()) for row in rows),
+                 f"{path.name}: row width differs from frozen schema")
+    return rows
+
+
+def _sha256_file(path: Path, name: str) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as error:
+        raise ValidationError(f"{name}: cannot verify source closure: {error}") from error
+
+
+def _canonical_json_sha256(value: Any, name: str) -> str:
+    try:
+        encoded = json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as error:
+        raise ValidationError(f"{name}: cannot canonicalize: {error}") from error
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _float32(value: float, name: str) -> float:
+    _require(math.isfinite(value), f"{name}: non-finite float32 value")
+    try:
+        result = struct.unpack(">f", struct.pack(">f", value))[0]
+    except OverflowError as error:
+        raise ValidationError(f"{name}: float32 overflow") from error
+    _require(math.isfinite(result), f"{name}: float32 overflow")
+    return result
+
+
+def _paired_close(actual: float, expected: float) -> bool:
+    return (
+        math.isfinite(actual)
+        and math.isfinite(expected)
+        and abs(actual - expected) <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+    )
+
+
+def _paired_meter_quantization_us(text: str) -> float:
+    """Return half of one 12-significant-digit meter CSV unit."""
+    value = float(text)
+    if value == 0:
+        return 0.0
+    exponent = math.floor(math.log10(abs(value))) - 11
+    return 0.5 * (10.0 ** exponent)
+
+
+def _paired_meter_close(actual: float, expected: float) -> bool:
+    """Compare a 12-significant-digit meter value to an exact reconstruction."""
+    return (
+        math.isfinite(actual)
+        and math.isfinite(expected)
+        and actual == float(format(expected, ".12g"))
+    )
 
 
 def _integer(row: dict[str, str], key: str, file_name: str) -> int:
@@ -690,6 +968,23 @@ def _adaptive_nominal_airtime_us(
     return cost_safety_factor * (
         ADAPTIVE_ESTIMATOR_PHY_PREAMBLE_US + payload_us
     )
+
+
+def _canonical_full_copy_descriptor(
+    frame: dict[str, str],
+) -> tuple[int, str, int, float]:
+    """Return exact packet, service-byte, and nominal whole-copy evidence."""
+    frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+    packet_count = _integer(frame, "packet_count", "frames.csv")
+    packet_indices = ";".join(str(index) for index in range(packet_count))
+    expected_service_bytes = frame_size + packet_count * (
+        ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES
+        + ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
+    )
+    nominal_airtime_us = _adaptive_nominal_airtime_us(
+        frame_size, packet_count, 1.0
+    )
+    return packet_count, packet_indices, expected_service_bytes, nominal_airtime_us
 
 
 def _adaptive_whole_copy_costs(
@@ -1786,15 +2081,8 @@ def _validate_randomized_intervention(
                      expected_service_bytes == 0 and nominal == 0 and estimated == 0,
                      f"{file_name}: unavailable descriptor has cost evidence")
             return False, nominal, estimated
-        frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
-        frame_packets = _integer(frame, "packet_count", "frames.csv")
-        expected_indices = ";".join(str(index) for index in range(frame_packets))
-        expected_service = frame_size + frame_packets * (
-            ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES +
-            ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
-        )
-        expected_nominal = _adaptive_nominal_airtime_us(
-            frame_size, frame_packets, 1.0
+        frame_packets, expected_indices, expected_service, expected_nominal = (
+            _canonical_full_copy_descriptor(frame)
         )
         _require(packet_count == frame_packets and
                  row["secondary_packet_indices"] == expected_indices and
@@ -1973,6 +2261,1484 @@ def _validate_randomized_intervention(
     return action_estimates, action_nominal_airtimes
 
 
+def _validate_paired_value_t2_source_files() -> None:
+    """Verify every repository file used by independent paired-value replay."""
+    repository_root = PAIRED_VALUE_T2_REPOSITORY_ROOT.resolve()
+    for relative_path, expected_sha256 in PAIRED_VALUE_T2_SOURCE_FILES.items():
+        source_path = PAIRED_VALUE_T2_REPOSITORY_ROOT / relative_path
+        _require(source_path.is_file() and not source_path.is_symlink() and
+                 source_path.resolve().is_relative_to(repository_root),
+                 f"paired-value runtime contract: invalid source path {relative_path}")
+        _require(_sha256_file(source_path, relative_path) == expected_sha256,
+                 f"paired-value runtime contract: source drifted {relative_path}")
+
+
+def _validate_paired_value_t2_config(config: dict[str, Any]) -> None:
+    """Validate the frozen resolved configuration and source closure."""
+    _require(
+        _sha256_file(PAIRED_VALUE_T2_CONTRACT_PATH, "paired-value runtime contract")
+        == PAIRED_VALUE_T2_CONTRACT_SHA256,
+        "paired-value runtime contract: committed bytes differ from frozen SHA-256",
+    )
+    _require(
+        _sha256_file(PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH, "neutral environment source")
+        == PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256,
+        "paired-value runtime contract: neutral environment source drifted",
+    )
+    _validate_paired_value_t2_source_files()
+    _require(config.get("topology") == "dual_interface" and
+             config.get("policy") == PAIRED_VALUE_T2_POLICY,
+             "resolved_config.json: paired-value policy/topology mismatch")
+    _require(config.get("environment") == "unchanged_neutral_mixed4x4",
+             "resolved_config.json: paired-value environment identity mismatch")
+
+    paired = config.get("pairedValueDuplicationT2")
+    _require(isinstance(paired, dict) and
+             _canonical_json_sha256(paired, "pairedValueDuplicationT2") ==
+             _canonical_json_sha256(PAIRED_VALUE_T2_CONFIG, "frozen paired config"),
+             "resolved_config.json: pairedValueDuplicationT2 differs from contract")
+    prediction = config.get("predictionTelemetry")
+    _require(isinstance(prediction, dict) and
+             _canonical_json_sha256(prediction, "predictionTelemetry") ==
+             _canonical_json_sha256(PAIRED_VALUE_T2_PREDICTION_CONFIG,
+                                    "frozen prediction config"),
+             "resolved_config.json: paired-value predictionTelemetry differs from contract")
+    meter = config.get("secondaryAirtimeMeter")
+    _require(isinstance(meter, dict) and
+             _canonical_json_sha256(meter, "secondaryAirtimeMeter") ==
+             _canonical_json_sha256(PAIRED_VALUE_T2_METER_CONFIG,
+                                    "frozen meter config"),
+             "resolved_config.json: paired-value secondaryAirtimeMeter differs from contract")
+    _require(all(key not in config for key in (
+        "selectiveDuplication", "adaptiveAirtimeDuplication",
+        "adaptiveDeficitDuplication", "randomizedIntervention",
+    )), "resolved_config.json: another controller object exists for paired-value policy")
+
+    missing = [key for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS if key not in config]
+    _require(not missing,
+             "resolved_config.json: paired-value neutral environment fields are missing")
+    wifi = config.get("wifi")
+    _require(isinstance(wifi, dict), "resolved_config.json: paired-value wifi is missing")
+    environment = {
+        **{key: config[key] for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS},
+        "shared_target_wifi": {
+            key: wifi.get(key, "__MISSING__")
+            for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
+        },
+    }
+    environment = copy.deepcopy(environment)
+    obss = environment.get("background", {}).get("obss")
+    if isinstance(obss, dict):
+        obss.pop("bsses", None)
+    _require(
+        _canonical_json_sha256(environment, "paired-value neutral environment")
+        == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
+        "resolved_config.json: paired-value neutral environment projection differs",
+    )
+    topology_wifi = {
+        key: wifi.get(key, "__MISSING__")
+        for key in PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS
+    }
+    _require(
+        _canonical_json_sha256(topology_wifi, "paired-value topology wifi")
+        == PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256,
+        "resolved_config.json: paired-value topology Wi-Fi projection differs",
+    )
+
+
+def _paired_value_t2_model_replay_context() -> dict[str, Any]:
+    """Load the exact canonical model and hash-pinned feature builders once."""
+    global _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT
+    if _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT is not None:
+        return _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT
+
+    _validate_paired_value_t2_source_files()
+    module_paths = {
+        "build_randomized_intervention_dataset": (
+            PAIRED_VALUE_T2_REPOSITORY_ROOT
+            / "tools/build_randomized_intervention_dataset.py"
+        ),
+        "build_randomized_temporal_dataset": (
+            PAIRED_VALUE_T2_REPOSITORY_ROOT
+            / "tools/build_randomized_temporal_dataset.py"
+        ),
+        "train_temporal_t2_value": (
+            PAIRED_VALUE_T2_REPOSITORY_ROOT / "tools/train_temporal_t2_value.py"
+        ),
+    }
+    modules: dict[str, Any] = {}
+    try:
+        for name, expected_path in module_paths.items():
+            spec = importlib.util.find_spec(name)
+            _require(spec is not None and spec.origin is not None and
+                     Path(spec.origin).resolve() == expected_path.resolve(),
+                     f"paired-value model replay: module path differs for {name}")
+            module = importlib.import_module(name)
+            _require(Path(module.__file__).resolve() == expected_path.resolve(),
+                     f"paired-value model replay: imported path differs for {name}")
+            modules[name] = module
+        import numpy as np
+    except (ImportError, AttributeError, OSError) as error:
+        raise ValidationError(
+            f"paired-value model replay: cannot load exact feature software: {error}"
+        ) from error
+
+    model_path = (
+        PAIRED_VALUE_T2_REPOSITORY_ROOT
+        / "results/randomized_full_copy_exploration_collection_v1/"
+        "temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl"
+    )
+    try:
+        with model_path.open("rb") as source:
+            bundle = pickle.load(source)
+        family = bundle["feature_families"]["primary_compact_physics_temporal"]
+        feature_names = tuple(family["ordered_feature_names"])
+        heads = family["heads"]
+        primary_head = heads["bad_tail_12000us:primary_need"]
+        treated_head = heads["bad_tail_12000us:treated_bad"]
+        cost_head = heads["log_cost_given_launch"]
+        smearing_factor = float(heads["log_cost_smearing_factor"])
+        threshold = float(bundle["selected_policy"]["score_threshold"])
+    except (OSError, pickle.UnpicklingError, KeyError, TypeError, ValueError) as error:
+        raise ValidationError(
+            f"paired-value model replay: canonical model bundle differs: {error}"
+        ) from error
+
+    base = modules["build_randomized_intervention_dataset"]
+    temporal = modules["build_randomized_temporal_dataset"]
+    trainer = modules["train_temporal_t2_value"]
+    encoded_base_names = tuple(
+        name for name in base.FEATURE_COLUMNS if name != "x_f0_frame_type"
+    ) + ("x_f0_frame_type=I_FRAME", "x_f0_frame_type=P_FRAME")
+    primary_base_names = tuple(
+        name for name in encoded_base_names if not name.startswith("x_secondary_")
+    )
+    expected_names = (
+        primary_base_names
+        + tuple(trainer.COMPACT_PRIMARY_PHYSICS_NAMES)
+        + tuple(trainer.PRIMARY_TEMPORAL_COLUMNS)
+    )
+    serialized_names = json.dumps(
+        list(feature_names), ensure_ascii=True, separators=(",", ":")
+    ).encode("utf-8")
+    _require(
+        len(feature_names) == 246
+        and feature_names == expected_names
+        and hashlib.sha256(serialized_names).hexdigest()
+        == PAIRED_VALUE_T2_FEATURE_NAMES_SHA256,
+        "paired-value model replay: exact ordered feature contract differs",
+    )
+    _require(
+        struct.pack(">f", _float32(threshold, "paired-value model replay"))
+        == PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+        and math.isfinite(smearing_factor)
+        and smearing_factor > 0
+        and math.log(smearing_factor) == PAIRED_VALUE_T2_LOG_SMEARING_FACTOR
+        and trainer.PREDICTED_COST_CAP_US == 1_000_000.0,
+        "paired-value model replay: frozen score or cost adapter differs",
+    )
+    for name, model, methods in (
+        ("primary", primary_head, ("decision_function", "predict_proba")),
+        ("treated", treated_head, ("decision_function", "predict_proba")),
+        ("cost", cost_head, ("predict",)),
+    ):
+        _require(all(callable(getattr(model, method, None)) for method in methods),
+                 f"paired-value model replay: {name} head differs")
+
+    _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT = {
+        "numpy": np,
+        "base": base,
+        "temporal": temporal,
+        "trainer": trainer,
+        "feature_names": feature_names,
+        "primary_head": primary_head,
+        "treated_head": treated_head,
+        "cost_head": cost_head,
+        "smearing_factor": smearing_factor,
+        "threshold": threshold,
+    }
+    return _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT
+
+
+def _paired_value_t2_feature_vector(
+    frame_id: int,
+    primary: dict[str, str],
+    current_poll: dict[str, str],
+    lag_polls: dict[int, dict[str, str]],
+) -> Any:
+    """Rebuild one exact primary-only 246-feature vector without decision data."""
+    context = _paired_value_t2_model_replay_context()
+    np = context["numpy"]
+    base = context["base"]
+    temporal = context["temporal"]
+    trainer = context["trainer"]
+    names = context["feature_names"]
+    source = f"paired-value model replay frame {frame_id}"
+
+    raw: dict[str, str] = {}
+    try:
+        raw.update((f"x_f0_{field}", primary[field]) for field in base.F0_FIELDS)
+        raw.update(
+            (f"x_primary_{field}", primary[field])
+            for field in base.PRIMARY_CURRENT_FIELDS
+        )
+        raw.update(
+            (f"x_primary_{field}", current_poll[field])
+            for field in base.PRIMARY_ROLLING_FIELDS
+        )
+        base_values: list[float] = []
+        for name in names[:68]:
+            if name == "x_f0_frame_type=I_FRAME":
+                value = float(primary["frame_type"] == "I_FRAME")
+            elif name == "x_f0_frame_type=P_FRAME":
+                value = float(primary["frame_type"] == "P_FRAME")
+            else:
+                value = trainer._float32_numeric(raw[name], name, source)
+            base_values.append(value)
+
+        base_matrix = np.asarray(base_values, dtype=np.float64).reshape(1, -1)
+        compact = trainer._compact_primary_physics(base_matrix, names[:68])[0]
+        current_capture = int(current_poll["capture_time_ns"])
+        current = temporal.Endpoint(
+            frame_id,
+            int(primary["generation_time_ns"]),
+            int(primary["sample_time_ns"]),
+            current_capture,
+            primary,
+            primary,
+            current_poll,
+            current_poll,
+        )
+        temporal_values: dict[str, str] = temporal._radio_features(
+            "x_primary_delayed_current", current_poll, current_capture, source
+        )
+        for lag in (1, 3, 8):
+            lag_poll = lag_polls[lag]
+            lagged = temporal.Endpoint(
+                frame_id - lag,
+                0,
+                0,
+                int(lag_poll["capture_time_ns"]),
+                primary,
+                primary,
+                lag_poll,
+                lag_poll,
+            )
+            temporal_values.update(temporal._lag_features(current, lagged, lag, source))
+        selected_temporal = [
+            trainer._float32_numeric(temporal_values[name], name, source)
+            for name in names[75:]
+        ]
+        vector = np.asarray(
+            [*base_values, *compact.tolist(), *selected_temporal], dtype=np.float64
+        )
+        with np.errstate(over="ignore", invalid="ignore"):
+            vector = vector.astype(np.float32).astype(np.float64)
+    except (KeyError, TypeError, ValueError, OverflowError) as error:
+        raise ValidationError(f"{source}: feature reconstruction failed: {error}") from error
+    _require(vector.shape == (246,) and not np.any(np.isinf(vector)),
+             f"{source}: reconstructed feature vector differs")
+    return vector
+
+
+def _validate_paired_value_t2_model_replays(records: list[dict[str, Any]]) -> None:
+    """Batch-replay and compare every evaluated row with the canonical model."""
+    if not records:
+        return
+    context = _paired_value_t2_model_replay_context()
+    np = context["numpy"]
+    matrix = np.vstack([record["features"] for record in records])
+    try:
+        primary_logits = context["primary_head"].decision_function(matrix)
+        primary_probabilities = context["primary_head"].predict_proba(matrix)[:, 1]
+        treated_logits = context["treated_head"].decision_function(matrix)
+        treated_probabilities = context["treated_head"].predict_proba(matrix)[:, 1]
+        predicted_logs = context["cost_head"].predict(matrix)
+    except (TypeError, ValueError, FloatingPointError) as error:
+        raise ValidationError(
+            f"paired-value model replay: canonical evaluation failed: {error}"
+        ) from error
+
+    for index, record in enumerate(records):
+        primary_probability = float(primary_probabilities[index])
+        treated_probability = float(treated_probabilities[index])
+        predicted_log = float(predicted_logs[index])
+        adjusted_log = min(
+            max(predicted_log + math.log(context["smearing_factor"]), 0.0),
+            math.log1p(1_000_000.0),
+        )
+        predicted_cost = max(math.expm1(adjusted_log), 1.0)
+        nonnegative_value = max(primary_probability - treated_probability, 0.0)
+        score = float(np.float32(nonnegative_value / predicted_cost))
+        expected = {
+            "primary_bad12_logit": float(primary_logits[index]),
+            "primary_bad12_probability": primary_probability,
+            "treated_bad12_logit": float(treated_logits[index]),
+            "treated_bad12_probability": treated_probability,
+            "predicted_log_airtime": predicted_log,
+            "predicted_secondary_airtime_us": predicted_cost,
+            "nonnegative_bad12_value": nonnegative_value,
+            "value_per_cost_score_float32": score,
+        }
+        observed = record["values"]
+        # The generated C++ evaluator and sklearn replay use different
+        # reduction/libm paths.  Retain only their deterministic last-bit
+        # envelope with an explicit per-diagnostic bound; do not reuse the
+        # validator's generic relative-tolerance helper.
+        evaluator_tolerances = {
+            "primary_bad12_logit": 1e-15,
+            "primary_bad12_probability": 2e-16,
+            "treated_bad12_logit": 1e-15,
+            "treated_bad12_probability": 2e-16,
+            "predicted_log_airtime": 1e-14,
+            "predicted_secondary_airtime_us": max(3e-11, predicted_cost * 2e-14),
+            "nonnegative_bad12_value": 2e-16,
+            "value_per_cost_score_float32": 0.0,
+        }
+        _require(
+            all(
+                abs(observed[key] - value) <= evaluator_tolerances[key]
+                for key, value in expected.items()
+            ),
+            "paired_value_t2_decisions.csv: canonical model replay differs for "
+            f"frame {record['frame_id']}",
+        )
+        expected_pass = score >= _float32(
+            context["threshold"], "paired-value model replay threshold"
+        )
+        _require(record["passes"] == expected_pass,
+                 "paired_value_t2_decisions.csv: canonical model gate differs for "
+                 f"frame {record['frame_id']}")
+
+
+def _paired_sigmoid(logit: float) -> float:
+    if logit >= 0:
+        return 1.0 / (1.0 + math.exp(-logit))
+    exponential = math.exp(logit)
+    return exponential / (1.0 + exponential)
+
+
+def _validate_paired_primary_report(
+    row: dict[str, str],
+    *,
+    previous_counters: dict[str, int] | None = None,
+) -> dict[str, int]:
+    """Validate the primary polling values consumed by the temporal adapter."""
+    file_name = "prediction_polling_samples.csv"
+    _require(row.get("feature_support_mask") == "0x3ffffffffdffff",
+             f"{file_name}: paired-value primary support mask differs")
+    latest_time = _optional_integer(row, "latest_feature_event_time_ns", file_name)
+    latest_sequence = _integer(row, "latest_feature_event_sequence", file_name)
+    _require((latest_sequence == 0) == (latest_time is None),
+             f"{file_name}: paired-value watermark absence mismatch")
+    capture_time = _integer(row, "capture_time_ns", file_name)
+    if latest_time is not None:
+        _require(latest_time <= capture_time,
+                 f"{file_name}: paired-value polling watermark is future")
+
+    cumulative_fields = (
+        "mpdu_tx_attempts_total", "mpdu_positive_acks_total",
+        "mpdu_tx_attempt_failures_total", "mpdu_retries_total",
+        "mpdu_terminal_drops_total", "mpdu_retry_limit_drops_total",
+        "mpdu_lifetime_drops_total", "mpdu_queue_drops_total", "ppdu_tx_count_total",
+    )
+    counters = {field: _integer(row, field, file_name) for field in cumulative_fields}
+    if previous_counters is not None:
+        _require(all(counters[field] >= previous_counters[field]
+                     for field in cumulative_fields),
+                 f"{file_name}: paired-value primary cumulative counter decreased")
+
+    for window in (1000, 5000, 20000):
+        label = _window_label(window)
+        attempts = _integer(row, f"mpdu_attempts_{label}", file_name)
+        retries = _integer(row, f"mpdu_retries_{label}", file_name)
+        positive_acks = _integer(row, f"mpdu_positive_acks_{label}", file_name)
+        _integer(row, f"mpdu_attempt_failures_{label}", file_name)
+        _integer(row, f"acknowledged_mac_service_bytes_{label}", file_name)
+        _require(retries <= attempts,
+                 f"{file_name}: paired-value retries exceed attempts")
+        retry_ratio = _optional_number(row, f"mpdu_retry_ratio_{label}", file_name)
+        if attempts == 0:
+            _require(retry_ratio is None,
+                     f"{file_name}: paired-value zero-attempt retry ratio is populated")
+        else:
+            _require(retry_ratio is not None and _close(retry_ratio, retries / attempts),
+                     f"{file_name}: paired-value retry ratio differs")
+        ack_latencies = [
+            _optional_number(row, f"{prefix}_{label}_us", file_name)
+            for prefix in (
+                "mpdu_queue_to_ack_mean", "mpdu_queue_to_ack_p95",
+                "mpdu_first_attempt_to_ack_mean", "mpdu_first_attempt_to_ack_p95",
+            )
+        ]
+        _require((positive_acks == 0 and all(value is None for value in ack_latencies)) or
+                 (positive_acks > 0 and all(value is not None for value in ack_latencies)),
+                 f"{file_name}: paired-value ACK latency nullability differs")
+        coverage = _number(row, f"history_coverage_{label}_us", file_name)
+        _require(_close(coverage, float(window)),
+                 f"{file_name}: paired-value polling history is not fully covered")
+        fractions = [
+            _optional_number(row, f"phy_{state}_fraction_{label}", file_name)
+            for state in ("tx", "rx", "busy", "idle", "other")
+        ]
+        _require(all(value is not None and 0 <= value <= 1 for value in fractions),
+                 f"{file_name}: paired-value PHY fraction is missing or out of bounds")
+        _require(abs(sum(value for value in fractions if value is not None) - 1.0) <= 2e-6,
+                 f"{file_name}: paired-value PHY fractions do not sum to one")
+    return counters
+
+
+def _paired_value_t2_telemetry(
+    run_dir: Path,
+    run_id: str,
+    frames_by_id: dict[int, dict[str, str]],
+) -> tuple[dict[int, dict[str, str]], dict[int, dict[str, str]]]:
+    """Return independently checked primary T2 samples and polling reports."""
+    rolling_columns = {
+        _rolling_column(prefix, _window_label(window))
+        for prefix in PREDICTION_ROLLING_PREFIXES
+        for window in (1000, 5000, 20000)
+    }
+    samples = _csv(run_dir / "prediction_samples.csv",
+                   PREDICTION_BASE_COLUMNS | rolling_columns)
+    polling = _csv(run_dir / "prediction_polling_samples.csv",
+                   PREDICTION_POLLING_BASE_COLUMNS | rolling_columns)
+    t2_samples = [row for row in samples if row.get("sample_offset_us") == "2000"]
+    _require(len(t2_samples) == 2 * len(frames_by_id),
+             "prediction_samples.csv: paired-value T2 endpoint cardinality mismatch")
+    pairs: dict[int, dict[tuple[int, int], dict[str, str]]] = {}
+    for row in t2_samples:
+        frame_id = _integer(row, "frame_id", "prediction_samples.csv")
+        key = (
+            _integer(row, "path_id", "prediction_samples.csv"),
+            _integer(row, "copy_id", "prediction_samples.csv"),
+        )
+        _require(frame_id in frames_by_id and key in {(1, 0), (0, 1)},
+                 "prediction_samples.csv: paired-value T2 endpoint identity mismatch")
+        _require(key not in pairs.setdefault(frame_id, {}),
+                 "prediction_samples.csv: duplicate paired-value T2 endpoint")
+        pairs[frame_id][key] = row
+    _require(set(pairs) == set(frames_by_id) and
+             all(set(pair) == {(1, 0), (0, 1)} for pair in pairs.values()),
+             "prediction_samples.csv: incomplete paired-value T2 endpoint pair")
+
+    immutable = (
+        "run_id", "telemetry_schema_version", "frame_id", "sample_stage",
+        "sample_offset_us", "sample_time_ns", "generation_time_ns", "deadline_time_ns",
+        "frame_age_us", "deadline_slack_us", "frame_size_bytes", "frame_packet_count",
+        "frame_type",
+    )
+    primary_samples: dict[int, dict[str, str]] = {}
+    last_sample_watermark_time = 0
+    last_sample_watermark_sequence = 0
+    for frame_id in sorted(pairs):
+        primary = pairs[frame_id][(1, 0)]
+        secondary = pairs[frame_id][(0, 1)]
+        _require(all(primary[field] == secondary[field] for field in immutable),
+                 "prediction_samples.csv: paired-value immutable endpoint mismatch")
+        _require(primary["run_id"] == run_id and primary["sample_stage"] == "T2" and
+                 primary["telemetry_schema_version"] == "3",
+                 "prediction_samples.csv: paired-value primary identity mismatch")
+        _require(primary["feature_support_mask"] == "0x3ffffffffdffff",
+                 "prediction_samples.csv: paired-value primary support mask differs")
+        latest_time = _optional_integer(
+            primary, "latest_feature_event_time_ns", "prediction_samples.csv"
+        )
+        latest_sequence = _integer(
+            primary, "latest_feature_event_sequence", "prediction_samples.csv"
+        )
+        _require((latest_sequence == 0) == (latest_time is None),
+                 "prediction_samples.csv: paired-value primary watermark absence mismatch")
+        watermark_time = latest_time or 0
+        _require(watermark_time >= last_sample_watermark_time and
+                 latest_sequence >= last_sample_watermark_sequence,
+                 "prediction_samples.csv: paired-value primary watermark reordered")
+        last_sample_watermark_time = watermark_time
+        last_sample_watermark_sequence = latest_sequence
+
+        packet_count = _integer(secondary, "frame_packet_count", "prediction_samples.csv")
+        _require(_integer(secondary, "packets_submitted", "prediction_samples.csv") == 0 and
+                 _integer(secondary, "application_socket_packet_bytes_submitted",
+                          "prediction_samples.csv") == 0 and
+                 _integer(secondary, "packets_remaining_to_submit",
+                          "prediction_samples.csv") == packet_count and
+                 not _flag(secondary, "sender_mac_complete", "prediction_samples.csv") and
+                 _flag(secondary, "actionable", "prediction_samples.csv"),
+                 "prediction_samples.csv: hypothetical secondary is not untreated")
+        for field in (
+            "frame_packets_mac_enqueued", "frame_packets_mac_dequeued",
+            "frame_packets_tx_succeeded", "frame_mpdu_attempt_failures",
+            "frame_packets_terminally_dropped", "frame_packets_currently_queued",
+            "frame_mac_service_bytes_currently_queued",
+        ):
+            value = _optional_integer(secondary, field, "prediction_samples.csv")
+            _require(value is None or value == 0,
+                     "prediction_samples.csv: hypothetical secondary has MAC progress")
+        primary_samples[frame_id] = primary
+
+    t2_polling = [row for row in polling if row.get("sample_offset_us") == "2000" and
+                  row.get("path_id") == "1" and row.get("copy_id") == "0"]
+    _require(len(t2_polling) == len(frames_by_id),
+             "prediction_polling_samples.csv: paired-value primary T2 cardinality mismatch")
+    primary_polling: dict[int, dict[str, str]] = {}
+    previous_counters: dict[str, int] | None = None
+    last_report_watermark_time = 0
+    last_report_watermark_sequence = 0
+    last_capture = -1
+    for row in sorted(t2_polling, key=lambda item: _integer(
+        item, "capture_time_ns", "prediction_polling_samples.csv"
+    )):
+        file_name = "prediction_polling_samples.csv"
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(frame_id in frames_by_id and frame_id not in primary_polling and
+                 row["run_id"] == run_id and row["sample_stage"] == "T2" and
+                 row["polling_schema_version"] == "1" and
+                 _flag(row, "report_available", file_name),
+                 f"{file_name}: paired-value primary report identity mismatch")
+        capture = _integer(row, "capture_time_ns", file_name)
+        available = _integer(row, "available_time_ns", file_name)
+        sample_time = _integer(primary_samples[frame_id], "sample_time_ns",
+                               "prediction_samples.csv")
+        _require(capture % 1_000_000 == 0 and available == capture + 1_000_000 and
+                 available <= sample_time and
+                 1_000_000 <= sample_time - capture < 2_000_000,
+                 f"{file_name}: paired-value delayed report timing mismatch")
+        counters = _validate_paired_primary_report(
+            row, previous_counters=previous_counters
+        )
+        previous_counters = counters
+        latest_time = _optional_integer(row, "latest_feature_event_time_ns", file_name) or 0
+        latest_sequence = _integer(row, "latest_feature_event_sequence", file_name)
+        _require(capture >= last_capture and latest_time >= last_report_watermark_time and
+                 latest_sequence >= last_report_watermark_sequence,
+                 f"{file_name}: paired-value report order or watermark regressed")
+        last_capture = capture
+        last_report_watermark_time = latest_time
+        last_report_watermark_sequence = latest_sequence
+        primary_polling[frame_id] = row
+    return primary_samples, primary_polling
+
+
+def _validate_paired_value_t2_decisions(
+    run_dir: Path,
+    run_id: str,
+    frames: list[dict[str, str]],
+    policy_decisions: list[dict[str, str]],
+    duplicated_frame_ids: set[int],
+) -> dict[str, Any]:
+    """Validate and reconstruct every frozen paired-value decision."""
+    file_name = "paired_value_t2_decisions.csv"
+    rows = _csv(
+        run_dir / file_name,
+        set(PAIRED_VALUE_T2_DECISION_COLUMNS),
+        ordered_columns=PAIRED_VALUE_T2_DECISION_COLUMNS,
+    )
+    frame_ids = [_integer(frame, "frame_id", "frames.csv") for frame in frames]
+    expected_frame_ids = list(range(len(frames)))
+    _require(set(frame_ids) == set(expected_frame_ids),
+             "frames.csv: paired-value frame IDs must start at zero and be contiguous")
+    _require(len(rows) == len(frames) and
+             [_integer(row, "frame_id", file_name) for row in rows] == expected_frame_ids,
+             f"{file_name}: rows must exactly match generated frames in frame order")
+    frames_by_id = {int(frame["frame_id"]): frame for frame in frames}
+    primary_samples, primary_polling = _paired_value_t2_telemetry(
+        run_dir, run_id, frames_by_id
+    )
+
+    status_counts: Counter[str] = Counter()
+    action_frames: set[int] = set()
+    action_estimates: dict[int, float] = {}
+    action_nominals: dict[int, float] = {}
+    learned_evaluated = 0.0
+    learned_launched = 0.0
+    nominal_launched = 0.0
+    reserved_launched = 0.0
+    score_passed = 0
+    launch_attempted_count = 0
+    maximum_observed_debt = 0.0
+    previous_meter_reserved_after: float | None = None
+    model_replay_records: list[dict[str, Any]] = []
+
+    model_numeric_columns = (
+        "primary_bad12_logit", "primary_bad12_probability", "treated_bad12_logit",
+        "treated_bad12_probability", "predicted_log_airtime",
+        "predicted_secondary_airtime_us", "nonnegative_bad12_value",
+        "value_per_cost_score_float32",
+    )
+    for row in rows:
+        frame_id = _integer(row, "frame_id", file_name)
+        frame = frames_by_id[frame_id]
+        primary = primary_samples[frame_id]
+        poll = primary_polling[frame_id]
+        _require(_integer(row, "schema_version", file_name) == 1 and
+                 row["run_id"] == run_id and
+                 all(row[key] == value for key, value in PAIRED_VALUE_T2_MODEL_METADATA.items()),
+                 f"{file_name}: fixed schema, policy, or model metadata differs")
+        threshold = _number(row, "score_threshold_float32", file_name)
+        _require(struct.pack(">f", _float32(threshold, file_name)) ==
+                 PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+                 f"{file_name}: frozen float32 threshold differs")
+        _require(row["primary_path_id"] == "1" and row["primary_copy_id"] == "0" and
+                 row["secondary_path_id"] == "0" and row["secondary_copy_id"] == "1",
+                 f"{file_name}: paired endpoint identity differs")
+
+        generation_ns = _integer(row, "generation_time_ns", file_name)
+        deadline_ns = _integer(row, "deadline_time_ns", file_name)
+        sample_ns = _integer(row, "primary_sample_time_ns", file_name)
+        _require(generation_ns // 1000 == int(frame["generation_time_us"]) and
+                 deadline_ns == generation_ns + int(frame["deadline_us"]) * 1000 and
+                 sample_ns == generation_ns + 2_000_000 and
+                 _integer(row, "secondary_sample_time_ns", file_name) == sample_ns,
+                 f"{file_name}: paired decision timestamps differ")
+        _require(row["generation_time_ns"] == primary["generation_time_ns"] and
+                 row["deadline_time_ns"] == primary["deadline_time_ns"] and
+                 row["primary_sample_time_ns"] == primary["sample_time_ns"] and
+                 row["frame_type"] == frame["frame_type"] == primary["frame_type"] and
+                 row["frame_size_bytes"] == frame["frame_size_bytes"] ==
+                 primary["frame_size_bytes"] and
+                 row["frame_packet_count"] == frame["packet_count"] ==
+                 primary["frame_packet_count"] and
+                 row["primary_actionable"] == primary["actionable"],
+                 f"{file_name}: decision evidence differs from primary telemetry")
+        _require(row["primary_feature_watermark_time_ns"] ==
+                 primary["latest_feature_event_time_ns"] and
+                 row["primary_feature_watermark_sequence"] ==
+                 primary["latest_feature_event_sequence"],
+                 f"{file_name}: primary watermark evidence differs")
+
+        _require(row["current_poll_capture_time_ns"] == poll["capture_time_ns"] and
+                 row["current_poll_available_time_ns"] == poll["available_time_ns"],
+                 f"{file_name}: current delayed polling evidence differs")
+        history_ready = frame_id >= 8
+        _require(_flag(row, "history_ready", file_name) == history_ready,
+                 f"{file_name}: exact history-ready evidence differs")
+        for lag in (1, 3, 8):
+            lag_frame_key = f"lag{lag}_frame_id"
+            lag_capture_key = f"lag{lag}_poll_capture_time_ns"
+            if frame_id >= lag:
+                expected_frame = frame_id - lag
+                _require(row[lag_frame_key] == str(expected_frame) and
+                         row[lag_capture_key] == primary_polling[expected_frame]["capture_time_ns"],
+                         f"{file_name}: exact lag-{lag} evidence differs")
+            else:
+                _require(row[lag_frame_key] == "" and row[lag_capture_key] == "",
+                         f"{file_name}: absent lag-{lag} must be null")
+
+        inside = PAIRED_VALUE_T2_DECISION_START_NS <= sample_ns < \
+            PAIRED_VALUE_T2_DECISION_STOP_NS
+        actionable = _flag(row, "primary_actionable", file_name)
+        _require(row["decision_window_start_ns"] ==
+                 str(PAIRED_VALUE_T2_DECISION_START_NS) and
+                 row["decision_window_stop_ns"] == str(PAIRED_VALUE_T2_DECISION_STOP_NS) and
+                 _flag(row, "inside_decision_window", file_name) == inside,
+                 f"{file_name}: decision-window evidence differs")
+        descriptor_should_be_checked = (
+            inside and history_ready and row["frame_type"] == "P_FRAME" and actionable
+        )
+        descriptor_checked = _flag(row, "descriptor_checked", file_name)
+        descriptor_available = _flag(row, "descriptor_available", file_name)
+        _require(descriptor_checked == descriptor_should_be_checked and
+                 (descriptor_checked or not descriptor_available),
+                 f"{file_name}: descriptor gate order differs")
+
+        _require(row["canonical_cost_estimator_id"] == RANDOMIZED_COST_ESTIMATOR and
+                 _paired_close(_number(row, "cost_safety_factor", file_name), 1.25),
+                 f"{file_name}: canonical estimator metadata differs")
+        nominal: float | None = None
+        reserved: float | None = None
+        descriptor_fields = (
+            "descriptor_frame_packet_count", "descriptor_packet_count",
+            "descriptor_packet_indices", "descriptor_expected_mac_service_bytes",
+            "descriptor_deadline_time_ns", "canonical_nominal_airtime_us",
+            "canonical_reserved_airtime_us",
+        )
+        if descriptor_available:
+            packet_count, indices, expected_service_bytes, expected_nominal = (
+                _canonical_full_copy_descriptor(frame)
+            )
+            _require(row["descriptor_frame_packet_count"] == str(packet_count) and
+                     row["descriptor_packet_count"] == str(packet_count) and
+                     row["descriptor_packet_indices"] == indices and
+                     row["descriptor_expected_mac_service_bytes"] ==
+                     str(expected_service_bytes) and
+                     row["descriptor_deadline_time_ns"] == str(deadline_ns),
+                     f"{file_name}: canonical descriptor evidence differs")
+            nominal = _number(row, "canonical_nominal_airtime_us", file_name)
+            reserved = _number(row, "canonical_reserved_airtime_us", file_name)
+            _require(_paired_close(nominal, expected_nominal) and
+                     _paired_close(reserved, 1.25 * expected_nominal),
+                     f"{file_name}: canonical descriptor cost differs")
+        else:
+            _require(all(row[field] == "" for field in descriptor_fields),
+                     f"{file_name}: unavailable descriptor has populated evidence")
+
+        feature_evaluated = _flag(row, "feature_evaluated", file_name)
+        _require(feature_evaluated == descriptor_available,
+                 f"{file_name}: model evaluation bypassed ordered gates")
+        passes: bool | None
+        predicted_cost: float | None = None
+        if feature_evaluated:
+            values = {key: _signed_number(row, key, file_name)
+                      for key in model_numeric_columns}
+            primary_probability = values["primary_bad12_probability"]
+            treated_probability = values["treated_bad12_probability"]
+            predicted_log_cost = values["predicted_log_airtime"]
+            predicted_cost = values["predicted_secondary_airtime_us"]
+            nonnegative_value = values["nonnegative_bad12_value"]
+            adjusted_log_cost = min(
+                max(predicted_log_cost + PAIRED_VALUE_T2_LOG_SMEARING_FACTOR, 0.0),
+                PAIRED_VALUE_T2_LOG_COST_CAP,
+            )
+            reconstructed_cost = max(math.expm1(adjusted_log_cost), 1.0)
+            _require(0 <= primary_probability <= 1 and 0 <= treated_probability <= 1 and
+                     _close(primary_probability,
+                            _paired_sigmoid(values["primary_bad12_logit"])) and
+                     _close(treated_probability,
+                            _paired_sigmoid(values["treated_bad12_logit"])) and
+                     1 <= predicted_cost <= 1_000_000 and
+                     _close(predicted_cost, reconstructed_cost) and
+                     _close(nonnegative_value,
+                            max(primary_probability - treated_probability, 0.0)),
+                     f"{file_name}: frozen model diagnostics do not reconcile")
+            expected_score = _float32(nonnegative_value / predicted_cost, file_name)
+            observed_score = values["value_per_cost_score_float32"]
+            _require(_float32(observed_score, file_name) == observed_score and
+                     struct.pack(">f", observed_score) == struct.pack(">f", expected_score),
+                     f"{file_name}: value-per-cost score is not exact float32")
+            passes = _flag(row, "passes_score_threshold", file_name)
+            _require(passes == (observed_score >= PAIRED_VALUE_T2_SCORE_THRESHOLD),
+                     f"{file_name}: float32 score-threshold result differs")
+            model_replay_records.append({
+                "frame_id": frame_id,
+                "features": _paired_value_t2_feature_vector(
+                    frame_id,
+                    primary,
+                    poll,
+                    {
+                        lag: primary_polling[frame_id - lag]
+                        for lag in (1, 3, 8)
+                    },
+                ),
+                "values": values,
+                "passes": passes,
+            })
+            learned_evaluated += predicted_cost
+            if passes:
+                score_passed += 1
+        else:
+            _require(all(row[key] == "" for key in model_numeric_columns) and
+                     row["passes_score_threshold"] == "",
+                     f"{file_name}: unevaluated model diagnostics must be null")
+            passes = None
+
+        _require(_paired_close(_number(row, "guard_fraction", file_name), 0.006) and
+                 _integer(row, "guard_max_horizon_us", file_name) == 10_000_000 and
+                 _integer(row, "guard_initial_horizon_us", file_name) == 2_000_000 and
+                 _paired_close(_number(row, "guard_capacity_us", file_name), 60_000) and
+                 _paired_close(_number(row, "guard_initial_credit_us", file_name), 12_000),
+                 f"{file_name}: frozen guard metadata differs")
+        balance_before = _signed_number(row, "guard_balance_before_us", file_name)
+        reserved_before = _number(row, "meter_reserved_before_us", file_name)
+        available_before = _signed_number(row, "guard_available_before_us", file_name)
+        debt_before = _number(row, "guard_debt_before_us", file_name)
+        balance_after = _signed_number(row, "guard_balance_after_us", file_name)
+        reserved_after = _number(row, "meter_reserved_after_us", file_name)
+        available_after = _signed_number(row, "guard_available_after_us", file_name)
+        debt_after = _number(row, "guard_debt_after_us", file_name)
+        if previous_meter_reserved_after is None:
+            _require(_paired_close(reserved_before, 0.0),
+                     f"{file_name}: initial meter reservation is nonzero")
+        else:
+            _require(reserved_before <= previous_meter_reserved_after +
+                     PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+                     f"{file_name}: meter reservation increased between decisions")
+        _require(_paired_close(available_before, balance_before - reserved_before) and
+                 _paired_close(available_after, balance_after - reserved_after) and
+                 _paired_close(debt_before, max(0.0, -balance_before)) and
+                 _paired_close(debt_after, max(0.0, -balance_after)) and
+                 _paired_close(balance_before, balance_after),
+                 f"{file_name}: guard accounting arithmetic differs")
+        maximum_observed_debt = max(maximum_observed_debt, debt_before, debt_after)
+        considered = _flag(row, "guard_admission_considered", file_name)
+        admitted = _flag(row, "guard_admitted", file_name)
+        launch_attempted = _flag(row, "launch_attempted", file_name)
+        launched = _flag(row, "secondary_launched", file_name)
+        _require(considered == (passes is True),
+                 f"{file_name}: guard admission gate order differs")
+        expected_admitted = bool(considered and reserved is not None and
+                                 reserved <= available_before)
+        _require(admitted == expected_admitted and launch_attempted == admitted and
+                 (launch_attempted or not launched),
+                 f"{file_name}: guard or launch flags differ from reconstructed decision")
+        if launch_attempted:
+            launch_attempted_count += 1
+        if launched:
+            assert nominal is not None and reserved is not None and predicted_cost is not None
+            _require(_paired_close(reserved_after, reserved_before + reserved),
+                     f"{file_name}: action reservation does not reconcile")
+            action_frames.add(frame_id)
+            action_estimates[frame_id] = reserved
+            action_nominals[frame_id] = nominal
+            learned_launched += predicted_cost
+            nominal_launched += nominal
+            reserved_launched += reserved
+        else:
+            _require(_paired_close(reserved_after, reserved_before),
+                     f"{file_name}: non-action changed meter reservation")
+        previous_meter_reserved_after = reserved_after
+
+        if not inside:
+            expected_status = "outside_decision_window"
+        elif not history_ready:
+            expected_status = "history_warmup"
+        elif row["frame_type"] != "P_FRAME":
+            expected_status = "frame_type_restricted"
+        elif not actionable:
+            expected_status = "not_actionable"
+        elif not descriptor_available:
+            expected_status = "descriptor_unavailable"
+        elif not passes:
+            expected_status = "below_score_threshold"
+        elif not admitted:
+            expected_status = "airtime_guard_rejected"
+        elif not launched:
+            expected_status = "launch_rejected"
+        else:
+            expected_status = "action"
+        _require(row["decision_status"] == expected_status and
+                 row["decision_status"] in PAIRED_VALUE_T2_STATUSES,
+                 f"{file_name}: decision status differs from ordered gates")
+        status_counts[expected_status] += 1
+
+    _validate_paired_value_t2_model_replays(model_replay_records)
+    _require(action_frames == duplicated_frame_ids,
+             f"{file_name}: actions do not match duplicated frames")
+    policy_action_frames = {
+        _integer(row, "frame_id", "policy_decisions.csv")
+        for row in policy_decisions
+        if _flag(row, "duplicated", "policy_decisions.csv")
+    }
+    _require(policy_action_frames == action_frames and
+             all(row["policy"] == PAIRED_VALUE_T2_POLICY and row["primary_link"] == "1"
+                 for row in policy_decisions) and
+             all((row["secondary_link"] == "0") ==
+                 _flag(row, "duplicated", "policy_decisions.csv")
+                 for row in policy_decisions),
+             "policy_decisions.csv: paired-value launch evidence differs")
+    _require(all(frame["policy"] == PAIRED_VALUE_T2_POLICY and
+                 frame["primary_link"] == "1" for frame in frames),
+             "frames.csv: paired-value policy/path identity differs")
+    return {
+        "rows": rows,
+        "status_counts": status_counts,
+        "action_frames": action_frames,
+        "action_estimates": action_estimates,
+        "action_nominals": action_nominals,
+        "learned_evaluated": learned_evaluated,
+        "learned_launched": learned_launched,
+        "nominal_launched": nominal_launched,
+        "reserved_launched": reserved_launched,
+        "score_passed": score_passed,
+        "launch_attempted": launch_attempted_count,
+        "maximum_observed_debt": maximum_observed_debt,
+    }
+
+
+def _replay_paired_value_t2_guard(
+    decision_rows: list[dict[str, str]],
+    events: list[dict[str, str]],
+) -> None:
+    """Reconstruct measured-airtime guard balance from independent PHY events."""
+    decisions_by_time: dict[int, list[dict[str, str]]] = {}
+    events_by_time: dict[int, list[dict[str, str]]] = {}
+    for row in decision_rows:
+        decisions_by_time.setdefault(
+            _integer(row, "primary_sample_time_ns", "paired_value_t2_decisions.csv"), []
+        ).append(row)
+    for row in events:
+        events_by_time.setdefault(
+            _integer(row, "time_ns", "secondary_airtime_events.csv"), []
+        ).append(row)
+
+    balance = PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US
+    last_refill_ns = PAIRED_VALUE_T2_DECISION_START_NS
+    for time_ns in sorted(set(decisions_by_time) | set(events_by_time)):
+        if time_ns >= PAIRED_VALUE_T2_DECISION_START_NS:
+            refill_time = min(time_ns, PAIRED_VALUE_T2_MEASUREMENT_STOP_NS)
+            _require(refill_time >= last_refill_ns,
+                     "paired-value guard replay: causal time regressed")
+            balance = min(
+                PAIRED_VALUE_T2_GUARD_CAPACITY_US,
+                balance + PAIRED_VALUE_T2_GUARD_FRACTION *
+                ((refill_time - last_refill_ns) / 1000.0),
+            )
+            last_refill_ns = refill_time
+        event_debit = sum(
+            _number(row, "ppdu_duration_us", "secondary_airtime_events.csv")
+            for row in events_by_time.get(time_ns, [])
+        )
+        for row in decisions_by_time.get(time_ns, []):
+            observed = _signed_number(
+                row, "guard_balance_before_us", "paired_value_t2_decisions.csv"
+            )
+            # Independent files do not preserve callback order for equal-time
+            # events.  A decision may therefore expose the balance immediately
+            # before or after all same-time PPDU callbacks, but no value between.
+            valid = _paired_close(observed, balance)
+            if event_debit:
+                valid = valid or _paired_close(observed, balance - event_debit)
+            _require(valid,
+                     "paired_value_t2_decisions.csv: guard balance differs from PHY replay")
+        balance -= event_debit
+
+
+def _paired_value_t2_event_frames(row: dict[str, str]) -> tuple[int, ...]:
+    """Parse the distinct frame IDs attributed to one secondary PPDU."""
+    tokens = row.get("frame_ids", "").split(";")
+    _require(tokens and all(re.fullmatch(r"[0-9]+", token) for token in tokens),
+             "secondary airtime events: invalid frame_ids")
+    frame_ids = tuple(int(token) for token in tokens)
+    _require(len(frame_ids) == len(set(frame_ids)),
+             "secondary airtime events: repeated frame ID in PPDU")
+    return frame_ids
+
+
+def _paired_value_t2_airtime_allocations(
+    event_records: list[dict[str, Any]],
+    measured_by_frame: dict[int, float],
+) -> dict[tuple[int, int], float]:
+    """Find a feasible event-to-frame airtime allocation from frozen evidence.
+
+    Event rows expose a PPDU duration, total tagged bytes, and the set of
+    tagged frames, while settlement rows expose each frame's final measured
+    airtime.  Every listed frame contributed at least one tagged byte, so a
+    lower-bounded bipartite max-flow proves that some strictly positive
+    allocation exists on every logged event/frame edge and that the event and
+    frame marginals reconcile.  It does not claim to recover the meter's
+    unlogged byte-proportional split.
+    """
+    frame_ids = sorted(measured_by_frame)
+    frame_index = {frame_id: index for index, frame_id in enumerate(frame_ids)}
+    event_count = len(event_records)
+    source = 0
+    event_start = 1
+    frame_start = event_start + event_count
+    sink = frame_start + len(frame_ids)
+    graph: list[list[list[float | int]]] = [[] for _ in range(sink + 1)]
+
+    def add_edge(origin: int, target: int, capacity: float) -> int:
+        forward: list[float | int] = [target, len(graph[target]), capacity, capacity]
+        reverse: list[float | int] = [origin, len(graph[origin]), 0.0, 0.0]
+        graph[origin].append(forward)
+        graph[target].append(reverse)
+        return len(graph[origin]) - 1
+
+    allocation_edges: dict[tuple[int, int], tuple[int, int]] = {}
+    lower_bounds: dict[tuple[int, int], float] = {}
+    frame_lower_bounds = {frame_id: 0.0 for frame_id in frame_ids}
+    event_residual_total = 0.0
+    for event_index, record in enumerate(event_records):
+        duration = float(record["duration"])
+        tagged_bytes = int(record["tagged_bytes"])
+        event_frames = record["frame_ids"]
+        _require(duration > 0 and tagged_bytes >= len(event_frames),
+                 "secondary airtime event cannot allocate positive tagged bytes")
+        minimum = duration / tagged_bytes
+        residual = duration - minimum * len(event_frames)
+        _require(minimum > 0 and residual >= -PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+                 "secondary airtime event has no positive per-frame allocation")
+        if residual < 0:
+            residual = 0.0
+        event_residual_total += residual
+        event_node = event_start + event_index
+        add_edge(source, event_node, residual)
+        for frame_id in event_frames:
+            edge_index = add_edge(
+                event_node,
+                frame_start + frame_index[frame_id],
+                residual,
+            )
+            allocation_edges[(event_index, frame_id)] = (event_node, edge_index)
+            lower_bounds[(event_index, frame_id)] = minimum
+            frame_lower_bounds[frame_id] += minimum
+    for frame_id in frame_ids:
+        residual = measured_by_frame[frame_id] - frame_lower_bounds[frame_id]
+        _require(residual >= -PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+                 "secondary airtime settlement cannot give every listed frame "
+                 "positive airtime")
+        if residual < 0:
+            residual = 0.0
+        add_edge(
+            frame_start + frame_index[frame_id],
+            sink,
+            residual,
+        )
+
+    total_flow = 0.0
+    epsilon = 1e-12
+    while True:
+        levels = [-1] * len(graph)
+        levels[source] = 0
+        queue = [source]
+        for node in queue:
+            for target, _, capacity, _ in graph[node]:
+                if float(capacity) > epsilon and levels[int(target)] < 0:
+                    levels[int(target)] = levels[node] + 1
+                    queue.append(int(target))
+        if levels[sink] < 0:
+            break
+        cursors = [0] * len(graph)
+
+        def send(node: int, available: float) -> float:
+            if node == sink:
+                return available
+            while cursors[node] < len(graph[node]):
+                edge = graph[node][cursors[node]]
+                target = int(edge[0])
+                capacity = float(edge[2])
+                if capacity > epsilon and levels[target] == levels[node] + 1:
+                    pushed = send(target, min(available, capacity))
+                    if pushed > epsilon:
+                        edge[2] = capacity - pushed
+                        reverse = graph[target][int(edge[1])]
+                        reverse[2] = float(reverse[2]) + pushed
+                        return pushed
+                cursors[node] += 1
+            return 0.0
+
+        while True:
+            pushed = send(source, math.inf)
+            if pushed <= epsilon:
+                break
+            total_flow += pushed
+
+    _require(_paired_close(total_flow, event_residual_total),
+             "secondary airtime evidence has no feasible per-frame allocation")
+    allocations: dict[tuple[int, int], float] = {}
+    for event_index, record in enumerate(event_records):
+        allocated = 0.0
+        for frame_id in record["frame_ids"]:
+            node, edge_index = allocation_edges[(event_index, frame_id)]
+            edge = graph[node][edge_index]
+            residual_flow = float(edge[3]) - float(edge[2])
+            if abs(residual_flow) <= epsilon:
+                residual_flow = 0.0
+            flow = lower_bounds[(event_index, frame_id)] + residual_flow
+            _require(flow > 0,
+                     "secondary airtime allocation is not positive")
+            allocations[(event_index, frame_id)] = flow
+            allocated += flow
+        _require(_paired_close(allocated, float(record["duration"])),
+                 "secondary airtime event has no feasible per-frame allocation")
+    for frame_id, measured in measured_by_frame.items():
+        allocated = sum(
+            allocations.get((event_index, frame_id), 0.0)
+            for event_index in range(event_count)
+        )
+        _require(_paired_close(allocated, measured),
+                 "secondary airtime settlement has no feasible event allocation")
+    return allocations
+
+
+def _replay_paired_value_t2_meter(
+    decision_rows: list[dict[str, str]],
+    events: list[dict[str, str]],
+    settlements: list[dict[str, str]],
+    action_estimates: dict[int, float],
+    action_nominals: dict[int, float],
+) -> None:
+    """Reconstruct paired action causality and outstanding meter reservations."""
+    decision_file = "paired_value_t2_decisions.csv"
+    event_file = "secondary_airtime_events.csv"
+    settlement_file = "secondary_airtime_settlements.csv"
+    launches = {
+        _integer(row, "frame_id", decision_file):
+        _integer(row, "primary_sample_time_ns", decision_file)
+        for row in decision_rows
+        if _flag(row, "secondary_launched", decision_file)
+    }
+    _require(set(launches) == set(action_estimates) == set(action_nominals),
+             "paired-value meter replay: action evidence differs")
+
+    settlement_records: dict[int, dict[str, Any]] = {}
+    for row in settlements:
+        frame_id = _integer(row, "frame_id", settlement_file)
+        _require(frame_id in launches and frame_id not in settlement_records,
+                 "secondary airtime settlement references an unlaunched frame")
+        settlement_time = _integer(row, "settlement_time_ns", settlement_file)
+        _require(launches[frame_id] <= settlement_time <=
+                 PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+                 "secondary airtime settlement precedes its action launch")
+        nominal = _number(row, "nominal_airtime_us", settlement_file)
+        # The meter CSV is written with 12 significant digits.  Compare its
+        # canonical rendering instead of adding a magnitude-scaled tolerance.
+        expected_nominal = float(format(action_nominals[frame_id], ".12g"))
+        _require(nominal == expected_nominal,
+                 "secondary airtime settlement nominal differs from its action")
+        settlement_records[frame_id] = {
+            "time": settlement_time,
+            "released": _number(row, "released_airtime_us", settlement_file),
+            "measured": _number(row, "measured_airtime_us", settlement_file),
+            "released_text": row["released_airtime_us"],
+            "measured_text": row["measured_airtime_us"],
+        }
+    _require(set(settlement_records) == set(launches),
+             "secondary airtime settlements do not match paired-value actions")
+
+    event_records: list[dict[str, Any]] = []
+    for event_index, row in enumerate(events):
+        event_time = _integer(row, "time_ns", event_file)
+        frame_ids = _paired_value_t2_event_frames(row)
+        for frame_id in frame_ids:
+            _require(frame_id in launches,
+                     "secondary airtime event references an unlaunched frame")
+            _require(launches[frame_id] <= event_time <=
+                     settlement_records[frame_id]["time"],
+                     "secondary airtime event is outside its frame's active interval")
+        event_records.append({
+            "index": event_index,
+            "time": event_time,
+            "duration": _number(row, "ppdu_duration_us", event_file),
+            "tagged_bytes": _integer(row, "tagged_mpdu_bytes", event_file),
+            "frame_ids": frame_ids,
+        })
+
+    allocations = _paired_value_t2_airtime_allocations(
+        event_records,
+        {
+            frame_id: float(record["measured"])
+            for frame_id, record in settlement_records.items()
+        },
+    )
+
+    timeline: list[tuple[int, int, int, Any]] = []
+    for row_index, row in enumerate(decision_rows):
+        timeline.append((
+            _integer(row, "primary_sample_time_ns", decision_file),
+            0,
+            row_index,
+            row,
+        ))
+    for event_index, record in enumerate(event_records):
+        timeline.append((int(record["time"]), 1, event_index, record))
+    for frame_id, record in settlement_records.items():
+        timeline.append((int(record["time"]), 2, frame_id, record))
+
+    active: dict[int, dict[str, float]] = {}
+    for _, kind, identity, record in sorted(timeline):
+        if kind == 0:
+            row = record
+            observed_before = _number(row, "meter_reserved_before_us", decision_file)
+            expected_before = sum(state["remaining"] for state in active.values())
+            _require(_paired_close(observed_before, expected_before),
+                     "paired-value decision outstanding reservation differs from meter replay")
+            frame_id = _integer(row, "frame_id", decision_file)
+            launched = _flag(row, "secondary_launched", decision_file)
+            if launched:
+                _require(frame_id not in active,
+                         "paired-value action launched an already-active frame")
+                active[frame_id] = {
+                    "remaining": action_estimates[frame_id],
+                    "measured": 0.0,
+                }
+            observed_after = _number(row, "meter_reserved_after_us", decision_file)
+            expected_after = sum(state["remaining"] for state in active.values())
+            _require(_paired_close(observed_after, expected_after),
+                     "paired-value decision post-action reservation differs from meter replay")
+        elif kind == 1:
+            event_index = identity
+            for frame_id in record["frame_ids"]:
+                _require(frame_id in active,
+                         "secondary airtime event references an inactive frame")
+                allocated = allocations[(event_index, frame_id)]
+                state = active[frame_id]
+                state["measured"] += allocated
+                state["remaining"] -= min(state["remaining"], allocated)
+                if abs(state["remaining"]) <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US:
+                    state["remaining"] = 0.0
+        else:
+            frame_id = identity
+            _require(frame_id in active,
+                     "secondary airtime settlement references an inactive frame")
+            state = active[frame_id]
+            _require(_paired_close(state["measured"], float(record["measured"])),
+                     "secondary airtime settlement measured total differs from replay")
+            measured_text = str(record["measured_text"])
+            released_text = str(record["released_text"])
+            released = float(record["released"])
+            measured = float(record["measured"])
+            _require(
+                released == float(format(released, ".12g"))
+                and measured == float(format(measured, ".12g"))
+                and abs(max(action_estimates[frame_id] - measured, 0.0) - released)
+                <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+                + _paired_meter_quantization_us(measured_text)
+                + _paired_meter_quantization_us(released_text),
+                     "secondary airtime settlement release differs from replay")
+            del active[frame_id]
+    _require(not active,
+             "paired-value meter replay ended with outstanding reservations")
+
+
+def _validate_paired_value_t2_summary(
+    run_dir: Path,
+    run_id: str,
+    frame_count: int,
+    evidence: dict[str, Any],
+    events: list[dict[str, str]],
+    settlements: list[dict[str, str]],
+    meter_summary: dict[str, Any],
+) -> None:
+    """Validate exact controller summary keys and reconstruct every total."""
+    summary = _json(run_dir / "paired_value_t2_summary.json")
+    top_keys = {
+        "schema_version", "run_id", "policy", "runtime_contract_id",
+        "runtime_contract_sha256", "source_artifacts", "model", "telemetry",
+        "decision_window", "budget_guard", "counts", "airtime", "integrity",
+    }
+    _require(set(summary) == top_keys,
+             "paired_value_t2_summary.json: top-level key set differs")
+    _require(isinstance(summary.get("schema_version"), int) and
+             not isinstance(summary.get("schema_version"), bool) and
+             summary.get("schema_version") == 1 and summary.get("run_id") == run_id and
+             summary.get("policy") == PAIRED_VALUE_T2_POLICY and
+             summary.get("runtime_contract_id") == PAIRED_VALUE_T2_CONTRACT_ID and
+             summary.get("runtime_contract_sha256") == PAIRED_VALUE_T2_CONTRACT_SHA256,
+             "paired_value_t2_summary.json: scalar identity differs")
+    expected_sources = {
+        "frozen_selection": {
+            "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+            "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f",
+        },
+        "canonical_fit_manifest": {
+            "path": (
+                "results/randomized_full_copy_exploration_collection_v1/"
+                "temporal_t2_primary_only_two_objective_v1/artifact_manifest.json"
+            ),
+            "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f",
+        },
+        "canonical_model_pickle": {
+            "path": (
+                "results/randomized_full_copy_exploration_collection_v1/"
+                "temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl"
+            ),
+            "sha256": PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
+        },
+        "canonical_candidates": {
+            "path": (
+                "results/randomized_full_copy_exploration_collection_v1/"
+                "temporal_t2_primary_only_two_objective_v1/"
+                "temporal_t2_value_policy_candidates.csv"
+            ),
+            "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb",
+        },
+        "canonical_metrics": {
+            "path": (
+                "results/randomized_full_copy_exploration_collection_v1/"
+                "temporal_t2_primary_only_two_objective_v1/"
+                "temporal_t2_value_training_metrics.json"
+            ),
+            "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014",
+        },
+    }
+    _require(summary.get("source_artifacts") == expected_sources,
+             "paired_value_t2_summary.json: source artifact closure differs")
+    expected_model = {
+        "model_spec_id": "hgb64_depth3_7leaf_two_head_ridge_log_cost_v1",
+        "artifact_sha256": PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
+        "feature_family": "primary_compact_physics_temporal",
+        "feature_count": 246,
+        "feature_adapter_id": "finite_numeric_float32_then_float64_one_hot_v1",
+        "ordered_feature_names_sha256": PAIRED_VALUE_T2_FEATURE_NAMES_SHA256,
+        "ranker": "legacy_bad12_value_per_cost",
+        "frame_gate": "p_frames_only",
+        "score_adapter_id": "final_candidate_float32_threshold_ge_v1",
+        "score_threshold_float32": PAIRED_VALUE_T2_SCORE_THRESHOLD,
+        "score_threshold_float32_bits_hex": "0x38bbc0e5",
+    }
+    model = summary.get("model")
+    _require(isinstance(model, dict) and set(model) == set(expected_model),
+             "paired_value_t2_summary.json: model key set differs")
+    _require(isinstance(model.get("feature_count"), int) and
+             not isinstance(model.get("feature_count"), bool),
+             "paired_value_t2_summary.json: model.feature_count is not an integer")
+    for key, expected in expected_model.items():
+        if key == "score_threshold_float32":
+            value = model.get(key)
+            _require(isinstance(value, (int, float)) and not isinstance(value, bool) and
+                     struct.pack(">f", _float32(float(value), "paired summary model")) ==
+                     PAIRED_VALUE_T2_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+                     "paired_value_t2_summary.json: model threshold differs")
+        else:
+            _require(model.get(key) == expected,
+                     f"paired_value_t2_summary.json: model.{key} differs")
+
+    expected_telemetry = {
+        "telemetry_schema_version": 3,
+        "polling_schema_version": 1,
+        "feature_support_mask_version": 2,
+        "primary_required_support_mask_hex": "0x3ffffffffdffff",
+        "sample_offsets_us": [0, 2000],
+        "history_windows_us": [1000, 5000, 20000],
+        "polling_interval_us": 1000,
+        "polling_report_delay_us": 1000,
+        "raw_prediction_event_log_enabled": False,
+        "oracle_features_enabled": False,
+    }
+    expected_window = {
+        "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+        "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+        "decision_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+        "decision_stop_ns": PAIRED_VALUE_T2_DECISION_STOP_NS,
+        "interval_semantics": "half_open",
+        "decision_stop_guard_us": 534000,
+    }
+    expected_guard = {
+        "canonical_estimator_id": RANDOMIZED_COST_ESTIMATOR,
+        "cost_safety_factor": 1.25,
+        "fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
+        "max_horizon_us": 10_000_000,
+        "initial_horizon_us": 2_000_000,
+        "capacity_us": 60_000,
+        "initial_credit_us": 12_000,
+        "initialization_time_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+        "accounting_absolute_tolerance_us": PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+    }
+    for key, expected in (
+        ("telemetry", expected_telemetry),
+        ("decision_window", expected_window),
+        ("budget_guard", expected_guard),
+    ):
+        actual = summary.get(key)
+        _require(isinstance(actual, dict) and
+                 _canonical_json_sha256(actual, f"paired summary {key}") ==
+                 _canonical_json_sha256(expected, f"expected paired summary {key}"),
+                 f"paired_value_t2_summary.json: {key} differs")
+
+    count_keys = {
+        "generated_frames", "paired_t2_frames", *PAIRED_VALUE_T2_STATUSES[:-1],
+        "feature_evaluated", "score_threshold_passed", "launch_attempted",
+        "secondary_launched", "secondary_settled",
+    }
+    # ACTION is serialized as secondary_launched, not as a separate count key.
+    counts = summary.get("counts")
+    _require(isinstance(counts, dict) and set(counts) == count_keys,
+             "paired_value_t2_summary.json: counts key set differs")
+    _require(all(isinstance(value, int) and not isinstance(value, bool) and value >= 0
+                 for value in counts.values()),
+             "paired_value_t2_summary.json: count is not a nonnegative integer")
+    status_counts: Counter[str] = evidence["status_counts"]
+    expected_counts = {
+        "generated_frames": frame_count,
+        "paired_t2_frames": frame_count,
+        "outside_decision_window": status_counts["outside_decision_window"],
+        "history_warmup": status_counts["history_warmup"],
+        "frame_type_restricted": status_counts["frame_type_restricted"],
+        "not_actionable": status_counts["not_actionable"],
+        "descriptor_unavailable": status_counts["descriptor_unavailable"],
+        "feature_evaluated": sum(
+            _flag(row, "feature_evaluated", "paired_value_t2_decisions.csv")
+            for row in evidence["rows"]
+        ),
+        "below_score_threshold": status_counts["below_score_threshold"],
+        "score_threshold_passed": evidence["score_passed"],
+        "airtime_guard_rejected": status_counts["airtime_guard_rejected"],
+        "launch_attempted": evidence["launch_attempted"],
+        "launch_rejected": status_counts["launch_rejected"],
+        "secondary_launched": len(evidence["action_frames"]),
+        "secondary_settled": len(settlements),
+    }
+    _require(counts == expected_counts,
+             "paired_value_t2_summary.json: counts differ from reconstructed rows")
+    _require(frame_count == sum(status_counts[status]
+                                for status in PAIRED_VALUE_T2_STATUSES) and
+             expected_counts["feature_evaluated"] ==
+             status_counts["below_score_threshold"] + evidence["score_passed"] and
+             evidence["score_passed"] ==
+             status_counts["airtime_guard_rejected"] +
+             status_counts["launch_rejected"] + status_counts["action"] and
+             evidence["launch_attempted"] ==
+             status_counts["launch_rejected"] + status_counts["action"] and
+             len(evidence["action_frames"]) == status_counts["action"] == len(settlements),
+             "paired_value_t2_summary.json: reconstructed counts do not reconcile")
+
+    airtime_keys = {
+        "learned_predicted_cost_sum_evaluated_us",
+        "learned_predicted_cost_sum_launched_us",
+        "canonical_nominal_launched_sum_us",
+        "canonical_reserved_launched_sum_us",
+        "measured_secondary_airtime_debited_us",
+    }
+    airtime = summary.get("airtime")
+    _require(isinstance(airtime, dict) and set(airtime) == airtime_keys,
+             "paired_value_t2_summary.json: airtime key set differs")
+    measured_total = sum(_number(
+        row, "ppdu_duration_us", "secondary_airtime_events.csv"
+    ) for row in events)
+    for key, expected in {
+        "learned_predicted_cost_sum_evaluated_us": evidence["learned_evaluated"],
+        "learned_predicted_cost_sum_launched_us": evidence["learned_launched"],
+        "canonical_nominal_launched_sum_us": evidence["nominal_launched"],
+        "canonical_reserved_launched_sum_us": evidence["reserved_launched"],
+        "measured_secondary_airtime_debited_us": measured_total,
+    }.items():
+        value = airtime.get(key)
+        _require(isinstance(value, (int, float)) and not isinstance(value, bool) and
+                 math.isfinite(float(value)) and float(value) >= 0 and
+                 _paired_close(float(value), expected),
+                 f"paired_value_t2_summary.json: airtime.{key} differs")
+    _require(_paired_meter_close(
+                 _summary_number(meter_summary, "estimated_action_airtime_us"),
+                 float(airtime["canonical_reserved_launched_sum_us"]),
+             ) and
+             _paired_meter_close(
+                 _summary_number(meter_summary, "tagged_secondary_tx_airtime_us"),
+                 float(airtime["measured_secondary_airtime_debited_us"]),
+             ),
+             "paired_value_t2_summary.json: airtime differs from meter summary")
+
+    expected_integrity = {
+        "pending_pair_empty": True,
+        "generated_equals_paired": True,
+        "status_counts_reconcile": True,
+        "launches_equal_settlements": True,
+        "launched_frame_ids_equal_duplicated_frame_ids": True,
+        "meter_reserved_final_within_tolerance": True,
+        "meter_reserved_final_normalized_us": 0,
+        "learned_cost_used_for_token_accounting": False,
+    }
+    integrity = summary.get("integrity")
+    _require(isinstance(integrity, dict) and
+             set(integrity) == set(expected_integrity) | {"meter_reserved_final_raw_us"} and
+             all(integrity.get(key) == value for key, value in expected_integrity.items()),
+             "paired_value_t2_summary.json: integrity evidence differs")
+    _require(all(isinstance(integrity.get(key), bool)
+                 for key in expected_integrity
+                 if key != "meter_reserved_final_normalized_us") and
+             isinstance(integrity.get("meter_reserved_final_normalized_us"), int) and
+             not isinstance(integrity.get("meter_reserved_final_normalized_us"), bool),
+             "paired_value_t2_summary.json: integrity value type differs")
+    raw_reserved = integrity.get("meter_reserved_final_raw_us")
+    _require(isinstance(raw_reserved, (int, float)) and not isinstance(raw_reserved, bool) and
+             math.isfinite(float(raw_reserved)) and
+             abs(float(raw_reserved)) <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+             "paired_value_t2_summary.json: final raw reservation exceeds tolerance")
+    settlement_ids = {
+        _integer(row, "frame_id", "secondary_airtime_settlements.csv")
+        for row in settlements
+    }
+    _require(settlement_ids == evidence["action_frames"],
+             "paired_value_t2_summary.json: settlements do not match actions")
+    _replay_paired_value_t2_meter(
+        evidence["rows"],
+        events,
+        settlements,
+        evidence["action_estimates"],
+        evidence["action_nominals"],
+    )
+    _replay_paired_value_t2_guard(evidence["rows"], events)
+
+
 def _validate_secondary_airtime(
     events: list[dict[str, str]],
     settlements: list[dict[str, str]],
@@ -1990,12 +3756,14 @@ def _validate_secondary_airtime(
     action_nominal_airtimes: dict[int, float] | None = None,
 ) -> None:
     """Reconcile secondary PHY events, reservations, and the run budget."""
+    accounting_close = _paired_close if policy == PAIRED_VALUE_T2_POLICY else _close
+    meter_close = _paired_meter_close if policy == PAIRED_VALUE_T2_POLICY else _close
     _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
              "secondary_airtime_summary.json: missing fields")
     _require(policy in {
         "selective_duplication", "adaptive_airtime_duplication",
         "adaptive_deficit_duplication", "randomized_full_copy_exploration",
-        "full_duplication",
+        PAIRED_VALUE_T2_POLICY, "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
     expected_settlement_nominals = dict(action_nominal_airtimes or {})
     if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
@@ -2035,7 +3803,8 @@ def _validate_secondary_airtime(
              _summary_integer(summary, "measurement_stop_ns") == stop_ns,
              "secondary airtime summary: measurement window mismatch")
     duration_us = (stop_ns - start_ns) / 1000.0
-    _require(_close(_summary_number(summary, "measurement_duration_us"), duration_us),
+    _require(meter_close(
+                 _summary_number(summary, "measurement_duration_us"), duration_us),
              "secondary airtime summary: measurement duration mismatch")
 
     running_total = 0.0
@@ -2071,17 +3840,17 @@ def _validate_secondary_airtime(
         cumulative = _number(
             row, "cumulative_tagged_airtime_us", "secondary_airtime_events.csv"
         )
-        _require(_close(cumulative, running_total),
+        _require(meter_close(cumulative, running_total),
                  "secondary airtime events: cumulative airtime mismatch")
 
     tagged_total = _summary_number(summary, "tagged_secondary_tx_airtime_us")
     _require(_summary_integer(summary, "tagged_ppdu_count") == len(events) and
              _summary_integer(summary, "mixed_ppdu_count") == mixed_count and
-             _close(tagged_total, running_total),
+             meter_close(tagged_total, running_total),
              "secondary airtime events do not reconcile with summary")
-    _require(_close(
+    _require(meter_close(
         _summary_number(summary, "tagged_secondary_tx_airtime_fraction"),
-        tagged_total / duration_us,
+        running_total / duration_us,
     ), "secondary airtime summary: fraction mismatch")
     _require(observed_event_frames <= duplicated_frame_ids,
              "secondary airtime events: unlaunched frame observed")
@@ -2121,9 +3890,15 @@ def _validate_secondary_airtime(
         _require(nominal > 0,
                  "secondary airtime settlements: nonpositive nominal airtime")
         if expected_settlement_nominals:
-            _require(frame_id in expected_settlement_nominals and _close(
-                nominal, expected_settlement_nominals[frame_id]
-            ), "secondary airtime settlements: nominal estimator mismatch")
+            expected_nominal = expected_settlement_nominals.get(frame_id)
+            if policy == PAIRED_VALUE_T2_POLICY and expected_nominal is not None:
+                nominal_matches = nominal == float(format(expected_nominal, ".12g"))
+            else:
+                nominal_matches = expected_nominal is not None and accounting_close(
+                    nominal, expected_nominal
+                )
+            _require(nominal_matches,
+                     "secondary airtime settlements: nominal estimator mismatch")
         settlement_by_frame[frame_id] = {
             "released": released, "measured": measured, "fallback": fallback,
         }
@@ -2138,45 +3913,65 @@ def _validate_secondary_airtime(
 
     reservation_policy = policy in {
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
-        "randomized_full_copy_exploration",
+        "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
     }
     if reservation_policy:
-        if policy != "randomized_full_copy_exploration":
+        if policy not in {"randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY}:
             _require(adaptive_config is not None,
                      "adaptive secondary airtime validation lacks controller config")
         _require(set(settlement_by_frame) == set(action_estimates),
                  "secondary airtime settlements do not match reserved actions")
         _require(observed_event_frames <= set(action_estimates),
                  "secondary airtime events do not match reserved actions")
-        _require(_close(estimate_total, sum(action_estimates.values())),
+        exact_estimate_total = sum(action_estimates.values())
+        _require(meter_close(estimate_total, exact_estimate_total),
                  "secondary airtime summary: action estimates do not sum")
         measured_total = sum(float(item["measured"]) for item in settlement_by_frame.values())
-        _require(_close(measured_total, tagged_total),
+        _require(accounting_close(measured_total, tagged_total),
                  "secondary airtime settlements: measured airtime does not sum")
         for frame_id, estimate in action_estimates.items():
             settlement = settlement_by_frame[frame_id]
             measured = float(settlement["measured"])
             released = float(settlement["released"])
             expected_release = max(0.0, estimate - measured)
-            # These three values are written independently with setprecision(12).
-            # Scale the absolute tolerance to the operands so cancellation near
-            # zero does not turn harmless decimal serialization into a failure.
-            serialization_tolerance = max(
-                1e-9,
-                1e-11 * max(abs(estimate), abs(measured), 1.0),
-            )
-            _require(math.isclose(
-                released,
-                expected_release,
-                rel_tol=1e-9,
-                abs_tol=serialization_tolerance,
-            ),
+            if policy == PAIRED_VALUE_T2_POLICY:
+                settlement_row = next(
+                    row for row in settlements
+                    if _integer(row, "frame_id", "secondary_airtime_settlements.csv")
+                    == frame_id
+                )
+                release_matches = (
+                    measured == float(format(measured, ".12g"))
+                    and released == float(format(released, ".12g"))
+                    and abs(max(estimate - measured, 0.0) - released)
+                    <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+                    + _paired_meter_quantization_us(
+                        settlement_row["measured_airtime_us"]
+                    )
+                    + _paired_meter_quantization_us(
+                        settlement_row["released_airtime_us"]
+                    )
+                )
+            else:
+                # These three values are written independently with
+                # setprecision(12). Preserve the legacy policies' envelope.
+                serialization_tolerance = max(
+                    1e-9,
+                    1e-11 * max(abs(estimate), abs(measured), 1.0),
+                )
+                release_matches = math.isclose(
+                    released,
+                    expected_release,
+                    rel_tol=1e-9,
+                    abs_tol=serialization_tolerance,
+                )
+            _require(release_matches,
                      "secondary airtime settlements: released reservation mismatch")
-        expected_ratio = tagged_total / estimate_total if estimate_total else 0.0
-        _require(_close(ratio, expected_ratio),
+        expected_ratio = running_total / exact_estimate_total if exact_estimate_total else 0.0
+        _require(meter_close(ratio, expected_ratio),
                  "secondary airtime summary: estimate ratio mismatch")
         if policy == "randomized_full_copy_exploration":
-            _require(_close(maximum_debt, 0.0),
+            _require(accounting_close(maximum_debt, 0.0),
                      "secondary airtime summary: randomized policy has budget debt")
             for key in (
                 "budget_fraction", "initial_bucket_capacity_us", "finite_run_budget_us",
@@ -2184,6 +3979,20 @@ def _validate_secondary_airtime(
             ):
                 _require(summary.get(key) is None,
                          f"secondary_airtime_summary.json: {key} must be null")
+        elif policy == PAIRED_VALUE_T2_POLICY:
+            fraction = PAIRED_VALUE_T2_GUARD_FRACTION
+            capacity = PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US
+            finite_budget = fraction * duration_us + capacity
+            _require(meter_close(
+                         _summary_number(summary, "budget_fraction"), fraction) and
+                     meter_close(
+                         _summary_number(summary, "initial_bucket_capacity_us"), capacity) and
+                     meter_close(
+                         _summary_number(summary, "finite_run_budget_us"), finite_budget) and
+                     meter_close(
+                         _summary_number(summary, "budget_excess_us"),
+                         max(0.0, running_total - finite_budget)),
+                     "secondary airtime summary: paired-value finite-run budget mismatch")
         else:
             assert adaptive_config is not None
             object_name = (
@@ -2196,11 +4005,15 @@ def _validate_secondary_airtime(
                 adaptive_config, "initial_bucket_capacity_us", object_name
             )
             finite_budget = fraction * duration_us + capacity
-            _require(_close(_summary_number(summary, "budget_fraction"), fraction) and
-                     _close(_summary_number(summary, "initial_bucket_capacity_us"), capacity) and
-                     _close(_summary_number(summary, "finite_run_budget_us"), finite_budget) and
-                     _close(_summary_number(summary, "budget_excess_us"),
-                            max(0.0, tagged_total - finite_budget)),
+            _require(accounting_close(
+                         _summary_number(summary, "budget_fraction"), fraction) and
+                     accounting_close(
+                         _summary_number(summary, "initial_bucket_capacity_us"), capacity) and
+                     accounting_close(
+                         _summary_number(summary, "finite_run_budget_us"), finite_budget) and
+                     accounting_close(
+                         _summary_number(summary, "budget_excess_us"),
+                         max(0.0, tagged_total - finite_budget)),
                      "secondary airtime summary: finite-run budget mismatch")
     else:
         _require(not settlements and not action_estimates and estimate_total == 0 and ratio == 0 and
@@ -2261,7 +4074,7 @@ def _validate_prediction(
     _require(config.get("policy") in {
         "fixed_link_0", "fixed_link_1", "selective_duplication",
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
-        "randomized_full_copy_exploration",
+        "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
     }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
@@ -2307,8 +4120,9 @@ def _validate_prediction(
     _require(isinstance(oracle_enabled, bool),
              "resolved_config.json: invalid prediction oracle flag")
     randomized_policy = config["policy"] == "randomized_full_copy_exploration"
-    _require(not randomized_policy or event_enabled is False,
-             "randomized paired-link telemetry requires disabled raw event logging")
+    paired_endpoint_policy = randomized_policy or config["policy"] == PAIRED_VALUE_T2_POLICY
+    _require(not paired_endpoint_policy or event_enabled is False,
+             "paired-link telemetry requires disabled raw event logging")
     _require(samples_path.is_file(), "missing core file: prediction_samples.csv")
     _require(polling_path.is_file(), "missing core file: prediction_polling_samples.csv")
     _require(events_path.is_file() == event_enabled,
@@ -2324,13 +4138,13 @@ def _validate_prediction(
     _require(samples, "prediction_samples.csv: no rows")
     _require(all(None not in row for row in samples),
              "prediction_samples.csv: rows exceed the declared schema")
-    copies_per_frame = 2 if randomized_policy else 1
+    copies_per_frame = 2 if paired_endpoint_policy else 1
     _require(len(samples) == len(frames) * len(offsets) * copies_per_frame,
              "prediction_samples.csv: receiver-independent cardinality mismatch")
 
     selected_path = 0 if config["policy"] == "fixed_link_0" else 1
     expected_identities = (
-        {(1, 0), (0, 1)} if randomized_policy else {(selected_path, 0)}
+        {(1, 0), (0, 1)} if paired_endpoint_policy else {(selected_path, 0)}
     )
     frames_by_id = {int(row["frame_id"]): row for row in frames}
     sample_keys: set[tuple[int, int, int, int]] = set()
@@ -2658,7 +4472,7 @@ def _validate_prediction(
             (int(row["path_id"]), int(row["copy_id"])) for row in rows
         } == expected_identities,
                  "prediction_samples.csv: incomplete paired path/copy sample")
-        if randomized_policy:
+        if paired_endpoint_policy:
             primary = next(row for row in rows if row["path_id"] == "1")
             secondary = next(row for row in rows if row["path_id"] == "0")
             for field in (
@@ -3137,6 +4951,8 @@ def validate_run(
     },
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
+    if config.get("policy") == PAIRED_VALUE_T2_POLICY:
+        _validate_paired_value_t2_config(config)
     wifi = config.get("wifi", {})
     max_inflights = int(wifi.get("sta_max_inflights", 1))
     _require(1 <= max_inflights <= 15,
@@ -3417,6 +5233,7 @@ def validate_run(
     action_estimates: dict[int, float] = {}
     action_nominal_airtimes: dict[int, float] = {}
     observed_budget_debt_us = 0.0
+    paired_value_evidence: dict[str, Any] | None = None
     decision_samples: dict[tuple[int, int], dict[str, str]] = {}
     if config["policy"] in {
         "selective_duplication", "adaptive_airtime_duplication",
@@ -3571,11 +5388,44 @@ def validate_run(
         action_estimates, action_nominal_airtimes = _validate_randomized_intervention(
             run_dir, config, run_id, frames, duplicated_frame_ids
         )
+    elif config["policy"] == PAIRED_VALUE_T2_POLICY:
+        decisions_path = run_dir / "paired_value_t2_decisions.csv"
+        controller_summary_path = run_dir / "paired_value_t2_summary.json"
+        _require(decisions_path.is_file(),
+                 "missing core file: paired_value_t2_decisions.csv")
+        _require(controller_summary_path.is_file(),
+                 "missing core file: paired_value_t2_summary.json")
+        paired_value_evidence = _validate_paired_value_t2_decisions(
+            run_dir,
+            run_id,
+            frames,
+            decisions,
+            duplicated_frame_ids,
+        )
+        action_estimates = paired_value_evidence["action_estimates"]
+        action_nominal_airtimes = paired_value_evidence["action_nominals"]
+        observed_budget_debt_us = paired_value_evidence["maximum_observed_debt"]
+        for forbidden in (
+            "selective_duplication_decisions.csv",
+            "adaptive_airtime_decisions.csv",
+            "randomized_intervention_assignments.csv",
+            "randomized_intervention_executions.csv",
+        ):
+            _require(not (run_dir / forbidden).exists(),
+                     f"{forbidden} exists for paired-value policy")
     else:
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for a non-selective policy")
         _require(not (run_dir / "adaptive_airtime_decisions.csv").exists(),
                  "adaptive decision output exists for a non-adaptive policy")
+
+    if config["policy"] != PAIRED_VALUE_T2_POLICY:
+        _require("pairedValueDuplicationT2" not in config,
+                 "resolved_config.json: paired-value object exists for another policy")
+        _require(not (run_dir / "paired_value_t2_decisions.csv").exists(),
+                 "paired-value decisions exist for another policy")
+        _require(not (run_dir / "paired_value_t2_summary.json").exists(),
+                 "paired-value summary exists for another policy")
 
     if config["policy"] != "randomized_full_copy_exploration":
         _require("randomizedIntervention" not in config,
@@ -3618,6 +5468,16 @@ def validate_run(
             config["stream"],
             action_nominal_airtimes,
         )
+        if paired_value_evidence is not None:
+            _validate_paired_value_t2_summary(
+                run_dir,
+                run_id,
+                total,
+                paired_value_evidence,
+                events,
+                settlements,
+                meter_summary,
+            )
     else:
         _require(not (run_dir / "secondary_airtime_events.csv").exists(),
                  "secondary airtime events exist while meter is disabled")
