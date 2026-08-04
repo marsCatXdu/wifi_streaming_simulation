@@ -42,6 +42,13 @@ Consequences for analysis and claims:
   explicitly (for example, deadline-censored latency) and keep it separate
   from the completed-frame P99 estimand.
 
+Current development priority (2026-08-04): do not let EMLSR behavior steer
+policy design or consume iteration effort.  First qualify the frozen policy
+against STR MLO alone, using all-generated-frame deadline-miss rate, mean
+per-run completed-frame P99, and the sender-airtime target.  EMLSR may remain
+a later descriptive/reference arm, but it is not an optimization target and
+must not delay improvements against STR MLO.
+
 Primary evidence:
 
 - `results/primary_tail_t4_remote_a7ac4ae4da42/campaign/analysis.json`
