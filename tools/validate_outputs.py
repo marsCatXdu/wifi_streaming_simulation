@@ -14,7 +14,9 @@ import math
 import pickle
 import re
 import struct
+import time
 from collections import Counter
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -155,6 +157,9 @@ ADAPTIVE_ESTIMATOR_PHY_DATA_RATE_BPS = 68_823_530
 ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES = 50
 ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES = 36
 ADAPTIVE_ESTIMATOR_ADDITIONAL_BYTES_PER_PACKET = 38
+# WifiMpdu::GetSize() adds the frozen QoS data MAC header to each MAC-service
+# packet.  Paired T2 launches only equal-size full-copy P-frame packets.
+PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES = 30
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
     "application_bytes_received", "redundant_bytes", "successful_mpdus",
@@ -3009,6 +3014,7 @@ def _validate_paired_value_t2_decisions(
     action_frames: set[int] = set()
     action_estimates: dict[int, float] = {}
     action_nominals: dict[int, float] = {}
+    action_byte_quanta: dict[int, int] = {}
     learned_evaluated = 0.0
     learned_launched = 0.0
     nominal_launched = 0.0
@@ -3111,6 +3117,7 @@ def _validate_paired_value_t2_decisions(
                  f"{file_name}: canonical estimator metadata differs")
         nominal: float | None = None
         reserved: float | None = None
+        mpdu_bytes: int | None = None
         descriptor_fields = (
             "descriptor_frame_packet_count", "descriptor_packet_count",
             "descriptor_packet_indices", "descriptor_expected_mac_service_bytes",
@@ -3128,6 +3135,14 @@ def _validate_paired_value_t2_decisions(
                      str(expected_service_bytes) and
                      row["descriptor_deadline_time_ns"] == str(deadline_ns),
                      f"{file_name}: canonical descriptor evidence differs")
+            _require(
+                expected_service_bytes % packet_count == 0,
+                f"{file_name}: full-copy packets do not have equal service bytes",
+            )
+            mpdu_bytes = (
+                expected_service_bytes // packet_count
+                + PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES
+            )
             nominal = _number(row, "canonical_nominal_airtime_us", file_name)
             reserved = _number(row, "canonical_reserved_airtime_us", file_name)
             _require(_paired_close(nominal, expected_nominal) and
@@ -3293,12 +3308,14 @@ def _validate_paired_value_t2_decisions(
         if launch_attempted:
             launch_attempted_count += 1
         if launched:
-            assert nominal is not None and reserved is not None and predicted_cost is not None
+            assert (nominal is not None and reserved is not None and
+                    predicted_cost is not None and mpdu_bytes is not None)
             _require(_paired_close(reserved_after, reserved_before + reserved),
                      f"{file_name}: action reservation does not reconcile")
             action_frames.add(frame_id)
             action_estimates[frame_id] = reserved
             action_nominals[frame_id] = nominal
+            action_byte_quanta[frame_id] = mpdu_bytes
             learned_launched += predicted_cost
             nominal_launched += nominal
             reserved_launched += reserved
@@ -3354,6 +3371,7 @@ def _validate_paired_value_t2_decisions(
         "action_frames": action_frames,
         "action_estimates": action_estimates,
         "action_nominals": action_nominals,
+        "action_byte_quanta": action_byte_quanta,
         "learned_evaluated": learned_evaluated,
         "learned_launched": learned_launched,
         "nominal_launched": nominal_launched,
@@ -3435,6 +3453,7 @@ def _validate_paired_value_t2_meter_checkpoints(
     settlement_records: dict[int, dict[str, Any]],
     launches: dict[int, int],
     action_estimates: dict[int, float],
+    action_byte_quanta: dict[int, int] | None = None,
 ) -> None:
     """Prove one latent PPDU split can satisfy every meter checkpoint.
 
@@ -3474,8 +3493,6 @@ def _validate_paired_value_t2_meter_checkpoints(
         return
 
     try:
-        import warnings
-
         import numpy as np
         from scipy.optimize import Bounds, LinearConstraint, milp
     except ImportError as error:
@@ -3483,10 +3500,66 @@ def _validate_paired_value_t2_meter_checkpoints(
             f"paired-value meter replay: cannot load feasibility solver: {error}"
         ) from error
 
+    byte_quantum = 1
+    if action_byte_quanta is not None:
+        _require(
+            set(action_byte_quanta) == set(launches)
+            and len(set(action_byte_quanta.values())) == 1,
+            "paired-value meter replay: MPDU byte quantum differs across actions",
+        )
+        byte_quantum = next(iter(action_byte_quanta.values()))
+        _require(
+            byte_quantum > 0
+            and all(
+                int(event["tagged_bytes"]) % byte_quantum == 0
+                and int(event["tagged_bytes"]) // byte_quantum
+                >= len(event["frame_ids"])
+                for event in event_records
+            ),
+            "paired-value meter replay: tagged bytes violate the MPDU quantum",
+        )
+
+    # Events with the same serialized duration, tagged-byte total, frame set,
+    # and checkpoint visibility are observationally indistinguishable.  Model
+    # their per-frame allocation-unit totals as one group.  Any positive-
+    # integer group allocation can be decomposed into positive per-event
+    # allocations by a transportation construction, so this preserves the
+    # feasible evidence set while removing repeated PPDU variables.
+    event_group_index: dict[tuple[Any, ...], int] = {}
+    event_groups: list[dict[str, Any]] = []
+    for event in event_records:
+        visibility = tuple(
+            int(event["time"]) < int(checkpoint["time"])
+            for checkpoint in checkpoints
+        )
+        key = (
+            event["duration_text"],
+            event["tagged_bytes"],
+            event["frame_ids"],
+            visibility,
+        )
+        group_index = event_group_index.get(key)
+        if group_index is None:
+            group_index = len(event_groups)
+            event_group_index[key] = group_index
+            event_groups.append({
+                "count": 1,
+                "duration": event["duration"],
+                "duration_text": event["duration_text"],
+                "tagged_bytes": event["tagged_bytes"],
+                "frame_ids": event["frame_ids"],
+                "visibility": visibility,
+            })
+        else:
+            event_groups[group_index]["count"] += 1
+
+    # A single-frame group has no latent allocation.  For a shared group,
+    # retain only the first n - 1 integer allocation totals and derive the
+    # final total as count * tagged_units minus their sum.
     byte_edges = [
-        (event_index, frame_id)
-        for event_index, event in enumerate(event_records)
-        for frame_id in event["frame_ids"]
+        (group_index, frame_id)
+        for group_index, group in enumerate(event_groups)
+        for frame_id in group["frame_ids"][:-1]
     ]
     byte_index = {
         edge: index for index, edge in enumerate(byte_edges)
@@ -3505,6 +3578,7 @@ def _validate_paired_value_t2_meter_checkpoints(
     rows: list[Any] = []
     lower_constraints: list[float] = []
     upper_constraints: list[float] = []
+    integer_solver_rows: dict[int, dict[int, Fraction]] = {}
 
     def add_constraint(coefficients: Any, lower: float, upper: float) -> None:
         rows.append(coefficients)
@@ -3513,50 +3587,85 @@ def _validate_paired_value_t2_meter_checkpoints(
 
     variable_lower = np.zeros(variable_count, dtype=np.float64)
     variable_upper = np.full(variable_count, np.inf, dtype=np.float64)
-    for edge_index, (event_index, _) in enumerate(byte_edges):
-        event = event_records[event_index]
-        variable_lower[edge_index] = 1.0
-        variable_upper[edge_index] = float(event["tagged_bytes"])
+    for edge_index, (group_index, _) in enumerate(byte_edges):
+        group = event_groups[group_index]
+        count = int(group["count"])
+        frame_count = len(group["frame_ids"])
+        tagged_units = int(group["tagged_bytes"]) // byte_quantum
+        variable_lower[edge_index] = float(count)
+        variable_upper[edge_index] = float(
+            count * (tagged_units - frame_count + 1)
+        )
 
-    for event_index, event in enumerate(event_records):
+    for group_index, group in enumerate(event_groups):
+        if len(group["frame_ids"]) == 1:
+            continue
         coefficients = np.zeros(variable_count, dtype=np.float64)
-        for frame_id in event["frame_ids"]:
-            coefficients[byte_index[(event_index, frame_id)]] = 1.0
-        tagged_bytes = float(event["tagged_bytes"])
-        add_constraint(coefficients, tagged_bytes, tagged_bytes)
+        for frame_id in group["frame_ids"][:-1]:
+            coefficients[byte_index[(group_index, frame_id)]] = 1.0
+        # Each retained total leaves one allocation unit per contributing
+        # event for its frame.  This does the same for the derived final frame.
+        add_constraint(
+            coefficients,
+            -np.inf,
+            float(
+                group["count"]
+                * (int(group["tagged_bytes"]) // byte_quantum - 1)
+            ),
+        )
 
-    def allocation_expression(event_index: int, frame_id: int) -> tuple[Any, float, float]:
-        """Return center-value C++ allocation coefficients, constant, and error."""
-        event = event_records[event_index]
-        duration = float(event["duration"])
-        tagged_bytes = float(event["tagged_bytes"])
-        frames = event["frame_ids"]
+    def allocation_expression(group_index: int, frame_id: int) -> tuple[Any, float, float]:
+        """Return grouped C++ allocation coefficients, constant, and error."""
+        group = event_groups[group_index]
+        duration = float(group["duration"])
+        tagged_units = float(int(group["tagged_bytes"]) // byte_quantum)
+        frames = group["frame_ids"]
+        count = int(group["count"])
         coefficients = np.zeros(variable_count, dtype=np.float64)
         constant = 0.0
         if frame_id != frames[-1]:
-            coefficients[byte_index[(event_index, frame_id)]] = \
-                duration / tagged_bytes
+            coefficients[byte_index[(group_index, frame_id)]] = \
+                duration / tagged_units
         else:
-            constant = duration
+            constant = count * duration
             for previous_frame in frames[:-1]:
-                coefficients[byte_index[(event_index, previous_frame)]] -= \
-                    duration / tagged_bytes
+                coefficients[byte_index[(group_index, previous_frame)]] -= \
+                    duration / tagged_units
         # The serialized duration hides at most half a 12-digit unit.  Cover
         # that scale error plus the ordered binary64 multiply/sum residual.
         uncertainty = (
-            _paired_meter_quantization_us(str(event["duration_text"]))
-            + (len(frames) + 2) * math.ulp(duration)
+            count * (
+                _paired_meter_quantization_us(str(group["duration_text"]))
+                + (len(frames) + 2) * math.ulp(duration)
+            )
         )
         return coefficients, constant, uncertainty
+
+    def rational_allocation_expression(
+        group_index: int,
+        frame_id: int,
+    ) -> dict[int, Fraction]:
+        """Return exact center coefficients from serialized event durations."""
+        group = event_groups[group_index]
+        frames = group["frame_ids"]
+        tagged_units = int(group["tagged_bytes"]) // byte_quantum
+        rate = Fraction(str(group["duration_text"])) / tagged_units
+        coefficients: dict[int, Fraction] = {}
+        if frame_id != frames[-1]:
+            coefficients[byte_index[(group_index, frame_id)]] = rate
+        else:
+            for previous_frame in frames[:-1]:
+                coefficients[byte_index[(group_index, previous_frame)]] = -rate
+        return coefficients
 
     for frame_id, settlement in settlement_records.items():
         coefficients = np.zeros(variable_count, dtype=np.float64)
         constant = 0.0
         allocation_uncertainty = 0.0
-        for event_index, _ in enumerate(event_records):
-            if (event_index, frame_id) in byte_index:
+        for group_index, group in enumerate(event_groups):
+            if frame_id in group["frame_ids"]:
                 event_coefficients, event_constant, event_uncertainty = \
-                    allocation_expression(event_index, frame_id)
+                    allocation_expression(group_index, frame_id)
                 coefficients += event_coefficients
                 constant += event_constant
                 allocation_uncertainty += event_uncertainty
@@ -3564,11 +3673,29 @@ def _validate_paired_value_t2_meter_checkpoints(
         quantization = _paired_meter_quantization_us(
             str(settlement["measured_text"])
         )
+        row_index = len(rows)
         add_constraint(
             coefficients,
             measured - quantization - allocation_uncertainty - constant,
             measured + quantization + allocation_uncertainty - constant,
         )
+        rational_coefficients: dict[int, Fraction] = {}
+        for group_index, group in enumerate(event_groups):
+            if frame_id not in group["frame_ids"]:
+                continue
+            for variable_index, value in rational_allocation_expression(
+                group_index, frame_id
+            ).items():
+                rational_coefficients[variable_index] = (
+                    rational_coefficients.get(variable_index, Fraction()) + value
+                )
+        rational_coefficients = {
+            variable_index: value
+            for variable_index, value in rational_coefficients.items()
+            if value
+        }
+        if rational_coefficients:
+            integer_solver_rows[row_index] = rational_coefficients
 
     pairs_by_checkpoint: dict[int, list[int]] = {}
     pairs_by_frame: dict[int, list[int]] = {}
@@ -3579,11 +3706,11 @@ def _validate_paired_value_t2_meter_checkpoints(
         cumulative = np.zeros(variable_count, dtype=np.float64)
         cumulative_constant = 0.0
         cumulative_uncertainty = 0.0
-        for event_index, event in enumerate(event_records):
-            if (int(event["time"]) < int(checkpoint["time"])
-                    and (event_index, frame_id) in byte_index):
+        for group_index, group in enumerate(event_groups):
+            if (group["visibility"][checkpoint_index]
+                    and frame_id in group["frame_ids"]):
                 event_coefficients, event_constant, event_uncertainty = \
-                    allocation_expression(event_index, frame_id)
+                    allocation_expression(group_index, frame_id)
                 cumulative += event_coefficients
                 cumulative_constant += event_constant
                 cumulative_uncertainty += event_uncertainty
@@ -3664,38 +3791,179 @@ def _validate_paired_value_t2_meter_checkpoints(
     integrality = np.zeros(variable_count, dtype=np.uint8)
     integrality[:byte_count] = 1
     integrality[unsaturated_start:] = 1
+    if variable_count == 0:
+        lower_array = np.asarray(lower_constraints, dtype=np.float64)
+        upper_array = np.asarray(upper_constraints, dtype=np.float64)
+        tolerance = PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+        _require(
+            bool(np.all(lower_array <= tolerance))
+            and bool(np.all(upper_array >= -tolerance)),
+            "paired-value fixed event allocation violates the accounting envelope",
+        )
+        return
+    lower_array = np.asarray(lower_constraints, dtype=np.float64)
+    upper_array = np.asarray(upper_constraints, dtype=np.float64)
+    solver_matrix = matrix.copy()
+    solver_lower = lower_array.copy()
+    solver_upper = upper_array.copy()
+    # A binary64 MILP cannot reliably distinguish the serialized settlement
+    # envelopes (around 1e-9 us) from feasibility tolerance when the byte
+    # coefficients are around 1e-1 us.  Convert those rows to equivalent
+    # integer lattices using the exact decimal event durations.  Bounds are
+    # rounded inward to attainable integer activities.  The eventual witness
+    # is still replayed against the original floating-point rows below.
+    for row_index, rational_coefficients in integer_solver_rows.items():
+        denominator = math.lcm(*(
+            coefficient.denominator
+            for coefficient in rational_coefficients.values()
+        ))
+        integer_coefficients = {
+            variable_index: int(coefficient * denominator)
+            for variable_index, coefficient in rational_coefficients.items()
+        }
+        divisor = math.gcd(*(
+            abs(coefficient) for coefficient in integer_coefficients.values()
+        ))
+        scaled_lower = math.nextafter(
+            lower_array[row_index] * denominator, -math.inf
+        )
+        scaled_upper = math.nextafter(
+            upper_array[row_index] * denominator, math.inf
+        )
+        attainable_lower = math.ceil(scaled_lower / divisor)
+        attainable_upper = math.floor(scaled_upper / divisor)
+        _require(
+            attainable_lower <= attainable_upper,
+            "paired-value settlement has no feasible event allocation",
+        )
+        normalized = np.zeros(variable_count, dtype=np.float64)
+        for variable_index, coefficient in integer_coefficients.items():
+            normalized[variable_index] = coefficient // divisor
+        maximum_activity = max(
+            abs(attainable_lower),
+            abs(attainable_upper),
+            *(abs(int(value)) for value in normalized),
+        )
+        _require(
+            maximum_activity <= 2**53,
+            "paired-value settlement integer normalization exceeds binary64",
+        )
+        solver_matrix[row_index] = normalized
+        solver_lower[row_index] = float(attainable_lower)
+        solver_upper[row_index] = float(attainable_upper)
+    # Every nonzero row joins all variables that it touches.  Solve the
+    # resulting independent components separately: PPDU/frame clusters do not
+    # share latent byte totals, and forcing them into one MILP made HiGHS 1.2
+    # spend its time on irrelevant cross-products.  Disable presolve because
+    # that version can incorrectly call exact integer-lattice rows infeasible.
+    parent = list(range(variable_count))
+
+    def find_root(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def join(left: int, right: int) -> None:
+        left_root = find_root(left)
+        right_root = find_root(right)
+        if left_root != right_root:
+            parent[right_root] = left_root
+
+    row_variables: list[Any] = []
+    for row in solver_matrix:
+        indices = np.flatnonzero(row)
+        row_variables.append(indices)
+        for index in indices[1:]:
+            join(int(indices[0]), int(index))
+
+    component_variables: dict[int, list[int]] = {}
+    for variable_index in range(variable_count):
+        component_variables.setdefault(find_root(variable_index), []).append(
+            variable_index
+        )
+    component_rows: dict[int, list[int]] = {
+        root: [] for root in component_variables
+    }
+    tolerance = PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+    for row_index, indices in enumerate(row_variables):
+        if len(indices) == 0:
+            _require(
+                solver_lower[row_index] <= tolerance
+                and solver_upper[row_index] >= -tolerance,
+                "paired-value fixed event allocation violates the accounting envelope",
+            )
+            continue
+        component_rows[find_root(int(indices[0]))].append(row_index)
+
+    witness = np.zeros(variable_count, dtype=np.float64)
+    solver_started = time.monotonic()
     try:
-        # scipy forwards this supported HiGHS option even though its local
-        # option whitelist does not yet name it.
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="Unrecognized options detected:.*mip_feasibility_tolerance",
-                category=RuntimeWarning,
+        for root, variable_indices_list in component_variables.items():
+            variable_indices = np.asarray(variable_indices_list, dtype=np.int64)
+            row_indices = np.asarray(component_rows[root], dtype=np.int64)
+            if len(row_indices) == 0:
+                witness[variable_indices] = variable_lower[variable_indices]
+                continue
+            component_matrix = solver_matrix[np.ix_(
+                row_indices, variable_indices
+            )].copy()
+            component_lower = solver_lower[row_indices].copy()
+            component_upper = solver_upper[row_indices].copy()
+            # Keep coefficients near unity and finite right-hand sides near
+            # 1e5.  Integer-lattice rows retain a unit step well above HiGHS'
+            # primal tolerance for the frozen paired-T2 evidence ranges.
+            for component_row in range(len(row_indices)):
+                scale = max(
+                    float(np.max(np.abs(component_matrix[component_row]))),
+                    1.0,
+                )
+                if math.isfinite(component_lower[component_row]):
+                    scale = max(
+                        scale, abs(component_lower[component_row]) / 100_000.0
+                    )
+                if math.isfinite(component_upper[component_row]):
+                    scale = max(
+                        scale, abs(component_upper[component_row]) / 100_000.0
+                    )
+                component_matrix[component_row] /= scale
+                if math.isfinite(component_lower[component_row]):
+                    component_lower[component_row] /= scale
+                if math.isfinite(component_upper[component_row]):
+                    component_upper[component_row] /= scale
+            remaining_time = 30.0 - (time.monotonic() - solver_started)
+            _require(
+                remaining_time > 0,
+                "paired-value reservation checkpoint feasibility timed out",
             )
             result = milp(
-                np.zeros(variable_count, dtype=np.float64),
-                integrality=integrality,
-                bounds=Bounds(variable_lower, variable_upper),
+                np.zeros(len(variable_indices), dtype=np.float64),
+                integrality=integrality[variable_indices],
+                bounds=Bounds(
+                    variable_lower[variable_indices],
+                    variable_upper[variable_indices],
+                ),
                 constraints=LinearConstraint(
-                    matrix,
-                    np.asarray(lower_constraints, dtype=np.float64),
-                    np.asarray(upper_constraints, dtype=np.float64),
+                    component_matrix,
+                    component_lower,
+                    component_upper,
                 ),
                 options={
-                    "presolve": True,
-                    "time_limit": 30.0,
+                    "presolve": False,
+                    "time_limit": remaining_time,
                     "mip_rel_gap": 0.0,
-                    "mip_feasibility_tolerance": 1e-9,
                 },
             )
+            _require(
+                result.success and result.x is not None,
+                "paired-value reservation checkpoints have no feasible "
+                "event allocation",
+            )
+            witness[variable_indices] = result.x
     except (TypeError, ValueError, FloatingPointError) as error:
         raise ValidationError(
             f"paired-value meter replay: feasibility solver failed: {error}"
         ) from error
-    _require(result.success and result.x is not None,
-             "paired-value reservation checkpoints have no feasible event allocation")
-    witness = np.asarray(result.x, dtype=np.float64).copy()
     integer_indices = np.flatnonzero(integrality)
     rounded = np.rint(witness[integer_indices])
     # HiGHS may return an integer-feasible solution with visible postsolve
@@ -3711,19 +3979,17 @@ def _validate_paired_value_t2_meter_checkpoints(
     for pair_index, (checkpoint_index, frame_id) in enumerate(checkpoint_pairs):
         checkpoint = checkpoints[checkpoint_index]
         cumulative = 0.0
-        for event_index, event in enumerate(event_records):
-            if (int(event["time"]) < int(checkpoint["time"])
-                    and (event_index, frame_id) in byte_index):
+        for group_index, group in enumerate(event_groups):
+            if (group["visibility"][checkpoint_index]
+                    and frame_id in group["frame_ids"]):
                 coefficients, constant, _ = allocation_expression(
-                    event_index, frame_id
+                    group_index, frame_id
                 )
                 cumulative += float(coefficients @ witness) + constant
         reservation = action_estimates[frame_id]
         witness[remaining_start + pair_index] = max(reservation - cumulative, 0.0)
         witness[unsaturated_start + pair_index] = float(cumulative <= reservation)
     activities = matrix @ witness
-    lower_array = np.asarray(lower_constraints, dtype=np.float64)
-    upper_array = np.asarray(upper_constraints, dtype=np.float64)
     tolerance = PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
     lower_violation = float(np.max(np.maximum(lower_array - activities, 0.0)))
     upper_violation = float(np.max(np.maximum(activities - upper_array, 0.0)))
@@ -3747,6 +4013,7 @@ def _replay_paired_value_t2_meter(
     settlements: list[dict[str, str]],
     action_estimates: dict[int, float],
     action_nominals: dict[int, float],
+    action_byte_quanta: dict[int, int] | None = None,
 ) -> None:
     """Reconstruct paired action causality and outstanding meter reservations."""
     decision_file = "paired_value_t2_decisions.csv"
@@ -3817,6 +4084,7 @@ def _replay_paired_value_t2_meter(
         settlement_records,
         launches,
         action_estimates,
+        action_byte_quanta,
     )
     for frame_id, record in settlement_records.items():
         measured_text = str(record["measured_text"])
@@ -4130,6 +4398,7 @@ def _validate_paired_value_t2_summary(
         settlements,
         evidence["action_estimates"],
         evidence["action_nominals"],
+        evidence["action_byte_quanta"],
     )
     _replay_paired_value_t2_guard(evidence["rows"], events)
 

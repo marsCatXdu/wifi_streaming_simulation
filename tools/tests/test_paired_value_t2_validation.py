@@ -603,6 +603,7 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         temporary, fixture = self.fixture(action=True)
         with temporary:
             evidence = fixture.validate_decisions()
+            self.assertEqual(evidence["action_byte_quanta"], {8: 1316})
             meter_summary = fixture.write_summary(evidence)
             _validate_paired_value_t2_summary(
                 fixture.root,
@@ -998,9 +999,22 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         ]
         estimates = {9: reservation, 10: reservation}
         nominals = {9: 1000.0, 10: 1000.0}
+        byte_quanta = {9: 1316, 10: 1316}
         _replay_paired_value_t2_meter(
-            decisions, events, settlements, estimates, nominals
+            decisions, events, settlements, estimates, nominals, byte_quanta
         )
+
+        invalid_quantum = copy.deepcopy(events)
+        invalid_quantum[1]["tagged_mpdu_bytes"] = "26321"
+        with self.assertRaisesRegex(ValidationError, "MPDU quantum"):
+            _replay_paired_value_t2_meter(
+                decisions,
+                invalid_quantum,
+                settlements,
+                estimates,
+                nominals,
+                byte_quanta,
+            )
 
         inconsistent = copy.deepcopy(decisions)
         inconsistent[2]["meter_reserved_before_us"] = repr(after_shared + 1.0)
@@ -1009,7 +1023,12 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             ValidationError, "no feasible event allocation|witness violates"
         ):
             _replay_paired_value_t2_meter(
-                inconsistent, events, settlements, estimates, nominals
+                inconsistent,
+                events,
+                settlements,
+                estimates,
+                nominals,
+                byte_quanta,
             )
 
     def test_requires_integer_ppdu_byte_allocations(self) -> None:
@@ -1116,7 +1135,6 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             result = original_milp(*args, **kwargs)
             result.x = result.x.copy()
             result.x[0] += 2.6e-7
-            result.x[1] -= 2.6e-7
             return result
 
         with mock.patch("scipy.optimize.milp", side_effect=represented_with_residual):
@@ -1128,7 +1146,6 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             result = original_milp(*args, **kwargs)
             result.x = result.x.copy()
             result.x[0] += 0.51
-            result.x[1] -= 0.51
             return result
 
         with mock.patch("scipy.optimize.milp", side_effect=represented_with_wrong_rounding):
