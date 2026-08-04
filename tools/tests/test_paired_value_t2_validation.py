@@ -556,8 +556,7 @@ class PairedValueT2Fixture:
                 "emergency_score_threshold_float32":
                     PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
                 "emergency_score_threshold_float32_bits_hex": "0x391d4952",
-                "emergency_maximum_debt_us":
-                    PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+                "emergency_maximum_debt_us": 60_000,
             })
             summary["counts"].update({
                 "strict_guard_admitted": evidence["strict_guard_admitted"],

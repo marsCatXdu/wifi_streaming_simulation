@@ -515,9 +515,11 @@ PAIRED_VALUE_T2_SCORE_AWARE_CONFIG = {
     "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
     "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
     "admission_profile_id": "score_aware_emergency_v2",
-    "emergency_score_threshold_float32": PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+    # resolved_config.json uses the common 12-significant-digit writer; the
+    # decision and controller-summary evidence retain max_digits10.
+    "emergency_score_threshold_float32": 0.000150000007125,
     "emergency_score_threshold_float32_bits_hex": "0x391d4952",
-    "emergency_maximum_debt_us": PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+    "emergency_maximum_debt_us": 60_000,
 }
 PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "enabled": True,
@@ -2373,6 +2375,22 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
              _canonical_json_sha256(profile["resolved_config"],
                                     "frozen paired config"),
              "resolved_config.json: pairedValueDuplicationT2 differs from contract")
+    if profile["score_aware"]:
+        configured_emergency_threshold = paired.get(
+            "emergency_score_threshold_float32"
+        )
+        _require(
+            isinstance(configured_emergency_threshold, (int, float))
+            and not isinstance(configured_emergency_threshold, bool)
+            and struct.pack(
+                ">f",
+                _float32(
+                    float(configured_emergency_threshold),
+                    "paired-value resolved emergency threshold",
+                ),
+            ) == PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big"),
+            "resolved_config.json: emergency float32 threshold differs",
+        )
     prediction = config.get("predictionTelemetry")
     _require(isinstance(prediction, dict) and
              _canonical_json_sha256(prediction, "predictionTelemetry") ==
@@ -3949,8 +3967,7 @@ def _validate_paired_value_t2_summary(
             "emergency_score_threshold_float32":
                 PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
             "emergency_score_threshold_float32_bits_hex": "0x391d4952",
-            "emergency_maximum_debt_us":
-                PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+            "emergency_maximum_debt_us": 60_000,
         })
     for key, expected in (
         ("telemetry", expected_telemetry),
