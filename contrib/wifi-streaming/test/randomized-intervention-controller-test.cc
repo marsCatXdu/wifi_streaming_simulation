@@ -207,7 +207,7 @@ class RandomizedInterventionBehaviorTestCase : public TestCase
 {
   public:
     RandomizedInterventionBehaviorTestCase()
-        : TestCase("Randomized intervention executes paired T2/T4 assignments exactly once")
+        : TestCase("Randomized intervention executes paired T2 and T4 assignments exactly once")
     {
     }
 
