@@ -380,6 +380,17 @@ PAIRED_VALUE_T2_CONTRACT_PATH = (
     PAIRED_VALUE_T2_REPOSITORY_ROOT
     / "experiments/model-selection/paired-value-duplication-t2-runtime-v1.json"
 )
+PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID = (
+    "paired-value-duplication-t2-score-aware-emergency-v2"
+)
+PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256 = (
+    "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+)
+PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "paired-value-duplication-t2-score-aware-emergency-v2.json"
+)
 PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH = (
     Path(__file__).resolve().parent / "analyze_primary_tail_t4_campaign.py"
 )
@@ -411,6 +422,11 @@ PAIRED_VALUE_T2_MEASUREMENT_STOP_NS = 61_000_000_000
 PAIRED_VALUE_T2_GUARD_FRACTION = 0.006
 PAIRED_VALUE_T2_GUARD_CAPACITY_US = 60_000.0
 PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US = 12_000.0
+PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS = 0x391D4952
+PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD = struct.unpack(
+    ">f", PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+)[0]
+PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US = 60_000.0
 
 PAIRED_VALUE_T2_DECISION_COLUMNS = (
     "schema_version", "run_id", "frame_id", "policy", "decision_status",
@@ -440,6 +456,12 @@ PAIRED_VALUE_T2_DECISION_COLUMNS = (
     "guard_admitted", "launch_attempted", "secondary_launched",
     "guard_balance_after_us", "meter_reserved_after_us", "guard_available_after_us",
     "guard_debt_after_us", "learned_cost_token_accounting",
+)
+PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX = (
+    "admission_profile_id", "strict_guard_admitted",
+    "emergency_score_threshold_float32", "passes_emergency_score_threshold",
+    "emergency_admission_considered", "emergency_maximum_debt_us",
+    "emergency_admitted", "admission_tier",
 )
 PAIRED_VALUE_T2_STATUSES = (
     "outside_decision_window", "history_warmup", "frame_type_restricted",
@@ -485,6 +507,17 @@ PAIRED_VALUE_T2_CONFIG = {
     "budget_fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
     "budget_max_horizon_us": 10_000_000,
     "budget_initial_horizon_us": 2_000_000,
+}
+PAIRED_VALUE_T2_SCORE_AWARE_CONFIG = {
+    **PAIRED_VALUE_T2_CONFIG,
+    "csv_schema_version": 2,
+    "summary_schema_version": 2,
+    "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
+    "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+    "admission_profile_id": "score_aware_emergency_v2",
+    "emergency_score_threshold_float32": PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+    "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+    "emergency_maximum_debt_us": PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
 }
 PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "enabled": True,
@@ -2283,11 +2316,44 @@ def _validate_paired_value_t2_source_files() -> None:
                  f"paired-value runtime contract: source drifted {relative_path}")
 
 
-def _validate_paired_value_t2_config(config: dict[str, Any]) -> None:
+def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     """Validate the frozen resolved configuration and source closure."""
+    paired = config.get("pairedValueDuplicationT2")
+    _require(isinstance(paired, dict),
+             "resolved_config.json: pairedValueDuplicationT2 is missing")
+    runtime_id = paired.get("runtime_contract_id")
+    if runtime_id == PAIRED_VALUE_T2_CONTRACT_ID:
+        profile = {
+            "score_aware": False,
+            "decision_schema_version": 1,
+            "summary_schema_version": 1,
+            "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_CONTRACT_SHA256,
+            "runtime_contract_path": PAIRED_VALUE_T2_CONTRACT_PATH,
+            "resolved_config": PAIRED_VALUE_T2_CONFIG,
+            "decision_columns": PAIRED_VALUE_T2_DECISION_COLUMNS,
+        }
+    elif runtime_id == PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID:
+        profile = {
+            "score_aware": True,
+            "decision_schema_version": 2,
+            "summary_schema_version": 2,
+            "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+            "runtime_contract_path": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_PATH,
+            "resolved_config": PAIRED_VALUE_T2_SCORE_AWARE_CONFIG,
+            "decision_columns": (
+                PAIRED_VALUE_T2_DECISION_COLUMNS
+                + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+            ),
+        }
+    else:
+        raise ValidationError(
+            "resolved_config.json: unsupported paired-value runtime contract"
+        )
     _require(
-        _sha256_file(PAIRED_VALUE_T2_CONTRACT_PATH, "paired-value runtime contract")
-        == PAIRED_VALUE_T2_CONTRACT_SHA256,
+        _sha256_file(profile["runtime_contract_path"], "paired-value runtime contract")
+        == profile["runtime_contract_sha256"],
         "paired-value runtime contract: committed bytes differ from frozen SHA-256",
     )
     _require(
@@ -2302,10 +2368,10 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> None:
     _require(config.get("environment") == "unchanged_neutral_mixed4x4",
              "resolved_config.json: paired-value environment identity mismatch")
 
-    paired = config.get("pairedValueDuplicationT2")
     _require(isinstance(paired, dict) and
              _canonical_json_sha256(paired, "pairedValueDuplicationT2") ==
-             _canonical_json_sha256(PAIRED_VALUE_T2_CONFIG, "frozen paired config"),
+             _canonical_json_sha256(profile["resolved_config"],
+                                    "frozen paired config"),
              "resolved_config.json: pairedValueDuplicationT2 differs from contract")
     prediction = config.get("predictionTelemetry")
     _require(isinstance(prediction, dict) and
@@ -2354,6 +2420,7 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> None:
         == PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256,
         "resolved_config.json: paired-value topology Wi-Fi projection differs",
     )
+    return profile
 
 
 def _paired_value_t2_model_replay_context() -> dict[str, Any]:
@@ -2890,13 +2957,23 @@ def _validate_paired_value_t2_decisions(
     frames: list[dict[str, str]],
     policy_decisions: list[dict[str, str]],
     duplicated_frame_ids: set[int],
+    profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate and reconstruct every frozen paired-value decision."""
+    if profile is None:
+        profile = {
+            "score_aware": False,
+            "decision_schema_version": 1,
+            "summary_schema_version": 1,
+            "runtime_contract_id": PAIRED_VALUE_T2_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_CONTRACT_SHA256,
+            "decision_columns": PAIRED_VALUE_T2_DECISION_COLUMNS,
+        }
     file_name = "paired_value_t2_decisions.csv"
     rows = _csv(
         run_dir / file_name,
-        set(PAIRED_VALUE_T2_DECISION_COLUMNS),
-        ordered_columns=PAIRED_VALUE_T2_DECISION_COLUMNS,
+        set(profile["decision_columns"]),
+        ordered_columns=profile["decision_columns"],
     )
     frame_ids = [_integer(frame, "frame_id", "frames.csv") for frame in frames]
     expected_frame_ids = list(range(len(frames)))
@@ -2920,6 +2997,10 @@ def _validate_paired_value_t2_decisions(
     reserved_launched = 0.0
     score_passed = 0
     launch_attempted_count = 0
+    strict_guard_admitted_count = 0
+    emergency_score_passed_count = 0
+    emergency_admission_considered_count = 0
+    emergency_admitted_count = 0
     maximum_observed_debt = 0.0
     previous_meter_reserved_after: float | None = None
     model_replay_records: list[dict[str, Any]] = []
@@ -2935,7 +3016,8 @@ def _validate_paired_value_t2_decisions(
         frame = frames_by_id[frame_id]
         primary = primary_samples[frame_id]
         poll = primary_polling[frame_id]
-        _require(_integer(row, "schema_version", file_name) == 1 and
+        _require(_integer(row, "schema_version", file_name) ==
+                 profile["decision_schema_version"] and
                  row["run_id"] == run_id and
                  all(row[key] == value for key, value in PAIRED_VALUE_T2_MODEL_METADATA.items()),
                  f"{file_name}: fixed schema, policy, or model metadata differs")
@@ -3041,6 +3123,7 @@ def _validate_paired_value_t2_decisions(
         _require(feature_evaluated == descriptor_available,
                  f"{file_name}: model evaluation bypassed ordered gates")
         passes: bool | None
+        observed_score: float | None = None
         predicted_cost: float | None = None
         if feature_evaluated:
             values = {key: _signed_number(row, key, file_name)
@@ -3130,8 +3213,62 @@ def _validate_paired_value_t2_decisions(
         launched = _flag(row, "secondary_launched", file_name)
         _require(considered == (passes is True),
                  f"{file_name}: guard admission gate order differs")
-        expected_admitted = bool(considered and reserved is not None and
-                                 reserved <= available_before)
+        strict_admitted = bool(considered and reserved is not None and
+                               reserved <= available_before)
+        emergency_admitted = False
+        if profile["score_aware"]:
+            serialized_emergency_threshold = _number(
+                row, "emergency_score_threshold_float32", file_name
+            )
+            _require(
+                row["admission_profile_id"] == "score_aware_emergency_v2"
+                and struct.pack(
+                    ">f", _float32(serialized_emergency_threshold, file_name)
+                ) == PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD_BITS.to_bytes(4, "big")
+                and _paired_close(
+                    _number(row, "emergency_maximum_debt_us", file_name),
+                    PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+                ),
+                f"{file_name}: emergency admission metadata differs",
+            )
+            expected_emergency_score_pass = bool(
+                considered
+                and not strict_admitted
+                and observed_score is not None
+                and observed_score >= PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+            )
+            observed_emergency_score_pass = _flag(
+                row, "passes_emergency_score_threshold", file_name
+            )
+            emergency_considered = _flag(
+                row, "emergency_admission_considered", file_name
+            )
+            emergency_admitted = bool(
+                expected_emergency_score_pass
+                and reserved is not None
+                and reserved <= available_before + PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US
+            )
+            observed_emergency_admitted = _flag(
+                row, "emergency_admitted", file_name
+            )
+            expected_tier = (
+                "strict" if strict_admitted
+                else "emergency" if emergency_admitted
+                else "none"
+            )
+            _require(
+                _flag(row, "strict_guard_admitted", file_name) == strict_admitted
+                and observed_emergency_score_pass == expected_emergency_score_pass
+                and emergency_considered == expected_emergency_score_pass
+                and observed_emergency_admitted == emergency_admitted
+                and row["admission_tier"] == expected_tier,
+                f"{file_name}: emergency admission differs from reconstructed decision",
+            )
+            strict_guard_admitted_count += int(strict_admitted)
+            emergency_score_passed_count += int(expected_emergency_score_pass)
+            emergency_admission_considered_count += int(emergency_considered)
+            emergency_admitted_count += int(emergency_admitted)
+        expected_admitted = strict_admitted or emergency_admitted
         _require(admitted == expected_admitted and launch_attempted == admitted and
                  (launch_attempted or not launched),
                  f"{file_name}: guard or launch flags differ from reconstructed decision")
@@ -3205,7 +3342,12 @@ def _validate_paired_value_t2_decisions(
         "reserved_launched": reserved_launched,
         "score_passed": score_passed,
         "launch_attempted": launch_attempted_count,
+        "strict_guard_admitted": strict_guard_admitted_count,
+        "emergency_score_passed": emergency_score_passed_count,
+        "emergency_admission_considered": emergency_admission_considered_count,
+        "emergency_admitted": emergency_admitted_count,
         "maximum_observed_debt": maximum_observed_debt,
+        "profile": profile,
     }
 
 
@@ -3684,6 +3826,7 @@ def _validate_paired_value_t2_summary(
     meter_summary: dict[str, Any],
 ) -> None:
     """Validate exact controller summary keys and reconstruct every total."""
+    profile = evidence["profile"]
     summary = _json(run_dir / "paired_value_t2_summary.json")
     top_keys = {
         "schema_version", "run_id", "policy", "runtime_contract_id",
@@ -3694,10 +3837,12 @@ def _validate_paired_value_t2_summary(
              "paired_value_t2_summary.json: top-level key set differs")
     _require(isinstance(summary.get("schema_version"), int) and
              not isinstance(summary.get("schema_version"), bool) and
-             summary.get("schema_version") == 1 and summary.get("run_id") == run_id and
+             summary.get("schema_version") == profile["summary_schema_version"] and
+             summary.get("run_id") == run_id and
              summary.get("policy") == PAIRED_VALUE_T2_POLICY and
-             summary.get("runtime_contract_id") == PAIRED_VALUE_T2_CONTRACT_ID and
-             summary.get("runtime_contract_sha256") == PAIRED_VALUE_T2_CONTRACT_SHA256,
+             summary.get("runtime_contract_id") == profile["runtime_contract_id"] and
+             summary.get("runtime_contract_sha256") ==
+             profile["runtime_contract_sha256"],
              "paired_value_t2_summary.json: scalar identity differs")
     expected_sources = {
         "frozen_selection": {
@@ -3798,6 +3943,15 @@ def _validate_paired_value_t2_summary(
         "initialization_time_ns": PAIRED_VALUE_T2_DECISION_START_NS,
         "accounting_absolute_tolerance_us": PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
     }
+    if profile["score_aware"]:
+        expected_guard.update({
+            "admission_profile_id": "score_aware_emergency_v2",
+            "emergency_score_threshold_float32":
+                PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+            "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+            "emergency_maximum_debt_us":
+                PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+        })
     for key, expected in (
         ("telemetry", expected_telemetry),
         ("decision_window", expected_window),
@@ -3814,6 +3968,13 @@ def _validate_paired_value_t2_summary(
         "feature_evaluated", "score_threshold_passed", "launch_attempted",
         "secondary_launched", "secondary_settled",
     }
+    if profile["score_aware"]:
+        count_keys.update({
+            "strict_guard_admitted",
+            "emergency_score_threshold_passed",
+            "emergency_admission_considered",
+            "emergency_admitted",
+        })
     # ACTION is serialized as secondary_launched, not as a separate count key.
     counts = summary.get("counts")
     _require(isinstance(counts, dict) and set(counts) == count_keys,
@@ -3842,6 +4003,14 @@ def _validate_paired_value_t2_summary(
         "secondary_launched": len(evidence["action_frames"]),
         "secondary_settled": len(settlements),
     }
+    if profile["score_aware"]:
+        expected_counts.update({
+            "strict_guard_admitted": evidence["strict_guard_admitted"],
+            "emergency_score_threshold_passed": evidence["emergency_score_passed"],
+            "emergency_admission_considered":
+                evidence["emergency_admission_considered"],
+            "emergency_admitted": evidence["emergency_admitted"],
+        })
     _require(counts == expected_counts,
              "paired_value_t2_summary.json: counts differ from reconstructed rows")
     _require(frame_count == sum(status_counts[status]
@@ -3853,6 +4022,9 @@ def _validate_paired_value_t2_summary(
              status_counts["launch_rejected"] + status_counts["action"] and
              evidence["launch_attempted"] ==
              status_counts["launch_rejected"] + status_counts["action"] and
+             (not profile["score_aware"] or
+              evidence["strict_guard_admitted"] + evidence["emergency_admitted"] ==
+              evidence["launch_attempted"]) and
              len(evidence["action_frames"]) == status_counts["action"] == len(settlements),
              "paired_value_t2_summary.json: reconstructed counts do not reconcile")
 
@@ -3909,6 +4081,10 @@ def _validate_paired_value_t2_summary(
         "meter_reserved_final_normalized_us": 0,
         "learned_cost_used_for_token_accounting": False,
     }
+    if profile["score_aware"]:
+        expected_integrity[
+            "strict_plus_emergency_admitted_equals_launch_attempted"
+        ] = True
     integrity = summary.get("integrity")
     _require(isinstance(integrity, dict) and
              set(integrity) == set(expected_integrity) | {"meter_reserved_final_raw_us"} and
@@ -5153,8 +5329,9 @@ def validate_run(
     },
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
+    paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
-        _validate_paired_value_t2_config(config)
+        paired_value_profile = _validate_paired_value_t2_config(config)
     wifi = config.get("wifi", {})
     max_inflights = int(wifi.get("sta_max_inflights", 1))
     _require(1 <= max_inflights <= 15,
@@ -5591,6 +5768,7 @@ def validate_run(
             run_dir, config, run_id, frames, duplicated_frame_ids
         )
     elif config["policy"] == PAIRED_VALUE_T2_POLICY:
+        assert paired_value_profile is not None
         decisions_path = run_dir / "paired_value_t2_decisions.csv"
         controller_summary_path = run_dir / "paired_value_t2_summary.json"
         _require(decisions_path.is_file(),
@@ -5603,6 +5781,7 @@ def validate_run(
             frames,
             decisions,
             duplicated_frame_ids,
+            paired_value_profile,
         )
         action_estimates = paired_value_evidence["action_estimates"]
         action_nominal_airtimes = paired_value_evidence["action_nominals"]

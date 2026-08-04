@@ -23,11 +23,17 @@ if str(TOOLS) not in sys.path:
 from validate_outputs import (  # noqa: E402
     PAIRED_VALUE_T2_CONFIG,
     PAIRED_VALUE_T2_DECISION_COLUMNS,
+    PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+    PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
     PAIRED_VALUE_T2_LOG_SMEARING_FACTOR,
     PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
     PAIRED_VALUE_T2_MODEL_METADATA,
     PAIRED_VALUE_T2_PREDICTION_CONFIG,
     PAIRED_VALUE_T2_SCORE_THRESHOLD,
+    PAIRED_VALUE_T2_SCORE_AWARE_CONFIG,
+    PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
+    PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+    PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX,
     PREDICTION_BASE_COLUMNS,
     PREDICTION_POLLING_BASE_COLUMNS,
     PREDICTION_ROLLING_PREFIXES,
@@ -67,6 +73,8 @@ class PairedValueT2Fixture:
     def __init__(self, root: Path, *, action: bool = False) -> None:
         self.root = root
         self.action = action
+        self.decision_columns = PAIRED_VALUE_T2_DECISION_COLUMNS
+        self.decision_profile: dict[str, object] | None = None
         self.frames = self._frames()
         self.policy_decisions = self._policy_decisions()
         self.samples, self.polling, captures = self._telemetry()
@@ -355,14 +363,51 @@ class PairedValueT2Fixture:
         )
         write_csv(
             self.root / "paired_value_t2_decisions.csv",
-            PAIRED_VALUE_T2_DECISION_COLUMNS,
+            self.decision_columns,
             self.decisions,
         )
+
+    def use_score_aware_profile(self) -> None:
+        self.decision_columns = (
+            PAIRED_VALUE_T2_DECISION_COLUMNS
+            + PAIRED_VALUE_T2_SCORE_AWARE_DECISION_SUFFIX
+        )
+        self.decision_profile = {
+            "score_aware": True,
+            "decision_schema_version": 2,
+            "summary_schema_version": 2,
+            "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
+            "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+            "decision_columns": self.decision_columns,
+        }
+        for row in self.decisions:
+            strict = row["guard_admitted"] == "1"
+            row.update({
+                "schema_version": "2",
+                "admission_profile_id": "score_aware_emergency_v2",
+                "strict_guard_admitted": "1" if strict else "0",
+                "emergency_score_threshold_float32": repr(
+                    PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD
+                ),
+                "passes_emergency_score_threshold": "0",
+                "emergency_admission_considered": "0",
+                "emergency_maximum_debt_us": repr(
+                    PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US
+                ),
+                "emergency_admitted": "0",
+                "admission_tier": "strict" if strict else "none",
+            })
+        self._write_inputs()
 
     def validate_decisions(self) -> dict[str, object]:
         duplicated = {8} if self.action else set()
         return _validate_paired_value_t2_decisions(
-            self.root, RUN_ID, self.frames, self.policy_decisions, duplicated
+            self.root,
+            RUN_ID,
+            self.frames,
+            self.policy_decisions,
+            duplicated,
+            self.decision_profile,
         )
 
     def write_summary(self, evidence: dict[str, object]) -> dict[str, object]:
@@ -500,6 +545,30 @@ class PairedValueT2Fixture:
                 "learned_cost_used_for_token_accounting": False,
             },
         }
+        if self.decision_profile is not None:
+            summary.update({
+                "schema_version": 2,
+                "runtime_contract_id": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_ID,
+                "runtime_contract_sha256": PAIRED_VALUE_T2_SCORE_AWARE_CONTRACT_SHA256,
+            })
+            summary["budget_guard"].update({
+                "admission_profile_id": "score_aware_emergency_v2",
+                "emergency_score_threshold_float32":
+                    PAIRED_VALUE_T2_EMERGENCY_SCORE_THRESHOLD,
+                "emergency_score_threshold_float32_bits_hex": "0x391d4952",
+                "emergency_maximum_debt_us":
+                    PAIRED_VALUE_T2_EMERGENCY_MAXIMUM_DEBT_US,
+            })
+            summary["counts"].update({
+                "strict_guard_admitted": evidence["strict_guard_admitted"],
+                "emergency_score_threshold_passed": evidence["emergency_score_passed"],
+                "emergency_admission_considered":
+                    evidence["emergency_admission_considered"],
+                "emergency_admitted": evidence["emergency_admitted"],
+            })
+            summary["integrity"][
+                "strict_plus_emergency_admitted_equals_launch_attempted"
+            ] = True
         (self.root / "paired_value_t2_summary.json").write_text(
             json.dumps(summary), encoding="utf-8"
         )
@@ -586,6 +655,30 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                 },
                 evidence["action_nominals"],
             )
+
+    def test_accepts_score_aware_schema_and_reconstructs_strict_tier(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            fixture.use_score_aware_profile()
+            evidence = fixture.validate_decisions()
+            self.assertEqual(evidence["strict_guard_admitted"], 1)
+            self.assertEqual(evidence["emergency_score_passed"], 0)
+            self.assertEqual(evidence["emergency_admission_considered"], 0)
+            self.assertEqual(evidence["emergency_admitted"], 0)
+            meter_summary = fixture.write_summary(evidence)
+            _validate_paired_value_t2_summary(
+                fixture.root,
+                RUN_ID,
+                9,
+                evidence,
+                fixture.events,
+                fixture.settlements,
+                meter_summary,
+            )
+            fixture.decisions[8]["strict_guard_admitted"] = "0"
+            fixture._write_inputs()
+            with self.assertRaisesRegex(ValidationError, "emergency admission differs"):
+                fixture.validate_decisions()
 
     def test_rejects_header_order_and_row_width_drift(self) -> None:
         for mutation in ("header", "extra width", "short width"):
@@ -1197,6 +1290,12 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         })
         config.pop("randomizedIntervention", None)
         _validate_paired_value_t2_config(config)
+        score_aware_config = copy.deepcopy(config)
+        score_aware_config["pairedValueDuplicationT2"] = copy.deepcopy(
+            PAIRED_VALUE_T2_SCORE_AWARE_CONFIG
+        )
+        profile = _validate_paired_value_t2_config(score_aware_config)
+        self.assertTrue(profile["score_aware"])
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
         with self.assertRaisesRegex(ValidationError, "neutral environment projection"):
