@@ -30,9 +30,10 @@ P99.
 
 ## Fixed experiment boundary
 
-- Engineering qualification units: seeds `1201` through `1248`, ns-3 run `1`.
-- Matrix: one paired temporal-T2 run and one STR MLO run per seed, for 48
-  matched pairs and 96 runs.
+- Failed V1 engineering units: seeds `1201` through `1248`, ns-3 run `1`.
+- Fresh score-aware V2 engineering units: seeds `1251` through `1298`, ns-3
+  run `1`.  The matrix has one policy run and one STR MLO run per seed, for
+  48 matched pairs and 96 runs.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -55,6 +56,9 @@ P99.
 | Add paired qualification runner | `f3df932` | Frozen 48-pair matrix and two-run preflight |
 | Preserve canonical artifacts | `62312a3` | Model, manifest, candidates, and metrics tracked |
 | Add strict qualification analyzer | `ba59751` | Exact gates, shared bootstrap, and 28 focused runner/analyzer tests |
+| Add bounded-debt guard primitive | `3740694` | Generic debt-limited admission and fail-closed unit tests |
+| Add score-aware V2 profile | `a8f6d5a` | Frozen contract, runtime telemetry, and fresh-seed matrices |
+| Validate V2 evidence | `24a5774` | Strict replay including serialized float32 profile identity |
 
 The latest validator milestone is `6b822a4`.  It exactly replays the
 compiled ridge reduction order and proves one integer per-frame byte
@@ -85,26 +89,29 @@ item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-All 96 qualification simulations finished on the VM from clean commit
-`da48d7d`; every run now passes the strict local validator.  Nine preserved
-attempts were recovered without rerunning their valid simulations.  The
-canonical manifest SHA-256 is
-`50e90d04e68b0d13cba9eb80873098a21871f0b80cc9d535fadf51d4470c3420`.
+Score-aware emergency admission V2 is implemented and pushed through
+`24a5774`.  It leaves the predictor, score threshold, P-frame gate, action,
+0.6% refill, 10-second carry-over, conservative reservation, and neutral
+environment unchanged.  After strict admission fails, only scores at least
+the exact float32 value `0.0001500000071246177` may borrow at most one bucket
+depth (`60000 us`) against future refill.  Its frozen runtime-contract SHA-256
+is `bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda`.
 
-The temporal-T2 candidate fails engineering qualification.  It records 681
-misses (0.7882%) versus STR's 609 (0.7049%); the paired miss interval is
-[-0.0567, +0.2269] percentage points.  Its P99 point estimate is 0.697 ms
-better, but the paired interval [-1.816, +0.310] ms is inconclusive.  It passes
-the sender-airtime ratio target at 1.1324 and background target at 0.0014%
-loss.
+A fresh same-commit seed-43 preflight at
+`/tmp/paired-value-t2-score-aware-preflight-24a5774` completed and strictly
+validated both arms.  V2 recorded 8/1,800 misses and 21.419 ms P99, versus
+16 misses and 22.024 ms for the prior V1 preflight and 10 misses and
+23.086 ms for the exactly reproduced STR arm.  V2 made 216 actions versus
+V1's 212: 146 strict and 70 emergency admissions.  This supports the intended
+allocation mechanism, but it is one reused pilot seed and makes no
+qualification claim.  Its sender-airtime ratio was 1.261, so the resource
+gate remains a live risk.
 
-Admission, not duplication efficacy, is the next work boundary.  The policy
-rescues 538/551 acted primary misses, while the chronological guard rejects
-2,276 higher-scoring candidates containing 349 primary misses.  Implement a
-score-aware guard or bounded high-score emergency credit on development seeds
-before considering a new predictor.  Keep the current primary-risk features;
-the learned cost head requires later replacement because it has no useful
-per-action rank correlation.  Do not open reserved final-confirmation seeds.
+Before launching the fresh 48-pair V2 campaign, extend the strict
+qualification analyzer to bind the V2 runtime contract and seeds `1251`
+through `1298` while preserving the V1 report path.  Then run the 96-run
+matrix on the 64-vCPU VM, fetch/checksum/validate every raw run, and apply the
+unchanged paired gates.  Do not open reserved final-confirmation seeds.
 
 The V1 event schema does not record its per-frame byte split or equal-time
 callback sequence, and the portable compiled cost path does not freeze FMA
@@ -145,8 +152,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   qualification, plotting, and generic analysis-tool tests passed.  Real
   regeneration freshly strict-validated all 96 runs before writing the
   machine-readable admission diagnostic and figures.
+- Score-aware V2 implementation through `24a5774`: both focused C++ suites
+  passed, as did 112 combined Python controller/runner/validator/qualification
+  tests, `py_compile`, and `git diff --check`.
+- Same-commit V2 preflight manifest SHA-256:
+  `e6141c6bfe6729a7a003ba408d01f00a4291845aa936ebf4b2216b8640001b24`.
+  Policy run `c88bb4ff52b2dbe72507` and STR run `0e075faa14035bb7dc22`
+  each passed strict validation with 1,800 frames.
 
 ## Work log
+
+### 2026-08-04 - Implement and preflight score-aware admission V2
+
+- Added a fail-closed debt-limited query to the measured-airtime guard and a
+  distinct score-aware runtime profile; preserved V1 output byte-for-byte.
+- Froze the emergency score and one-bucket debt bound in a checksum-bound
+  contract, with schema-V2 telemetry distinguishing strict and emergency
+  admissions.
+- Added strict evidence replay for the new admission tiers and corrected its
+  expected JSON-decimal representation without weakening float32 identity.
+- Pushed four clean implementation/validation commits through `24a5774`.
+- Completed the same-commit seed-43 preflight.  The encouraging miss/P99
+  points justify the fresh engineering campaign, while the one-seed airtime
+  ratio prohibits promotion without the full resource analysis.
 
 ### 2026-08-04 - Analyze and archive the temporal-T2 qualification
 

@@ -114,6 +114,29 @@ frames, versus STR's 57 episodes and 164 frames.  Absolute miss reduction
 remains the objective; replacing rare long bursts with more frequent shorter
 bursts is not sufficient.
 
+## Score-aware emergency V2 preflight
+
+The next candidate changes admission only.  If ordinary measured-airtime
+admission rejects a threshold-passing frame, an exact high-score tier may
+borrow at most `60000 us` against later refill.  Predictor, primary score,
+P-frame gate, action, conservative reservation, 0.6% refill, 10-second bucket,
+and environment remain unchanged.  The frozen contract is
+`experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json`
+with SHA-256
+`bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda`.
+
+On the reused seed-43 preflight, V2 recorded 8 misses and 21.419 ms completed
+P99, versus the prior V1 policy's 16 misses and 22.024 ms and the exactly
+reproduced STR arm's 10 misses and 23.086 ms.  V2 used 216 actions versus 212
+for V1; its 70 emergency admissions largely displaced later strict actions
+rather than simply adding 70 copies.  This is evidence that chronological
+allocation matters, not evidence that V2 passes.  The same seed's sender
+airtime ratio against STR was 1.261, above the 1.20 target.
+
+Judge V2 only on fresh engineering seeds `1251` through `1298`.  Keep seeds
+`1301` through `1348` unopened unless V2 passes both paired performance gates
+and both resource gates.  Do not tune the predictor from this pilot.
+
 ## Randomized-policy population mapping
 
 The randomized T2 intervention dataset estimates effects only among frames
