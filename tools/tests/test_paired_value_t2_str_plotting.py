@@ -13,7 +13,10 @@ from unittest import mock
 TOOLS = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TOOLS))
 
-from analyze_paired_value_t2_str_qualification import QualificationError
+from analyze_paired_value_t2_str_qualification import (
+    SCORE_AWARE_V2_PROFILE,
+    QualificationError,
+)
 from plot_paired_value_t2_str_qualification import (
     _TestOnlyContract,
     generate_plots,
@@ -351,6 +354,32 @@ class PairedQualificationPlottingTest(unittest.TestCase):
     def test_production_contract_rejects_synthetic_pair_count(self) -> None:
         with self.assertRaisesRegex(QualificationError, "frozen 48-unit contract"):
             paired_rows(self.aggregate_path, self.report_path)
+
+    def test_score_aware_profile_accepts_only_its_bound_report(self) -> None:
+        report = json.loads(self.report_path.read_text(encoding="utf-8"))
+        report["analysis"] = SCORE_AWARE_V2_PROFILE.analysis_id
+        report["qualification_profile"] = SCORE_AWARE_V2_PROFILE.key
+        report["treatments"]["policy"]["label"] = (
+            SCORE_AWARE_V2_PROFILE.policy_label
+        )
+        self.report_path.write_text(json.dumps(report), encoding="utf-8")
+        rows, observed, _ = paired_rows(
+            self.aggregate_path,
+            self.report_path,
+            profile=SCORE_AWARE_V2_PROFILE,
+            _test_contract=self.test_contract,
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(
+            observed["treatments"]["policy"]["label"],
+            SCORE_AWARE_V2_PROFILE.policy_label,
+        )
+        with self.assertRaisesRegex(QualificationError, "schema-v1 paired T2/STR"):
+            paired_rows(
+                self.aggregate_path,
+                self.report_path,
+                _test_contract=self.test_contract,
+            )
 
     def test_rejects_seed_and_config_reassignment(self) -> None:
         aggregate = json.loads(self.aggregate_path.read_text(encoding="utf-8"))

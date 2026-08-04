@@ -23,8 +23,10 @@ import numpy as np
 from analyze_paired_value_t2_str_qualification import (
     ARM_IDENTITIES,
     EXPECTED_PAIR_COUNT,
-    EXPECTED_SEED_RUN_UNITS,
+    PROFILES,
+    V1_PROFILE,
     QualificationError,
+    QualificationProfile,
     _background_metrics,
     _canonical_json,
     _finite,
@@ -41,7 +43,6 @@ from analyze_paired_value_t2_str_qualification import (
 from validate_outputs import ValidationError, validate_run
 
 
-ANALYSIS_NAME = "paired_value_t2_str_qualification"
 DEFAULT_REPORT_NAME = "paired_value_t2_str_qualification.json"
 DEFAULT_PLOT_DIRECTORY = "paired_value_t2_str_qualification"
 FAVORABLE_COLOR = "#00796b"
@@ -178,9 +179,19 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _report(path: Path) -> dict[str, Any]:
+def _report(
+    path: Path,
+    profile: QualificationProfile = V1_PROFILE,
+) -> dict[str, Any]:
     report = _read_json(path.resolve())
-    if report.get("schema_version") != 1 or report.get("analysis") != ANALYSIS_NAME:
+    if (
+        report.get("schema_version") != 1
+        or report.get("analysis") != profile.analysis_id
+        or (
+            profile != V1_PROFILE
+            and report.get("qualification_profile") != profile.key
+        )
+    ):
         raise QualificationError(f"{path}: not a schema-v1 paired T2/STR report")
     checks = report.get("campaign_checks")
     required_checks = {
@@ -283,6 +294,7 @@ def _bind_report_to_aggregate(
     aggregate_path: Path,
     report: dict[str, Any],
     test_contract: _TestOnlyContract | None,
+    profile: QualificationProfile = V1_PROFILE,
 ) -> list[dict[str, Any]]:
     manifests = report["campaign_checks"].get("manifests")
     if not isinstance(manifests, list) or len(manifests) != 1:
@@ -291,7 +303,9 @@ def _bind_report_to_aggregate(
     if _sha256_file(manifest_path) != manifests[0].get("sha256"):
         raise QualificationError("analysis report is not bound to this campaign manifest")
     if test_contract is None:
-        manifest_identity, runs_by_id = _validate_manifest(aggregate_path, aggregate)
+        manifest_identity, runs_by_id = _validate_manifest(
+            aggregate_path, aggregate, profile
+        )
     else:
         manifest_identity, runs_by_id = _validate_test_manifest(aggregate, manifest_path)
     if manifest_identity.get("sha256") != manifests[0].get("sha256"):
@@ -311,7 +325,9 @@ def _bind_report_to_aggregate(
 
 
 def _expected_pairs(
-    report: dict[str, Any], test_contract: _TestOnlyContract | None
+    report: dict[str, Any],
+    test_contract: _TestOnlyContract | None,
+    profile: QualificationProfile = V1_PROFILE,
 ) -> list[tuple[int, int]]:
     units = report.get("paired_units")
     if not isinstance(units, list) or len(units) != report.get("paired_unit_count"):
@@ -328,7 +344,7 @@ def _expected_pairs(
     if len(pairs) != len(set(pairs)) or pairs != sorted(pairs):
         raise QualificationError("analysis report paired units are not unique and ordered")
     expected = (
-        list(EXPECTED_SEED_RUN_UNITS)
+        list(profile.expected_seed_run_units)
         if test_contract is None
         else list(test_contract.expected_pairs)
     )
@@ -474,15 +490,16 @@ def paired_rows(
     aggregate_input: Path,
     report_path: Path,
     *,
+    profile: QualificationProfile = V1_PROFILE,
     _test_contract: _TestOnlyContract | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], Path]:
     """Reconstruct paired plot rows and bind them to one strict report."""
     aggregate_path = _resolve_aggregate(aggregate_input)
     aggregate = _read_json(aggregate_path)
-    report = _report(report_path)
-    pairs = _expected_pairs(report, _test_contract)
+    report = _report(report_path, profile)
+    pairs = _expected_pairs(report, _test_contract, profile)
     runs = _bind_report_to_aggregate(
-        aggregate, aggregate_path, report, _test_contract
+        aggregate, aggregate_path, report, _test_contract, profile
     )
     return (
         _paired_rows_from_runs(runs, aggregate_path, pairs, report),
@@ -802,14 +819,15 @@ def policy_admission_diagnostics(
     aggregate_path: Path,
     report: dict[str, Any],
     *,
+    profile: QualificationProfile = V1_PROFILE,
     _test_contract: _TestOnlyContract | None = None,
 ) -> dict[str, Any]:
     """Return freshly validated diagnostic-only policy admission evidence."""
     aggregate_path = _resolve_aggregate(aggregate_path)
     aggregate = _read_json(aggregate_path)
-    _expected_pairs(report, _test_contract)
+    _expected_pairs(report, _test_contract, profile)
     runs = _bind_report_to_aggregate(
-        aggregate, aggregate_path, report, _test_contract
+        aggregate, aggregate_path, report, _test_contract, profile
     )
     return _policy_admission_diagnostics_from_runs(
         aggregate_path, report, runs
@@ -823,6 +841,9 @@ def _colors(values: Iterable[float]) -> list[str]:
 def _paired_delta_plot(
     rows: list[dict[str, Any]], report: dict[str, Any], output: Path
 ) -> None:
+    policy_label = str(
+        report["treatments"]["policy"].get("label", V1_PROFILE.policy_label)
+    )
     seeds = np.asarray([row["seed"] for row in rows], dtype=int)
     miss = np.asarray([row["miss_delta_percentage_points"] for row in rows])
     p99_ms = np.asarray([row["completed_p99_delta_us"] for row in rows]) / 1000.0
@@ -860,8 +881,8 @@ def _paired_delta_plot(
         axis.grid(axis="y", color="#dddddd", linewidth=0.7)
         axis.legend(loc="upper right", frameon=False)
     axes[0].set_title(
-        "Temporal-T2 selective duplication minus STR MLO by matched seed\n"
-        "Negative values favor temporal-T2; band is the global paired 95% interval"
+        f"{policy_label} minus STR MLO by matched seed\n"
+        f"Negative values favor {policy_label}; band is the global paired 95% interval"
     )
     axes[1].set_xlabel("Seed (run 1)")
     axes[1].set_xticks(seeds[::4])
@@ -927,6 +948,9 @@ def _resource_axis(
 def _resource_plot(
     rows: list[dict[str, Any]], report: dict[str, Any], output: Path
 ) -> None:
+    policy_label = str(
+        report["treatments"]["policy"].get("label", V1_PROFILE.policy_label)
+    )
     comparison = report["comparison_against_str"]
     criteria = report["resource_target_against_str"]["criteria"]
     airtime = comparison["sender_phy_tx_airtime_ratio"]
@@ -948,7 +972,7 @@ def _resource_plot(
         criteria["sender_airtime_ratio"]["threshold"],
         criteria["sender_airtime_ratio"]["status"],
         "Sender PHY airtime",
-        "Temporal-T2 / STR ratio",
+        f"{policy_label} / STR ratio",
     )
     _resource_axis(
         axes[1],
@@ -971,7 +995,9 @@ def _resource_plot(
     plt.close(figure)
 
 
-def _tradeoff_plot(rows: list[dict[str, Any]], output: Path) -> None:
+def _tradeoff_plot(
+    rows: list[dict[str, Any]], policy_label: str, output: Path
+) -> None:
     miss = np.asarray([row["miss_delta_percentage_points"] for row in rows])
     p99_ms = np.asarray([row["completed_p99_delta_us"] for row in rows]) / 1000.0
     airtime_overhead = 100.0 * (
@@ -1010,7 +1036,7 @@ def _tradeoff_plot(rows: list[dict[str, Any]], output: Path) -> None:
     axis.set_xlabel("Deadline-miss delta (percentage points)")
     axis.set_ylabel("Completed-frame HF7 P99 delta (ms)")
     axis.set_title(
-        "Matched-seed performance tradeoff: temporal-T2 minus STR MLO\n"
+        f"Matched-seed performance tradeoff: {policy_label} minus STR MLO\n"
         "Lower-left improves both metrics; labels mark five most distant points"
     )
     axis.grid(color="#dddddd", linewidth=0.7)
@@ -1019,7 +1045,9 @@ def _tradeoff_plot(rows: list[dict[str, Any]], output: Path) -> None:
     plt.close(figure)
 
 
-def _policy_admission_plot(diagnostics: dict[str, Any], output: Path) -> None:
+def _policy_admission_plot(
+    diagnostics: dict[str, Any], policy_label: str, output: Path
+) -> None:
     funnel = diagnostics["funnel"]
     statuses = diagnostics["statuses"]
     outcomes = diagnostics["action_outcomes"]
@@ -1097,7 +1125,7 @@ def _policy_admission_plot(diagnostics: dict[str, Any], output: Path) -> None:
     axes[2].grid(axis="x", color="#dddddd", linewidth=0.7)
 
     figure.suptitle(
-        "Temporal-T2 policy admission and primary-copy outcomes\n"
+        f"{policy_label} admission and primary-copy outcomes\n"
         "Diagnostic only: these conditional populations are not qualification gates",
         y=1.04,
     )
@@ -1133,20 +1161,31 @@ def generate_plots(
     report_path: Path | None = None,
     output_directory: Path | None = None,
     *,
+    profile: QualificationProfile = V1_PROFILE,
     _test_contract: _TestOnlyContract | None = None,
 ) -> list[Path]:
     """Generate raw-backed paired diagnostic plots without recalculating gates."""
     aggregate_path = _resolve_aggregate(aggregate_input)
     campaign_root = aggregate_path.parent.parent
-    report_path = report_path or campaign_root / DEFAULT_REPORT_NAME
+    default_report_name = (
+        DEFAULT_REPORT_NAME
+        if profile == V1_PROFILE
+        else f"{profile.analysis_id}.json"
+    )
+    default_plot_directory = (
+        DEFAULT_PLOT_DIRECTORY
+        if profile == V1_PROFILE
+        else profile.analysis_id
+    )
+    report_path = report_path or campaign_root / default_report_name
     output_directory = output_directory or (
-        campaign_root / "plots" / DEFAULT_PLOT_DIRECTORY
+        campaign_root / "plots" / default_plot_directory
     )
     aggregate = _read_json(aggregate_path)
-    report = _report(report_path)
-    pairs = _expected_pairs(report, _test_contract)
+    report = _report(report_path, profile)
+    pairs = _expected_pairs(report, _test_contract, profile)
     runs = _bind_report_to_aggregate(
-        aggregate, aggregate_path, report, _test_contract
+        aggregate, aggregate_path, report, _test_contract, profile
     )
     rows = _paired_rows_from_runs(runs, aggregate_path, pairs, report)
     diagnostics = _policy_admission_diagnostics_from_runs(
@@ -1179,8 +1218,11 @@ def generate_plots(
     ]
     _paired_delta_plot(rows, report, outputs[0])
     _resource_plot(rows, report, outputs[1])
-    _tradeoff_plot(rows, outputs[2])
-    _policy_admission_plot(diagnostics, outputs[3])
+    policy_label = str(
+        report["treatments"]["policy"].get("label", V1_PROFILE.policy_label)
+    )
+    _tradeoff_plot(rows, policy_label, outputs[2])
+    _policy_admission_plot(diagnostics, policy_label, outputs[3])
     _write_json(outputs[4], diagnostic_document)
     _write_pair_csv(outputs[5], rows)
     return outputs
@@ -1196,15 +1238,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--analysis",
         type=Path,
-        help=f"strict analysis JSON (default: campaign/{DEFAULT_REPORT_NAME})",
+        help="strict analysis JSON (default: campaign/<profile analysis>.json)",
     )
     parser.add_argument(
         "--output-directory",
         type=Path,
         help=(
-            "plot directory (default: campaign/plots/"
-            f"{DEFAULT_PLOT_DIRECTORY})"
+            "plot directory (default: campaign/plots/<profile analysis>)"
         ),
+    )
+    parser.add_argument(
+        "--profile",
+        choices=tuple(PROFILES),
+        default=V1_PROFILE.key,
+        help="frozen runtime and engineering-seed profile to plot",
     )
     arguments = parser.parse_args(argv)
     try:
@@ -1212,6 +1259,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arguments.aggregate,
             report_path=arguments.analysis,
             output_directory=arguments.output_directory,
+            profile=PROFILES[arguments.profile],
         )
     except QualificationError as error:
         parser.error(str(error))
