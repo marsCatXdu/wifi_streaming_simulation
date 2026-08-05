@@ -10,6 +10,7 @@ import csv
 import hashlib
 import importlib.util
 import json
+import lzma
 import math
 import pickle
 import re
@@ -685,6 +686,176 @@ PAIRED_VALUE_T2_SOURCE_FILES = {
 }
 
 _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT: dict[str, Any] | None = None
+
+DISTRIBUTIONAL_SHADOW_T2_POLICY = "distributional_shadow_duplication_t2"
+DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID = "temporal-t2-shadow-borrow-runtime-v1"
+DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256 = (
+    "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+)
+DISTRIBUTIONAL_SHADOW_T2_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json"
+)
+DISTRIBUTIONAL_SHADOW_T2_MODEL_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "temporal-t2-shadow-borrow-runtime-model-v1.json.xz"
+)
+DISTRIBUTIONAL_SHADOW_T2_REFERENCE_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/"
+    "temporal-t2-shadow-borrow-runtime-reference-v1.json.xz"
+)
+DISTRIBUTIONAL_SHADOW_T2_MODEL_XZ_SHA256 = (
+    "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+)
+DISTRIBUTIONAL_SHADOW_T2_REFERENCE_XZ_SHA256 = (
+    "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+)
+DISTRIBUTIONAL_SHADOW_T2_SOURCE_MODEL_SHA256 = (
+    "e9d5f0ebc822f8956ef3ed06fc8cb1d776961d0fba5ebeebcdd1e181b5be0071"
+)
+DISTRIBUTIONAL_SHADOW_T2_SOURCE_REFERENCE_SHA256 = (
+    "a4d2ac57e35e79bb173d09e1ca6f0237e06438c001c1685a6d4af9ff13f44acf"
+)
+DISTRIBUTIONAL_SHADOW_T2_PORTABLE_MODEL_SHA256 = (
+    "8023d41495cd93df78a68fdad45f2dc588369ba23102ae038a400e8c3d5d5aac"
+)
+DISTRIBUTIONAL_SHADOW_T2_DEPLOYMENT_REFERENCE_SHA256 = (
+    "493c0624082a7cb363bcb7bfe3af0930cb6a2d84e09ce17e1d7eef8dd7d7f316"
+)
+DISTRIBUTIONAL_SHADOW_T2_FEATURE_CONTRACT_SHA256 = (
+    "1f8dce2aad4c21d5cdf66a25a87d7bdeaf8eb3befbc6fbc1922062b77c5d9d96"
+)
+DISTRIBUTIONAL_SHADOW_T2_EXPORTER_SHA256 = (
+    "1a0e9a89ca0edad2f12c1bccb383e246de8e1b8c1f578b8d47283d4b38e18a21"
+)
+DISTRIBUTIONAL_SHADOW_T2_FEATURE_ADAPTER = (
+    "parse or derive in the frozen order, quantize each finite numeric or missing "
+    "NaN to binary32, then widen exactly to binary64"
+)
+DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US = 1983.760667318285
+DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US = 360_000.0
+DISTRIBUTIONAL_SHADOW_T2_INITIAL_CREDIT_US = 12_000.0
+DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US = 5_000_000
+DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT = 12
+DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT = 3
+DISTRIBUTIONAL_SHADOW_T2_STATUSES = (
+    "outside_decision_window",
+    "history_warmup",
+    "not_actionable",
+    "frame_type_restricted",
+    "descriptor_unavailable",
+    "nonpositive_reward",
+    "opportunity_price_rejected",
+    "horizon_credit_rejected",
+    "launch_rejected",
+    "action",
+)
+DISTRIBUTIONAL_SHADOW_T2_DECISION_COLUMNS = (
+    "schema_version", "run_id", "frame_id", "policy", "decision_status",
+    "primary_path_id", "primary_copy_id", "secondary_path_id", "secondary_copy_id",
+    "sample_stage", "sample_offset_us", "generation_time_ns", "deadline_time_ns",
+    "primary_sample_time_ns", "secondary_sample_time_ns",
+    "primary_feature_watermark_time_ns", "primary_feature_watermark_sequence",
+    "secondary_feature_watermark_time_ns", "secondary_feature_watermark_sequence",
+    "frame_type", "frame_size_bytes", "frame_packet_count", "primary_actionable",
+    "decision_window_start_ns", "decision_window_stop_ns", "inside_decision_window",
+    "history_ready", "primary_current_poll_capture_time_ns",
+    "primary_current_poll_available_time_ns", "secondary_current_poll_capture_time_ns",
+    "secondary_current_poll_available_time_ns", "primary_lag1_frame_id",
+    "primary_lag1_poll_capture_time_ns", "primary_lag3_frame_id",
+    "primary_lag3_poll_capture_time_ns", "primary_lag8_frame_id",
+    "primary_lag8_poll_capture_time_ns", "secondary_lag1_frame_id",
+    "secondary_lag1_poll_capture_time_ns", "secondary_lag3_frame_id",
+    "secondary_lag3_poll_capture_time_ns", "secondary_lag8_frame_id",
+    "secondary_lag8_poll_capture_time_ns", "congestion_updated",
+    "current_primary_busy20ms", "running_primary_busy20ms",
+    "congestion_observation_count", "time_bin", "congestion_regime",
+    "feature_evaluated", "model_spec_id", "selected_variant", "feature_family",
+    "feature_count", "feature_adapter_id", "runtime_contract_id",
+    "runtime_contract_sha256", "control_logits", "control_probabilities", "control_cdf",
+    "full_copy_logits", "full_copy_probabilities", "full_copy_cdf",
+    "deadline_rescue_reward", "tail18_cdf_gain", "reward_density_per_us",
+    "opportunity_cost_per_us", "passes_opportunity_price", "earlier_unsettled_launches",
+    "secondary_state_action_dirty", "descriptor_checked", "descriptor_available",
+    "descriptor_frame_packet_count", "descriptor_packet_count",
+    "descriptor_packet_indices", "descriptor_expected_mac_service_bytes",
+    "descriptor_deadline_time_ns", "canonical_cost_estimator_id", "cost_safety_factor",
+    "canonical_nominal_airtime_us", "canonical_reserved_airtime_us",
+    "credit_accounting_id", "budget_fraction", "positive_balance_capacity_us",
+    "initial_credit_us", "repayment_stop_ns", "ledger_balance_before_us",
+    "ledger_debt_before_us", "ledger_remaining_refill_before_us",
+    "ledger_repayable_before_us", "ledger_debited_before_us",
+    "horizon_admission_considered", "horizon_admitted", "launch_attempted",
+    "secondary_launched", "ledger_balance_after_us", "ledger_debt_after_us",
+    "ledger_debited_after_us", "meter_reserved_before_us", "meter_reserved_after_us",
+    "measured_settlement_refunds_ledger",
+)
+DISTRIBUTIONAL_SHADOW_T2_CONFIG = {
+    "csv_schema_version": 1,
+    "summary_schema_version": 1,
+    "runtime_contract_id": DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID,
+    "runtime_contract_sha256": DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256,
+    "primary_path": 1,
+    "primary_copy_id": 0,
+    "secondary_path": 0,
+    "secondary_copy_id": 1,
+    "stage": "T2",
+    "sample_offset_us": 2000,
+    "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+    "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+    "decision_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+    "decision_stop_ns": PAIRED_VALUE_T2_DECISION_STOP_NS,
+    "decision_stop_guard_us": 534000,
+    "delayed_secondary_prediction_tracking_enabled": True,
+    "receiver_hold_for_delayed_secondary": True,
+    "action": "canonical_full_secondary_copy",
+    "predictor_variant": "primary_secondary_hgb64",
+    "predictor_model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+    "predictor_feature_count": 308,
+    "deadline_reward_and_tail_gain_are_separate": True,
+    "shadow_reference": "congestion_tertile_5s",
+    "cost_estimator_id": RANDOMIZED_COST_ESTIMATOR,
+    "cost_safety_factor": 1.25,
+    "canonical_p_frame_reservation_us": 1983.76066732,
+    "budget_fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
+    "positive_balance_capacity_us": 360000,
+    "initial_credit_us": 12000,
+    "negative_balance_allowed_when_repayable": True,
+    "accepted_reservation_is_permanent": True,
+    "measured_settlement_refunds_ledger": False,
+}
+DISTRIBUTIONAL_SHADOW_T2_SOURCE_FILES = {
+    "tools/export_temporal_t2_shadow_runtime_v1.py":
+        DISTRIBUTIONAL_SHADOW_T2_EXPORTER_SHA256,
+    "contrib/wifi-streaming/model/temporal-t2-distribution-model-data-v1.cc":
+        "b4b375b825edb789a4addf4a7e617764d8c3881a7ca91e048ed3974579f821d2",
+    "contrib/wifi-streaming/model/temporal-t2-distribution-model-data-v1.h":
+        "3099f3d72419706936b9012bec7d24294bd3912e5787a5cc10301c0b631941fd",
+    "contrib/wifi-streaming/model/temporal-t2-distribution-model-evaluator.cc":
+        "6a844b62fc4813208b4efc9a9ca1ea069cde1dc8f0fc0033283a4358647eeaa7",
+    "contrib/wifi-streaming/model/temporal-t2-distribution-model-evaluator.h":
+        "c11fe01089073629f194d2e7ed18ed683d0a7ffdb00553e4f651effa16a3711e",
+    "contrib/wifi-streaming/model/temporal-t2-distribution-predictor.cc":
+        "5ab8e06ddf63c0e929ef04dd1a2b49b7feda39395a93686019e900efa0cfafa9",
+    "contrib/wifi-streaming/model/temporal-t2-distribution-predictor.h":
+        "be0ee6462fd9f44ccf56cabfedbbc7d457839aeb37f2ecfc2189bf05718c1552",
+    "contrib/wifi-streaming/model/distributional-shadow-t2-controller.cc":
+        "07d9cf2d8195482014fc9e38d19326e14c6edef3bf549cff844c49f41cb97086",
+    "contrib/wifi-streaming/model/distributional-shadow-t2-controller.h":
+        "bbc9a30df5f7c910394c81aaeef9f7a26f1ae11ab3ecaca6434700e56f356acb",
+    "contrib/wifi-streaming/model/permanent-airtime-credit-ledger.cc":
+        "fbbd9f5d13f5b99ab03ccfae9a685b3f70e2aea59e71ffdd36fd6a33c9a525e9",
+    "contrib/wifi-streaming/model/permanent-airtime-credit-ledger.h":
+        "f79e7c888c825f9f9d1c22ede142c8ac523e97bf32ca309234dee61a2b870727",
+    "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.cc":
+        "67d61c6da75e676752fede0af3eafeccc43048597d947b7af3215a33afbfab31",
+    "contrib/wifi-streaming/model/canonical-secondary-airtime-estimator.h":
+        "a40842c0dec03e949b723190049ca158eee73f96ce35a241add88e6be972167b",
+}
+
+_DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT: dict[str, Any] | None = None
 
 
 class ValidationError(ValueError):
@@ -2629,6 +2800,450 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     return profile
 
 
+def _validate_distributional_shadow_t2_source_files() -> None:
+    """Verify the source closure of the compiled distributional runtime."""
+    repository_root = PAIRED_VALUE_T2_REPOSITORY_ROOT.resolve()
+    for relative_path, expected_sha256 in (
+        DISTRIBUTIONAL_SHADOW_T2_SOURCE_FILES.items()
+    ):
+        source_path = PAIRED_VALUE_T2_REPOSITORY_ROOT / relative_path
+        _require(
+            source_path.is_file()
+            and not source_path.is_symlink()
+            and source_path.resolve().is_relative_to(repository_root),
+            f"distributional-shadow runtime: invalid source path {relative_path}",
+        )
+        _require(
+            _sha256_file(source_path, relative_path) == expected_sha256,
+            f"distributional-shadow runtime: source drifted {relative_path}",
+        )
+
+
+def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
+    """Validate the frozen controller, telemetry, and neutral environment."""
+    _require(
+        _sha256_file(
+            DISTRIBUTIONAL_SHADOW_T2_CONTRACT_PATH,
+            "distributional-shadow runtime contract",
+        )
+        == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256,
+        "distributional-shadow runtime contract: committed bytes differ",
+    )
+    _require(
+        _sha256_file(PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH, "neutral environment source")
+        == PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256,
+        "distributional-shadow runtime: neutral environment source drifted",
+    )
+    _validate_distributional_shadow_t2_source_files()
+    controller = config.get("distributionalShadowDuplicationT2")
+    _require(
+        config.get("topology") == "dual_interface"
+        and config.get("policy") == DISTRIBUTIONAL_SHADOW_T2_POLICY
+        and config.get("environment") == "unchanged_neutral_mixed4x4",
+        "resolved_config.json: distributional-shadow identity differs",
+    )
+    _require(
+        isinstance(controller, dict)
+        and _canonical_json_sha256(controller, "distributionalShadowDuplicationT2")
+        == _canonical_json_sha256(
+            DISTRIBUTIONAL_SHADOW_T2_CONFIG,
+            "frozen distributional-shadow config",
+        ),
+        "resolved_config.json: distributionalShadowDuplicationT2 differs",
+    )
+    prediction = config.get("predictionTelemetry")
+    meter = config.get("secondaryAirtimeMeter")
+    _require(
+        isinstance(prediction, dict)
+        and _canonical_json_sha256(prediction, "predictionTelemetry")
+        == _canonical_json_sha256(
+            PAIRED_VALUE_T2_PREDICTION_CONFIG,
+            "frozen distributional prediction config",
+        ),
+        "resolved_config.json: distributional predictionTelemetry differs",
+    )
+    _require(
+        isinstance(meter, dict)
+        and _canonical_json_sha256(meter, "secondaryAirtimeMeter")
+        == _canonical_json_sha256(
+            PAIRED_VALUE_T2_METER_CONFIG,
+            "frozen distributional meter config",
+        ),
+        "resolved_config.json: distributional secondaryAirtimeMeter differs",
+    )
+    _require(
+        all(
+            key not in config
+            for key in (
+                "pairedValueDuplicationT2",
+                "selectiveDuplication",
+                "adaptiveAirtimeDuplication",
+                "adaptiveDeficitDuplication",
+                "randomizedIntervention",
+            )
+        ),
+        "resolved_config.json: another controller object exists for "
+        "distributional-shadow policy",
+    )
+
+    missing = [key for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS if key not in config]
+    _require(
+        not missing,
+        "resolved_config.json: distributional neutral environment fields are missing",
+    )
+    wifi = config.get("wifi")
+    _require(
+        isinstance(wifi, dict),
+        "resolved_config.json: distributional neutral Wi-Fi config is missing",
+    )
+    environment = {
+        **{key: config[key] for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS},
+        "shared_target_wifi": {
+            key: wifi.get(key, "__MISSING__")
+            for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
+        },
+    }
+    environment = copy.deepcopy(environment)
+    obss = environment.get("background", {}).get("obss")
+    if isinstance(obss, dict):
+        obss.pop("bsses", None)
+    _require(
+        _canonical_json_sha256(environment, "distributional neutral environment")
+        == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
+        "resolved_config.json: distributional neutral environment differs",
+    )
+    topology_wifi = {
+        key: wifi.get(key, "__MISSING__")
+        for key in PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS
+    }
+    _require(
+        _canonical_json_sha256(topology_wifi, "distributional topology Wi-Fi")
+        == PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256,
+        "resolved_config.json: distributional topology Wi-Fi differs",
+    )
+
+
+def _distributional_shadow_t2_xz_json(
+    path: Path,
+    compressed_sha256: str,
+    decompressed_sha256: str,
+    label: str,
+) -> dict[str, Any]:
+    """Load one hash-pinned compressed portable replay artifact."""
+    _require(
+        path.is_file()
+        and not path.is_symlink()
+        and _sha256_file(path, label) == compressed_sha256,
+        f"distributional-shadow replay: compressed {label} differs",
+    )
+    try:
+        with lzma.open(path, "rb") as source:
+            encoded = source.read()
+    except (OSError, lzma.LZMAError) as error:
+        raise ValidationError(
+            f"distributional-shadow replay: cannot decompress {label}: {error}"
+        ) from error
+    _require(
+        hashlib.sha256(encoded).hexdigest() == decompressed_sha256,
+        f"distributional-shadow replay: decompressed {label} differs",
+    )
+    try:
+        value = json.loads(encoded)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValidationError(
+            f"distributional-shadow replay: invalid {label}: {error}"
+        ) from error
+    _require(
+        isinstance(value, dict),
+        f"distributional-shadow replay: {label} is not an object",
+    )
+    return value
+
+
+def _distributional_shadow_t2_secondary_feature_names() -> tuple[str, ...]:
+    names = ["x_secondary_mac_queue_packets", "x_secondary_mac_queue_service_bytes"]
+    for lag in (None, 1, 3, 8):
+        prefix = "x_secondary" if lag is None else f"x_secondary_lag{lag}"
+        for window in ("1ms", "5ms", "20ms"):
+            for state in ("tx", "rx", "busy", "idle", "other"):
+                names.append(f"{prefix}_phy_{state}_fraction_{window}")
+    return tuple(names)
+
+
+def _distributional_shadow_t2_model_replay_context() -> dict[str, Any]:
+    """Load and semantically close the portable model and shadow curves."""
+    global _DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT
+    if _DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT is not None:
+        return _DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT
+
+    _validate_distributional_shadow_t2_source_files()
+    model = _distributional_shadow_t2_xz_json(
+        DISTRIBUTIONAL_SHADOW_T2_MODEL_PATH,
+        DISTRIBUTIONAL_SHADOW_T2_MODEL_XZ_SHA256,
+        DISTRIBUTIONAL_SHADOW_T2_SOURCE_MODEL_SHA256,
+        "portable model",
+    )
+    reference = _distributional_shadow_t2_xz_json(
+        DISTRIBUTIONAL_SHADOW_T2_REFERENCE_PATH,
+        DISTRIBUTIONAL_SHADOW_T2_REFERENCE_XZ_SHA256,
+        DISTRIBUTIONAL_SHADOW_T2_SOURCE_REFERENCE_SHA256,
+        "shadow reference",
+    )
+    _require(
+        _canonical_json_sha256(model, "distributional portable model")
+        == DISTRIBUTIONAL_SHADOW_T2_PORTABLE_MODEL_SHA256
+        and _canonical_json_sha256(reference, "distributional shadow reference")
+        == DISTRIBUTIONAL_SHADOW_T2_DEPLOYMENT_REFERENCE_SHA256,
+        "distributional-shadow replay: canonical component digest differs",
+    )
+    primary_context = _paired_value_t2_model_replay_context()
+    feature_names = tuple(model.get("feature_names", ()))
+    expected_names = (
+        tuple(primary_context["feature_names"])
+        + _distributional_shadow_t2_secondary_feature_names()
+    )
+    feature_contract = {
+        "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+        "feature_names": list(feature_names),
+        "adapter": DISTRIBUTIONAL_SHADOW_T2_FEATURE_ADAPTER,
+    }
+    _require(
+        model.get("model_schema_version") == 1
+        and model.get("runtime_contract_id") == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID
+        and model.get("runtime_contract_sha256")
+        == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256
+        and model.get("selected_variant") == "primary_secondary_hgb64"
+        and model.get("feature_family")
+        == "primary_compact_physics_temporal_plus_passive_secondary"
+        and feature_names == expected_names
+        and len(feature_names) == 308
+        and model.get("thresholds_us") == [12000, 18000, 24000, 30000, 33333]
+        and _canonical_json_sha256(feature_contract, "distributional feature contract")
+        == DISTRIBUTIONAL_SHADOW_T2_FEATURE_CONTRACT_SHA256,
+        "distributional-shadow replay: model or feature contract differs",
+    )
+    heads = model.get("heads")
+    _require(
+        isinstance(heads, dict) and set(heads) == {"control", "full_copy_t2"},
+        "distributional-shadow replay: model heads differ",
+    )
+    for name, training_count in (("control", 66_759), ("full_copy_t2", 6_641)):
+        head = heads[name]
+        imputer = head.get("imputer") if isinstance(head, dict) else None
+        _require(
+            isinstance(head, dict)
+            and isinstance(imputer, dict)
+            and len(imputer.get("medians", ())) == 308
+            and all(
+                isinstance(index, int) and not isinstance(index, bool) and 0 <= index < 308
+                for index in imputer.get("missing_indicator_raw_features", ())
+            )
+            and len(head.get("baseline", ())) == 6
+            and len(head.get("trees", ())) == 384
+            and isinstance(head.get("nodes"), list)
+            and head.get("training_count") == training_count
+            and head.get("dirichlet_alpha_per_class") == 0.5,
+            f"distributional-shadow replay: {name} head differs",
+        )
+
+    bins = reference.get("bins")
+    _require(
+        reference.get("reference_schema_version") == 1
+        and reference.get("runtime_contract_id") == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID
+        and reference.get("runtime_contract_sha256")
+        == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256
+        and reference.get("selected_variant") == "primary_secondary_hgb64"
+        and reference.get("canonical_p_frame_reservation_us")
+        == "1983.760667318285"
+        and reference.get("frame_gate") == "p_frames_only"
+        and reference.get("objective") == "deadline_rescue"
+        and reference.get("time_bin_count") == DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
+        and reference.get("time_bin_width_us")
+        == DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US
+        and isinstance(bins, list)
+        and len(bins) == DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT,
+        "distributional-shadow replay: shadow-reference metadata differs",
+    )
+    for time_bin, bin_row in enumerate(bins):
+        cutpoints = bin_row.get("congestion_cutpoints")
+        curves = bin_row.get("congestion_tertile")
+        _require(
+            bin_row.get("time_bin") == time_bin
+            and bin_row.get("start_us")
+            == time_bin * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US
+            and bin_row.get("stop_us")
+            == (time_bin + 1) * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US
+            and isinstance(cutpoints, list)
+            and len(cutpoints) == 2
+            and all(isinstance(value, (int, float)) for value in cutpoints)
+            and 0 <= float(cutpoints[0]) < float(cutpoints[1]) <= 1
+            and isinstance(curves, list)
+            and len(curves) == DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT,
+            "distributional-shadow replay: congestion bin differs",
+        )
+        for regime, curve in enumerate(curves):
+            densities = curve.get("density_descending")
+            _require(
+                curve.get("regime") == regime
+                and isinstance(curve.get("training_run_count"), int)
+                and curve["training_run_count"] > 0
+                and isinstance(densities, list)
+                and densities
+                and all(
+                    isinstance(value, (int, float))
+                    and not isinstance(value, bool)
+                    and math.isfinite(float(value))
+                    and float(value) > 0
+                    for value in densities
+                )
+                and all(
+                    float(left) >= float(right)
+                    for left, right in zip(densities, densities[1:])
+                ),
+                "distributional-shadow replay: opportunity curve differs",
+            )
+
+    _DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT = {
+        "numpy": primary_context["numpy"],
+        "model": model,
+        "reference": reference,
+        "feature_names": feature_names,
+    }
+    return _DISTRIBUTIONAL_SHADOW_T2_MODEL_REPLAY_CONTEXT
+
+
+def _distributional_shadow_t2_evaluate_head(
+    head: dict[str, Any], raw_features: Any
+) -> dict[str, list[float]]:
+    """Evaluate one portable six-class tree head in the compiled order."""
+    context = _distributional_shadow_t2_model_replay_context()
+    np = context["numpy"]
+    try:
+        raw = np.asarray(raw_features, dtype=np.float64)
+        _require(
+            raw.shape == (308,) and not np.any(np.isinf(raw)),
+            "distributional-shadow replay: feature vector differs",
+        )
+        with np.errstate(over="ignore", invalid="ignore"):
+            quantized = raw.astype(np.float32).astype(np.float64)
+        _require(
+            not np.any(np.isinf(quantized)),
+            "distributional-shadow replay: feature overflows binary32",
+        )
+        imputer = head["imputer"]
+        medians = imputer["medians"]
+        indicators = imputer["missing_indicator_raw_features"]
+        transformed = [
+            float(medians[index]) if math.isnan(float(value)) else float(value)
+            for index, value in enumerate(quantized)
+        ]
+        transformed.extend(
+            1.0 if math.isnan(float(quantized[index])) else 0.0
+            for index in indicators
+        )
+        logits = [float(value) for value in head["baseline"]]
+        nodes = head["nodes"]
+        for offset, count, class_index, _iteration in head["trees"]:
+            index = 0
+            while True:
+                _require(
+                    0 <= index < count and offset + index < len(nodes),
+                    "distributional-shadow replay: tree child differs",
+                )
+                value, threshold, feature, left, right, missing_left, leaf = (
+                    nodes[offset + index]
+                )
+                if leaf:
+                    logits[class_index] += float(value)
+                    break
+                observed = transformed[feature]
+                if math.isnan(observed):
+                    index = left if missing_left else right
+                else:
+                    index = left if observed <= float(threshold) else right
+        maximum = max(logits)
+        softmax: list[float] = []
+        denominator = 0.0
+        for logit in logits:
+            probability = math.exp(logit - maximum)
+            softmax.append(probability)
+            denominator += probability
+        training_count = int(head["training_count"])
+        alpha = float(head["dirichlet_alpha_per_class"])
+        smoothed_denominator = training_count + alpha * len(logits)
+        probabilities: list[float] = []
+        cdf: list[float] = []
+        cumulative = 0.0
+        for probability in softmax:
+            smoothed = (
+                training_count * probability / denominator + alpha
+            ) / smoothed_denominator
+            probabilities.append(smoothed)
+            cumulative += smoothed
+            if len(cdf) < 5:
+                cdf.append(cumulative)
+    except (KeyError, TypeError, ValueError, OverflowError, IndexError) as error:
+        raise ValidationError(
+            f"distributional-shadow replay: portable evaluation failed: {error}"
+        ) from error
+    return {"logits": logits, "probabilities": probabilities, "cdf": cdf}
+
+
+def _distributional_shadow_t2_model_result(raw_features: Any) -> dict[str, Any]:
+    """Evaluate both completion heads and derive the two separate benefits."""
+    heads = _distributional_shadow_t2_model_replay_context()["model"]["heads"]
+    control = _distributional_shadow_t2_evaluate_head(heads["control"], raw_features)
+    full_copy = _distributional_shadow_t2_evaluate_head(
+        heads["full_copy_t2"], raw_features
+    )
+    return {
+        "control": control,
+        "full_copy": full_copy,
+        "deadline_rescue_reward": max(
+            full_copy["cdf"][-1] - control["cdf"][-1], 0.0
+        ),
+        "tail18_cdf_gain": full_copy["cdf"][1] - control["cdf"][1],
+    }
+
+
+def _distributional_shadow_t2_opportunity_cost(
+    time_bin: int, regime: int, repayable_credit_us: float
+) -> float:
+    """Replay the exact marginal-density lookup using binary64 operands."""
+    context = _distributional_shadow_t2_model_replay_context()
+    _require(
+        0 <= time_bin < DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
+        and 0 <= regime < DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT
+        and math.isfinite(repayable_credit_us)
+        and 0 <= repayable_credit_us <= 372000.0 + PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+        "distributional-shadow replay: invalid opportunity-price state",
+    )
+    curve = context["reference"]["bins"][time_bin]["congestion_tertile"][regime]
+    densities = curve["density_descending"]
+    training_runs = int(curve["training_run_count"])
+    repayable_numerator, repayable_denominator = repayable_credit_us.as_integer_ratio()
+    cost_numerator, cost_denominator = (
+        DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US.as_integer_ratio()
+    )
+    low = 0
+    high = len(densities)
+    while low < high:
+        middle = (low + high) // 2
+        affordable = (
+            cost_numerator * (middle + 1) * repayable_denominator
+            <= repayable_numerator * training_runs * cost_denominator
+        )
+        if affordable:
+            low = middle + 1
+        else:
+            high = middle
+    if low == 0:
+        return math.inf
+    if low >= len(densities):
+        return 0.0
+    return float(densities[low - 1])
+
+
 def _paired_value_t2_model_replay_context() -> dict[str, Any]:
     """Load the exact canonical model and hash-pinned feature builders once."""
     global _PAIRED_VALUE_T2_MODEL_REPLAY_CONTEXT
@@ -3167,6 +3782,195 @@ def _paired_value_t2_telemetry(
     return primary_samples, primary_polling
 
 
+def _distributional_shadow_t2_telemetry(
+    run_dir: Path,
+    run_id: str,
+    frames_by_id: dict[int, dict[str, str]],
+) -> tuple[
+    dict[int, dict[str, str]],
+    dict[int, dict[str, str]],
+    dict[int, dict[str, str]],
+    dict[int, dict[str, str]],
+]:
+    """Return independently checked primary and passive-secondary T2 state."""
+    primary_samples, primary_polling = _paired_value_t2_telemetry(
+        run_dir, run_id, frames_by_id
+    )
+    rolling_columns = {
+        _rolling_column(prefix, _window_label(window))
+        for prefix in PREDICTION_ROLLING_PREFIXES
+        for window in (1000, 5000, 20000)
+    }
+    samples = _csv(
+        run_dir / "prediction_samples.csv",
+        PREDICTION_BASE_COLUMNS | rolling_columns,
+    )
+    polling = _csv(
+        run_dir / "prediction_polling_samples.csv",
+        PREDICTION_POLLING_BASE_COLUMNS | rolling_columns,
+    )
+    secondary_rows = [
+        row
+        for row in samples
+        if row.get("sample_offset_us") == "2000"
+        and row.get("path_id") == "0"
+        and row.get("copy_id") == "1"
+    ]
+    _require(
+        len(secondary_rows) == len(frames_by_id),
+        "prediction_samples.csv: distributional secondary T2 cardinality differs",
+    )
+    secondary_samples: dict[int, dict[str, str]] = {}
+    last_watermark_time = 0
+    last_watermark_sequence = 0
+    for row in secondary_rows:
+        file_name = "prediction_samples.csv"
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(
+            frame_id in frames_by_id
+            and frame_id not in secondary_samples
+            and row["run_id"] == run_id
+            and row["sample_stage"] == "T2"
+            and row["telemetry_schema_version"] == "3"
+            and row["feature_support_mask"] == "0x3ffffffffdffff",
+            f"{file_name}: distributional secondary identity differs",
+        )
+        latest_time = _optional_integer(
+            row, "latest_feature_event_time_ns", file_name
+        )
+        latest_sequence = _integer(
+            row, "latest_feature_event_sequence", file_name
+        )
+        _require(
+            (latest_sequence == 0) == (latest_time is None)
+            and (latest_time or 0) >= last_watermark_time
+            and latest_sequence >= last_watermark_sequence,
+            f"{file_name}: distributional secondary watermark regressed",
+        )
+        last_watermark_time = latest_time or 0
+        last_watermark_sequence = latest_sequence
+        secondary_samples[frame_id] = row
+
+    secondary_poll_rows = [
+        row
+        for row in polling
+        if row.get("sample_offset_us") == "2000"
+        and row.get("path_id") == "0"
+        and row.get("copy_id") == "1"
+    ]
+    _require(
+        len(secondary_poll_rows) == len(frames_by_id),
+        "prediction_polling_samples.csv: distributional secondary cardinality differs",
+    )
+    secondary_polling: dict[int, dict[str, str]] = {}
+    previous_counters: dict[str, int] | None = None
+    last_capture = -1
+    last_report_watermark_time = 0
+    last_report_watermark_sequence = 0
+    for row in sorted(
+        secondary_poll_rows,
+        key=lambda item: _integer(
+            item, "capture_time_ns", "prediction_polling_samples.csv"
+        ),
+    ):
+        file_name = "prediction_polling_samples.csv"
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(
+            frame_id in frames_by_id
+            and frame_id not in secondary_polling
+            and row["run_id"] == run_id
+            and row["sample_stage"] == "T2"
+            and row["polling_schema_version"] == "1"
+            and _flag(row, "report_available", file_name),
+            f"{file_name}: distributional secondary report identity differs",
+        )
+        capture = _integer(row, "capture_time_ns", file_name)
+        available = _integer(row, "available_time_ns", file_name)
+        sample_time = _integer(
+            secondary_samples[frame_id], "sample_time_ns", "prediction_samples.csv"
+        )
+        _require(
+            capture % 1_000_000 == 0
+            and available == capture + 1_000_000
+            and available <= sample_time
+            and 1_000_000 <= sample_time - capture < 2_000_000,
+            f"{file_name}: distributional secondary report timing differs",
+        )
+        counters = _validate_paired_primary_report(
+            row, previous_counters=previous_counters
+        )
+        previous_counters = counters
+        latest_time = _optional_integer(
+            row, "latest_feature_event_time_ns", file_name
+        ) or 0
+        latest_sequence = _integer(
+            row, "latest_feature_event_sequence", file_name
+        )
+        _require(
+            capture >= last_capture
+            and latest_time >= last_report_watermark_time
+            and latest_sequence >= last_report_watermark_sequence,
+            f"{file_name}: distributional secondary report order regressed",
+        )
+        last_capture = capture
+        last_report_watermark_time = latest_time
+        last_report_watermark_sequence = latest_sequence
+        secondary_polling[frame_id] = row
+    return primary_samples, primary_polling, secondary_samples, secondary_polling
+
+
+def _distributional_shadow_t2_feature_vector(
+    frame_id: int,
+    primary: dict[str, str],
+    primary_poll: dict[str, str],
+    primary_lag_polls: dict[int, dict[str, str]],
+    secondary: dict[str, str],
+    secondary_poll: dict[str, str],
+    secondary_lag_polls: dict[int, dict[str, str]],
+) -> Any:
+    """Rebuild the exact 308-feature binary32 adapter from raw telemetry."""
+    context = _distributional_shadow_t2_model_replay_context()
+    np = context["numpy"]
+    primary_features = _paired_value_t2_feature_vector(
+        frame_id, primary, primary_poll, primary_lag_polls
+    )
+    values: list[float] = []
+    for field in ("mac_queue_packets", "mac_queue_service_bytes"):
+        observed = _optional_number(secondary, field, "prediction_samples.csv")
+        values.append(math.nan if observed is None else observed)
+
+    def append_fractions(report: dict[str, str]) -> None:
+        for window in (1000, 5000, 20000):
+            label = _window_label(window)
+            for state in ("tx", "rx", "busy", "idle", "other"):
+                observed = _optional_number(
+                    report,
+                    f"phy_{state}_fraction_{label}",
+                    "prediction_polling_samples.csv",
+                )
+                values.append(math.nan if observed is None else observed)
+
+    append_fractions(secondary_poll)
+    for lag in (1, 3, 8):
+        append_fractions(secondary_lag_polls[lag])
+    try:
+        vector = np.concatenate(
+            (primary_features, np.asarray(values, dtype=np.float64))
+        )
+        with np.errstate(over="ignore", invalid="ignore"):
+            vector = vector.astype(np.float32).astype(np.float64)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ValidationError(
+            f"distributional-shadow frame {frame_id}: feature reconstruction failed: "
+            f"{error}"
+        ) from error
+    _require(
+        vector.shape == (308,) and not np.any(np.isinf(vector)),
+        f"distributional-shadow frame {frame_id}: feature vector differs",
+    )
+    return vector
+
+
 def _validate_paired_value_t2_decisions(
     run_dir: Path,
     run_id: str,
@@ -3669,6 +4473,797 @@ def _validate_paired_value_t2_decisions(
         "remaining_refill_admitted": remaining_refill_admitted_count,
         "maximum_observed_debt": maximum_observed_debt,
         "profile": profile,
+    }
+
+
+def _distributional_shadow_t2_array(
+    row: dict[str, str], key: str, size: int, file_name: str
+) -> list[float]:
+    tokens = row.get(key, "").split(";")
+    _require(
+        len(tokens) == size and all(token != "" for token in tokens),
+        f"{file_name}: {key} has the wrong array width",
+    )
+    try:
+        values = [float(token) for token in tokens]
+    except ValueError as error:
+        raise ValidationError(f"{file_name}: {key} has an invalid value") from error
+    _require(
+        all(math.isfinite(value) for value in values),
+        f"{file_name}: {key} contains a non-finite value",
+    )
+    return values
+
+
+def _distributional_shadow_t2_extended_nonnegative(
+    row: dict[str, str], key: str, file_name: str
+) -> float:
+    try:
+        value = float(row[key])
+    except (KeyError, ValueError) as error:
+        raise ValidationError(f"{file_name}: invalid extended number {key}") from error
+    _require(
+        not math.isnan(value) and value >= 0,
+        f"{file_name}: invalid nonnegative extended number {key}",
+    )
+    return value
+
+
+def _distributional_shadow_t2_values_close(
+    observed: list[float], expected: list[float], tolerance: float = 5e-14
+) -> bool:
+    return len(observed) == len(expected) and all(
+        abs(left - right) <= max(
+            tolerance,
+            16 * max(math.ulp(left), math.ulp(right)),
+        )
+        for left, right in zip(observed, expected)
+    )
+
+
+def _distributional_shadow_t2_expected_unsettled(
+    sample_time_ns: int,
+    feature_evaluated: bool,
+    action_times: dict[int, int],
+    settlement_times: dict[int, int],
+) -> int:
+    """Reconstruct the controller's scored-only unsettled-action diagnostic."""
+    if not feature_evaluated:
+        return 0
+    return sum(
+        launch_time < sample_time_ns <= settlement_times[frame_id]
+        for frame_id, launch_time in action_times.items()
+    )
+
+
+def _validate_distributional_shadow_t2_decisions(
+    run_dir: Path,
+    run_id: str,
+    frames: list[dict[str, str]],
+    policy_decisions: list[dict[str, str]],
+    duplicated_frame_ids: set[int],
+) -> dict[str, Any]:
+    """Independently replay every distributional-shadow decision and ledger debit."""
+    file_name = "distributional_shadow_t2_decisions.csv"
+    rows = _csv(
+        run_dir / file_name,
+        set(DISTRIBUTIONAL_SHADOW_T2_DECISION_COLUMNS),
+        ordered_columns=DISTRIBUTIONAL_SHADOW_T2_DECISION_COLUMNS,
+    )
+    frames_by_id = {_integer(row, "frame_id", "frames.csv"): row for row in frames}
+    _require(
+        len(rows) == len(frames_by_id)
+        and {_integer(row, "frame_id", file_name) for row in rows}
+        == set(frames_by_id),
+        f"{file_name}: frame cardinality differs",
+    )
+    (
+        primary_samples,
+        primary_polling,
+        secondary_samples,
+        secondary_polling,
+    ) = _distributional_shadow_t2_telemetry(run_dir, run_id, frames_by_id)
+    context = _distributional_shadow_t2_model_replay_context()
+    reference_bins = context["reference"]["bins"]
+
+    status_counts: Counter[str] = Counter()
+    action_frames: set[int] = set()
+    action_estimates: dict[int, float] = {}
+    action_nominals: dict[int, float] = {}
+    action_byte_quanta: dict[int, int] = {}
+    action_times: dict[int, int] = {}
+    actions_by_time_bin = [0] * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
+    reservation_by_time_bin = [0.0] * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
+    actions_by_regime = [0] * DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT
+    reservation_by_regime = [0.0] * DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT
+    positive_rewards: list[float] = []
+    finite_opportunity_costs: list[float] = []
+    infinite_opportunity_costs = 0
+    predicted_reward_launched = 0.0
+    tail18_gain_launched = 0.0
+    nominal_launched = 0.0
+    reserved_launched = 0.0
+    feature_evaluated_count = 0
+    positive_reward_count = 0
+    opportunity_passed_count = 0
+    horizon_considered_count = 0
+    horizon_admitted_count = 0
+    launch_attempted_count = 0
+
+    ledger_balance = DISTRIBUTIONAL_SHADOW_T2_INITIAL_CREDIT_US
+    ledger_last_ns = PAIRED_VALUE_T2_DECISION_START_NS
+    ledger_minimum_balance = ledger_balance
+    ledger_generated_refill = 0.0
+    ledger_discarded_refill = 0.0
+    ledger_debited = 0.0
+    ledger_debit_count = 0
+    previous_meter_reserved_after: float | None = None
+    congestion_sum = 0.0
+    congestion_count = 0
+
+    model_metadata = {
+        "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+        "selected_variant": "primary_secondary_hgb64",
+        "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+        "feature_count": "308",
+        "feature_adapter_id": DISTRIBUTIONAL_SHADOW_T2_FEATURE_ADAPTER,
+        "runtime_contract_id": DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID,
+        "runtime_contract_sha256": DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256,
+    }
+    model_columns = (
+        "control_logits",
+        "control_probabilities",
+        "control_cdf",
+        "full_copy_logits",
+        "full_copy_probabilities",
+        "full_copy_cdf",
+        "deadline_rescue_reward",
+        "tail18_cdf_gain",
+        "reward_density_per_us",
+        "opportunity_cost_per_us",
+        "passes_opportunity_price",
+    )
+
+    for row in rows:
+        frame_id = _integer(row, "frame_id", file_name)
+        frame = frames_by_id[frame_id]
+        primary = primary_samples[frame_id]
+        secondary = secondary_samples[frame_id]
+        primary_poll = primary_polling[frame_id]
+        secondary_poll = secondary_polling[frame_id]
+        _require(
+            _integer(row, "schema_version", file_name) == 1
+            and row["run_id"] == run_id
+            and row["policy"] == DISTRIBUTIONAL_SHADOW_T2_POLICY
+            and all(row[key] == value for key, value in model_metadata.items())
+            and row["primary_path_id"] == "1"
+            and row["primary_copy_id"] == "0"
+            and row["secondary_path_id"] == "0"
+            and row["secondary_copy_id"] == "1"
+            and row["sample_stage"] == "T2"
+            and row["sample_offset_us"] == "2000",
+            f"{file_name}: frozen identity or model metadata differs",
+        )
+
+        generation_ns = _integer(row, "generation_time_ns", file_name)
+        deadline_ns = _integer(row, "deadline_time_ns", file_name)
+        sample_ns = _integer(row, "primary_sample_time_ns", file_name)
+        _require(
+            generation_ns // 1000 == int(frame["generation_time_us"])
+            and deadline_ns == generation_ns + int(frame["deadline_us"]) * 1000
+            and sample_ns == generation_ns + 2_000_000
+            and _integer(row, "secondary_sample_time_ns", file_name) == sample_ns
+            and row["generation_time_ns"] == primary["generation_time_ns"]
+            == secondary["generation_time_ns"]
+            and row["deadline_time_ns"] == primary["deadline_time_ns"]
+            == secondary["deadline_time_ns"]
+            and row["primary_sample_time_ns"] == primary["sample_time_ns"]
+            and row["secondary_sample_time_ns"] == secondary["sample_time_ns"]
+            and row["frame_type"] == frame["frame_type"] == primary["frame_type"]
+            == secondary["frame_type"]
+            and row["frame_size_bytes"] == frame["frame_size_bytes"]
+            == primary["frame_size_bytes"] == secondary["frame_size_bytes"]
+            and row["frame_packet_count"] == frame["packet_count"]
+            == primary["frame_packet_count"] == secondary["frame_packet_count"]
+            and row["primary_actionable"] == primary["actionable"],
+            f"{file_name}: paired immutable telemetry differs",
+        )
+        _require(
+            row["primary_feature_watermark_time_ns"]
+            == primary["latest_feature_event_time_ns"]
+            and row["primary_feature_watermark_sequence"]
+            == primary["latest_feature_event_sequence"]
+            and row["secondary_feature_watermark_time_ns"]
+            == secondary["latest_feature_event_time_ns"]
+            and row["secondary_feature_watermark_sequence"]
+            == secondary["latest_feature_event_sequence"],
+            f"{file_name}: paired watermark evidence differs",
+        )
+        _require(
+            row["primary_current_poll_capture_time_ns"]
+            == primary_poll["capture_time_ns"]
+            and row["primary_current_poll_available_time_ns"]
+            == primary_poll["available_time_ns"]
+            and row["secondary_current_poll_capture_time_ns"]
+            == secondary_poll["capture_time_ns"]
+            and row["secondary_current_poll_available_time_ns"]
+            == secondary_poll["available_time_ns"],
+            f"{file_name}: current delayed polling evidence differs",
+        )
+
+        history_ready = frame_id >= 8
+        _require(
+            _flag(row, "history_ready", file_name) == history_ready,
+            f"{file_name}: history-ready evidence differs",
+        )
+        for endpoint, reports in (
+            ("primary", primary_polling),
+            ("secondary", secondary_polling),
+        ):
+            for lag in (1, 3, 8):
+                frame_key = f"{endpoint}_lag{lag}_frame_id"
+                capture_key = f"{endpoint}_lag{lag}_poll_capture_time_ns"
+                if frame_id >= lag:
+                    expected_frame = frame_id - lag
+                    _require(
+                        row[frame_key] == str(expected_frame)
+                        and row[capture_key]
+                        == reports[expected_frame]["capture_time_ns"],
+                        f"{file_name}: {endpoint} lag-{lag} evidence differs",
+                    )
+                else:
+                    _require(
+                        row[frame_key] == "" and row[capture_key] == "",
+                        f"{file_name}: absent {endpoint} lag-{lag} is populated",
+                    )
+
+        inside = (
+            PAIRED_VALUE_T2_DECISION_START_NS
+            <= sample_ns
+            < PAIRED_VALUE_T2_DECISION_STOP_NS
+        )
+        actionable = _flag(row, "primary_actionable", file_name)
+        _require(
+            row["decision_window_start_ns"] == str(PAIRED_VALUE_T2_DECISION_START_NS)
+            and row["decision_window_stop_ns"] == str(PAIRED_VALUE_T2_DECISION_STOP_NS)
+            and _flag(row, "inside_decision_window", file_name) == inside,
+            f"{file_name}: decision-window evidence differs",
+        )
+
+        _require(
+            sample_ns >= ledger_last_ns
+            and sample_ns <= PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+            f"{file_name}: ledger time regressed",
+        )
+        elapsed_us = (sample_ns - ledger_last_ns) / 1000.0
+        generated_us = PAIRED_VALUE_T2_GUARD_FRACTION * elapsed_us
+        uncapped_us = ledger_balance + generated_us
+        new_balance = min(
+            DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US, uncapped_us
+        )
+        ledger_discarded_refill += max(0.0, uncapped_us - new_balance)
+        ledger_generated_refill += generated_us
+        ledger_balance = new_balance
+        ledger_last_ns = sample_ns
+        remaining_refill = PAIRED_VALUE_T2_GUARD_FRACTION * (
+            (PAIRED_VALUE_T2_MEASUREMENT_STOP_NS - sample_ns) / 1000.0
+        )
+        repayable = ledger_balance + remaining_refill
+        _require(
+            row["credit_accounting_id"]
+            == "permanent_canonical_reservation_borrow_repay_v1"
+            and _paired_close(
+                _number(row, "budget_fraction", file_name),
+                PAIRED_VALUE_T2_GUARD_FRACTION,
+            )
+            and _paired_close(
+                _number(row, "positive_balance_capacity_us", file_name),
+                DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US,
+            )
+            and _paired_close(
+                _number(row, "initial_credit_us", file_name),
+                DISTRIBUTIONAL_SHADOW_T2_INITIAL_CREDIT_US,
+            )
+            and _integer(row, "repayment_stop_ns", file_name)
+            == PAIRED_VALUE_T2_MEASUREMENT_STOP_NS
+            and _paired_close(
+                _signed_number(row, "ledger_balance_before_us", file_name),
+                ledger_balance,
+            )
+            and _paired_close(
+                _number(row, "ledger_debt_before_us", file_name),
+                max(0.0, -ledger_balance),
+            )
+            and _paired_close(
+                _number(row, "ledger_remaining_refill_before_us", file_name),
+                remaining_refill,
+            )
+            and _paired_close(
+                _number(row, "ledger_repayable_before_us", file_name), repayable
+            )
+            and _paired_close(
+                _number(row, "ledger_debited_before_us", file_name), ledger_debited
+            )
+            and not _flag(row, "measured_settlement_refunds_ledger", file_name),
+            f"{file_name}: permanent ledger snapshot differs",
+        )
+
+        congestion_should_update = inside and history_ready and actionable
+        congestion_updated = _flag(row, "congestion_updated", file_name)
+        _require(
+            congestion_updated == congestion_should_update,
+            f"{file_name}: congestion update gate differs",
+        )
+        time_bin: int | None = None
+        regime: int | None = None
+        if congestion_updated:
+            current_busy = _number(
+                primary_poll, "phy_busy_fraction_20ms", "prediction_polling_samples.csv"
+            )
+            congestion_sum += current_busy
+            congestion_count += 1
+            running_busy = congestion_sum / congestion_count
+            time_bin = min(
+                (sample_ns - PAIRED_VALUE_T2_DECISION_START_NS)
+                // (DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US * 1000),
+                DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT - 1,
+            )
+            low, high = (
+                float(value)
+                for value in reference_bins[time_bin]["congestion_cutpoints"]
+            )
+            regime = 0 if running_busy < low else 1 if running_busy < high else 2
+            _require(
+                _paired_close(
+                    _number(row, "current_primary_busy20ms", file_name), current_busy
+                )
+                and _paired_close(
+                    _number(row, "running_primary_busy20ms", file_name), running_busy
+                )
+                and _integer(row, "congestion_observation_count", file_name)
+                == congestion_count
+                and _integer(row, "time_bin", file_name) == time_bin
+                and _integer(row, "congestion_regime", file_name) == regime,
+                f"{file_name}: congestion state differs",
+            )
+        else:
+            _require(
+                all(
+                    row[key] == ""
+                    for key in (
+                        "current_primary_busy20ms",
+                        "running_primary_busy20ms",
+                        "congestion_observation_count",
+                        "time_bin",
+                        "congestion_regime",
+                    )
+                ),
+                f"{file_name}: skipped congestion state is populated",
+            )
+
+        descriptor_should_be_checked = (
+            congestion_should_update and row["frame_type"] == "P_FRAME"
+        )
+        descriptor_checked = _flag(row, "descriptor_checked", file_name)
+        descriptor_available = _flag(row, "descriptor_available", file_name)
+        _require(
+            descriptor_checked == descriptor_should_be_checked
+            and (descriptor_checked or not descriptor_available),
+            f"{file_name}: descriptor gate order differs",
+        )
+        _require(
+            row["canonical_cost_estimator_id"] == RANDOMIZED_COST_ESTIMATOR
+            and _paired_close(_number(row, "cost_safety_factor", file_name), 1.25),
+            f"{file_name}: canonical estimator metadata differs",
+        )
+        descriptor_fields = (
+            "descriptor_frame_packet_count",
+            "descriptor_packet_count",
+            "descriptor_packet_indices",
+            "descriptor_expected_mac_service_bytes",
+            "descriptor_deadline_time_ns",
+            "canonical_nominal_airtime_us",
+            "canonical_reserved_airtime_us",
+        )
+        nominal: float | None = None
+        reserved: float | None = None
+        mpdu_bytes: int | None = None
+        if descriptor_available:
+            packet_count, indices, service_bytes, expected_nominal = (
+                _canonical_full_copy_descriptor(frame)
+            )
+            nominal = _number(row, "canonical_nominal_airtime_us", file_name)
+            reserved = _number(row, "canonical_reserved_airtime_us", file_name)
+            _require(
+                row["descriptor_frame_packet_count"] == str(packet_count)
+                and row["descriptor_packet_count"] == str(packet_count)
+                and row["descriptor_packet_indices"] == indices
+                and row["descriptor_expected_mac_service_bytes"] == str(service_bytes)
+                and row["descriptor_deadline_time_ns"] == str(deadline_ns)
+                and service_bytes % packet_count == 0
+                and _paired_close(nominal, expected_nominal)
+                and _paired_close(reserved, 1.25 * expected_nominal)
+                and _paired_close(
+                    reserved, DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US
+                ),
+                f"{file_name}: canonical descriptor or reservation differs",
+            )
+            mpdu_bytes = (
+                service_bytes // packet_count + PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES
+            )
+        else:
+            _require(
+                all(row[field] == "" for field in descriptor_fields),
+                f"{file_name}: unavailable descriptor has populated evidence",
+            )
+
+        feature_evaluated = _flag(row, "feature_evaluated", file_name)
+        _require(
+            feature_evaluated == descriptor_available,
+            f"{file_name}: model evaluation bypassed ordered gates",
+        )
+        reward: float | None = None
+        tail18_gain: float | None = None
+        reward_density: float | None = None
+        opportunity_cost: float | None = None
+        passes_opportunity = False
+        if feature_evaluated:
+            assert time_bin is not None and regime is not None and reserved is not None
+            feature_evaluated_count += 1
+            features = _distributional_shadow_t2_feature_vector(
+                frame_id,
+                primary,
+                primary_poll,
+                {lag: primary_polling[frame_id - lag] for lag in (1, 3, 8)},
+                secondary,
+                secondary_poll,
+                {lag: secondary_polling[frame_id - lag] for lag in (1, 3, 8)},
+            )
+            expected_model = _distributional_shadow_t2_model_result(features)
+            observed_arrays = {
+                "control_logits": _distributional_shadow_t2_array(
+                    row, "control_logits", 6, file_name
+                ),
+                "control_probabilities": _distributional_shadow_t2_array(
+                    row, "control_probabilities", 6, file_name
+                ),
+                "control_cdf": _distributional_shadow_t2_array(
+                    row, "control_cdf", 5, file_name
+                ),
+                "full_copy_logits": _distributional_shadow_t2_array(
+                    row, "full_copy_logits", 6, file_name
+                ),
+                "full_copy_probabilities": _distributional_shadow_t2_array(
+                    row, "full_copy_probabilities", 6, file_name
+                ),
+                "full_copy_cdf": _distributional_shadow_t2_array(
+                    row, "full_copy_cdf", 5, file_name
+                ),
+            }
+            expected_arrays = {
+                "control_logits": expected_model["control"]["logits"],
+                "control_probabilities": expected_model["control"]["probabilities"],
+                "control_cdf": expected_model["control"]["cdf"],
+                "full_copy_logits": expected_model["full_copy"]["logits"],
+                "full_copy_probabilities": expected_model["full_copy"]["probabilities"],
+                "full_copy_cdf": expected_model["full_copy"]["cdf"],
+            }
+            _require(
+                all(
+                    _distributional_shadow_t2_values_close(
+                        observed_arrays[key], expected_arrays[key]
+                    )
+                    for key in expected_arrays
+                ),
+                f"{file_name}: portable model replay differs for frame {frame_id}",
+            )
+            reward = _number(row, "deadline_rescue_reward", file_name)
+            tail18_gain = _signed_number(row, "tail18_cdf_gain", file_name)
+            reward_density = _number(row, "reward_density_per_us", file_name)
+            _require(
+                abs(reward - expected_model["deadline_rescue_reward"]) <= 5e-14
+                and abs(tail18_gain - expected_model["tail18_cdf_gain"]) <= 5e-14
+                and _paired_close(reward_density, reward / reserved),
+                f"{file_name}: derived distributional reward differs",
+            )
+            if reward > 0:
+                positive_reward_count += 1
+                positive_rewards.append(reward)
+                opportunity_cost = _distributional_shadow_t2_opportunity_cost(
+                    time_bin, regime, repayable
+                )
+                observed_opportunity = _distributional_shadow_t2_extended_nonnegative(
+                    row, "opportunity_cost_per_us", file_name
+                )
+                _require(
+                    (math.isinf(opportunity_cost) and math.isinf(observed_opportunity))
+                    or (
+                        math.isfinite(opportunity_cost)
+                        and observed_opportunity == opportunity_cost
+                    ),
+                    f"{file_name}: shadow-price replay differs",
+                )
+                if math.isfinite(opportunity_cost):
+                    finite_opportunity_costs.append(opportunity_cost)
+                else:
+                    infinite_opportunity_costs += 1
+                passes_opportunity = reward_density >= opportunity_cost
+                _require(
+                    _flag(row, "passes_opportunity_price", file_name)
+                    == passes_opportunity,
+                    f"{file_name}: opportunity-price gate differs",
+                )
+                opportunity_passed_count += int(passes_opportunity)
+            else:
+                _require(
+                    row["opportunity_cost_per_us"] == ""
+                    and not _flag(row, "passes_opportunity_price", file_name),
+                    f"{file_name}: nonpositive reward reached the shadow gate",
+                )
+        else:
+            _require(
+                all(row[key] == "" for key in model_columns),
+                f"{file_name}: skipped model evidence is populated",
+            )
+
+        considered = _flag(row, "horizon_admission_considered", file_name)
+        admitted = _flag(row, "horizon_admitted", file_name)
+        launch_attempted = _flag(row, "launch_attempted", file_name)
+        launched = _flag(row, "secondary_launched", file_name)
+        expected_considered = bool(feature_evaluated and reward is not None and reward > 0
+                                   and passes_opportunity)
+        expected_admitted = bool(
+            expected_considered and reserved is not None and reserved <= repayable
+        )
+        _require(
+            considered == expected_considered
+            and admitted == expected_admitted
+            and launch_attempted == admitted
+            and (launch_attempted or not launched),
+            f"{file_name}: horizon or launch gate differs",
+        )
+        horizon_considered_count += int(considered)
+        horizon_admitted_count += int(admitted)
+        launch_attempted_count += int(launch_attempted)
+
+        meter_before = _number(row, "meter_reserved_before_us", file_name)
+        meter_after = _number(row, "meter_reserved_after_us", file_name)
+        if previous_meter_reserved_after is None:
+            _require(
+                _paired_close(meter_before, 0.0),
+                f"{file_name}: initial meter reservation is nonzero",
+            )
+        else:
+            _require(
+                meter_before
+                <= previous_meter_reserved_after
+                + PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+                f"{file_name}: meter reservation increased between decisions",
+            )
+        if launched:
+            assert (
+                nominal is not None
+                and reserved is not None
+                and mpdu_bytes is not None
+                and reward is not None
+                and tail18_gain is not None
+                and time_bin is not None
+                and regime is not None
+            )
+            ledger_balance -= reserved
+            ledger_minimum_balance = min(ledger_minimum_balance, ledger_balance)
+            ledger_debited += reserved
+            ledger_debit_count += 1
+            _require(
+                ledger_balance >= -remaining_refill
+                and _paired_close(meter_after, meter_before + reserved),
+                f"{file_name}: action debit or meter reservation differs",
+            )
+            action_frames.add(frame_id)
+            action_estimates[frame_id] = reserved
+            action_nominals[frame_id] = nominal
+            action_byte_quanta[frame_id] = mpdu_bytes
+            action_times[frame_id] = sample_ns
+            nominal_launched += nominal
+            reserved_launched += reserved
+            predicted_reward_launched += reward
+            tail18_gain_launched += tail18_gain
+            actions_by_time_bin[time_bin] += 1
+            reservation_by_time_bin[time_bin] += reserved
+            actions_by_regime[regime] += 1
+            reservation_by_regime[regime] += reserved
+        else:
+            _require(
+                _paired_close(meter_after, meter_before),
+                f"{file_name}: rejection changed the meter reservation",
+            )
+        previous_meter_reserved_after = meter_after
+        _require(
+            _paired_close(
+                _signed_number(row, "ledger_balance_after_us", file_name),
+                ledger_balance,
+            )
+            and _paired_close(
+                _number(row, "ledger_debt_after_us", file_name),
+                max(0.0, -ledger_balance),
+            )
+            and _paired_close(
+                _number(row, "ledger_debited_after_us", file_name), ledger_debited
+            ),
+            f"{file_name}: post-decision ledger differs",
+        )
+
+        if not inside:
+            expected_status = "outside_decision_window"
+        elif not history_ready:
+            expected_status = "history_warmup"
+        elif not actionable:
+            expected_status = "not_actionable"
+        elif row["frame_type"] != "P_FRAME":
+            expected_status = "frame_type_restricted"
+        elif not descriptor_available:
+            expected_status = "descriptor_unavailable"
+        elif reward is not None and not (reward > 0):
+            expected_status = "nonpositive_reward"
+        elif not passes_opportunity:
+            expected_status = "opportunity_price_rejected"
+        elif not admitted:
+            expected_status = "horizon_credit_rejected"
+        elif not launched:
+            expected_status = "launch_rejected"
+        else:
+            expected_status = "action"
+        _require(
+            row["decision_status"] == expected_status
+            and expected_status in DISTRIBUTIONAL_SHADOW_T2_STATUSES,
+            f"{file_name}: ordered decision status differs",
+        )
+        status_counts[expected_status] += 1
+
+    settlement_rows = _csv(
+        run_dir / "secondary_airtime_settlements.csv",
+        SECONDARY_AIRTIME_SETTLEMENT_COLUMNS,
+    )
+    settlement_times = {
+        _integer(row, "frame_id", "secondary_airtime_settlements.csv"):
+        _integer(row, "settlement_time_ns", "secondary_airtime_settlements.csv")
+        for row in settlement_rows
+    }
+    _require(
+        set(settlement_times) == action_frames,
+        f"{file_name}: settlement/action identity differs",
+    )
+    action_dirty_count = 0
+    for row in rows:
+        sample_ns = _integer(row, "primary_sample_time_ns", file_name)
+        feature_evaluated = _flag(row, "feature_evaluated", file_name)
+        earlier_unsettled = _distributional_shadow_t2_expected_unsettled(
+            sample_ns,
+            feature_evaluated,
+            action_times,
+            settlement_times,
+        )
+        _require(
+            _integer(row, "earlier_unsettled_launches", file_name)
+            == earlier_unsettled
+            and _flag(row, "secondary_state_action_dirty", file_name)
+            == (earlier_unsettled != 0),
+            f"{file_name}: action-dirty secondary diagnostic differs",
+        )
+        action_dirty_count += int(feature_evaluated and earlier_unsettled != 0)
+
+    _require(
+        action_frames == duplicated_frame_ids,
+        f"{file_name}: launches do not match duplicated frames",
+    )
+    policy_action_frames = {
+        _integer(row, "frame_id", "policy_decisions.csv")
+        for row in policy_decisions
+        if _flag(row, "duplicated", "policy_decisions.csv")
+    }
+    _require(
+        policy_action_frames == action_frames
+        and all(
+            row["policy"] == DISTRIBUTIONAL_SHADOW_T2_POLICY
+            and row["primary_link"] == "1"
+            and (row["secondary_link"] == "0")
+            == _flag(row, "duplicated", "policy_decisions.csv")
+            for row in policy_decisions
+        )
+        and all(
+            frame["policy"] == DISTRIBUTIONAL_SHADOW_T2_POLICY
+            and frame["primary_link"] == "1"
+            for frame in frames
+        ),
+        "distributional-shadow final frame/action evidence differs",
+    )
+    _require(
+        len(rows) == sum(status_counts[status] for status in DISTRIBUTIONAL_SHADOW_T2_STATUSES)
+        and feature_evaluated_count
+        == status_counts["nonpositive_reward"]
+        + status_counts["opportunity_price_rejected"]
+        + status_counts["horizon_credit_rejected"]
+        + status_counts["launch_rejected"]
+        + status_counts["action"]
+        and positive_reward_count
+        == status_counts["opportunity_price_rejected"]
+        + status_counts["horizon_credit_rejected"]
+        + status_counts["launch_rejected"]
+        + status_counts["action"]
+        and opportunity_passed_count
+        == status_counts["horizon_credit_rejected"]
+        + status_counts["launch_rejected"]
+        + status_counts["action"]
+        and horizon_considered_count == opportunity_passed_count
+        and horizon_admitted_count
+        == status_counts["launch_rejected"] + status_counts["action"]
+        and launch_attempted_count == horizon_admitted_count
+        and len(action_frames) == status_counts["action"],
+        f"{file_name}: reconstructed counts do not reconcile",
+    )
+
+    balance_after_last_decision = ledger_balance
+    debt_after_last_decision = max(0.0, -ledger_balance)
+    remaining_after_last_decision = PAIRED_VALUE_T2_GUARD_FRACTION * (
+        (PAIRED_VALUE_T2_MEASUREMENT_STOP_NS - ledger_last_ns) / 1000.0
+    )
+    repayable_after_last_decision = ledger_balance + remaining_after_last_decision
+    final_uncapped = ledger_balance + remaining_after_last_decision
+    final_balance = min(
+        DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US, final_uncapped
+    )
+    final_discarded_refill = ledger_discarded_refill + max(
+        0.0,
+        final_uncapped - DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US,
+    )
+    final_generated_refill = ledger_generated_refill + remaining_after_last_decision
+    _require(
+        final_balance >= 0,
+        f"{file_name}: ledger does not repay by measurement stop",
+    )
+    return {
+        "rows": rows,
+        "status_counts": status_counts,
+        "action_frames": action_frames,
+        "action_estimates": action_estimates,
+        "action_nominals": action_nominals,
+        "action_byte_quanta": action_byte_quanta,
+        "maximum_observed_debt": max(0.0, -ledger_minimum_balance),
+        "feature_evaluated": feature_evaluated_count,
+        "positive_reward": positive_reward_count,
+        "opportunity_passed": opportunity_passed_count,
+        "horizon_considered": horizon_considered_count,
+        "horizon_admitted": horizon_admitted_count,
+        "launch_attempted": launch_attempted_count,
+        "congestion_observations": congestion_count,
+        "action_dirty_scored": action_dirty_count,
+        "positive_rewards": positive_rewards,
+        "finite_opportunity_costs": finite_opportunity_costs,
+        "infinite_opportunity_costs": infinite_opportunity_costs,
+        "predicted_reward_launched": predicted_reward_launched,
+        "tail18_gain_launched": tail18_gain_launched,
+        "nominal_launched": nominal_launched,
+        "reserved_launched": reserved_launched,
+        "actions_by_time_bin": actions_by_time_bin,
+        "reservation_by_time_bin": reservation_by_time_bin,
+        "actions_by_regime": actions_by_regime,
+        "reservation_by_regime": reservation_by_regime,
+        "ledger": {
+            "balance_after_last_decision_us": balance_after_last_decision,
+            "debt_after_last_decision_us": debt_after_last_decision,
+            "remaining_refill_after_last_decision_us": remaining_after_last_decision,
+            "repayable_after_last_decision_us": repayable_after_last_decision,
+            "minimum_balance_us": ledger_minimum_balance,
+            "maximum_debt_us": max(0.0, -ledger_minimum_balance),
+            "permanent_debited_us": ledger_debited,
+            "permanent_debit_count": ledger_debit_count,
+            "generated_refill_before_finalize_us": ledger_generated_refill,
+            "discarded_refill_before_finalize_us": ledger_discarded_refill,
+            "generated_refill_at_stop_us": final_generated_refill,
+            "discarded_refill_at_stop_us": final_discarded_refill,
+            "final_balance_us": final_balance,
+            "repayment_closed": True,
+        },
     }
 
 
@@ -4720,6 +6315,389 @@ def _validate_paired_value_t2_summary(
     _replay_paired_value_t2_guard(evidence["rows"], events, profile)
 
 
+def _distributional_shadow_t2_distribution(values: list[float]) -> dict[str, Any]:
+    """Reconstruct the controller's nearest-rank diagnostic distribution."""
+    if not values:
+        return {
+            "finite_count": 0,
+            "minimum": None,
+            "p50": None,
+            "p90": None,
+            "p99": None,
+            "maximum": None,
+            "mean": None,
+        }
+    ordered = sorted(values)
+
+    def nearest_rank(probability: float) -> float:
+        rank = math.ceil(probability * len(ordered))
+        return ordered[max(0, min(rank - 1, len(ordered) - 1))]
+
+    return {
+        "finite_count": len(ordered),
+        "minimum": ordered[0],
+        "p50": nearest_rank(0.50),
+        "p90": nearest_rank(0.90),
+        "p99": nearest_rank(0.99),
+        "maximum": ordered[-1],
+        "mean": sum(ordered) / len(ordered),
+    }
+
+
+def _validate_distributional_shadow_t2_summary(
+    run_dir: Path,
+    run_id: str,
+    frame_count: int,
+    evidence: dict[str, Any],
+    events: list[dict[str, str]],
+    settlements: list[dict[str, str]],
+    meter_summary: dict[str, Any],
+) -> None:
+    """Reconstruct every distributional controller summary field."""
+    file_name = "distributional_shadow_t2_summary.json"
+    summary = _json(run_dir / file_name)
+    expected_top_keys = {
+        "schema_version",
+        "run_id",
+        "policy",
+        "runtime_contract_id",
+        "runtime_contract_sha256",
+        "evidence_status",
+        "source_artifacts",
+        "model",
+        "telemetry",
+        "decision_window",
+        "allocator",
+        "counts",
+        "allocation_by_time_bin",
+        "allocation_by_congestion_regime",
+        "prediction_diagnostics",
+        "ledger",
+        "airtime",
+        "integrity",
+    }
+    _require(
+        set(summary) == expected_top_keys
+        and summary.get("schema_version") == 1
+        and summary.get("run_id") == run_id
+        and summary.get("policy") == DISTRIBUTIONAL_SHADOW_T2_POLICY
+        and summary.get("runtime_contract_id") == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_ID
+        and summary.get("runtime_contract_sha256")
+        == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256
+        and summary.get("evidence_status")
+        == "deployment_refit_and_in_sample_construction_sanity",
+        f"{file_name}: top-level identity differs",
+    )
+    expected_sources = {
+        "training_git_commit": "49c74528289e7dfd8881cbe1f65ea9293abe3ca6",
+        "source_model_pickle_sha256": (
+            "60c181eb75faafde57f65a63f71a31cee99050a54afa53edb162a9ac7a1ec6e0"
+        ),
+        "source_model_json_sha256": DISTRIBUTIONAL_SHADOW_T2_SOURCE_MODEL_SHA256,
+        "source_reference_json_sha256": (
+            DISTRIBUTIONAL_SHADOW_T2_SOURCE_REFERENCE_SHA256
+        ),
+        "source_metrics_sha256": (
+            "ffa32fdb852f4296a9f548666a946b9da7048d475f648679deb6bcc72cf8c9ab"
+        ),
+        "source_manifest_sha256": (
+            "20207dacbbb44dc638c3674d61c56596e1e2092920e3a95fb391cb0dd6d05b89"
+        ),
+        "exporter_sha256": DISTRIBUTIONAL_SHADOW_T2_EXPORTER_SHA256,
+        "portable_model_sha256": DISTRIBUTIONAL_SHADOW_T2_PORTABLE_MODEL_SHA256,
+        "deployment_reference_sha256": (
+            DISTRIBUTIONAL_SHADOW_T2_DEPLOYMENT_REFERENCE_SHA256
+        ),
+        "feature_contract_sha256": DISTRIBUTIONAL_SHADOW_T2_FEATURE_CONTRACT_SHA256,
+    }
+    expected_model = {
+        "selected_variant": "primary_secondary_hgb64",
+        "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+        "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+        "feature_count": 308,
+        "feature_adapter_id": DISTRIBUTIONAL_SHADOW_T2_FEATURE_ADAPTER,
+        "objective": "deadline_rescue",
+        "frame_gate": "p_frames_only",
+    }
+    expected_telemetry = {
+        "telemetry_schema_version": 3,
+        "polling_schema_version": 1,
+        "feature_support_mask_version": 2,
+        "required_support_mask_hex": "0x3ffffffffdffff",
+        "sample_offsets_us": [0, 2000],
+        "history_windows_us": [1000, 5000, 20000],
+        "polling_interval_us": 1000,
+        "polling_report_delay_us": 1000,
+        "raw_prediction_event_log_enabled": False,
+        "oracle_features_enabled": False,
+    }
+    expected_window = {
+        "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+        "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+        "decision_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
+        "decision_stop_ns": PAIRED_VALUE_T2_DECISION_STOP_NS,
+        "interval_semantics": "half_open",
+    }
+    expected_allocator = {
+        "shadow_reference_id": "full_refit_congestion_tertile_5s_finite_horizon_v1",
+        "congestion_signal_id": "causal_running_mean_primary_phy_busy_fraction_20ms",
+        "time_bin_width_us": DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_WIDTH_US,
+        "time_bin_count": DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT,
+        "congestion_regime_count": DISTRIBUTIONAL_SHADOW_T2_REGIME_COUNT,
+        "canonical_estimator_id": RANDOMIZED_COST_ESTIMATOR,
+        "canonical_p_frame_reservation_us": (
+            DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US
+        ),
+        "cost_safety_factor": 1.25,
+        "credit_accounting_id": "permanent_canonical_reservation_borrow_repay_v1",
+        "refill_fraction": PAIRED_VALUE_T2_GUARD_FRACTION,
+        "positive_balance_capacity_us": (
+            DISTRIBUTIONAL_SHADOW_T2_POSITIVE_BALANCE_CAPACITY_US
+        ),
+        "initial_credit_us": DISTRIBUTIONAL_SHADOW_T2_INITIAL_CREDIT_US,
+        "maximum_generated_credit_us": 372000,
+        "negative_balance_allowed_when_repayable": True,
+        "accepted_reservation_is_permanent": True,
+        "measured_settlement_refunds_ledger": False,
+    }
+    for key, expected in (
+        ("source_artifacts", expected_sources),
+        ("model", expected_model),
+        ("telemetry", expected_telemetry),
+        ("decision_window", expected_window),
+        ("allocator", expected_allocator),
+    ):
+        _require(
+            summary.get(key) == expected,
+            f"{file_name}: {key} differs",
+        )
+
+    status_counts: Counter[str] = evidence["status_counts"]
+    expected_counts = {
+        "generated_frames": frame_count,
+        "paired_t2_frames": frame_count,
+        "outside_decision_window": status_counts["outside_decision_window"],
+        "history_warmup": status_counts["history_warmup"],
+        "not_actionable": status_counts["not_actionable"],
+        "frame_type_restricted": status_counts["frame_type_restricted"],
+        "descriptor_unavailable": status_counts["descriptor_unavailable"],
+        "feature_evaluated": evidence["feature_evaluated"],
+        "nonpositive_reward": status_counts["nonpositive_reward"],
+        "positive_reward": evidence["positive_reward"],
+        "opportunity_price_rejected": status_counts["opportunity_price_rejected"],
+        "opportunity_price_passed": evidence["opportunity_passed"],
+        "horizon_credit_rejected": status_counts["horizon_credit_rejected"],
+        "horizon_admission_considered": evidence["horizon_considered"],
+        "horizon_admitted": evidence["horizon_admitted"],
+        "launch_attempted": evidence["launch_attempted"],
+        "launch_rejected": status_counts["launch_rejected"],
+        "secondary_launched": len(evidence["action_frames"]),
+        "secondary_settled": len(settlements),
+        "congestion_observations": evidence["congestion_observations"],
+        "action_dirty_scored_decisions": evidence["action_dirty_scored"],
+    }
+    _require(
+        summary.get("counts") == expected_counts,
+        f"{file_name}: counts differ from replay",
+    )
+
+    def validate_allocation(
+        key: str,
+        expected_actions: list[int],
+        expected_reservations: list[float],
+    ) -> None:
+        actual = summary.get(key)
+        _require(
+            isinstance(actual, dict)
+            and set(actual) == {"actions", "canonical_reservation_us"}
+            and actual.get("actions") == expected_actions
+            and isinstance(actual.get("canonical_reservation_us"), list)
+            and len(actual["canonical_reservation_us"])
+            == len(expected_reservations)
+            and all(
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and _paired_close(float(value), expected)
+                for value, expected in zip(
+                    actual["canonical_reservation_us"], expected_reservations
+                )
+            ),
+            f"{file_name}: {key} differs",
+        )
+
+    validate_allocation(
+        "allocation_by_time_bin",
+        evidence["actions_by_time_bin"],
+        evidence["reservation_by_time_bin"],
+    )
+    validate_allocation(
+        "allocation_by_congestion_regime",
+        evidence["actions_by_regime"],
+        evidence["reservation_by_regime"],
+    )
+
+    diagnostics = summary.get("prediction_diagnostics")
+    expected_positive = _distributional_shadow_t2_distribution(
+        evidence["positive_rewards"]
+    )
+    expected_opportunity = _distributional_shadow_t2_distribution(
+        evidence["finite_opportunity_costs"]
+    )
+    _require(
+        isinstance(diagnostics, dict)
+        and set(diagnostics)
+        == {
+            "positive_deadline_rescue_reward",
+            "finite_opportunity_cost_per_us",
+            "infinite_opportunity_cost_count",
+            "predicted_deadline_rescue_sum_launched",
+            "predicted_tail18_cdf_gain_sum_launched",
+        },
+        f"{file_name}: prediction diagnostic keys differ",
+    )
+
+    def validate_distribution(actual: Any, expected: dict[str, Any], label: str) -> None:
+        _require(
+            isinstance(actual, dict) and set(actual) == set(expected),
+            f"{file_name}: {label} structure differs",
+        )
+        for key, expected_value in expected.items():
+            actual_value = actual.get(key)
+            if expected_value is None or key == "finite_count":
+                _require(
+                    actual_value == expected_value,
+                    f"{file_name}: {label}.{key} differs",
+                )
+            else:
+                _require(
+                    isinstance(actual_value, (int, float))
+                    and not isinstance(actual_value, bool)
+                    and _paired_close(float(actual_value), float(expected_value)),
+                    f"{file_name}: {label}.{key} differs",
+                )
+
+    validate_distribution(
+        diagnostics["positive_deadline_rescue_reward"],
+        expected_positive,
+        "positive reward distribution",
+    )
+    validate_distribution(
+        diagnostics["finite_opportunity_cost_per_us"],
+        expected_opportunity,
+        "opportunity-cost distribution",
+    )
+    _require(
+        diagnostics["infinite_opportunity_cost_count"]
+        == evidence["infinite_opportunity_costs"]
+        and _paired_close(
+            float(diagnostics["predicted_deadline_rescue_sum_launched"]),
+            evidence["predicted_reward_launched"],
+        )
+        and _paired_close(
+            float(diagnostics["predicted_tail18_cdf_gain_sum_launched"]),
+            evidence["tail18_gain_launched"],
+        ),
+        f"{file_name}: prediction totals differ",
+    )
+
+    ledger = summary.get("ledger")
+    expected_ledger = evidence["ledger"]
+    _require(
+        isinstance(ledger, dict) and set(ledger) == set(expected_ledger),
+        f"{file_name}: ledger structure differs",
+    )
+    for key, expected in expected_ledger.items():
+        actual = ledger.get(key)
+        if isinstance(expected, bool) or isinstance(expected, int):
+            _require(actual == expected, f"{file_name}: ledger.{key} differs")
+        else:
+            _require(
+                isinstance(actual, (int, float))
+                and not isinstance(actual, bool)
+                and _paired_close(float(actual), expected),
+                f"{file_name}: ledger.{key} differs",
+            )
+
+    measured_airtime = _summary_number(
+        meter_summary, "tagged_secondary_tx_airtime_us"
+    )
+    estimated_airtime = _summary_number(
+        meter_summary, "estimated_action_airtime_us"
+    )
+    airtime = summary.get("airtime")
+    expected_airtime = {
+        "canonical_nominal_launched_sum_us": evidence["nominal_launched"],
+        "canonical_reserved_launched_sum_us": evidence["reserved_launched"],
+        "measured_secondary_airtime_us": measured_airtime,
+        "meter_estimated_action_airtime_us": estimated_airtime,
+    }
+    _require(
+        isinstance(airtime, dict) and set(airtime) == set(expected_airtime),
+        f"{file_name}: airtime structure differs",
+    )
+    for key, expected in expected_airtime.items():
+        actual = airtime.get(key)
+        meter_serialized = key in {
+            "measured_secondary_airtime_us",
+            "meter_estimated_action_airtime_us",
+        }
+        _require(
+            isinstance(actual, (int, float))
+            and not isinstance(actual, bool)
+            and (
+                _paired_meter_close(expected, float(actual))
+                if meter_serialized
+                else _paired_close(float(actual), expected)
+            ),
+            f"{file_name}: airtime.{key} differs",
+        )
+
+    expected_integrity = {
+        "pending_pair_empty": True,
+        "generated_equals_paired": True,
+        "status_counts_reconcile": True,
+        "launches_equal_settlements": True,
+        "launched_frame_ids_equal_duplicated_frame_ids": True,
+        "ledger_debits_equal_actions": True,
+        "ledger_debits_equal_canonical_reservation_sum": True,
+        "ledger_finalized_at_repayment_stop": True,
+        "meter_reserved_final_within_tolerance": True,
+        "meter_reserved_final_normalized_us": 0,
+        "measured_settlement_refunds_ledger": False,
+    }
+    integrity = summary.get("integrity")
+    _require(
+        isinstance(integrity, dict)
+        and set(integrity) == set(expected_integrity) | {"meter_reserved_final_raw_us"}
+        and all(integrity.get(key) == value for key, value in expected_integrity.items()),
+        f"{file_name}: integrity evidence differs",
+    )
+    raw_reserved = integrity.get("meter_reserved_final_raw_us")
+    _require(
+        isinstance(raw_reserved, (int, float))
+        and not isinstance(raw_reserved, bool)
+        and math.isfinite(float(raw_reserved))
+        and abs(float(raw_reserved)) <= PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US,
+        f"{file_name}: final meter reservation exceeds tolerance",
+    )
+    settlement_ids = {
+        _integer(row, "frame_id", "secondary_airtime_settlements.csv")
+        for row in settlements
+    }
+    _require(
+        settlement_ids == evidence["action_frames"],
+        f"{file_name}: settlements do not match actions",
+    )
+    _replay_paired_value_t2_meter(
+        evidence["rows"],
+        events,
+        settlements,
+        evidence["action_estimates"],
+        evidence["action_nominals"],
+        evidence["action_byte_quanta"],
+    )
+
+
 def _validate_secondary_airtime(
     events: list[dict[str, str]],
     settlements: list[dict[str, str]],
@@ -4737,14 +6715,18 @@ def _validate_secondary_airtime(
     action_nominal_airtimes: dict[int, float] | None = None,
 ) -> None:
     """Reconcile secondary PHY events, reservations, and the run budget."""
-    accounting_close = _paired_close if policy == PAIRED_VALUE_T2_POLICY else _close
-    meter_close = _paired_meter_close if policy == PAIRED_VALUE_T2_POLICY else _close
+    exact_policy = policy in {
+        PAIRED_VALUE_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY,
+    }
+    accounting_close = _paired_close if exact_policy else _close
+    meter_close = _paired_meter_close if exact_policy else _close
     _require(SECONDARY_AIRTIME_SUMMARY_KEYS <= summary.keys(),
              "secondary_airtime_summary.json: missing fields")
     _require(policy in {
         "selective_duplication", "adaptive_airtime_duplication",
         "adaptive_deficit_duplication", "randomized_full_copy_exploration",
-        PAIRED_VALUE_T2_POLICY, "full_duplication",
+        PAIRED_VALUE_T2_POLICY, DISTRIBUTIONAL_SHADOW_T2_POLICY, "full_duplication",
     }, "secondary airtime meter enabled for an unsupported policy")
     expected_settlement_nominals = dict(action_nominal_airtimes or {})
     if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
@@ -4872,7 +6854,7 @@ def _validate_secondary_airtime(
                  "secondary airtime settlements: nonpositive nominal airtime")
         if expected_settlement_nominals:
             expected_nominal = expected_settlement_nominals.get(frame_id)
-            if policy == PAIRED_VALUE_T2_POLICY and expected_nominal is not None:
+            if exact_policy and expected_nominal is not None:
                 nominal_matches = nominal == float(format(expected_nominal, ".12g"))
             else:
                 nominal_matches = expected_nominal is not None and accounting_close(
@@ -4889,15 +6871,28 @@ def _validate_secondary_airtime(
     estimate_total = _summary_number(summary, "estimated_action_airtime_us")
     ratio = _summary_number(summary, "actual_to_estimated_airtime_ratio")
     maximum_debt = _summary_number(summary, "maximum_budget_debt_us")
-    _require(maximum_debt + 1e-9 >= observed_budget_debt_us,
-             "secondary airtime summary: maximum debt misses an observed deficit")
+    if exact_policy:
+        _require(
+            _paired_meter_close(maximum_debt, observed_budget_debt_us),
+            "secondary airtime summary: maximum debt differs from exact replay",
+        )
+    else:
+        _require(
+            maximum_debt + 1e-9 >= observed_budget_debt_us,
+            "secondary airtime summary: maximum debt misses an observed deficit",
+        )
 
     reservation_policy = policy in {
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
         "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY,
     }
     if reservation_policy:
-        if policy not in {"randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY}:
+        if policy not in {
+            "randomized_full_copy_exploration",
+            PAIRED_VALUE_T2_POLICY,
+            DISTRIBUTIONAL_SHADOW_T2_POLICY,
+        }:
             _require(adaptive_config is not None,
                      "adaptive secondary airtime validation lacks controller config")
         _require(set(settlement_by_frame) == set(action_estimates),
@@ -4913,7 +6908,7 @@ def _validate_secondary_airtime(
                 tagged_total,
                 [row["measured_airtime_us"] for row in settlements],
             )
-            if policy == PAIRED_VALUE_T2_POLICY
+            if exact_policy
             else accounting_close(measured_total, tagged_total)
         )
         _require(measured_matches,
@@ -4923,7 +6918,7 @@ def _validate_secondary_airtime(
             measured = float(settlement["measured"])
             released = float(settlement["released"])
             expected_release = max(0.0, estimate - measured)
-            if policy == PAIRED_VALUE_T2_POLICY:
+            if exact_policy:
                 settlement_row = next(
                     row for row in settlements
                     if _integer(row, "frame_id", "secondary_airtime_settlements.csv")
@@ -4968,7 +6963,7 @@ def _validate_secondary_airtime(
             ):
                 _require(summary.get(key) is None,
                          f"secondary_airtime_summary.json: {key} must be null")
-        elif policy == PAIRED_VALUE_T2_POLICY:
+        elif exact_policy:
             fraction = PAIRED_VALUE_T2_GUARD_FRACTION
             capacity = PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US
             finite_budget = fraction * duration_us + capacity
@@ -5064,6 +7059,7 @@ def _validate_prediction(
         "fixed_link_0", "fixed_link_1", "selective_duplication",
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
         "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY,
     }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
@@ -5109,7 +7105,10 @@ def _validate_prediction(
     _require(isinstance(oracle_enabled, bool),
              "resolved_config.json: invalid prediction oracle flag")
     randomized_policy = config["policy"] == "randomized_full_copy_exploration"
-    paired_endpoint_policy = randomized_policy or config["policy"] == PAIRED_VALUE_T2_POLICY
+    paired_endpoint_policy = randomized_policy or config["policy"] in {
+        PAIRED_VALUE_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY,
+    }
     _require(not paired_endpoint_policy or event_enabled is False,
              "paired-link telemetry requires disabled raw event logging")
     _require(samples_path.is_file(), "missing core file: prediction_samples.csv")
@@ -5943,6 +7942,8 @@ def validate_run(
     paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
         paired_value_profile = _validate_paired_value_t2_config(config)
+    elif config.get("policy") == DISTRIBUTIONAL_SHADOW_T2_POLICY:
+        _validate_distributional_shadow_t2_config(config)
     wifi = config.get("wifi", {})
     max_inflights = int(wifi.get("sta_max_inflights", 1))
     _require(1 <= max_inflights <= 15,
@@ -6224,6 +8225,7 @@ def validate_run(
     action_nominal_airtimes: dict[int, float] = {}
     observed_budget_debt_us = 0.0
     paired_value_evidence: dict[str, Any] | None = None
+    distributional_shadow_evidence: dict[str, Any] | None = None
     decision_samples: dict[tuple[int, int], dict[str, str]] = {}
     if config["policy"] in {
         "selective_duplication", "adaptive_airtime_duplication",
@@ -6405,6 +8407,43 @@ def validate_run(
         ):
             _require(not (run_dir / forbidden).exists(),
                      f"{forbidden} exists for paired-value policy")
+    elif config["policy"] == DISTRIBUTIONAL_SHADOW_T2_POLICY:
+        decisions_path = run_dir / "distributional_shadow_t2_decisions.csv"
+        controller_summary_path = run_dir / "distributional_shadow_t2_summary.json"
+        _require(
+            decisions_path.is_file(),
+            "missing core file: distributional_shadow_t2_decisions.csv",
+        )
+        _require(
+            controller_summary_path.is_file(),
+            "missing core file: distributional_shadow_t2_summary.json",
+        )
+        distributional_shadow_evidence = (
+            _validate_distributional_shadow_t2_decisions(
+                run_dir,
+                run_id,
+                frames,
+                decisions,
+                duplicated_frame_ids,
+            )
+        )
+        action_estimates = distributional_shadow_evidence["action_estimates"]
+        action_nominal_airtimes = distributional_shadow_evidence["action_nominals"]
+        observed_budget_debt_us = distributional_shadow_evidence[
+            "maximum_observed_debt"
+        ]
+        for forbidden in (
+            "selective_duplication_decisions.csv",
+            "adaptive_airtime_decisions.csv",
+            "randomized_intervention_assignments.csv",
+            "randomized_intervention_executions.csv",
+            "paired_value_t2_decisions.csv",
+            "paired_value_t2_summary.json",
+        ):
+            _require(
+                not (run_dir / forbidden).exists(),
+                f"{forbidden} exists for distributional-shadow policy",
+            )
     else:
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for a non-selective policy")
@@ -6418,6 +8457,20 @@ def validate_run(
                  "paired-value decisions exist for another policy")
         _require(not (run_dir / "paired_value_t2_summary.json").exists(),
                  "paired-value summary exists for another policy")
+
+    if config["policy"] != DISTRIBUTIONAL_SHADOW_T2_POLICY:
+        _require(
+            "distributionalShadowDuplicationT2" not in config,
+            "resolved_config.json: distributional-shadow object exists for another policy",
+        )
+        _require(
+            not (run_dir / "distributional_shadow_t2_decisions.csv").exists(),
+            "distributional-shadow decisions exist for another policy",
+        )
+        _require(
+            not (run_dir / "distributional_shadow_t2_summary.json").exists(),
+            "distributional-shadow summary exists for another policy",
+        )
 
     if config["policy"] != "randomized_full_copy_exploration":
         _require("randomizedIntervention" not in config,
@@ -6466,6 +8519,16 @@ def validate_run(
                 run_id,
                 total,
                 paired_value_evidence,
+                events,
+                settlements,
+                meter_summary,
+            )
+        if distributional_shadow_evidence is not None:
+            _validate_distributional_shadow_t2_summary(
+                run_dir,
+                run_id,
+                total,
+                distributional_shadow_evidence,
                 events,
                 settlements,
                 meter_summary,
