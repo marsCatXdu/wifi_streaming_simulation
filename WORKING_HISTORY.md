@@ -120,6 +120,9 @@ P99.
 | Plot environment policy analysis | `5bfc082` | Five checksum-bound frontier, family, OOD, allocation, and regret figures |
 | Add deployment exploration wrapper | `e04093f` | Exact OOD fallback, SplitMix64 forcing, budget, propensity, and compliance logs |
 | Orchestrate environment analysis | `3dd6855` | One clean-worktree VM entry point with top-level provenance closure |
+| Preserve missing queue-order telemetry | `916bb9a` | Keep valid rows with jointly unavailable FIFO-ahead fields and blank only their derived clearance features |
+| Record randomized collection closure | `1742ba1` | Exact 384-run manifest identity and corrected-analysis handoff |
+| Freeze held-out qualification execution | `257b194` | Exact 576-run three-arm matrix in nine complete 64-worker waves |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -203,33 +206,48 @@ remains the engineering champion after the distributional closed-loop test.
   exploration rate for post-deployment treatment-effect recalibration.  Keep
   seeds `1301` through `1348` untouched and freeze all family, split, gate,
   fallback, exploration, and regret contracts before reading held-out results.
-  The six-family full preflight now passes at `8c38753`; the 384-run randomized
-  collection is active as six exact 64-worker waves.  The source-closed
-  scenario-aware temporal builder is complete through `af1f29c`.  The frozen
-  LOFO predictor/OOD path and exact policy/oracle/regret analyzer are complete
-  and pushed through `e6ddcf3`.  At the last metadata-only poll, 245/384 runs
-  were complete; no randomized frame, latency, airtime, or policy outcome has
-  been read.  Once all runs close, build the source-closed dataset, execute the
-  frozen analyses, plot and archive them, then design a nested nonclairvoyant
-  allocator from the measured ceiling before closed-loop qualification.  The
-  OOD-aware logged exploration wrapper and single-entry remote analysis runner
-  are complete through `3dd6855`.
+  The six-family full preflight passed at `8c38753`, and all 384 randomized
+  runs closed as six exact 64-worker waves.  The source-closed scenario-aware
+  temporal builder is complete through `af1f29c`; `916bb9a` additionally
+  preserves valid rows whose two FIFO-ahead fields are jointly unavailable.
+  The corrected 307,689-row dataset and all 12 held-out-family model fits are
+  published on the VM; the exact resource-policy stage is running, and no
+  partial policy outcome has been inspected.  The frozen LOFO predictor/OOD
+  path, exact policy/oracle/regret analyzer, OOD-aware exploration wrapper, and
+  single-entry remote pipeline are complete through `3dd6855`.  Fetch,
+  checksum, interpret, plot, and archive the analysis only after its top-level
+  manifest closes.  The held-out V2/distributional-shadow/STR execution matrix
+  is frozen at `257b194` as 576 simulations in nine full 64-worker waves.
+  Freeze its analyzer before launch, then use the actual closed-loop family
+  results to choose the next predictor/allocation intervention.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The active boundary is environment-level generalization.  The six-family
-preflight and source-closed scenario dataset path pass; the 384-run randomized
-collection is running as six full 64-worker waves and was at 245 complete at
-the last metadata-only poll.  The LOFO completion-distribution, robust OOD,
-exact decimal resource replay, uniform/myopic baselines, cross-fitted resource
-oracle, DR/HT value, shared 10,000-sample hierarchical bootstrap, confidence
-gates, checksum-closed row-action output, five-figure plot suite, OOD-aware
-logged exploration, and detachable VM pipeline are implemented and pushed
-through `3dd6855`.  Build and analyze the full dataset immediately after the
-collection closes; do not inspect qualification outcomes.
+The active boundary is environment-level generalization.  All 384 randomized
+collection runs are complete and checksum-bound.  The corrected analysis has
+published a 307,689-row action-clean T2 dataset and completed all 12 LOFO arm
+fits across the six held-out families; the exact resource-policy replay is now
+running on the VM.  Do not interpret partial policy output.  Wait for the
+plots and top-level pipeline manifest, fetch and independently validate the
+complete output, then archive the compact evidence.
+
+One compound-shift scenario contributes only 16 included rows across four
+runs after the frozen warmup and action-contamination exclusions.  Preserve
+this as a coverage/uncertainty warning when interpreting family aggregates;
+do not silently drop it or change the frozen population after seeing results.
+
+The LOFO completion-distribution, robust OOD, exact decimal resource replay,
+uniform/myopic baselines, cross-fitted resource oracle, DR/HT value, shared
+10,000-sample hierarchical bootstrap, confidence gates, checksum-closed
+row-action output, five-figure plot suite, OOD-aware logged exploration, and
+detachable VM pipeline are implemented through `3dd6855`.  The predeclared
+held-out execution is frozen at `257b194`: 48 unseen scenarios, 192 paired
+units, and three arms produce 576 simulations in nine complete 64-worker
+waves.  Build and freeze its analyzer before launch; do not inspect any
+qualification outcomes while changing that analyzer.
 
 Score-aware emergency admission V2 is complete and is the first candidate to
 pass every frozen engineering gate against STR.  On seeds `1251` through
@@ -611,6 +629,28 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Complete LOFO fitting and freeze 64-way qualification execution
+
+- The corrected dataset stage published atomically from the closed 384-run
+  collection: 307,689 action-clean T2 rows, all six families and 64 runs per
+  family, with its source and artifact manifests present.  A compound-shift
+  scenario has only 16 retained rows across four runs; carry that sparse-cell
+  warning into uncertainty and coverage interpretation.
+- All 12 separate-arm HGB64 leave-one-family-out fits completed.  The remote
+  pipeline then advanced to the exact resource-policy replay.  No partial
+  policy metrics were inspected, and the pipeline remains incomplete until
+  plots and `analysis_pipeline_manifest.json` are atomically published.
+- Froze and committed `257b194`, which mechanically binds the predeclared 48
+  held-out scenarios to STR, score-aware V2, and distributional-shadow T2.
+  The matrix contains 192 paired units and 576 simulations, exactly nine full
+  waves at 64 workers, using seeds `21001` through `21192` and none of the
+  reserved `1301` through `1348` confirmation seeds.
+- The generator validates source hashes, inherited V2 closure, arm identity,
+  exact pairing, worker-wave arithmetic, and seed isolation; 45 focused and
+  compatibility tests pass.  The campaign is frozen but not launched.  Build
+  and freeze the outcome analyzer after the randomized analysis closes and
+  before any held-out qualification result can be read.
 
 ### 2026-08-05 - Close the 384-run collection and repair dataset missingness
 
