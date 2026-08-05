@@ -1,0 +1,473 @@
+{
+  "schema_version": 3,
+  "analysis": "paired_value_t2_admission_campaign_comparison",
+  "evidence_role": "diagnostic_only_not_a_qualification_gate",
+  "labels": {
+    "baseline": "Score-aware T2 V2",
+    "candidate": "Cost-free T2 V5"
+  },
+  "paired_units": 48,
+  "frame_rows": 86400,
+  "sources": {
+    "baseline": {
+      "path": "/tmp/paired-v2-compare/runs/experiment_manifest.json",
+      "sha256": "24a87c9ec02e7564116992367754bdcf6ffc7845a1fa26908b8dea92fe316ef2",
+      "experiment": "paired-value-t2-score-aware-str-engineering-v2",
+      "matrix_sha256": "125370c3dfe0a0416816fb7e2a6f90b6db9d45b4eac3757c829bec123973f49a",
+      "project_commit": "eb7f9600fab33876bce4538f665b69785f493d74",
+      "runtime_contract_id": "paired-value-duplication-t2-score-aware-emergency-v2",
+      "runtime_contract_sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+    },
+    "candidate": {
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_cost_free_str_engineering_v5/runs/experiment_manifest.json",
+      "sha256": "e341438bb43dcef81a62862632bb95b643336dd8e08a4961cf3c58ba2587161a",
+      "experiment": "paired-value-t2-cost-free-str-engineering-v5",
+      "matrix_sha256": "fcac4ba30d3c8cd2394880e9550d9f40dc7b7c2ed56b66cb5293b3d91b8be363",
+      "project_commit": "ed21d0aafa28ca33e5a1628101d7478532434693",
+      "runtime_contract_id": "paired-value-duplication-t2-cost-free-score-aware-v5",
+      "runtime_contract_sha256": "b7fb00982ae090fe1142b39adf0ad6d26d253741dd5059ed95637dd86047ba96"
+    }
+  },
+  "decision_invariants": {
+    "score_different_rows": 0,
+    "diagnostic_value_per_cost_score_different_rows": 0,
+    "active_policy_score_different_rows": 42731,
+    "score_threshold_pass_different_rows": 790
+  },
+  "paired_performance_deltas": {
+    "all_generated_deadline_miss_rate": {
+      "baseline_mean": 0.005729166666666666,
+      "candidate_mean": 0.005740740740740741,
+      "estimate": 1.157407407407404e-05,
+      "ci95_low": -0.00025462962962962966,
+      "ci95_high": 0.0003124999999999999,
+      "confidence_level": 0.95,
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "statistic": "mean per-run candidate-minus-baseline miss-rate difference"
+    },
+    "completed_frame_p99_us": {
+      "baseline_mean": 17192.269791666662,
+      "candidate_mean": 17081.44145833333,
+      "estimate": -110.82833333333012,
+      "ci95_low": -295.5479583333246,
+      "ci95_high": 56.83642708334008,
+      "confidence_level": 0.95,
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "statistic": "mean per-run candidate-minus-baseline completed-P99 difference"
+    }
+  },
+  "admission": {
+    "baseline_actions": 4944,
+    "candidate_actions": 5147,
+    "net_candidate_actions": 203,
+    "transitions": {
+      "common_action": {
+        "count": 4426,
+        "baseline_outcomes": {
+          "frames": 4426,
+          "actions": 4426,
+          "primary_misses": 714,
+          "primary_miss_rate": 0.1613194758246724,
+          "acted_primary_misses": 714,
+          "final_misses": 31,
+          "final_miss_rate": 0.0070040668775417985,
+          "acted_primary_misses_rescued": 683
+        },
+        "candidate_outcomes": {
+          "frames": 4426,
+          "actions": 4426,
+          "primary_misses": 714,
+          "primary_miss_rate": 0.1613194758246724,
+          "acted_primary_misses": 714,
+          "final_misses": 25,
+          "final_miss_rate": 0.005648441030275644,
+          "acted_primary_misses_rescued": 689
+        },
+        "baseline_score": {
+          "count": 4426,
+          "minimum": 8.966439781943336e-05,
+          "p10": 0.00010600530367810279,
+          "median": 0.00017840486543718725,
+          "mean": 0.0001928687681128174,
+          "p90": 0.00028785972972400486,
+          "maximum": 0.0030369837768375874
+        },
+        "candidate_score": {
+          "count": 4426,
+          "minimum": 8.966439781943336e-05,
+          "p10": 0.00010600530367810279,
+          "median": 0.00017840486543718725,
+          "mean": 0.0001928687681128174,
+          "p90": 0.00028785972972400486,
+          "maximum": 0.0030369837768375874
+        },
+        "baseline_active_policy_score": {
+          "count": 4426,
+          "minimum": 8.966439781943336e-05,
+          "p10": 0.00010600530367810279,
+          "median": 0.00017840486543718725,
+          "mean": 0.0001928687681128174,
+          "p90": 0.00028785972972400486,
+          "maximum": 0.0030369837768375874
+        },
+        "candidate_active_policy_score": {
+          "count": 4426,
+          "minimum": 0.18835103511810303,
+          "p10": 0.23859403282403946,
+          "median": 0.40242742002010345,
+          "mean": 0.4317494079915043,
+          "p90": 0.6866897344589233,
+          "maximum": 0.8340106010437012
+        },
+        "baseline_primary_bad12_probability": {
+          "count": 4426,
+          "minimum": 0.1934978451438161,
+          "p10": 0.25473591171461685,
+          "median": 0.43252661352423316,
+          "mean": 0.47110394560123525,
+          "p90": 0.7689685345533939,
+          "maximum": 0.8532737481644961
+        },
+        "candidate_primary_bad12_probability": {
+          "count": 4426,
+          "minimum": 0.1934978451438161,
+          "p10": 0.25473591171461685,
+          "median": 0.43252661352423316,
+          "mean": 0.47110394560123525,
+          "p90": 0.7689685345533939,
+          "maximum": 0.8532737481644961
+        },
+        "generation_time_s": {
+          "count": 4426,
+          "minimum": 1.266666667,
+          "p10": 4.1166666665000005,
+          "median": 28.65,
+          "mean": 28.802515439064617,
+          "p90": 54.0166666665,
+          "maximum": 60.433333333
+        }
+      },
+      "baseline_only_action": {
+        "count": 518,
+        "baseline_outcomes": {
+          "frames": 518,
+          "actions": 518,
+          "primary_misses": 57,
+          "primary_miss_rate": 0.11003861003861004,
+          "acted_primary_misses": 57,
+          "final_misses": 3,
+          "final_miss_rate": 0.005791505791505791,
+          "acted_primary_misses_rescued": 54
+        },
+        "candidate_outcomes": {
+          "frames": 518,
+          "actions": 0,
+          "primary_misses": 57,
+          "primary_miss_rate": 0.11003861003861004,
+          "acted_primary_misses": 0,
+          "final_misses": 57,
+          "final_miss_rate": 0.11003861003861004,
+          "acted_primary_misses_rescued": 0
+        },
+        "baseline_score": {
+          "count": 518,
+          "minimum": 9.002259321277961e-05,
+          "p10": 9.460828514420427e-05,
+          "median": 0.00012000915012322366,
+          "mean": 0.00014804750757896912,
+          "p90": 0.00023779249022481963,
+          "maximum": 0.0010935208993032575
+        },
+        "candidate_score": {
+          "count": 518,
+          "minimum": 9.002259321277961e-05,
+          "p10": 9.460828514420427e-05,
+          "median": 0.00012000915012322366,
+          "mean": 0.00014804750757896912,
+          "p90": 0.00023779249022481963,
+          "maximum": 0.0010935208993032575
+        },
+        "baseline_active_policy_score": {
+          "count": 518,
+          "minimum": 9.002259321277961e-05,
+          "p10": 9.460828514420427e-05,
+          "median": 0.00012000915012322366,
+          "mean": 0.00014804750757896912,
+          "p90": 0.00023779249022481963,
+          "maximum": 0.0010935208993032575
+        },
+        "candidate_active_policy_score": {
+          "count": 518,
+          "minimum": 0.12083946913480759,
+          "p10": 0.21012653261423112,
+          "median": 0.2712660878896713,
+          "mean": 0.3225191249781824,
+          "p90": 0.5279585659503937,
+          "maximum": 0.7898901700973511
+        },
+        "baseline_primary_bad12_probability": {
+          "count": 518,
+          "minimum": 0.1288549088006002,
+          "p10": 0.21811536516830152,
+          "median": 0.28591638713018697,
+          "mean": 0.3463502765129559,
+          "p90": 0.5638937629943596,
+          "maximum": 0.8408163070919644
+        },
+        "candidate_primary_bad12_probability": {
+          "count": 518,
+          "minimum": 0.1288549088006002,
+          "p10": 0.21811536516830152,
+          "median": 0.28591638713018697,
+          "mean": 0.3463502765129559,
+          "p90": 0.5638937629943596,
+          "maximum": 0.8408163070919644
+        },
+        "generation_time_s": {
+          "count": 518,
+          "minimum": 1.366666667,
+          "p10": 9.3866666669,
+          "median": 34.05,
+          "mean": 33.161261261283784,
+          "p90": 55.7200000001,
+          "maximum": 60.3
+        }
+      },
+      "candidate_only_action": {
+        "count": 721,
+        "baseline_outcomes": {
+          "frames": 721,
+          "actions": 0,
+          "primary_misses": 49,
+          "primary_miss_rate": 0.06796116504854369,
+          "acted_primary_misses": 0,
+          "final_misses": 49,
+          "final_miss_rate": 0.06796116504854369,
+          "acted_primary_misses_rescued": 0
+        },
+        "candidate_outcomes": {
+          "frames": 721,
+          "actions": 721,
+          "primary_misses": 49,
+          "primary_miss_rate": 0.06796116504854369,
+          "acted_primary_misses": 49,
+          "final_misses": 2,
+          "final_miss_rate": 0.0027739251040221915,
+          "acted_primary_misses_rescued": 47
+        },
+        "baseline_score": {
+          "count": 721,
+          "minimum": 1.718817111395765e-05,
+          "p10": 8.357514161616564e-05,
+          "median": 0.00013577444769907743,
+          "mean": 0.0001239933284392242,
+          "p90": 0.00014882429968565702,
+          "maximum": 0.00041488316492177546
+        },
+        "candidate_score": {
+          "count": 721,
+          "minimum": 1.718817111395765e-05,
+          "p10": 8.357514161616564e-05,
+          "median": 0.00013577444769907743,
+          "mean": 0.0001239933284392242,
+          "p90": 0.00014882429968565702,
+          "maximum": 0.00041488316492177546
+        },
+        "baseline_active_policy_score": {
+          "count": 721,
+          "minimum": 1.718817111395765e-05,
+          "p10": 8.357514161616564e-05,
+          "median": 0.00013577444769907743,
+          "mean": 0.0001239933284392242,
+          "p90": 0.00014882429968565702,
+          "maximum": 0.00041488316492177546
+        },
+        "candidate_active_policy_score": {
+          "count": 721,
+          "minimum": 0.18696455657482147,
+          "p10": 0.1923750638961792,
+          "median": 0.3164730370044708,
+          "mean": 0.2994436587151476,
+          "p90": 0.3645164370536804,
+          "maximum": 0.7664200067520142
+        },
+        "baseline_primary_bad12_probability": {
+          "count": 721,
+          "minimum": 0.18987368833767965,
+          "p10": 0.20255837478140476,
+          "median": 0.3361090286048299,
+          "mean": 0.3231279690585124,
+          "p90": 0.40220871336484326,
+          "maximum": 0.8396308509237612
+        },
+        "candidate_primary_bad12_probability": {
+          "count": 721,
+          "minimum": 0.18987368833767965,
+          "p10": 0.20255837478140476,
+          "median": 0.3361090286048299,
+          "mean": 0.3231279690585124,
+          "p90": 0.40220871336484326,
+          "maximum": 0.8396308509237612
+        },
+        "generation_time_s": {
+          "count": 721,
+          "minimum": 1.266666667,
+          "p10": 5.633333333,
+          "median": 29.466666667,
+          "mean": 29.598982894127598,
+          "p90": 53.666666667,
+          "maximum": 60.3
+        }
+      },
+      "neither_action": {
+        "count": 80735,
+        "baseline_outcomes": {
+          "frames": 80735,
+          "actions": 0,
+          "primary_misses": 412,
+          "primary_miss_rate": 0.005103115129745464,
+          "acted_primary_misses": 0,
+          "final_misses": 412,
+          "final_miss_rate": 0.005103115129745464,
+          "acted_primary_misses_rescued": 0
+        },
+        "candidate_outcomes": {
+          "frames": 80735,
+          "actions": 0,
+          "primary_misses": 412,
+          "primary_miss_rate": 0.005103115129745464,
+          "acted_primary_misses": 0,
+          "final_misses": 412,
+          "final_miss_rate": 0.005103115129745464,
+          "acted_primary_misses_rescued": 0
+        },
+        "baseline_score": {
+          "count": 37070,
+          "minimum": 0.0,
+          "p10": 5.848435012012487e-06,
+          "median": 2.0154994672338944e-05,
+          "mean": 3.070444133092497e-05,
+          "p90": 7.270178612088785e-05,
+          "maximum": 0.001358457375317812
+        },
+        "candidate_score": {
+          "count": 37070,
+          "minimum": 0.0,
+          "p10": 5.848435012012487e-06,
+          "median": 2.0154994672338944e-05,
+          "mean": 3.070444133092497e-05,
+          "p90": 7.270178612088785e-05,
+          "maximum": 0.001358457375317812
+        },
+        "baseline_active_policy_score": {
+          "count": 37070,
+          "minimum": 0.0,
+          "p10": 5.848435012012487e-06,
+          "median": 2.0154994672338944e-05,
+          "mean": 3.070444133092497e-05,
+          "p90": 7.270178612088785e-05,
+          "maximum": 0.001358457375317812
+        },
+        "candidate_active_policy_score": {
+          "count": 37070,
+          "minimum": 0.0,
+          "p10": 0.01323723141103983,
+          "median": 0.04556913860142231,
+          "mean": 0.06938630159028102,
+          "p90": 0.16486065089702606,
+          "maximum": 0.7872796058654785
+        },
+        "baseline_primary_bad12_probability": {
+          "count": 37070,
+          "minimum": 0.012577545156105643,
+          "p10": 0.015041651767270818,
+          "median": 0.049242614553751694,
+          "mean": 0.07458024718466605,
+          "p90": 0.1735711986563148,
+          "maximum": 0.8408163070919644
+        },
+        "candidate_primary_bad12_probability": {
+          "count": 37070,
+          "minimum": 0.012577545156105643,
+          "p10": 0.015041651767270818,
+          "median": 0.049242614553751694,
+          "mean": 0.07458024718466605,
+          "p90": 0.1735711986563148,
+          "maximum": 0.8408163070919644
+        },
+        "generation_time_s": {
+          "count": 80735,
+          "minimum": 1.0,
+          "p10": 7.166666667,
+          "median": 31.1,
+          "mean": 31.101277843149674,
+          "p90": 55.033333333,
+          "maximum": 60.966666667
+        }
+      }
+    },
+    "terminal_status_transitions": {
+      "action -> action": 4426,
+      "action -> airtime_guard_rejected": 509,
+      "action -> below_score_threshold": 9,
+      "airtime_guard_rejected -> action": 487,
+      "airtime_guard_rejected -> airtime_guard_rejected": 2034,
+      "airtime_guard_rejected -> below_score_threshold": 19,
+      "below_score_threshold -> action": 234,
+      "below_score_threshold -> airtime_guard_rejected": 528,
+      "below_score_threshold -> below_score_threshold": 34489,
+      "frame_type_restricted -> frame_type_restricted": 1392,
+      "history_warmup -> history_warmup": 384,
+      "not_actionable -> not_actionable": 41121,
+      "outside_decision_window -> outside_decision_window": 768
+    },
+    "action_tier_transitions": {
+      "emergency -> emergency": 1941,
+      "emergency -> none": 159,
+      "emergency -> strict": 16,
+      "none -> emergency": 462,
+      "none -> strict": 259,
+      "strict -> emergency": 392,
+      "strict -> none": 359,
+      "strict -> strict": 2077
+    }
+  },
+  "outcomes": {
+    "baseline": {
+      "frames": 86400,
+      "actions": 4944,
+      "primary_misses": 1232,
+      "primary_miss_rate": 0.01425925925925926,
+      "acted_primary_misses": 771,
+      "final_misses": 495,
+      "final_miss_rate": 0.005729166666666666,
+      "acted_primary_misses_rescued": 737
+    },
+    "candidate": {
+      "frames": 86400,
+      "actions": 5147,
+      "primary_misses": 1232,
+      "primary_miss_rate": 0.01425925925925926,
+      "acted_primary_misses": 763,
+      "final_misses": 496,
+      "final_miss_rate": 0.005740740740740741,
+      "acted_primary_misses_rescued": 736
+    },
+    "primary_miss_transitions": {
+      "miss -> miss": 1232,
+      "on_time -> on_time": 85168
+    },
+    "final_miss_transitions": {
+      "miss -> miss": 440,
+      "miss -> on_time": 55,
+      "on_time -> miss": 56,
+      "on_time -> on_time": 85849
+    }
+  }
+}

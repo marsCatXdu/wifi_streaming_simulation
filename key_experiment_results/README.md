@@ -38,6 +38,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `08_full_horizon_t2_str_engineering_v3` | Full-horizon carry-over V3 versus STR MLO | Strict 48-pair null result, exact V2/V3 decision comparison, raw-archive identity, and qualification plus standard figures |
 | `09_remaining_refill_t2_str_engineering_v4` | Remaining-refill borrowing V4 versus STR MLO | Strict 48-pair pass against STR but regression from V2/V3, exact admission-shift diagnosis, raw-archive identity, and qualification plus standard figures |
 | `10_temporal_t2_cost_denominator_ablation_v1` | Frozen temporal-T2 value heads with and without learned cost normalization | Paired calibration grid, opened-test estimates, whole-run paired uncertainty, generated report, and summary figure |
+| `11_cost_free_t2_str_engineering_v5` | Cost-free raw-value T2 V5 versus STR MLO | Strict 48-pair all-gate pass, exact V2/V5 action comparison, raw-archive identity, and qualification plus standard figures |
 
 ## Current best STR result
 
@@ -60,16 +61,21 @@ higher-risk V2 actions.  See
 `07_score_aware_t2_str_engineering_v2/README.md` for the victory and
 `08_full_horizon_t2_str_engineering_v3/README.md` and
 `09_remaining_refill_t2_str_engineering_v4/README.md` for the two negative
-guard-isolation tests.
+guard-isolation tests. Cost-free V5 also passes all STR gates at 0.5741%
+misses and 17.081 ms P99, but it has one more miss, 203 more actions, and no
+statistically resolved P99 gain over V2. V2 therefore remains the current best
+implementation; see `11_cost_free_t2_str_engineering_v5/README.md`.
 
 The next frozen-head offline ablation shows that the learned per-frame cost
 divisor degrades ranking. At the same 15% requested action fraction, the raw
 bad12 value improves both calibrated objectives and uses less estimated
 airtime than bad12 value divided by learned cost. The selected cost-free point
 also improves both outcomes on the already-opened engineering test, with
-paired intervals excluding zero, but it uses more actions and has not been
-run closed-loop. See
-`10_temporal_t2_cost_denominator_ablation_v1/README.md`.
+paired intervals excluding zero. The closed-loop V5 test shows why that
+projection is insufficient: threshold misses fall, but guard-rejected misses
+rise and erase the gain. See
+`10_temporal_t2_cost_denominator_ablation_v1/README.md` and
+`11_cost_free_t2_str_engineering_v5/README.md`.
 
 ## Principal streaming results
 
