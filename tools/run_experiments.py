@@ -340,6 +340,33 @@ def build_experiment_manifest(
     runtime_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a schema-2 manifest while preserving legacy non-contract shape."""
+    manifest_runs = []
+    scenario_instances: dict[str, dict[str, Any]] = {}
+    for spec in specs:
+        scenario = spec.get("scenario")
+        if scenario is not None:
+            scenario_id = scenario["scenario_id"]
+            previous = scenario_instances.setdefault(
+                scenario_id, copy.deepcopy(scenario)
+            )
+            if canonical_json(previous) != canonical_json(scenario):
+                raise ValueError(
+                    f"scenario identity differs across arms: {scenario_id}"
+                )
+        if not spec.get("completed"):
+            continue
+        item = {
+            "run_id": spec["run_id"],
+            "status": "complete",
+            "seed": spec["seed"],
+            "run": spec["run"],
+            "directory": spec["run_id"],
+            "config": spec["config"],
+            "command": None,
+        }
+        if scenario is not None:
+            item["scenario"] = copy.deepcopy(scenario)
+        manifest_runs.append(item)
     manifest = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "experiment": experiment,
@@ -347,20 +374,14 @@ def build_experiment_manifest(
         "config_file": str(config_file.resolve()),
         "project_commit": project_git_commit,
         "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
-        "runs": [
-            {
-                "run_id": spec["run_id"],
-                "status": "complete",
-                "seed": spec["seed"],
-                "run": spec["run"],
-                "directory": spec["run_id"],
-                "config": spec["config"],
-                "command": None,
-            }
-            for spec in specs
-            if spec.get("completed")
-        ],
+        "runs": manifest_runs,
     }
+    if scenario_instances:
+        manifest["scenario_schema_version"] = 1
+        manifest["scenario_instances"] = [
+            scenario_instances[scenario_id]
+            for scenario_id in sorted(scenario_instances)
+        ]
     if runtime_contract is not None:
         manifest.update(copy.deepcopy(runtime_contract))
     return manifest
@@ -387,6 +408,7 @@ def run_identity_document(
     ns3_commit: str,
     project_git_commit: str,
     runtime_contract: dict[str, Any] | None = None,
+    scenario: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the canonical input document used to derive one run ID.
 
@@ -415,12 +437,16 @@ def run_identity_document(
                 "runtime_contract_id, runtime_contract_sha256, and source_artifacts"
             )
         identity[RUN_ID_RUNTIME_CONTRACT_KEY] = copy.deepcopy(runtime_contract)
+    if scenario is not None:
+        _validate_scenario_identity(scenario)
+        identity["scenario"] = copy.deepcopy(scenario)
     return identity
 
 
 def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
                   ns3_commit: str, project_git_commit: str,
-                  runtime_contract: dict[str, Any] | None = None) -> str:
+                  runtime_contract: dict[str, Any] | None = None,
+                  scenario: dict[str, Any] | None = None) -> str:
     identity = run_identity_document(
         resolved,
         seed,
@@ -428,6 +454,7 @@ def derive_run_id(resolved: dict[str, Any], seed: int, run: int,
         ns3_commit,
         project_git_commit,
         runtime_contract,
+        scenario,
     )
     return hashlib.sha256(canonical_json(identity).encode()).hexdigest()[:20]
 
@@ -457,16 +484,103 @@ def _entries(values: Any, kind: str) -> list[dict[str, Any]]:
     return result
 
 
+def _positive_integer_list(value: Any, label: str) -> list[int]:
+    if (
+        not isinstance(value, list)
+        or not value
+        or not all(isinstance(item, int) and not isinstance(item, bool) and item > 0
+                   for item in value)
+    ):
+        raise ValueError(f"{label} must be a nonempty list of positive integers")
+    return list(value)
+
+
+def _validate_scenario_identity(scenario: Any) -> dict[str, Any]:
+    required = {"scenario_id", "family_id", "parameter_sample", "config_overlay"}
+    if not isinstance(scenario, dict) or set(scenario) != required:
+        raise ValueError(
+            "scenario identity must contain exactly scenario_id, family_id, "
+            "parameter_sample, and config_overlay"
+        )
+    for key in ("scenario_id", "family_id"):
+        value = scenario[key]
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"scenario {key} must be a nonempty string")
+    sample = scenario["parameter_sample"]
+    if not isinstance(sample, int) or isinstance(sample, bool) or sample < 0:
+        raise ValueError("scenario parameter_sample must be a nonnegative integer")
+    overlay = scenario["config_overlay"]
+    if not isinstance(overlay, dict) or not overlay:
+        raise ValueError("scenario config_overlay must be a nonempty mapping")
+    if not all(isinstance(key, str) and key and "." in key for key in overlay):
+        raise ValueError("scenario config_overlay keys must be dotted configuration paths")
+    if any(key in {"topology", "policy"} for key in overlay):
+        raise ValueError("scenario config_overlay may not select topology or policy")
+    canonical_json(scenario)
+    return scenario
+
+
+def _scenario_instances(
+    document: dict[str, Any],
+    default_seeds: list[int],
+    default_runs: list[int],
+) -> list[dict[str, Any]] | None:
+    declared = document.get("scenario_instances")
+    if declared is None:
+        return None
+    if not isinstance(declared, list) or not declared:
+        raise ValueError("scenario_instances must be a nonempty list")
+    if document.get("sweep"):
+        raise ValueError("scenario_instances and sweep are mutually exclusive")
+    result: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in declared:
+        if not isinstance(item, dict):
+            raise ValueError("scenario instance must be a mapping")
+        allowed = {
+            "scenario_id", "family_id", "parameter_sample", "config", "seeds", "runs"
+        }
+        if not set(item) <= allowed or not {
+            "scenario_id", "family_id", "parameter_sample", "config"
+        } <= set(item):
+            raise ValueError("scenario instance has missing or unknown fields")
+        identity = _validate_scenario_identity({
+            "scenario_id": item["scenario_id"],
+            "family_id": item["family_id"],
+            "parameter_sample": item["parameter_sample"],
+            "config_overlay": copy.deepcopy(item["config"]),
+        })
+        scenario_id = identity["scenario_id"]
+        if scenario_id in seen:
+            raise ValueError(f"duplicate scenario_id: {scenario_id}")
+        seen.add(scenario_id)
+        result.append({
+            "identity": identity,
+            "seeds": _positive_integer_list(
+                item.get("seeds", default_seeds), f"scenario {scenario_id} seeds"
+            ),
+            "runs": _positive_integer_list(
+                item.get("runs", default_runs), f"scenario {scenario_id} runs"
+            ),
+        })
+    return result
+
+
 def expand_config(document: dict[str, Any]) -> list[dict[str, Any]]:
     base = document.get("base", {})
     if not isinstance(base, dict):
         raise ValueError("base must be a mapping")
-    seeds = document.get("seeds", [1])
-    runs = document.get("runs", [1])
-    if not all(isinstance(value, int) and value > 0 for value in [*seeds, *runs]):
-        raise ValueError("seeds and runs must contain positive integers")
+    seeds = _positive_integer_list(document.get("seeds", [1]), "seeds")
+    runs = _positive_integer_list(document.get("runs", [1]), "runs")
     topologies = _entries(document.get("topologies", ["single_link"]), "topologies")
     policies = _entries(document.get("policies", ["fixed_link_0"]), "policies")
+    scenarios = _scenario_instances(document, seeds, runs)
+    if scenarios is not None and any(
+        "seeds" in entry or "runs" in entry for entry in [*topologies, *policies]
+    ):
+        raise ValueError(
+            "scenario_instances own replication; topology/policy seeds and runs are forbidden"
+        )
     sweep = document.get("sweep", {})
     if not isinstance(sweep, dict) or not all(isinstance(v, list) and v for v in sweep.values()):
         raise ValueError("sweep must map dotted keys to nonempty lists")
@@ -476,36 +590,44 @@ def expand_config(document: dict[str, Any]) -> list[dict[str, Any]]:
     ) if sweep_keys else [()]
     expanded = []
     sweep_values = list(sweep_products)
-    for topology, policy in itertools.product(topologies, policies):
+    scenario_rows = scenarios or [{
+        "identity": None,
+        "seeds": seeds,
+        "runs": runs,
+    }]
+    for scenario_row, topology, policy in itertools.product(
+        scenario_rows, topologies, policies
+    ):
         compatible = policy.get("topologies")
         if compatible is not None and topology["name"] not in compatible:
             continue
         compatible_policies = topology.get("policies")
         if compatible_policies is not None and policy["name"] not in compatible_policies:
             continue
-        policy_seeds = policy.get("seeds", seeds)
-        policy_runs = policy.get("runs", runs)
-        if (
-            not isinstance(policy_seeds, list)
-            or not isinstance(policy_runs, list)
-            or not all(
-                isinstance(value, int) and value > 0
-                for value in [*policy_seeds, *policy_runs]
-            )
-        ):
-            raise ValueError("policy seeds and runs must contain positive integers")
+        policy_seeds = policy.get("seeds", scenario_row["seeds"])
+        policy_runs = policy.get("runs", scenario_row["runs"])
+        policy_seeds = _positive_integer_list(policy_seeds, "policy seeds")
+        policy_runs = _positive_integer_list(policy_runs, "policy runs")
         for seed, run, values in itertools.product(policy_seeds, policy_runs, sweep_values):
             resolved = copy.deepcopy(base)
             resolved["topology"] = topology["name"]
             resolved["policy"] = policy["name"]
-            for overlay in (topology.get("config", {}), policy.get("config", {})):
+            scenario = scenario_row["identity"]
+            overlays = []
+            if scenario is not None:
+                overlays.append(scenario["config_overlay"])
+            overlays.extend((topology.get("config", {}), policy.get("config", {})))
+            for overlay in overlays:
                 if not isinstance(overlay, dict):
                     raise ValueError("topology/policy config must be a mapping")
                 for key, value in overlay.items():
                     set_dotted(resolved, key, value)
             for key, value in zip(sweep_keys, values):
                 set_dotted(resolved, key, value)
-            expanded.append({"config": resolved, "seed": seed, "run": run})
+            spec = {"config": resolved, "seed": seed, "run": run}
+            if scenario is not None:
+                spec["scenario"] = copy.deepcopy(scenario)
+            expanded.append(spec)
     if not expanded:
         raise ValueError("matrix expansion produced no compatible runs")
     return expanded
@@ -967,11 +1089,14 @@ def run_one(spec: dict[str, Any], output_root: Path, config_dir: Path,
     finally:
         if log_path.exists():
             log_path.unlink()
-    return {
+    result = {
         "run_id": run_id, "status": "complete", "seed": spec["seed"], "run": spec["run"],
         "directory": str(final.relative_to(output_root)), "config": spec["config"],
         "command": command,
     }
+    if "scenario" in spec:
+        result["scenario"] = copy.deepcopy(spec["scenario"])
+    return result
 
 
 def main() -> None:
@@ -996,7 +1121,8 @@ def main() -> None:
     seen = set()
     for spec in specs:
         spec["run_id"] = derive_run_id(spec["config"], spec["seed"], spec["run"],
-                                       NS3_UPSTREAM_COMMIT, commit, runtime_contract)
+                                       NS3_UPSTREAM_COMMIT, commit, runtime_contract,
+                                       spec.get("scenario"))
         if spec["run_id"] in seen:
             raise ValueError(f"duplicate resolved run in matrix: {spec['run_id']}")
         seen.add(spec["run_id"])
