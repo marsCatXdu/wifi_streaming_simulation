@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "analysis_id": "environment-generalization-lofo-v1",
+  "status": "frozen_before_randomized_collection_results_read",
+  "purpose": "Leave-one-scenario-family-out completion distributions, OOD fallback, exploration support, and resource-oracle regret",
+  "parent_contract": {
+    "path": "experiments/model-selection/environment-generalization-v1.json",
+    "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+  },
+  "dataset_contract": {
+    "builder_path": "tools/build_environment_generalization_dataset.py",
+    "builder_sha256": "b8a2d693e4142c17aa56ca3561035480cbff8ec75ce3c667a08bd3d83d9a98dd",
+    "feature_contract_id": "environment_generalization_t2_temporal_action_clean_v1",
+    "analysis_stage": "T2",
+    "arms": [
+      "CONTROL",
+      "FULL_COPY_T2"
+    ],
+    "stored_split_role": "generalization_pool",
+    "expected_run_count": 384,
+    "expected_scenario_count": 96,
+    "expected_family_count": 6,
+    "replicates_per_scenario": 4,
+    "propensity": {
+      "control_assignment_probability": 0.8,
+      "t2_assignment_probability": 0.15,
+      "conditional_t2_probability": 0.15789473684210525
+    }
+  },
+  "completion_distribution": {
+    "thresholds_us": [
+      12000,
+      16667,
+      18000,
+      22222,
+      24000,
+      30000,
+      33333,
+      41667
+    ],
+    "class_count": 9,
+    "incomplete_maps_to_last_class": true,
+    "deadline_values_must_be_in_thresholds": [
+      16667,
+      22222,
+      33333,
+      41667
+    ],
+    "tail_threshold_us": 18000,
+    "dirichlet_alpha_per_class": 0.5,
+    "separate_arm_models": true,
+    "prediction_outputs": [
+      "control_completion_cdf",
+      "t2_completion_cdf",
+      "deadline_rescue_probability",
+      "tail_acceleration_18ms_probability"
+    ]
+  },
+  "predictor": {
+    "selection_timing": "fixed_from_prior_opened_neutral_evidence_before_generalization_results",
+    "prior_distribution_contract": {
+      "path": "experiments/model-selection/temporal-t2-distributional-frontier-v1.json",
+      "sha256": "7351064d437022b99c3e7481f44a4dba9c6b4e6435b3c8b957ca18e7c8d7d6f3"
+    },
+    "prior_runtime_contract": {
+      "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+      "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+    },
+    "prior_selected_variant": "primary_secondary_hgb64",
+    "feature_family": "primary_secondary_hgb64_plus_sender_context",
+    "encoded_prior_feature_count": 308,
+    "sender_context_feature_count": 5,
+    "encoded_feature_count": 313,
+    "sender_context_features": [
+      "env_stream_fps",
+      "env_interframe_size_bytes",
+      "env_gop_length",
+      "env_keyframe_size_multiplier",
+      "env_deadline_us"
+    ],
+    "forbidden_inputs": [
+      "scenario_id",
+      "family_id",
+      "parameter_sample",
+      "seed",
+      "run_id",
+      "run_number",
+      "frame_id",
+      "latent_simulator_parameters"
+    ],
+    "numeric_contract": "finite values quantized to float32 then widened to float64",
+    "missing_values": "training median imputation with indicators and keep_empty_features",
+    "model_spec": {
+      "id": "hgb64_depth3_7leaf_multiclass_generalization_v1",
+      "class": "sklearn.ensemble.HistGradientBoostingClassifier",
+      "loss": "log_loss",
+      "learning_rate": 0.05,
+      "max_iter": 64,
+      "max_leaf_nodes": 7,
+      "max_depth": 3,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "max_bins": 63,
+      "early_stopping": false,
+      "random_seed_base": 20260805
+    },
+    "diagnostic_ablation": {
+      "id": "same_predictor_without_five_sender_context_features",
+      "may_not_replace_selected_predictor_from_held_out_results": true
+    }
+  },
+  "cross_fitting": {
+    "outer_split": "leave_one_scenario_family_out",
+    "outer_unit": "family_id",
+    "outer_fold_count": 6,
+    "outer_family_order": [
+      "radio_propagation",
+      "obss_intensity",
+      "obss_geometry_mac",
+      "video_workload",
+      "legacy_coexistence",
+      "compound_shift"
+    ],
+    "all_rows_of_held_out_family_are_predicted_only_by_other_families": true,
+    "inner_group_unit": "scenario_id",
+    "replicate_seeds_never_cross_inner_folds": true,
+    "inner_fold_count": 4,
+    "inner_assignment": "sha256_round_robin_within_each_training_family_v1",
+    "inner_assignment_salt": "environment-generalization-inner-v1",
+    "full_refit_after_lofo_is_permitted_only_for_frozen_closed_loop_candidate": true
+  },
+  "ood_detector": {
+    "id": "robust_shrinkage_mahalanobis_context_v1",
+    "fit_scope": "outer_training_families_only",
+    "context_features_source": "parent_contract.model_evaluation.observable_environment_features",
+    "raw_context_feature_count": 16,
+    "allowed_missing_context_features": [
+      "x_primary_mpdu_retry_ratio_20ms",
+      "x_primary_mpdu_queue_to_ack_p95_20ms_us"
+    ],
+    "imputation": "outer_training_median",
+    "missing_indicators": "one_per_context_feature",
+    "encoded_context_feature_count": 32,
+    "center": "outer_training_median",
+    "scale": "outer_training_median_absolute_deviation_with_zero_replaced_by_one",
+    "covariance": "unbiased_sample_covariance_after_robust_scaling",
+    "covariance_shrinkage_to_identity": 0.1,
+    "inverse": "symmetric_eigendecomposition_with_eigenvalue_floor_1e-9",
+    "score": "squared_mahalanobis_distance",
+    "threshold_quantile": 0.995,
+    "threshold_quantile_method": "higher",
+    "threshold_calibration": "four_fold_group_out_of_fold_by_scenario_id_on_outer_training_families",
+    "known_application_support": "closed_min_max_interval_from_outer_training_rows",
+    "hard_failure_states": [
+      "missing_or_nonfinite_nonoptional_context",
+      "known_application_context_outside_outer_training_support"
+    ],
+    "soft_ood_state": "finite_context_score_strictly_above_calibrated_threshold",
+    "fallback_policy": "no_secondary_copy",
+    "fallback_semantics": "resource_conservative_not_a_reliability_claim"
+  },
+  "deployment_exploration": {
+    "assignment_algorithm": "splitmix64_v1",
+    "assignment_salt": 13503953896175478587,
+    "unit": "eligible_frame",
+    "in_support": {
+      "forced_t2_action_probability": 0.01,
+      "forced_control_probability": 0.01,
+      "base_policy_probability": 0.98
+    },
+    "soft_ood": {
+      "maximum_forced_t2_action_probability": 0.002,
+      "base_policy": "no_secondary_copy"
+    },
+    "hard_failure": {
+      "forced_t2_action_probability": 0.0,
+      "base_policy": "no_secondary_copy"
+    },
+    "forced_actions_must_pass_descriptor_and_repayable_credit_checks": true,
+    "forced_control_must_override_a_base_action": true,
+    "log_assignment_propensity": true,
+    "log_execution_compliance": true
+  },
+  "evaluation": {
+    "family_weighting": "equal_family_then_equal_scenario_then_equal_replicate",
+    "prediction_metrics_are_diagnostic_not_qualification_gates": true,
+    "prediction_metrics": [
+      "observed_arm_multiclass_log_loss",
+      "observed_arm_multiclass_brier",
+      "threshold_brier_by_arm",
+      "control_deadline_miss_auc",
+      "deadline_rescue_auc",
+      "calibration_by_family"
+    ],
+    "causal_estimator": "known_propensity_doubly_robust_cdf_with_lofo_nuisance_models",
+    "policy_value_metrics": [
+      "all_generated_deadline_miss_rate",
+      "completed_late18_rate",
+      "canonical_reservation_us",
+      "ood_fallback_rate",
+      "exploration_rate"
+    ],
+    "scenario_resource_oracle": {
+      "name": "cross_fitted_scenario_resource_oracle_v1",
+      "optimization_unit": "run",
+      "canonical_reservation_budget_us_per_60s_run": 372000,
+      "objective_order": [
+        "minimize_all_generated_deadline_misses",
+        "minimize_completed_late18",
+        "minimize_canonical_reservation"
+      ],
+      "information": "lofo_cross_fitted_potential_completion_distributions",
+      "must_report_identification_uncertainty": true,
+      "must_not_be_described_as_perfect_information": true
+    },
+    "regret_metrics": [
+      "candidate_minus_oracle_deadline_miss_rate",
+      "candidate_minus_oracle_completed_late18_rate",
+      "fraction_of_oracle_deadline_gain_realized",
+      "candidate_minus_uniform_random_same_budget",
+      "candidate_minus_myopic_deadline_risk_same_budget"
+    ],
+    "qualification_results_must_remain_unread_during_this_analysis": true,
+    "reserved_neutral_seeds_1301_through_1348_must_remain_unopened": true
+  }
+}
