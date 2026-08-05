@@ -101,6 +101,44 @@ class TemporalT2ShadowRuntimeExporterTest(unittest.TestCase):
         self.assertEqual(curve.opportunity_cost(Decimal("2"), cost), 8.0)
         self.assertEqual(curve.opportunity_cost(Decimal("3"), cost), 0.0)
 
+    def test_compiled_curve_keeps_every_reachable_boundary(self) -> None:
+        row = {
+            "training_run_count": 32,
+            "density_descending": [float(7000 - index) for index in range(7000)],
+        }
+        values, complete = exporter._reachable_curve_prefix(
+            row, Decimal("1983.760667318285")
+        )
+        expected_affordable = int(
+            (
+                exporter.MAXIMUM_REPAYABLE_CREDIT_US
+                * row["training_run_count"]
+            )
+            // Decimal("1983.760667318285")
+        )
+        self.assertEqual(len(values), expected_affordable + 1)
+        self.assertFalse(complete)
+        self.assertEqual(values[0], 7000.0)
+
+    def test_generated_data_interface_is_deterministic(self) -> None:
+        first = exporter.emit_data_header()
+        second = exporter.emit_data_header()
+        self.assertEqual(first, second)
+        self.assertIn("MulticlassClassifier", first)
+        self.assertIn("std::array<ShadowCurve, 3>", first)
+        self.assertNotIn("globalCurves", first)
+
+    def test_credit_goldens_include_action_debt_cap_and_rejection(self) -> None:
+        rows = exporter._credit_golden_cases(Decimal("1983.760667318285"))
+        self.assertEqual(
+            [row["label"] for row in rows],
+            ["initial_action", "debt_action", "positive_cap", "horizon_reject"],
+        )
+        self.assertTrue(rows[0]["expected_admitted"])
+        self.assertLess(rows[1]["expected_balance_after_us"], 0.0)
+        self.assertEqual(rows[2]["expected_refilled_balance_us"], 360000.0)
+        self.assertFalse(rows[3]["expected_admitted"])
+
     def test_regime_boundaries_match_searchsorted_side_right(self) -> None:
         cutpoints = (0.25, 0.75)
         self.assertEqual(exporter._regime(0.249, cutpoints), 0)
