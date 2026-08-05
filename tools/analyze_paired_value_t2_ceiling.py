@@ -922,6 +922,147 @@ def render_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def plot_ceiling(report: dict[str, Any], output: Path) -> None:
+    """Plot the miss and canonical-resource separation between ceilings."""
+    import matplotlib.pyplot as plt
+
+    reference = report["reference_campaign"]
+    factual = report["factual"]
+    frontiers = report["scalar_score_frontiers"]
+    oracle = report["perfect_primary_information_oracle"]
+    target = report["target"]
+    resource = report["canonical_static_resource_contract"]
+
+    factual_labels = list(factual)
+    bar_labels = factual_labels + [
+        f"{reference}\nfinite score",
+        f"{reference}\npooled threshold*",
+        "Perfect primary\ninformation",
+    ]
+    bar_values = [factual[label]["final_misses"] for label in factual_labels]
+    bar_values.extend(
+        [
+            frontiers[reference]["per_run_finite_budget_score_order"][
+                "reference_rate_projected_final_misses"
+            ],
+            frontiers[reference]["pooled_all_threshold_passers_sensitivity"][
+                "reference_rate_projected_final_misses"
+            ],
+            oracle["per_run_refill_budget"][
+                "reference_rate_projected_final_misses"
+            ],
+        ]
+    )
+    colors = ["#526d82", "#2a9d8f", "#e9c46a", "#f4a261", "#6a4c93"]
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5), constrained_layout=True)
+    bar_colors = [colors[index % len(colors)] for index in range(len(bar_labels))]
+    bars = axes[0].bar(bar_labels, bar_values, color=bar_colors)
+    axes[0].bar_label(bars, fmt="%.1f", padding=3)
+    axes[0].axhline(
+        target["maximum_integer_final_misses"],
+        color="#c1121f",
+        linestyle="--",
+        linewidth=1.5,
+        label=f"target <= {target['maximum_integer_final_misses']} misses",
+    )
+    axes[0].set_ylabel("Final misses across 86,400 frames")
+    axes[0].set_title("Factual results and explicit rescue sensitivities")
+    axes[0].tick_params(axis="x", rotation=18)
+    axes[0].legend(loc="upper right")
+    axes[0].text(
+        0.01,
+        0.02,
+        "* pooled threshold transfers credit across runs",
+        transform=axes[0].transAxes,
+        fontsize=9,
+    )
+
+    score_colors = ["#526d82", "#2a9d8f", "#6a4c93"]
+    for index, (color, (label, values)) in enumerate(
+        zip(score_colors, frontiers.items())
+    ):
+        points = [
+            (
+                resource["per_run_refill_budget_us"] / 1000,
+                values["per_run_refill_budget_score_order"][
+                    "captured_primary_misses"
+                ],
+                "refill",
+            ),
+            (
+                resource["per_run_finite_budget_us"] / 1000,
+                values["per_run_finite_budget_score_order"][
+                    "captured_primary_misses"
+                ],
+                "finite",
+            ),
+            (
+                values["minimum_uniform_score_cap_for_target"][
+                    "maximum_per_run_canonical_reserved_airtime_us"
+                ]
+                / 1000,
+                values["minimum_uniform_score_cap_for_target"][
+                    "captured_primary_misses"
+                ],
+                "target capture",
+            ),
+        ]
+        axes[1].plot(
+            [point[0] for point in points],
+            [point[1] for point in points],
+            color=color,
+            marker="o",
+            linewidth=2,
+            label=label,
+        )
+        endpoint_x, endpoint_y, _ = points[-1]
+        cap = values["minimum_uniform_score_cap_for_target"][
+            "uniform_action_cap_per_run"
+        ]
+        axes[1].annotate(
+            f"{cap}/run",
+            (endpoint_x, endpoint_y),
+            xytext=(5, 8 if index else -17),
+            textcoords="offset points",
+            fontsize=8,
+            color=color,
+        )
+    axes[1].scatter(
+        oracle[
+            "maximum_per_run_cost_to_act_on_every_eligible_primary_miss_us"
+        ]
+        / 1000,
+        oracle["per_run_refill_budget"]["captured_primary_misses"],
+        marker="*",
+        s=180,
+        color="#6a4c93",
+        label="Perfect primary information",
+        zorder=5,
+    )
+    axes[1].axhline(
+        target["required_captured_primary_misses_at_reference_rescue_rate"],
+        color="#c1121f",
+        linestyle="--",
+        linewidth=1.5,
+        label="required capture",
+    )
+    axes[1].axvspan(
+        resource["per_run_refill_budget_us"] / 1000,
+        resource["per_run_finite_budget_us"] / 1000,
+        color="#999999",
+        alpha=0.18,
+        label="360-372 ms budget proxy",
+    )
+    axes[1].set_xlabel("Maximum per-run canonical reservation (ms)")
+    axes[1].set_ylabel("Captured primary misses")
+    axes[1].set_title("Scalar-score information gap")
+    axes[1].grid(alpha=0.25)
+    axes[1].legend(fontsize=8, loc="upper right")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(output, dpi=180)
+    plt.close(fig)
+
+
 def _parse_labeled_path(value: str) -> tuple[str, Path]:
     """Parse one LABEL=PATH command-line value."""
     if "=" not in value:
@@ -967,6 +1108,7 @@ def main() -> None:
     )
     parser.add_argument("--json-output", type=Path, required=True)
     parser.add_argument("--markdown-output", type=Path, required=True)
+    parser.add_argument("--plot-output", type=Path)
     args = parser.parse_args()
     campaigns = dict(args.campaign)
     support = dict(args.support_campaign)
@@ -985,6 +1127,8 @@ def main() -> None:
         _write_json(args.json_output, report)
         args.markdown_output.parent.mkdir(parents=True, exist_ok=True)
         args.markdown_output.write_text(render_markdown(report), encoding="utf-8")
+        if args.plot_output is not None:
+            plot_ceiling(report, args.plot_output)
     except (CeilingError, ComparisonError, OSError, ValueError, KeyError) as error:
         parser.error(str(error))
 

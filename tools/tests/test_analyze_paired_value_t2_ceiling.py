@@ -14,6 +14,7 @@ sys.path.insert(0, str(TOOLS))
 from analyze_paired_value_t2_ceiling import (
     CeilingError,
     analyze_ceiling,
+    plot_ceiling,
     render_markdown,
 )
 
@@ -217,6 +218,9 @@ class AnalyzePairedValueT2CeilingTest(unittest.TestCase):
         markdown = render_markdown(report)
         self.assertIn("unused credit across independent runs", markdown)
         self.assertIn("not an exact secondary-outcome or P99 oracle", markdown)
+        plot = self.root / "ceiling.png"
+        plot_ceiling(report, plot)
+        self.assertGreater(plot.stat().st_size, 1000)
 
     def test_rejects_primary_label_changes_between_factual_campaigns(self) -> None:
         reference = write_campaign(self.root, "reference", {1: {0}, 2: {0}})
