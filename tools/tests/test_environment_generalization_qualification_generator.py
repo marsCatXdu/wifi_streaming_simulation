@@ -24,6 +24,7 @@ from generate_environment_generalization_qualification_v1 import (  # noqa: E402
     build_document,
     generate_artifacts,
     load_contract,
+    resolved_matrix_sha256,
     validate_document,
 )
 from run_experiments import (  # noqa: E402
@@ -102,6 +103,14 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         manifest = json.loads(OUTPUT_MANIFEST.read_text(encoding="utf-8"))
         self.assertEqual(manifest["campaign_counts"]["simulation_runs"], 576)
         self.assertEqual(manifest["campaign_counts"]["worker_waves"], 9)
+        self.assertEqual(
+            manifest["resolved_matrix_sha256"],
+            "e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922",
+        )
+        self.assertEqual(
+            manifest["resolved_matrix_sha256"],
+            resolved_matrix_sha256(self.document, self.contract),
+        )
 
     def test_generated_yaml_carries_the_hash_verified_runtime_closure(self) -> None:
         resolved = load_yaml(OUTPUT_CONFIG)

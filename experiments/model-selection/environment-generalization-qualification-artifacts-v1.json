@@ -19,7 +19,7 @@
   },
   "generator": {
     "path": "tools/generate_environment_generalization_qualification_v1.py",
-    "sha256": "58eaadf22121c8ec67906479b11dbc022de02aeac20dfb58e08116c00c475f16"
+    "sha256": "d440208a55b396f47649ddb4bed67e20b71f38b16950caf653878a7f8131b8bc"
   },
   "invariants": {
     "every_paired_unit_has_all_three_arms": true,
@@ -31,5 +31,6 @@
   "reproduction": [
     "python3 tools/generate_environment_generalization_qualification_v1.py --check"
   ],
+  "resolved_matrix_sha256": "e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922",
   "schema_version": 1
 }
