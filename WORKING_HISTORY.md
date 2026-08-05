@@ -612,6 +612,28 @@ Do not repeat an entry unless relevant code changed after it ran.
 
 ## Work log
 
+### 2026-08-05 - Close the 384-run collection and repair dataset missingness
+
+- Completed all 384 randomized runs as six full 64-worker waves on the VM.
+  Every manifest entry is `complete`, no simulator zombies remain, and the
+  final experiment-manifest SHA-256 is
+  `b306ea8384f99413834760978a2ef76fb9969f35df2cd8ef0930aed3565652c9`.
+- The frozen `543f6c1` pipeline stopped before model fitting when a valid raw
+  row had jointly null `packets_ahead_of_frame` and
+  `mac_service_bytes_ahead_of_frame`.  The telemetry contract permits this
+  state when exact FIFO ordering is unavailable; the temporal physics
+  augmenter had incorrectly required the byte field to be finite.
+- Fixed the augmenter in `916bb9a` by retaining the frame and propagating the
+  null only to the two ahead-clearance derivatives.  No outcome-dependent
+  row filtering or feature imputation was introduced.  Sixty-five focused
+  local tests and sixteen focused VM tests pass, including a paired-null
+  regression.  The pushed source bundle SHA-256 is
+  `2e65421e7dd0f81aa1e231f4d7e6a9544427da2edb469a26776a0e81057382a8`.
+- Relaunched the source-closed dataset-to-plots pipeline from the clean
+  detached `916bb9a` checkout into a fresh output root.  Preserve the failed
+  `543f6c1` output and log as an audit trail.  Do not interpret policy results
+  until the new top-level artifact manifest closes all four stages.
+
 ### 2026-08-05 - Complete pre-outcome LOFO and resource replay tooling
 
 - Froze the held-out-family completion-distribution and robust OOD contract at
