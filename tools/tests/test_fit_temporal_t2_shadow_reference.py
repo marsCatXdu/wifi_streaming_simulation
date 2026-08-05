@@ -80,6 +80,22 @@ class ShadowReferenceTest(unittest.TestCase):
         selected, _ = reference.select_variant(result)
         self.assertEqual(selected, "primary_hgb64")
 
+    def test_selection_uses_tail_as_nonregression_gate_only(self) -> None:
+        result = _selection_result()
+        for index, row in enumerate(result["policies"]):
+            row["captured_primary_deadline_misses"] = 100
+            row["mean_canonical_reservation_us_per_run"] = 300_000.0 + index
+        economical = result["policies"][0]
+        economical["mean_canonical_reservation_us_per_run"] = 100_000.0
+        economical["dr_policy_minus_none_completed_late18_ratio"][
+            "estimate"
+        ] = -0.001
+        result["policies"][1][
+            "dr_policy_minus_none_completed_late18_ratio"
+        ]["estimate"] = -0.5
+        selected, _ = reference.select_variant(result)
+        self.assertEqual(selected, economical["variant"])
+
     def test_prediction_header_is_selected_variant_specific(self) -> None:
         header = reference._header("primary_hgb64")
         self.assertEqual(

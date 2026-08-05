@@ -125,7 +125,6 @@ def select_variant(result: dict[str, Any]) -> tuple[str, dict[str, Any]]:
             -int(row["captured_primary_deadline_misses"]),
             float(row["dr_policy_deadline_miss_probability"]),
             int(float(tail_delta) > 0),
-            float(tail_delta),
             float(row["mean_canonical_reservation_us_per_run"]),
             family_rank[row["feature_family"]],
             model_rank[row["model_spec_id"]],
