@@ -16,6 +16,7 @@ build_lib(
     model/temporal-t2-value-predictor.cc
     model/temporal-t2-distribution-predictor.cc
     model/paired-value-t2-controller.cc
+    model/distributional-shadow-t2-controller.cc
     model/closed-loop-risk-predictor.cc
     model/prediction-telemetry-collector.cc
     model/selective-duplication-controller.cc
@@ -50,6 +51,7 @@ build_lib(
     model/temporal-t2-value-predictor.h
     model/temporal-t2-distribution-predictor.h
     model/paired-value-t2-controller.h
+    model/distributional-shadow-t2-controller.h
     model/closed-loop-risk-predictor.h
     model/prediction-telemetry-collector.h
     model/selective-duplication-controller.h
@@ -80,6 +82,7 @@ build_lib(
     test/temporal-t2-value-predictor-test.cc
     test/temporal-t2-distribution-predictor-test.cc
     test/paired-value-t2-controller-test.cc
+    test/distributional-shadow-t2-controller-test.cc
     test/randomized-intervention-controller-test.cc
     test/secondary-airtime-primitives-test.cc
     test/permanent-airtime-credit-ledger-test.cc
