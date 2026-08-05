@@ -122,7 +122,7 @@ P99.
 | Orchestrate environment analysis | `3dd6855` | One clean-worktree VM entry point with top-level provenance closure |
 | Preserve missing queue-order telemetry | `916bb9a` | Keep valid rows with jointly unavailable FIFO-ahead fields and blank only their derived clearance features |
 | Record randomized collection closure | `1742ba1` | Exact 384-run manifest identity and corrected-analysis handoff |
-| Freeze held-out qualification execution | `257b194` | Exact 576-run three-arm matrix in nine complete 64-worker waves |
+| Freeze held-out qualification execution | `257b194`, `06806cb` | Exact 576-run three-arm matrix and resolved hash in nine complete 64-worker waves |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -238,6 +238,17 @@ One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
 this as a coverage/uncertainty warning when interpreting family aggregates;
 do not silently drop it or change the frozen population after seeing results.
+
+The randomized resource oracle estimates only the action-clean eligible-T2
+population and explicitly forbids an all-generated-frame claim.  Therefore
+its miss probability is not commensurate with the closed-loop all-generated
+miss rate, and the predeclared `fraction_of_oracle_deadline_gain_realized`
+gate cannot honestly be calculated by subtracting those two rates.  The
+qualification analyzer must report that gate as `not_assessable`, while still
+reporting direct all-generated STR gates and eligible-population oracle/regret
+evidence separately.  A future all-generated oracle needs a sequentially
+identified policy-value design that covers startup, ineligible, and
+action-history-contaminated frames; do not silently bridge the estimands.
 
 The LOFO completion-distribution, robust OOD, exact decimal resource replay,
 uniform/myopic baselines, cross-fitted resource oracle, DR/HT value, shared
@@ -645,12 +656,19 @@ Do not repeat an entry unless relevant code changed after it ran.
   held-out scenarios to STR, score-aware V2, and distributional-shadow T2.
   The matrix contains 192 paired units and 576 simulations, exactly nine full
   waves at 64 workers, using seeds `21001` through `21192` and none of the
-  reserved `1301` through `1348` confirmation seeds.
+  reserved `1301` through `1348` confirmation seeds.  Follow-up `06806cb`
+  records the runner's fully inherited resolved-matrix SHA-256 as
+  `e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922`.
 - The generator validates source hashes, inherited V2 closure, arm identity,
   exact pairing, worker-wave arithmetic, and seed isolation; 45 focused and
   compatibility tests pass.  The campaign is frozen but not launched.  Build
   and freeze the outcome analyzer after the randomized analysis closes and
   before any held-out qualification result can be read.
+- A pre-launch analyzer audit found that the randomized oracle's eligible,
+  action-clean T2 estimand cannot normalize an all-generated closed-loop miss
+  rate.  Preserve its replay as ceiling evidence, but mark the parent's oracle
+  fraction gate unassessable until an all-generated sequential causal bridge
+  exists.  Direct paired STR performance and resource gates remain valid.
 
 ### 2026-08-05 - Close the 384-run collection and repair dataset missingness
 
