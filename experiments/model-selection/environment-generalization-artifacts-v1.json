@@ -1,0 +1,58 @@
+{
+  "campaign_counts": {
+    "closed_loop_qualification_64_worker_waves": 9,
+    "closed_loop_qualification_paired_units": 192,
+    "closed_loop_qualification_scenarios": 48,
+    "closed_loop_qualification_simulation_runs": 576,
+    "preflight_runs": 6,
+    "preflight_scenarios": 6,
+    "randomized_collection_64_worker_waves": 6,
+    "randomized_collection_runs": 384,
+    "randomized_collection_scenarios": 96
+  },
+  "contract": {
+    "id": "environment-generalization-v1",
+    "path": "experiments/model-selection/environment-generalization-v1.json",
+    "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+  },
+  "generated_artifacts": {
+    "randomized_collection_config": {
+      "bytes": 46095,
+      "path": "experiments/configs/environment_generalization_randomized_collection_v1.yaml",
+      "sha256": "0b95ad7c7d9c7b8c3c8706963c8996434c79a28bf23df274003e3ee01a4b1a2d"
+    },
+    "randomized_preflight_config": {
+      "bytes": 4166,
+      "path": "experiments/configs/environment_generalization_randomized_preflight_v1.yaml",
+      "sha256": "c5881939648048a69b1507f77e28a76cf2f67b76b6ccf1d069b13a54df036ca6"
+    },
+    "scenario_catalog": {
+      "bytes": 110535,
+      "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+      "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+    }
+  },
+  "generator": {
+    "path": "tools/generate_environment_generalization_v1.py",
+    "sha256": "05342c634d95a1ac16a9693c9228fdb34cef07e2cbc77b5a4dd2d252e0fb1e54"
+  },
+  "invariants": {
+    "collection_and_qualification_are_64_worker_multiples": true,
+    "phase_seed_sets_are_disjoint": true,
+    "qualification_catalog_generated_before_results": true,
+    "reserved_confirmation_seed_overlap_count": 0,
+    "scenario_identity_is_not_a_simulator_cli_input": true
+  },
+  "manifest_id": "environment-generalization-artifacts-v1",
+  "reproduction": [
+    "python3 tools/generate_environment_generalization_v1.py --check"
+  ],
+  "schema_version": 1,
+  "source_artifacts": {
+    "randomized_base_config": {
+      "file_sha256": "806a188cb38a233e7b4d264dda68fd08912452364bf4a43f1fb71afab8f52629",
+      "path": "experiments/configs/randomized_full_copy_exploration_pilot_v1.yaml",
+      "resolved_sha256": "31719541d466486e541006ffeb836c2351563102b97409b849f68a3ee1c44d4d"
+    }
+  }
+}

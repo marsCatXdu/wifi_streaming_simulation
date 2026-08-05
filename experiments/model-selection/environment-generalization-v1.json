@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "contract_id": "environment-generalization-v1",
+  "purpose": "Leave-one-scenario-family-out causal and closed-loop qualification of selective T2 duplication",
+  "reserved_confirmation_seeds": {
+    "first": 1301,
+    "last": 1348,
+    "must_remain_unopened": true
+  },
+  "sampling": {
+    "algorithm": "sha256_latin_hypercube_v1",
+    "salt": "wifi-streaming-environment-generalization-v1",
+    "family_order": [
+      "radio_propagation",
+      "obss_intensity",
+      "obss_geometry_mac",
+      "video_workload",
+      "legacy_coexistence",
+      "compound_shift"
+    ],
+    "phases": {
+      "randomized_collection": {
+        "phase_tag": "collection",
+        "parameter_samples_per_family": 16,
+        "replicates_per_parameter_sample": 4,
+        "parameter_sample_offset": 0,
+        "simulation_seed_base": 20001,
+        "expected_run_count": 384,
+        "expected_64_worker_waves": 6
+      },
+      "closed_loop_qualification": {
+        "phase_tag": "qualification",
+        "parameter_samples_per_family": 8,
+        "replicates_per_parameter_sample": 4,
+        "parameter_sample_offset": 16,
+        "simulation_seed_base": 21001,
+        "expected_paired_units": 192,
+        "actual_simulation_arms": 3,
+        "expected_simulation_run_count": 576,
+        "expected_64_worker_waves": 9
+      },
+      "preflight": {
+        "phase_tag": "preflight",
+        "parameter_samples_per_family": 1,
+        "replicates_per_parameter_sample": 1,
+        "parameter_sample_offset": 24,
+        "simulation_seed_base": 22001,
+        "expected_run_count": 6
+      }
+    }
+  },
+  "randomized_collection": {
+    "base_config_path": "experiments/configs/randomized_full_copy_exploration_pilot_v1.yaml",
+    "base_config_file_sha256": "806a188cb38a233e7b4d264dda68fd08912452364bf4a43f1fb71afab8f52629",
+    "resolved_base_config_sha256": "31719541d466486e541006ffeb836c2351563102b97409b849f68a3ee1c44d4d",
+    "experiment_name": "environment-generalization-randomized-collection-v1",
+    "output_root": "results/environment_generalization_randomized_collection_v1/runs",
+    "preflight_experiment_name": "environment-generalization-randomized-preflight-v1",
+    "preflight_output_root": "results/environment_generalization_randomized_preflight_v1/runs",
+    "policy": "randomized_full_copy_exploration",
+    "topology": "dual_interface",
+    "assignment": {
+      "algorithm": "splitmix64-threshold-v1",
+      "salt": 7640891576956012809,
+      "t2_probability": 0.15,
+      "t4_probability": 0.05,
+      "control_probability": 0.8,
+      "stop_guard_us": 550000,
+      "token_gate_enabled": false
+    },
+    "maximum_keyframe_bytes": 56000,
+    "workers": 64
+  },
+  "generated_artifacts": {
+    "randomized_collection_config": "experiments/configs/environment_generalization_randomized_collection_v1.yaml",
+    "randomized_preflight_config": "experiments/configs/environment_generalization_randomized_preflight_v1.yaml",
+    "scenario_catalog": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+    "artifact_manifest": "experiments/model-selection/environment-generalization-artifacts-v1.json"
+  },
+  "scenario_families": {
+    "radio_propagation": {
+      "description": "Target-link distance, path-loss, and fading shift with neutral traffic",
+      "fixed_overrides": {},
+      "parameters": {
+        "propagation.station_distance_m": {
+          "kind": "uniform_float",
+          "minimum": 4.0,
+          "maximum": 22.0,
+          "digits": 3
+        },
+        "propagation.path_loss_exponent": {
+          "kind": "uniform_float",
+          "minimum": 2.2,
+          "maximum": 4.0,
+          "digits": 4
+        },
+        "propagation.nakagami_distance_1_m": {
+          "kind": "uniform_float",
+          "minimum": 40.0,
+          "maximum": 110.0,
+          "digits": 2
+        },
+        "propagation.nakagami_distance_2_m": {
+          "kind": "uniform_float",
+          "minimum": 150.0,
+          "maximum": 320.0,
+          "digits": 2
+        },
+        "propagation.nakagami_m0": {
+          "kind": "uniform_float",
+          "minimum": 0.7,
+          "maximum": 2.5,
+          "digits": 4
+        },
+        "propagation.nakagami_m1": {
+          "kind": "uniform_float",
+          "minimum": 0.35,
+          "maximum": 1.25,
+          "digits": 4
+        },
+        "propagation.nakagami_m2": {
+          "kind": "uniform_float",
+          "minimum": 0.35,
+          "maximum": 1.25,
+          "digits": 4
+        }
+      }
+    },
+    "obss_intensity": {
+      "description": "OBSS offered-load and burst-duty shift with neutral geometry",
+      "fixed_overrides": {},
+      "parameters": {
+        "obss.obss_ul_min_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 0.2,
+          "maximum": 1.2,
+          "digits": 4
+        },
+        "obss.obss_ul_max_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 2.5,
+          "maximum": 6.0,
+          "digits": 4
+        },
+        "obss.obss_dl_min_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 1.0,
+          "maximum": 4.0,
+          "digits": 4
+        },
+        "obss.obss_dl_max_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 6.0,
+          "maximum": 16.0,
+          "digits": 4
+        },
+        "obss.obss_on_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 20.0,
+          "maximum": 250.0,
+          "digits": 2
+        },
+        "obss.obss_off_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 40.0,
+          "maximum": 500.0,
+          "digits": 2
+        },
+        "obss.obss_packet_size": {
+          "kind": "choice",
+          "values": [600, 1200, 1472]
+        }
+      }
+    },
+    "obss_geometry_mac": {
+      "description": "OBSS placement and station-manager shift with neutral offered load",
+      "fixed_overrides": {},
+      "parameters": {
+        "obss.obss_area_min_x_m": {
+          "kind": "uniform_float",
+          "minimum": -25.0,
+          "maximum": -8.0,
+          "digits": 3
+        },
+        "obss.obss_area_max_x_m": {
+          "kind": "uniform_float",
+          "minimum": 8.0,
+          "maximum": 25.0,
+          "digits": 3
+        },
+        "obss.obss_area_min_y_m": {
+          "kind": "uniform_float",
+          "minimum": -18.0,
+          "maximum": -6.0,
+          "digits": 3
+        },
+        "obss.obss_area_max_y_m": {
+          "kind": "uniform_float",
+          "minimum": 6.0,
+          "maximum": 18.0,
+          "digits": 3
+        },
+        "obss.obss_sta_min_distance_m": {
+          "kind": "uniform_float",
+          "minimum": 1.0,
+          "maximum": 3.0,
+          "digits": 3
+        },
+        "obss.obss_sta_max_distance_m": {
+          "kind": "uniform_float",
+          "minimum": 5.0,
+          "maximum": 10.0,
+          "digits": 3
+        },
+        "obss.obss_station_manager": {
+          "kind": "choice",
+          "values": ["minstrel_ht", "ideal", "constant"]
+        },
+        "obss.obss_manager_update_ms": {
+          "kind": "choice",
+          "values": [20, 50, 100]
+        }
+      }
+    },
+    "video_workload": {
+      "description": "Application frame cadence, size, GOP, and deadline shift",
+      "fixed_overrides": {},
+      "parameters": {
+        "stream.fps": {
+          "kind": "choice",
+          "values": [24, 30, 45, 60]
+        },
+        "stream.frame_size": {
+          "kind": "uniform_int",
+          "minimum": 6000,
+          "maximum": 14000,
+          "step": 100
+        },
+        "stream.gop_length": {
+          "kind": "choice",
+          "values": [30, 60, 90, 120]
+        },
+        "stream.keyframe_size_multiplier": {
+          "kind": "uniform_float",
+          "minimum": 2.0,
+          "maximum": 4.0,
+          "digits": 3
+        },
+        "stream.deadline_us": {
+          "kind": "derived_frame_period_us",
+          "source": "stream.fps"
+        }
+      }
+    },
+    "legacy_coexistence": {
+      "description": "Legacy mixed-station coexistence added to the neutral OBSS environment",
+      "fixed_overrides": {
+        "background.background_profile": "legacy_mixed8"
+      },
+      "parameters": {
+        "background.background_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 0.5,
+          "maximum": 4.0,
+          "digits": 4
+        },
+        "background.background_packet_size": {
+          "kind": "choice",
+          "values": [600, 1200, 1472]
+        },
+        "background.random_on_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 30.0,
+          "maximum": 250.0,
+          "digits": 2
+        },
+        "background.random_off_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 30.0,
+          "maximum": 250.0,
+          "digits": 2
+        }
+      }
+    },
+    "compound_shift": {
+      "description": "Simultaneous moderate radio, OBSS, workload, and legacy-coexistence shift",
+      "fixed_overrides": {
+        "background.background_profile": "legacy_mixed8"
+      },
+      "parameters": {
+        "propagation.station_distance_m": {
+          "kind": "uniform_float",
+          "minimum": 6.0,
+          "maximum": 18.0,
+          "digits": 3
+        },
+        "propagation.path_loss_exponent": {
+          "kind": "uniform_float",
+          "minimum": 2.5,
+          "maximum": 3.6,
+          "digits": 4
+        },
+        "obss.obss_ul_max_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 2.5,
+          "maximum": 5.0,
+          "digits": 4
+        },
+        "obss.obss_dl_max_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 6.0,
+          "maximum": 13.0,
+          "digits": 4
+        },
+        "obss.obss_on_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 40.0,
+          "maximum": 180.0,
+          "digits": 2
+        },
+        "obss.obss_off_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 80.0,
+          "maximum": 400.0,
+          "digits": 2
+        },
+        "stream.fps": {
+          "kind": "choice",
+          "values": [24, 30, 45]
+        },
+        "stream.frame_size": {
+          "kind": "uniform_int",
+          "minimum": 8000,
+          "maximum": 13000,
+          "step": 100
+        },
+        "stream.gop_length": {
+          "kind": "choice",
+          "values": [30, 60, 90]
+        },
+        "stream.keyframe_size_multiplier": {
+          "kind": "uniform_float",
+          "minimum": 2.0,
+          "maximum": 3.5,
+          "digits": 3
+        },
+        "stream.deadline_us": {
+          "kind": "derived_frame_period_us",
+          "source": "stream.fps"
+        },
+        "background.background_rate_mbps": {
+          "kind": "uniform_float",
+          "minimum": 0.5,
+          "maximum": 3.0,
+          "digits": 4
+        },
+        "background.random_on_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 40.0,
+          "maximum": 200.0,
+          "digits": 2
+        },
+        "background.random_off_mean_ms": {
+          "kind": "uniform_float",
+          "minimum": 40.0,
+          "maximum": 240.0,
+          "digits": 2
+        }
+      }
+    }
+  },
+  "model_evaluation": {
+    "outer_split_unit": "family_id",
+    "outer_split": "leave_one_scenario_family_out",
+    "inner_split_unit": "scenario_id",
+    "seed_replicates_must_not_cross_inner_splits": true,
+    "family_id_is_forbidden_as_model_input": true,
+    "scenario_id_is_forbidden_as_model_input": true,
+    "latent_simulator_parameters_are_forbidden_as_model_inputs": true,
+    "observable_environment_features": [
+      "env_stream_fps",
+      "env_interframe_size_bytes",
+      "env_gop_length",
+      "env_keyframe_size_multiplier",
+      "env_deadline_us",
+      "x_primary_mac_queue_service_bytes",
+      "x_secondary_mac_queue_service_bytes",
+      "x_primary_mpdu_retry_ratio_20ms",
+      "x_primary_acknowledged_mac_service_bytes_20ms",
+      "x_primary_mpdu_queue_to_ack_p95_20ms_us",
+      "x_primary_phy_busy_fraction_20ms",
+      "x_secondary_phy_busy_fraction_20ms",
+      "x_physics_working_rate_margin_20ms_bytes_per_us",
+      "x_physics_secondary_idle_minus_primary_20ms",
+      "x_physics_primary_busy_trend_5ms_vs_20ms",
+      "x_physics_secondary_busy_trend_5ms_vs_20ms"
+    ],
+    "prediction_outputs": [
+      "control_completion_distribution",
+      "t2_completion_distribution",
+      "deadline_rescue_probability",
+      "tail_acceleration_18ms_probability",
+      "canonical_airtime_cost"
+    ],
+    "primary_selection_objective": "deadline_rescue_probability",
+    "secondary_selection_objective": "tail_acceleration_18ms_probability",
+    "prediction_metrics_are_diagnostic_not_qualification_gates": true
+  },
+  "ood_policy": {
+    "detector": "robust_shrinkage_mahalanobis_context_v1",
+    "fit_scope": "outer_training_families_only",
+    "context_features": "model_evaluation.observable_environment_features",
+    "imputation": "training_median_plus_missing_indicators",
+    "scale": "training_median_absolute_deviation",
+    "covariance_shrinkage_to_identity": 0.1,
+    "threshold_quantile": 0.995,
+    "threshold_calibration": "group_out_of_fold_by_scenario_id",
+    "hard_failure_states": [
+      "missing_required_telemetry",
+      "nonfinite_required_telemetry",
+      "known_application_context_outside_training_support"
+    ],
+    "fallback_policy": "no_secondary_copy",
+    "fallback_semantics": "resource_conservative_not_a_reliability_claim",
+    "maximum_ood_exploration_action_probability": 0.002,
+    "hard_failure_exploration_action_probability": 0.0
+  },
+  "deployment_exploration": {
+    "assignment_algorithm": "splitmix64-threshold-v1",
+    "assignment_salt": 13503953896175478587,
+    "unit": "eligible_frame",
+    "forced_t2_action_probability": 0.01,
+    "forced_control_probability": 0.01,
+    "base_policy_probability": 0.98,
+    "forced_actions_must_pass_descriptor_and_repayable_credit_checks": true,
+    "forced_control_must_override_a_base_action": true,
+    "log_assignment_propensity": true,
+    "log_execution_compliance": true,
+    "purpose": "Maintain counterfactual support for post-deployment treatment-effect recalibration"
+  },
+  "closed_loop_qualification": {
+    "actual_experiment_required_in_every_held_out_family": true,
+    "paired_unit": "scenario_id_seed_run",
+    "family_weighting": "equal_family_then_equal_scenario",
+    "actual_simulation_arms": [
+      {
+        "arm_id": "str_mlo_nmaxinflights_1",
+        "topology": "mlo_str",
+        "policy": "fixed_link_0"
+      },
+      {
+        "arm_id": "score_aware_t2_v2",
+        "topology": "dual_interface",
+        "policy": "paired_value_duplication_t2",
+        "admission_profile": "score_aware_emergency_v2"
+      },
+      {
+        "arm_id": "distributional_shadow_t2",
+        "topology": "dual_interface",
+        "policy": "distributional_shadow_duplication_t2"
+      }
+    ],
+    "simple_baselines": [
+      "str_mlo_nmaxinflights_1",
+      "score_aware_t2_v2",
+      "uniform_random_t2_same_canonical_budget",
+      "myopic_deadline_risk_same_canonical_budget"
+    ],
+    "scenario_oracle": {
+      "name": "cross_fitted_scenario_resource_oracle_v1",
+      "information": "held_out_randomized_outcomes_with_cross_fitted_potential_outcome_models",
+      "optimization_unit": "run",
+      "canonical_reservation_budget_us_per_60s_run": 372000,
+      "objective_order": [
+        "minimize_all_generated_deadline_misses",
+        "minimize_completed_late18",
+        "minimize_canonical_reservation"
+      ],
+      "must_report_identification_uncertainty": true,
+      "must_not_be_described_as_a_perfect_information_oracle": true
+    },
+    "regret_metrics": [
+      "candidate_minus_oracle_deadline_miss_rate",
+      "candidate_minus_oracle_completed_late18_rate",
+      "fraction_of_oracle_deadline_gain_realized",
+      "candidate_minus_each_simple_baseline_policy_value"
+    ],
+    "aggregate_gates": {
+      "deadline_miss_delta_95pct_upper_less_than": 0.0,
+      "completed_p99_delta_us_95pct_upper_less_than": 0.0,
+      "sender_airtime_ratio_95pct_upper_at_most": 1.2,
+      "background_throughput_loss_95pct_upper_at_most": 0.01,
+      "relative_deadline_miss_reduction_at_least": 0.5,
+      "fraction_of_oracle_deadline_gain_realized_at_least": 0.5
+    },
+    "per_family_safety_gates": {
+      "deadline_miss_delta_at_most": 0.002,
+      "completed_p99_delta_us_at_most": 2000,
+      "sender_airtime_ratio_at_most": 1.25,
+      "background_throughput_loss_at_most": 0.02,
+      "families_worse_on_both_miss_and_p99_at_most": 0
+    },
+    "reserved_neutral_confirmation_is_separate": true
+  }
+}

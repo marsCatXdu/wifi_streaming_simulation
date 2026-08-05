@@ -1,0 +1,3619 @@
+{
+  "base_config": {
+    "file_sha256": "806a188cb38a233e7b4d264dda68fd08912452364bf4a43f1fb71afab8f52629",
+    "path": "experiments/configs/randomized_full_copy_exploration_pilot_v1.yaml",
+    "resolved_sha256": "31719541d466486e541006ffeb836c2351563102b97409b849f68a3ee1c44d4d"
+  },
+  "catalog_id": "environment-generalization-scenarios-v1",
+  "contract": {
+    "id": "environment-generalization-v1",
+    "path": "experiments/model-selection/environment-generalization-v1.json",
+    "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+  },
+  "generator": {
+    "path": "tools/generate_environment_generalization_v1.py",
+    "sha256": "05342c634d95a1ac16a9693c9228fdb34cef07e2cbc77b5a4dd2d252e0fb1e54"
+  },
+  "phases": {
+    "closed_loop_qualification": {
+      "paired_unit_count": 192,
+      "phase_tag": "qualification",
+      "scenario_count": 48,
+      "scenario_list_sha256": "1d6b2280d8e3e370bfb24c84c82fd52d5f98ff9f2e3b8710aa3d1ed5f5141313",
+      "scenarios": [
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 108.75,
+            "propagation.nakagami_distance_2_m": 178.91,
+            "propagation.nakagami_m0": 2.1424,
+            "propagation.nakagami_m1": 0.665,
+            "propagation.nakagami_m2": 0.422,
+            "propagation.path_loss_exponent": 2.4202,
+            "propagation.station_distance_m": 12.425
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p16",
+          "seeds": [
+            21001,
+            21002,
+            21003,
+            21004
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 52.97,
+            "propagation.nakagami_distance_2_m": 196.74,
+            "propagation.nakagami_m0": 1.3302,
+            "propagation.nakagami_m1": 1.2343,
+            "propagation.nakagami_m2": 1.0194,
+            "propagation.path_loss_exponent": 3.7489,
+            "propagation.station_distance_m": 16.05
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p17",
+          "seeds": [
+            21005,
+            21006,
+            21007,
+            21008
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 94.8,
+            "propagation.nakagami_distance_2_m": 219.23,
+            "propagation.nakagami_m0": 1.9661,
+            "propagation.nakagami_m1": 1.0725,
+            "propagation.nakagami_m2": 1.086,
+            "propagation.path_loss_exponent": 3.1653,
+            "propagation.station_distance_m": 6.902
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p18",
+          "seeds": [
+            21009,
+            21010,
+            21011,
+            21012
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 91.04,
+            "propagation.nakagami_distance_2_m": 166.26,
+            "propagation.nakagami_m0": 1.8044,
+            "propagation.nakagami_m1": 0.9725,
+            "propagation.nakagami_m2": 0.7553,
+            "propagation.path_loss_exponent": 2.979,
+            "propagation.station_distance_m": 10.746
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p19",
+          "seeds": [
+            21013,
+            21014,
+            21015,
+            21016
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 64.52,
+            "propagation.nakagami_distance_2_m": 252.09,
+            "propagation.nakagami_m0": 2.3218,
+            "propagation.nakagami_m1": 0.7023,
+            "propagation.nakagami_m2": 0.659,
+            "propagation.path_loss_exponent": 3.8546,
+            "propagation.station_distance_m": 13.155
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p20",
+          "seeds": [
+            21017,
+            21018,
+            21019,
+            21020
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 70.78,
+            "propagation.nakagami_distance_2_m": 264.22,
+            "propagation.nakagami_m0": 1.0217,
+            "propagation.nakagami_m1": 0.4576,
+            "propagation.nakagami_m2": 0.5546,
+            "propagation.path_loss_exponent": 2.5417,
+            "propagation.station_distance_m": 21.204
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p21",
+          "seeds": [
+            21021,
+            21022,
+            21023,
+            21024
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 41.07,
+            "propagation.nakagami_distance_2_m": 307.51,
+            "propagation.nakagami_m0": 1.5061,
+            "propagation.nakagami_m1": 0.8243,
+            "propagation.nakagami_m2": 0.9083,
+            "propagation.path_loss_exponent": 2.7717,
+            "propagation.station_distance_m": 5.472
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p22",
+          "seeds": [
+            21025,
+            21026,
+            21027,
+            21028
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 82.15,
+            "propagation.nakagami_distance_2_m": 294.24,
+            "propagation.nakagami_m0": 0.7457,
+            "propagation.nakagami_m1": 0.4676,
+            "propagation.nakagami_m2": 1.219,
+            "propagation.path_loss_exponent": 3.4482,
+            "propagation.station_distance_m": 19.188
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-qualification-p23",
+          "seeds": [
+            21029,
+            21030,
+            21031,
+            21032
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 13.1084,
+            "obss.obss_dl_min_rate_mbps": 3.7239,
+            "obss.obss_off_mean_ms": 442.77,
+            "obss.obss_on_mean_ms": 100.74,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 2.7711,
+            "obss.obss_ul_min_rate_mbps": 0.785
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p16",
+          "seeds": [
+            21033,
+            21034,
+            21035,
+            21036
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 8.5009,
+            "obss.obss_dl_min_rate_mbps": 2.41,
+            "obss.obss_off_mean_ms": 186.44,
+            "obss.obss_on_mean_ms": 219.99,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 5.7591,
+            "obss.obss_ul_min_rate_mbps": 1.14
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p17",
+          "seeds": [
+            21037,
+            21038,
+            21039,
+            21040
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 14.2475,
+            "obss.obss_dl_min_rate_mbps": 1.1644,
+            "obss.obss_off_mean_ms": 141.64,
+            "obss.obss_on_mean_ms": 51.17,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 3.5582,
+            "obss.obss_ul_min_rate_mbps": 0.6153
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p18",
+          "seeds": [
+            21041,
+            21042,
+            21043,
+            21044
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 9.9833,
+            "obss.obss_dl_min_rate_mbps": 2.5902,
+            "obss.obss_off_mean_ms": 435.38,
+            "obss.obss_on_mean_ms": 249.82,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 5.5524,
+            "obss.obss_ul_min_rate_mbps": 0.3428
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p19",
+          "seeds": [
+            21045,
+            21046,
+            21047,
+            21048
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 7.269,
+            "obss.obss_dl_min_rate_mbps": 1.9523,
+            "obss.obss_off_mean_ms": 73.92,
+            "obss.obss_on_mean_ms": 192.1,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 4.352,
+            "obss.obss_ul_min_rate_mbps": 0.2126
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p20",
+          "seeds": [
+            21049,
+            21050,
+            21051,
+            21052
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 6.0269,
+            "obss.obss_dl_min_rate_mbps": 3.1278,
+            "obss.obss_off_mean_ms": 235.15,
+            "obss.obss_on_mean_ms": 151.78,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 3.0648,
+            "obss.obss_ul_min_rate_mbps": 0.4513
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p21",
+          "seeds": [
+            21053,
+            21054,
+            21055,
+            21056
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 12.0195,
+            "obss.obss_dl_min_rate_mbps": 1.6046,
+            "obss.obss_off_mean_ms": 306.76,
+            "obss.obss_on_mean_ms": 128.58,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 4.8641,
+            "obss.obss_ul_min_rate_mbps": 0.9985
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p22",
+          "seeds": [
+            21057,
+            21058,
+            21059,
+            21060
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 15.4671,
+            "obss.obss_dl_min_rate_mbps": 3.3429,
+            "obss.obss_off_mean_ms": 346.51,
+            "obss.obss_on_mean_ms": 37.57,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 4.178,
+            "obss.obss_ul_min_rate_mbps": 0.8427
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-qualification-p23",
+          "seeds": [
+            21061,
+            21062,
+            21063,
+            21064
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 11.183,
+            "obss.obss_area_max_y_m": 14.837,
+            "obss.obss_area_min_x_m": -12.853,
+            "obss.obss_area_min_y_m": -13.862,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 5.717,
+            "obss.obss_sta_min_distance_m": 1.427,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p16",
+          "seeds": [
+            21065,
+            21066,
+            21067,
+            21068
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 20.598,
+            "obss.obss_area_max_y_m": 11.549,
+            "obss.obss_area_min_x_m": -11.351,
+            "obss.obss_area_min_y_m": -11.15,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 6.764,
+            "obss.obss_sta_min_distance_m": 2.924,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p17",
+          "seeds": [
+            21069,
+            21070,
+            21071,
+            21072
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 13.531,
+            "obss.obss_area_max_y_m": 16.468,
+            "obss.obss_area_min_x_m": -9.42,
+            "obss.obss_area_min_y_m": -15.221,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 5.213,
+            "obss.obss_sta_min_distance_m": 1.927,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p18",
+          "seeds": [
+            21073,
+            21074,
+            21075,
+            21076
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 10.077,
+            "obss.obss_area_max_y_m": 17.666,
+            "obss.obss_area_min_x_m": -14.526,
+            "obss.obss_area_min_y_m": -17.021,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 8.975,
+            "obss.obss_sta_min_distance_m": 2.206,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p19",
+          "seeds": [
+            21077,
+            21078,
+            21079,
+            21080
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 23.648,
+            "obss.obss_area_max_y_m": 10.041,
+            "obss.obss_area_min_x_m": -22.928,
+            "obss.obss_area_min_y_m": -12.406,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 8.581,
+            "obss.obss_sta_min_distance_m": 2.319,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p20",
+          "seeds": [
+            21081,
+            21082,
+            21083,
+            21084
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 20.758,
+            "obss.obss_area_max_y_m": 7.931,
+            "obss.obss_area_min_x_m": -22.86,
+            "obss.obss_area_min_y_m": -9.281,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 9.667,
+            "obss.obss_sta_min_distance_m": 2.729,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p21",
+          "seeds": [
+            21085,
+            21086,
+            21087,
+            21088
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 16.41,
+            "obss.obss_area_max_y_m": 12.929,
+            "obss.obss_area_min_x_m": -19.848,
+            "obss.obss_area_min_y_m": -7.83,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 7.473,
+            "obss.obss_sta_min_distance_m": 1.194,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p22",
+          "seeds": [
+            21089,
+            21090,
+            21091,
+            21092
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 17.058,
+            "obss.obss_area_max_y_m": 6.101,
+            "obss.obss_area_min_x_m": -18.13,
+            "obss.obss_area_min_y_m": -6.308,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 7.723,
+            "obss.obss_sta_min_distance_m": 1.641,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-qualification-p23",
+          "seeds": [
+            21093,
+            21094,
+            21095,
+            21096
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 8200,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.613
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p16",
+          "seeds": [
+            21097,
+            21098,
+            21099,
+            21100
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 12400,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 3.234
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p17",
+          "seeds": [
+            21101,
+            21102,
+            21103,
+            21104
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 13700,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 3.999
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p18",
+          "seeds": [
+            21105,
+            21106,
+            21107,
+            21108
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 10700,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.65
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p19",
+          "seeds": [
+            21109,
+            21110,
+            21111,
+            21112
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 7500,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.15
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p20",
+          "seeds": [
+            21113,
+            21114,
+            21115,
+            21116
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 9200,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.789
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p21",
+          "seeds": [
+            21117,
+            21118,
+            21119,
+            21120
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 11700,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 2.465
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p22",
+          "seeds": [
+            21121,
+            21122,
+            21123,
+            21124
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 6100,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 3.343
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-qualification-p23",
+          "seeds": [
+            21125,
+            21126,
+            21127,
+            21128
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.5103,
+            "background.random_off_mean_ms": 137.05,
+            "background.random_on_mean_ms": 248.21
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p16",
+          "seeds": [
+            21129,
+            21130,
+            21131,
+            21132
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.9549,
+            "background.random_off_mean_ms": 185.21,
+            "background.random_on_mean_ms": 170.56
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p17",
+          "seeds": [
+            21133,
+            21134,
+            21135,
+            21136
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.5169,
+            "background.random_off_mean_ms": 157.92,
+            "background.random_on_mean_ms": 216.04
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p18",
+          "seeds": [
+            21137,
+            21138,
+            21139,
+            21140
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.2408,
+            "background.random_off_mean_ms": 208.46,
+            "background.random_on_mean_ms": 67.68
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p19",
+          "seeds": [
+            21141,
+            21142,
+            21143,
+            21144
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.9997,
+            "background.random_off_mean_ms": 107.77,
+            "background.random_on_mean_ms": 120.4
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p20",
+          "seeds": [
+            21145,
+            21146,
+            21147,
+            21148
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.9118,
+            "background.random_off_mean_ms": 52.94,
+            "background.random_on_mean_ms": 85.41
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p21",
+          "seeds": [
+            21149,
+            21150,
+            21151,
+            21152
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.8668,
+            "background.random_off_mean_ms": 72.05,
+            "background.random_on_mean_ms": 151.06
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p22",
+          "seeds": [
+            21153,
+            21154,
+            21155,
+            21156
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.4135,
+            "background.random_off_mean_ms": 238.57,
+            "background.random_on_mean_ms": 56.73
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-qualification-p23",
+          "seeds": [
+            21157,
+            21158,
+            21159,
+            21160
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.8414,
+            "background.random_off_mean_ms": 153.25,
+            "background.random_on_mean_ms": 102.42,
+            "obss.obss_dl_max_rate_mbps": 10.7259,
+            "obss.obss_off_mean_ms": 181.47,
+            "obss.obss_on_mean_ms": 71.63,
+            "obss.obss_ul_max_rate_mbps": 4.7201,
+            "propagation.path_loss_exponent": 2.9237,
+            "propagation.station_distance_m": 12.065,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 8900,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.191
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 16,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p16",
+          "seeds": [
+            21161,
+            21162,
+            21163,
+            21164
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.6427,
+            "background.random_off_mean_ms": 82.09,
+            "background.random_on_mean_ms": 125.93,
+            "obss.obss_dl_max_rate_mbps": 6.0925,
+            "obss.obss_off_mean_ms": 380.7,
+            "obss.obss_on_mean_ms": 175.05,
+            "obss.obss_ul_max_rate_mbps": 3.1588,
+            "propagation.path_loss_exponent": 2.7158,
+            "propagation.station_distance_m": 10.244,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 11000,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.46
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 17,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p17",
+          "seeds": [
+            21165,
+            21166,
+            21167,
+            21168
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.7597,
+            "background.random_off_mean_ms": 218.67,
+            "background.random_on_mean_ms": 182.94,
+            "obss.obss_dl_max_rate_mbps": 12.5301,
+            "obss.obss_off_mean_ms": 337.36,
+            "obss.obss_on_mean_ms": 136.86,
+            "obss.obss_ul_max_rate_mbps": 2.6351,
+            "propagation.path_loss_exponent": 2.5636,
+            "propagation.station_distance_m": 7.431,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 12100,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.085
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 18,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p18",
+          "seeds": [
+            21169,
+            21170,
+            21171,
+            21172
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.5988,
+            "background.random_off_mean_ms": 200.6,
+            "background.random_on_mean_ms": 167.47,
+            "obss.obss_dl_max_rate_mbps": 7.7296,
+            "obss.obss_off_mean_ms": 286.3,
+            "obss.obss_on_mean_ms": 81.29,
+            "obss.obss_ul_max_rate_mbps": 2.9153,
+            "propagation.path_loss_exponent": 3.165,
+            "propagation.station_distance_m": 8.659,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 12900,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.472
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 19,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p19",
+          "seeds": [
+            21173,
+            21174,
+            21175,
+            21176
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.3394,
+            "background.random_off_mean_ms": 136.63,
+            "background.random_on_mean_ms": 68.6,
+            "obss.obss_dl_max_rate_mbps": 7.9542,
+            "obss.obss_off_mean_ms": 204.97,
+            "obss.obss_on_mean_ms": 146.72,
+            "obss.obss_ul_max_rate_mbps": 4.2693,
+            "propagation.path_loss_exponent": 2.7774,
+            "propagation.station_distance_m": 14.714,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 10200,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.265
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 20,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p20",
+          "seeds": [
+            21177,
+            21178,
+            21179,
+            21180
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.6747,
+            "background.random_off_mean_ms": 42.32,
+            "background.random_on_mean_ms": 92.7,
+            "obss.obss_dl_max_rate_mbps": 10.3164,
+            "obss.obss_off_mean_ms": 243.38,
+            "obss.obss_on_mean_ms": 48.5,
+            "obss.obss_ul_max_rate_mbps": 4.5041,
+            "propagation.path_loss_exponent": 3.327,
+            "propagation.station_distance_m": 15.693,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 8400,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.598
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 21,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p21",
+          "seeds": [
+            21181,
+            21182,
+            21183,
+            21184
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.0238,
+            "background.random_off_mean_ms": 101.84,
+            "background.random_on_mean_ms": 146.1,
+            "obss.obss_dl_max_rate_mbps": 11.6913,
+            "obss.obss_off_mean_ms": 124.98,
+            "obss.obss_on_mean_ms": 118.9,
+            "obss.obss_ul_max_rate_mbps": 3.5281,
+            "propagation.path_loss_exponent": 3.5028,
+            "propagation.station_distance_m": 16.505,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 11500,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.838
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 22,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p22",
+          "seeds": [
+            21185,
+            21186,
+            21187,
+            21188
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.2414,
+            "background.random_off_mean_ms": 177.42,
+            "background.random_on_mean_ms": 54.98,
+            "obss.obss_dl_max_rate_mbps": 9.322,
+            "obss.obss_off_mean_ms": 88.78,
+            "obss.obss_on_mean_ms": 104.49,
+            "obss.obss_ul_max_rate_mbps": 4.0026,
+            "propagation.path_loss_exponent": 3.1893,
+            "propagation.station_distance_m": 10.665,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 9400,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.187
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 23,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-qualification-p23",
+          "seeds": [
+            21189,
+            21190,
+            21191,
+            21192
+          ]
+        }
+      ]
+    },
+    "preflight": {
+      "paired_unit_count": 6,
+      "phase_tag": "preflight",
+      "scenario_count": 6,
+      "scenario_list_sha256": "41b845d4de2701f9f740d5be5e33ef230ab04333406f2052d21fc1021ddf6e62",
+      "scenarios": [
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 81.62,
+            "propagation.nakagami_distance_2_m": 230.99,
+            "propagation.nakagami_m0": 0.763,
+            "propagation.nakagami_m1": 0.7689,
+            "propagation.nakagami_m2": 1.2307,
+            "propagation.path_loss_exponent": 3.3251,
+            "propagation.station_distance_m": 11.042
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-preflight-p24",
+          "seeds": [
+            22001
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 6.9999,
+            "obss.obss_dl_min_rate_mbps": 1.0769,
+            "obss.obss_off_mean_ms": 238.88,
+            "obss.obss_on_mean_ms": 90.4,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 5.6495,
+            "obss.obss_ul_min_rate_mbps": 0.7365
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-preflight-p24",
+          "seeds": [
+            22002
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 19.79,
+            "obss.obss_area_max_y_m": 10.814,
+            "obss.obss_area_min_x_m": -20.497,
+            "obss.obss_area_min_y_m": -8.599,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 9.156,
+            "obss.obss_sta_min_distance_m": 1.039,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-preflight-p24",
+          "seeds": [
+            22003
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 8900,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.604
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-preflight-p24",
+          "seeds": [
+            22004
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.1591,
+            "background.random_off_mean_ms": 207.61,
+            "background.random_on_mean_ms": 242.96
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-preflight-p24",
+          "seeds": [
+            22005
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.8565,
+            "background.random_off_mean_ms": 144.14,
+            "background.random_on_mean_ms": 173.54,
+            "obss.obss_dl_max_rate_mbps": 6.9017,
+            "obss.obss_off_mean_ms": 83.67,
+            "obss.obss_on_mean_ms": 179.16,
+            "obss.obss_ul_max_rate_mbps": 3.2338,
+            "propagation.path_loss_exponent": 3.0339,
+            "propagation.station_distance_m": 8.635,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 8200,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.004
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 24,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-preflight-p24",
+          "seeds": [
+            22006
+          ]
+        }
+      ]
+    },
+    "randomized_collection": {
+      "paired_unit_count": 384,
+      "phase_tag": "collection",
+      "scenario_count": 96,
+      "scenario_list_sha256": "5581f7accf54df064db7966c4adfe1a2703bc57a0d24804d257b047b97f8517b",
+      "scenarios": [
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 66.58,
+            "propagation.nakagami_distance_2_m": 173.18,
+            "propagation.nakagami_m0": 1.2259,
+            "propagation.nakagami_m1": 1.0241,
+            "propagation.nakagami_m2": 0.7883,
+            "propagation.path_loss_exponent": 3.7051,
+            "propagation.station_distance_m": 4.591
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p00",
+          "seeds": [
+            20001,
+            20002,
+            20003,
+            20004
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 44.14,
+            "propagation.nakagami_distance_2_m": 258.6,
+            "propagation.nakagami_m0": 2.498,
+            "propagation.nakagami_m1": 0.5563,
+            "propagation.nakagami_m2": 1.1263,
+            "propagation.path_loss_exponent": 3.4381,
+            "propagation.station_distance_m": 16.335
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p01",
+          "seeds": [
+            20005,
+            20006,
+            20007,
+            20008
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 85.9,
+            "propagation.nakagami_distance_2_m": 195.92,
+            "propagation.nakagami_m0": 1.6595,
+            "propagation.nakagami_m1": 0.358,
+            "propagation.nakagami_m2": 0.6638,
+            "propagation.path_loss_exponent": 3.906,
+            "propagation.station_distance_m": 5.371
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p02",
+          "seeds": [
+            20009,
+            20010,
+            20011,
+            20012
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 55.33,
+            "propagation.nakagami_distance_2_m": 157.09,
+            "propagation.nakagami_m0": 1.8834,
+            "propagation.nakagami_m1": 0.8724,
+            "propagation.nakagami_m2": 0.9702,
+            "propagation.path_loss_exponent": 2.755,
+            "propagation.station_distance_m": 14.341
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p03",
+          "seeds": [
+            20013,
+            20014,
+            20015,
+            20016
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 45.13,
+            "propagation.nakagami_distance_2_m": 222.56,
+            "propagation.nakagami_m0": 1.5859,
+            "propagation.nakagami_m1": 0.6078,
+            "propagation.nakagami_m2": 0.49,
+            "propagation.path_loss_exponent": 3.2602,
+            "propagation.station_distance_m": 8.22
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p04",
+          "seeds": [
+            20017,
+            20018,
+            20019,
+            20020
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 98.21,
+            "propagation.nakagami_distance_2_m": 228.36,
+            "propagation.nakagami_m0": 2.3112,
+            "propagation.nakagami_m1": 1.1314,
+            "propagation.nakagami_m2": 0.5371,
+            "propagation.path_loss_exponent": 2.4534,
+            "propagation.station_distance_m": 18.516
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p05",
+          "seeds": [
+            20021,
+            20022,
+            20023,
+            20024
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 75.61,
+            "propagation.nakagami_distance_2_m": 290.84,
+            "propagation.nakagami_m0": 0.9893,
+            "propagation.nakagami_m1": 0.833,
+            "propagation.nakagami_m2": 0.4508,
+            "propagation.path_loss_exponent": 3.6077,
+            "propagation.station_distance_m": 11.598
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p06",
+          "seeds": [
+            20025,
+            20026,
+            20027,
+            20028
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 93.89,
+            "propagation.nakagami_distance_2_m": 249.83,
+            "propagation.nakagami_m0": 1.7387,
+            "propagation.nakagami_m1": 1.1888,
+            "propagation.nakagami_m2": 1.0785,
+            "propagation.path_loss_exponent": 3.3501,
+            "propagation.station_distance_m": 8.718
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p07",
+          "seeds": [
+            20029,
+            20030,
+            20031,
+            20032
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 82.78,
+            "propagation.nakagami_distance_2_m": 270.03,
+            "propagation.nakagami_m0": 1.2994,
+            "propagation.nakagami_m1": 1.0702,
+            "propagation.nakagami_m2": 0.7398,
+            "propagation.path_loss_exponent": 3.8785,
+            "propagation.station_distance_m": 20.379
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p08",
+          "seeds": [
+            20033,
+            20034,
+            20035,
+            20036
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 65.03,
+            "propagation.nakagami_distance_2_m": 237.82,
+            "propagation.nakagami_m0": 2.0546,
+            "propagation.nakagami_m1": 0.7381,
+            "propagation.nakagami_m2": 0.8145,
+            "propagation.path_loss_exponent": 2.3263,
+            "propagation.station_distance_m": 12.044
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p09",
+          "seeds": [
+            20037,
+            20038,
+            20039,
+            20040
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 92.43,
+            "propagation.nakagami_distance_2_m": 315.63,
+            "propagation.nakagami_m0": 2.271,
+            "propagation.nakagami_m1": 0.7554,
+            "propagation.nakagami_m2": 0.9265,
+            "propagation.path_loss_exponent": 2.872,
+            "propagation.station_distance_m": 13.593
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p10",
+          "seeds": [
+            20041,
+            20042,
+            20043,
+            20044
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 59.82,
+            "propagation.nakagami_distance_2_m": 167.27,
+            "propagation.nakagami_m0": 1.0902,
+            "propagation.nakagami_m1": 0.4752,
+            "propagation.nakagami_m2": 0.8648,
+            "propagation.path_loss_exponent": 3.0247,
+            "propagation.station_distance_m": 10.613
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p11",
+          "seeds": [
+            20045,
+            20046,
+            20047,
+            20048
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 72.33,
+            "propagation.nakagami_distance_2_m": 278.08,
+            "propagation.nakagami_m0": 1.9585,
+            "propagation.nakagami_m1": 0.6777,
+            "propagation.nakagami_m2": 0.3798,
+            "propagation.path_loss_exponent": 2.5725,
+            "propagation.station_distance_m": 21.772
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p12",
+          "seeds": [
+            20049,
+            20050,
+            20051,
+            20052
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 106.53,
+            "propagation.nakagami_distance_2_m": 309.22,
+            "propagation.nakagami_m0": 0.9173,
+            "propagation.nakagami_m1": 0.4317,
+            "propagation.nakagami_m2": 0.6141,
+            "propagation.path_loss_exponent": 2.8768,
+            "propagation.station_distance_m": 6.971
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p13",
+          "seeds": [
+            20053,
+            20054,
+            20055,
+            20056
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 51.87,
+            "propagation.nakagami_distance_2_m": 182.28,
+            "propagation.nakagami_m0": 1.4037,
+            "propagation.nakagami_m1": 0.9406,
+            "propagation.nakagami_m2": 1.1977,
+            "propagation.path_loss_exponent": 3.154,
+            "propagation.station_distance_m": 16.932
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p14",
+          "seeds": [
+            20057,
+            20058,
+            20059,
+            20060
+          ]
+        },
+        {
+          "config": {
+            "propagation.nakagami_distance_1_m": 104.21,
+            "propagation.nakagami_distance_2_m": 204.07,
+            "propagation.nakagami_m0": 0.7655,
+            "propagation.nakagami_m1": 1.2056,
+            "propagation.nakagami_m2": 1.1547,
+            "propagation.path_loss_exponent": 2.2863,
+            "propagation.station_distance_m": 18.72
+          },
+          "family_id": "radio_propagation",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "radio-propagation-collection-p15",
+          "seeds": [
+            20061,
+            20062,
+            20063,
+            20064
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 7.9929,
+            "obss.obss_dl_min_rate_mbps": 2.7514,
+            "obss.obss_off_mean_ms": 409.22,
+            "obss.obss_on_mean_ms": 115.36,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 4.3119,
+            "obss.obss_ul_min_rate_mbps": 0.5728
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p00",
+          "seeds": [
+            20065,
+            20066,
+            20067,
+            20068
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 6.9733,
+            "obss.obss_dl_min_rate_mbps": 3.0384,
+            "obss.obss_off_mean_ms": 162.37,
+            "obss.obss_on_mean_ms": 201.0,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 5.4807,
+            "obss.obss_ul_min_rate_mbps": 0.9021
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p01",
+          "seeds": [
+            20069,
+            20070,
+            20071,
+            20072
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 15.4439,
+            "obss.obss_dl_min_rate_mbps": 3.9669,
+            "obss.obss_off_mean_ms": 52.16,
+            "obss.obss_on_mean_ms": 92.07,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 2.6627,
+            "obss.obss_ul_min_rate_mbps": 0.4602
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p02",
+          "seeds": [
+            20073,
+            20074,
+            20075,
+            20076
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 8.5697,
+            "obss.obss_dl_min_rate_mbps": 3.1556,
+            "obss.obss_off_mean_ms": 147.33,
+            "obss.obss_on_mean_ms": 78.74,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 4.2132,
+            "obss.obss_ul_min_rate_mbps": 1.0336
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p03",
+          "seeds": [
+            20077,
+            20078,
+            20079,
+            20080
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 13.6496,
+            "obss.obss_dl_min_rate_mbps": 1.992,
+            "obss.obss_off_mean_ms": 271.36,
+            "obss.obss_on_mean_ms": 225.77,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 5.6102,
+            "obss.obss_ul_min_rate_mbps": 0.4496
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p04",
+          "seeds": [
+            20081,
+            20082,
+            20083,
+            20084
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 11.9261,
+            "obss.obss_dl_min_rate_mbps": 3.5358,
+            "obss.obss_off_mean_ms": 216.73,
+            "obss.obss_on_mean_ms": 180.98,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 3.4667,
+            "obss.obss_ul_min_rate_mbps": 0.8069
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p05",
+          "seeds": [
+            20085,
+            20086,
+            20087,
+            20088
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 12.6939,
+            "obss.obss_dl_min_rate_mbps": 1.8231,
+            "obss.obss_off_mean_ms": 478.34,
+            "obss.obss_on_mean_ms": 36.31,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 3.1093,
+            "obss.obss_ul_min_rate_mbps": 0.9857
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p06",
+          "seeds": [
+            20089,
+            20090,
+            20091,
+            20092
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 10.6368,
+            "obss.obss_dl_min_rate_mbps": 1.1875,
+            "obss.obss_off_mean_ms": 246.37,
+            "obss.obss_on_mean_ms": 241.05,
+            "obss.obss_packet_size": 1472,
+            "obss.obss_ul_max_rate_mbps": 3.2087,
+            "obss.obss_ul_min_rate_mbps": 1.1243
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p07",
+          "seeds": [
+            20093,
+            20094,
+            20095,
+            20096
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 14.511,
+            "obss.obss_dl_min_rate_mbps": 3.7983,
+            "obss.obss_off_mean_ms": 371.17,
+            "obss.obss_on_mean_ms": 68.83,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 5.3054,
+            "obss.obss_ul_min_rate_mbps": 0.3794
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p08",
+          "seeds": [
+            20097,
+            20098,
+            20099,
+            20100
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 6.0961,
+            "obss.obss_dl_min_rate_mbps": 3.4319,
+            "obss.obss_off_mean_ms": 84.44,
+            "obss.obss_on_mean_ms": 218.94,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 3.661,
+            "obss.obss_ul_min_rate_mbps": 0.7219
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p09",
+          "seeds": [
+            20101,
+            20102,
+            20103,
+            20104
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 11.2732,
+            "obss.obss_dl_min_rate_mbps": 2.1625,
+            "obss.obss_off_mean_ms": 210.72,
+            "obss.obss_on_mean_ms": 22.03,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 4.7927,
+            "obss.obss_ul_min_rate_mbps": 0.2485
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p10",
+          "seeds": [
+            20105,
+            20106,
+            20107,
+            20108
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 7.3882,
+            "obss.obss_dl_min_rate_mbps": 1.0653,
+            "obss.obss_off_mean_ms": 105.46,
+            "obss.obss_on_mean_ms": 173.82,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 4.0068,
+            "obss.obss_ul_min_rate_mbps": 0.8352
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p11",
+          "seeds": [
+            20109,
+            20110,
+            20111,
+            20112
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 14.956,
+            "obss.obss_dl_min_rate_mbps": 1.4372,
+            "obss.obss_off_mean_ms": 323.6,
+            "obss.obss_on_mean_ms": 122.78,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 4.9276,
+            "obss.obss_ul_min_rate_mbps": 0.5778
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p12",
+          "seeds": [
+            20113,
+            20114,
+            20115,
+            20116
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 9.344,
+            "obss.obss_dl_min_rate_mbps": 1.7453,
+            "obss.obss_off_mean_ms": 460.5,
+            "obss.obss_on_mean_ms": 51.79,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 5.8449,
+            "obss.obss_ul_min_rate_mbps": 1.1712
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p13",
+          "seeds": [
+            20117,
+            20118,
+            20119,
+            20120
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 10.3178,
+            "obss.obss_dl_min_rate_mbps": 2.3595,
+            "obss.obss_off_mean_ms": 435.49,
+            "obss.obss_on_mean_ms": 136.92,
+            "obss.obss_packet_size": 600,
+            "obss.obss_ul_max_rate_mbps": 2.7906,
+            "obss.obss_ul_min_rate_mbps": 0.6682
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p14",
+          "seeds": [
+            20121,
+            20122,
+            20123,
+            20124
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_dl_max_rate_mbps": 13.0846,
+            "obss.obss_dl_min_rate_mbps": 2.5431,
+            "obss.obss_off_mean_ms": 353.7,
+            "obss.obss_on_mean_ms": 163.69,
+            "obss.obss_packet_size": 1200,
+            "obss.obss_ul_max_rate_mbps": 4.6833,
+            "obss.obss_ul_min_rate_mbps": 0.2692
+          },
+          "family_id": "obss_intensity",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-intensity-collection-p15",
+          "seeds": [
+            20125,
+            20126,
+            20127,
+            20128
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 15.175,
+            "obss.obss_area_max_y_m": 12.489,
+            "obss.obss_area_min_x_m": -19.99,
+            "obss.obss_area_min_y_m": -6.177,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 9.68,
+            "obss.obss_sta_min_distance_m": 1.462,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p00",
+          "seeds": [
+            20129,
+            20130,
+            20131,
+            20132
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 23.263,
+            "obss.obss_area_max_y_m": 15.697,
+            "obss.obss_area_min_x_m": -10.329,
+            "obss.obss_area_min_y_m": -15.742,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 7.261,
+            "obss.obss_sta_min_distance_m": 1.257,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p01",
+          "seeds": [
+            20133,
+            20134,
+            20135,
+            20136
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 9.842,
+            "obss.obss_area_max_y_m": 15.767,
+            "obss.obss_area_min_x_m": -13.139,
+            "obss.obss_area_min_y_m": -12.402,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 6.111,
+            "obss.obss_sta_min_distance_m": 1.586,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p02",
+          "seeds": [
+            20137,
+            20138,
+            20139,
+            20140
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 17.868,
+            "obss.obss_area_max_y_m": 10.156,
+            "obss.obss_area_min_x_m": -13.914,
+            "obss.obss_area_min_y_m": -7.29,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 8.042,
+            "obss.obss_sta_min_distance_m": 2.121,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p03",
+          "seeds": [
+            20141,
+            20142,
+            20143,
+            20144
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 24.534,
+            "obss.obss_area_max_y_m": 7.583,
+            "obss.obss_area_min_x_m": -23.298,
+            "obss.obss_area_min_y_m": -14.826,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 5.864,
+            "obss.obss_sta_min_distance_m": 2.524,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p04",
+          "seeds": [
+            20145,
+            20146,
+            20147,
+            20148
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 18.681,
+            "obss.obss_area_max_y_m": 11.909,
+            "obss.obss_area_min_x_m": -8.985,
+            "obss.obss_area_min_y_m": -8.107,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 9.837,
+            "obss.obss_sta_min_distance_m": 2.697,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p05",
+          "seeds": [
+            20149,
+            20150,
+            20151,
+            20152
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 17.158,
+            "obss.obss_area_max_y_m": 13.214,
+            "obss.obss_area_min_x_m": -19.124,
+            "obss.obss_area_min_y_m": -13.618,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 6.637,
+            "obss.obss_sta_min_distance_m": 1.135,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p06",
+          "seeds": [
+            20153,
+            20154,
+            20155,
+            20156
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 11.838,
+            "obss.obss_area_max_y_m": 7.428,
+            "obss.obss_area_min_x_m": -9.166,
+            "obss.obss_area_min_y_m": -11.093,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 6.341,
+            "obss.obss_sta_min_distance_m": 1.872,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p07",
+          "seeds": [
+            20157,
+            20158,
+            20159,
+            20160
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 15.79,
+            "obss.obss_area_max_y_m": 14.995,
+            "obss.obss_area_min_x_m": -15.629,
+            "obss.obss_area_min_y_m": -17.94,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 5.094,
+            "obss.obss_sta_min_distance_m": 2.257,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p08",
+          "seeds": [
+            20161,
+            20162,
+            20163,
+            20164
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 10.826,
+            "obss.obss_area_max_y_m": 17.227,
+            "obss.obss_area_min_x_m": -24.242,
+            "obss.obss_area_min_y_m": -16.535,
+            "obss.obss_manager_update_ms": 20,
+            "obss.obss_sta_max_distance_m": 7.139,
+            "obss.obss_sta_min_distance_m": 2.433,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p09",
+          "seeds": [
+            20165,
+            20166,
+            20167,
+            20168
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 21.765,
+            "obss.obss_area_max_y_m": 6.102,
+            "obss.obss_area_min_x_m": -14.381,
+            "obss.obss_area_min_y_m": -9.914,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 5.51,
+            "obss.obss_sta_min_distance_m": 1.964,
+            "obss.obss_station_manager": "ideal"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p10",
+          "seeds": [
+            20169,
+            20170,
+            20171,
+            20172
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 22.627,
+            "obss.obss_area_max_y_m": 10.878,
+            "obss.obss_area_min_x_m": -17.067,
+            "obss.obss_area_min_y_m": -9.294,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 9.143,
+            "obss.obss_sta_min_distance_m": 1.635,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p11",
+          "seeds": [
+            20173,
+            20174,
+            20175,
+            20176
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 14.069,
+            "obss.obss_area_max_y_m": 8.521,
+            "obss.obss_area_min_x_m": -18.197,
+            "obss.obss_area_min_y_m": -13.164,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 8.405,
+            "obss.obss_sta_min_distance_m": 2.135,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p12",
+          "seeds": [
+            20177,
+            20178,
+            20179,
+            20180
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 20.428,
+            "obss.obss_area_max_y_m": 9.275,
+            "obss.obss_area_min_x_m": -21.124,
+            "obss.obss_area_min_y_m": -11.91,
+            "obss.obss_manager_update_ms": 100,
+            "obss.obss_sta_max_distance_m": 8.939,
+            "obss.obss_sta_min_distance_m": 2.934,
+            "obss.obss_station_manager": "minstrel_ht"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p13",
+          "seeds": [
+            20181,
+            20182,
+            20183,
+            20184
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 13.019,
+            "obss.obss_area_max_y_m": 14.164,
+            "obss.obss_area_min_x_m": -12.12,
+            "obss.obss_area_min_y_m": -8.426,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 8.682,
+            "obss.obss_sta_min_distance_m": 2.827,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p14",
+          "seeds": [
+            20185,
+            20186,
+            20187,
+            20188
+          ]
+        },
+        {
+          "config": {
+            "obss.obss_area_max_x_m": 9.033,
+            "obss.obss_area_max_y_m": 17.45,
+            "obss.obss_area_min_x_m": -22.855,
+            "obss.obss_area_min_y_m": -15.823,
+            "obss.obss_manager_update_ms": 50,
+            "obss.obss_sta_max_distance_m": 7.597,
+            "obss.obss_sta_min_distance_m": 1.006,
+            "obss.obss_station_manager": "constant"
+          },
+          "family_id": "obss_geometry_mac",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "obss-geometry-mac-collection-p15",
+          "seeds": [
+            20189,
+            20190,
+            20191,
+            20192
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 13500,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 3.402
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p00",
+          "seeds": [
+            20193,
+            20194,
+            20195,
+            20196
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 9800,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 3.519
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p01",
+          "seeds": [
+            20197,
+            20198,
+            20199,
+            20200
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 8300,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 2.14
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p02",
+          "seeds": [
+            20201,
+            20202,
+            20203,
+            20204
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 7300,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.104
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p03",
+          "seeds": [
+            20205,
+            20206,
+            20207,
+            20208
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 11200,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.583
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p04",
+          "seeds": [
+            20209,
+            20210,
+            20211,
+            20212
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 11000,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.182
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p05",
+          "seeds": [
+            20213,
+            20214,
+            20215,
+            20216
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 9400,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 3.978
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p06",
+          "seeds": [
+            20217,
+            20218,
+            20219,
+            20220
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 7700,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.65
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p07",
+          "seeds": [
+            20221,
+            20222,
+            20223,
+            20224
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 6200,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.95
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p08",
+          "seeds": [
+            20225,
+            20226,
+            20227,
+            20228
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 10200,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 3.057
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p09",
+          "seeds": [
+            20229,
+            20230,
+            20231,
+            20232
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 6600,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.282
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p10",
+          "seeds": [
+            20233,
+            20234,
+            20235,
+            20236
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 16667,
+            "stream.fps": 60,
+            "stream.frame_size": 14000,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 3.686
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p11",
+          "seeds": [
+            20237,
+            20238,
+            20239,
+            20240
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 12500,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.774
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p12",
+          "seeds": [
+            20241,
+            20242,
+            20243,
+            20244
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 12000,
+            "stream.gop_length": 120,
+            "stream.keyframe_size_multiplier": 3.309
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p13",
+          "seeds": [
+            20245,
+            20246,
+            20247,
+            20248
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 13000,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.874
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p14",
+          "seeds": [
+            20249,
+            20250,
+            20251,
+            20252
+          ]
+        },
+        {
+          "config": {
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 9000,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.458
+          },
+          "family_id": "video_workload",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "video-workload-collection-p15",
+          "seeds": [
+            20253,
+            20254,
+            20255,
+            20256
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.7805,
+            "background.random_off_mean_ms": 32.91,
+            "background.random_on_mean_ms": 179.3
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p00",
+          "seeds": [
+            20257,
+            20258,
+            20259,
+            20260
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.0586,
+            "background.random_off_mean_ms": 118.01,
+            "background.random_on_mean_ms": 244.33
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p01",
+          "seeds": [
+            20261,
+            20262,
+            20263,
+            20264
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.2431,
+            "background.random_off_mean_ms": 242.17,
+            "background.random_on_mean_ms": 45.97
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p02",
+          "seeds": [
+            20265,
+            20266,
+            20267,
+            20268
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.898,
+            "background.random_off_mean_ms": 144.14,
+            "background.random_on_mean_ms": 201.08
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p03",
+          "seeds": [
+            20269,
+            20270,
+            20271,
+            20272
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.4026,
+            "background.random_off_mean_ms": 199.59,
+            "background.random_on_mean_ms": 71.1
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p04",
+          "seeds": [
+            20273,
+            20274,
+            20275,
+            20276
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.7098,
+            "background.random_off_mean_ms": 161.26,
+            "background.random_on_mean_ms": 162.1
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p05",
+          "seeds": [
+            20277,
+            20278,
+            20279,
+            20280
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.8441,
+            "background.random_off_mean_ms": 59.25,
+            "background.random_on_mean_ms": 111.64
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p06",
+          "seeds": [
+            20281,
+            20282,
+            20283,
+            20284
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.626,
+            "background.random_off_mean_ms": 229.34,
+            "background.random_on_mean_ms": 30.88
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p07",
+          "seeds": [
+            20285,
+            20286,
+            20287,
+            20288
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.1444,
+            "background.random_off_mean_ms": 79.0,
+            "background.random_on_mean_ms": 234.8
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p08",
+          "seeds": [
+            20289,
+            20290,
+            20291,
+            20292
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1200,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.1241,
+            "background.random_off_mean_ms": 184.68,
+            "background.random_on_mean_ms": 182.14
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p09",
+          "seeds": [
+            20293,
+            20294,
+            20295,
+            20296
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.6864,
+            "background.random_off_mean_ms": 169.79,
+            "background.random_on_mean_ms": 138.35
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p10",
+          "seeds": [
+            20297,
+            20298,
+            20299,
+            20300
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 3.3897,
+            "background.random_off_mean_ms": 108.97,
+            "background.random_on_mean_ms": 78.07
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p11",
+          "seeds": [
+            20301,
+            20302,
+            20303,
+            20304
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 1472,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.6228,
+            "background.random_off_mean_ms": 44.89,
+            "background.random_on_mean_ms": 143.16
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p12",
+          "seeds": [
+            20305,
+            20306,
+            20307,
+            20308
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.8366,
+            "background.random_off_mean_ms": 131.94,
+            "background.random_on_mean_ms": 89.06
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p13",
+          "seeds": [
+            20309,
+            20310,
+            20311,
+            20312
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.3911,
+            "background.random_off_mean_ms": 91.18,
+            "background.random_on_mean_ms": 212.01
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p14",
+          "seeds": [
+            20313,
+            20314,
+            20315,
+            20316
+          ]
+        },
+        {
+          "config": {
+            "background.background_packet_size": 600,
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.1129,
+            "background.random_off_mean_ms": 221.19,
+            "background.random_on_mean_ms": 114.03
+          },
+          "family_id": "legacy_coexistence",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "legacy-coexistence-collection-p15",
+          "seeds": [
+            20317,
+            20318,
+            20319,
+            20320
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.4738,
+            "background.random_off_mean_ms": 46.87,
+            "background.random_on_mean_ms": 62.71,
+            "obss.obss_dl_max_rate_mbps": 10.578,
+            "obss.obss_off_mean_ms": 290.47,
+            "obss.obss_on_mean_ms": 176.54,
+            "obss.obss_ul_max_rate_mbps": 4.9693,
+            "propagation.path_loss_exponent": 3.2189,
+            "propagation.station_distance_m": 9.381,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 12100,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 3.149
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 0,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p00",
+          "seeds": [
+            20321,
+            20322,
+            20323,
+            20324
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.9139,
+            "background.random_off_mean_ms": 174.16,
+            "background.random_on_mean_ms": 105.16,
+            "obss.obss_dl_max_rate_mbps": 9.8103,
+            "obss.obss_off_mean_ms": 384.76,
+            "obss.obss_on_mean_ms": 58.41,
+            "obss.obss_ul_max_rate_mbps": 2.6706,
+            "propagation.path_loss_exponent": 3.5059,
+            "propagation.station_distance_m": 8.262,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 12700,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 3.064
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 1,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p01",
+          "seeds": [
+            20325,
+            20326,
+            20327,
+            20328
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.3437,
+            "background.random_off_mean_ms": 157.03,
+            "background.random_on_mean_ms": 99.35,
+            "obss.obss_dl_max_rate_mbps": 10.9309,
+            "obss.obss_off_mean_ms": 241.4,
+            "obss.obss_on_mean_ms": 81.97,
+            "obss.obss_ul_max_rate_mbps": 4.1551,
+            "propagation.path_loss_exponent": 2.5087,
+            "propagation.station_distance_m": 7.122,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 10600,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.105
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 2,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p02",
+          "seeds": [
+            20329,
+            20330,
+            20331,
+            20332
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.4968,
+            "background.random_off_mean_ms": 232.07,
+            "background.random_on_mean_ms": 123.32,
+            "obss.obss_dl_max_rate_mbps": 12.8864,
+            "obss.obss_off_mean_ms": 192.45,
+            "obss.obss_on_mean_ms": 117.32,
+            "obss.obss_ul_max_rate_mbps": 2.9122,
+            "propagation.path_loss_exponent": 3.4496,
+            "propagation.station_distance_m": 16.588,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 9800,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.811
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 3,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p03",
+          "seeds": [
+            20333,
+            20334,
+            20335,
+            20336
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.1515,
+            "background.random_off_mean_ms": 182.86,
+            "background.random_on_mean_ms": 171.55,
+            "obss.obss_dl_max_rate_mbps": 8.49,
+            "obss.obss_off_mean_ms": 362.97,
+            "obss.obss_on_mean_ms": 163.78,
+            "obss.obss_ul_max_rate_mbps": 4.5317,
+            "propagation.path_loss_exponent": 3.0432,
+            "propagation.station_distance_m": 6.128,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 12100,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.892
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 4,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p04",
+          "seeds": [
+            20337,
+            20338,
+            20339,
+            20340
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.5403,
+            "background.random_off_mean_ms": 122.11,
+            "background.random_on_mean_ms": 43.21,
+            "obss.obss_dl_max_rate_mbps": 11.2798,
+            "obss.obss_off_mean_ms": 327.05,
+            "obss.obss_on_mean_ms": 133.47,
+            "obss.obss_ul_max_rate_mbps": 4.7904,
+            "propagation.path_loss_exponent": 2.8908,
+            "propagation.station_distance_m": 14.683,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 10100,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 3.302
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 5,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p05",
+          "seeds": [
+            20341,
+            20342,
+            20343,
+            20344
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.5386,
+            "background.random_off_mean_ms": 210.96,
+            "background.random_on_mean_ms": 197.02,
+            "obss.obss_dl_max_rate_mbps": 8.0783,
+            "obss.obss_off_mean_ms": 163.5,
+            "obss.obss_on_mean_ms": 146.85,
+            "obss.obss_ul_max_rate_mbps": 3.4021,
+            "propagation.path_loss_exponent": 2.9808,
+            "propagation.station_distance_m": 16.107,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 8900,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 3.397
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 6,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p06",
+          "seeds": [
+            20345,
+            20346,
+            20347,
+            20348
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.3119,
+            "background.random_off_mean_ms": 111.42,
+            "background.random_on_mean_ms": 76.38,
+            "obss.obss_dl_max_rate_mbps": 9.0044,
+            "obss.obss_off_mean_ms": 236.42,
+            "obss.obss_on_mean_ms": 155.45,
+            "obss.obss_ul_max_rate_mbps": 4.0196,
+            "propagation.path_loss_exponent": 3.1611,
+            "propagation.station_distance_m": 11.28,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 10200,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.46
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 7,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p07",
+          "seeds": [
+            20349,
+            20350,
+            20351,
+            20352
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.6107,
+            "background.random_off_mean_ms": 131.54,
+            "background.random_on_mean_ms": 168.34,
+            "obss.obss_dl_max_rate_mbps": 7.3484,
+            "obss.obss_off_mean_ms": 96.48,
+            "obss.obss_on_mean_ms": 56.71,
+            "obss.obss_ul_max_rate_mbps": 3.2695,
+            "propagation.path_loss_exponent": 2.6423,
+            "propagation.station_distance_m": 10.997,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 9500,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.334
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 8,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p08",
+          "seeds": [
+            20353,
+            20354,
+            20355,
+            20356
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.6681,
+            "background.random_off_mean_ms": 152.08,
+            "background.random_on_mean_ms": 83.54,
+            "obss.obss_dl_max_rate_mbps": 12.3782,
+            "obss.obss_off_mean_ms": 306.8,
+            "obss.obss_on_mean_ms": 70.07,
+            "obss.obss_ul_max_rate_mbps": 3.8501,
+            "propagation.path_loss_exponent": 3.547,
+            "propagation.station_distance_m": 12.953,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 8500,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 3.476
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 9,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p09",
+          "seeds": [
+            20357,
+            20358,
+            20359,
+            20360
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.8312,
+            "background.random_off_mean_ms": 78.0,
+            "background.random_on_mean_ms": 118.93,
+            "obss.obss_dl_max_rate_mbps": 6.5053,
+            "obss.obss_off_mean_ms": 265.95,
+            "obss.obss_on_mean_ms": 91.66,
+            "obss.obss_ul_max_rate_mbps": 3.6567,
+            "propagation.path_loss_exponent": 3.3701,
+            "propagation.station_distance_m": 17.286,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 8100,
+            "stream.gop_length": 60,
+            "stream.keyframe_size_multiplier": 2.681
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 10,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p10",
+          "seeds": [
+            20361,
+            20362,
+            20363,
+            20364
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 0.8592,
+            "background.random_off_mean_ms": 191.26,
+            "background.random_on_mean_ms": 156.12,
+            "obss.obss_dl_max_rate_mbps": 6.3933,
+            "obss.obss_off_mean_ms": 202.14,
+            "obss.obss_on_mean_ms": 126.3,
+            "obss.obss_ul_max_rate_mbps": 4.3434,
+            "propagation.path_loss_exponent": 2.7478,
+            "propagation.station_distance_m": 15.459,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 13000,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.549
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 11,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p11",
+          "seeds": [
+            20365,
+            20366,
+            20367,
+            20368
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.691,
+            "background.random_off_mean_ms": 220.36,
+            "background.random_on_mean_ms": 180.9,
+            "obss.obss_dl_max_rate_mbps": 9.3312,
+            "obss.obss_off_mean_ms": 351.5,
+            "obss.obss_on_mean_ms": 136.82,
+            "obss.obss_ul_max_rate_mbps": 3.5098,
+            "propagation.path_loss_exponent": 3.2615,
+            "propagation.station_distance_m": 10.356,
+            "stream.deadline_us": 33333,
+            "stream.fps": 30,
+            "stream.frame_size": 11600,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.987
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 12,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p12",
+          "seeds": [
+            20369,
+            20370,
+            20371,
+            20372
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.1592,
+            "background.random_off_mean_ms": 90.11,
+            "background.random_on_mean_ms": 136.57,
+            "obss.obss_dl_max_rate_mbps": 7.1893,
+            "obss.obss_off_mean_ms": 142.1,
+            "obss.obss_on_mean_ms": 47.8,
+            "obss.obss_ul_max_rate_mbps": 3.0339,
+            "propagation.path_loss_exponent": 2.6177,
+            "propagation.station_distance_m": 7.737,
+            "stream.deadline_us": 41667,
+            "stream.fps": 24,
+            "stream.frame_size": 8800,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.046
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 13,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p13",
+          "seeds": [
+            20373,
+            20374,
+            20375,
+            20376
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 2.8484,
+            "background.random_off_mean_ms": 58.36,
+            "background.random_on_mean_ms": 141.25,
+            "obss.obss_dl_max_rate_mbps": 10.291,
+            "obss.obss_off_mean_ms": 100.84,
+            "obss.obss_on_mean_ms": 104.82,
+            "obss.obss_ul_max_rate_mbps": 4.5124,
+            "propagation.path_loss_exponent": 3.058,
+            "propagation.station_distance_m": 12.687,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 11400,
+            "stream.gop_length": 90,
+            "stream.keyframe_size_multiplier": 2.648
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 14,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p14",
+          "seeds": [
+            20377,
+            20378,
+            20379,
+            20380
+          ]
+        },
+        {
+          "config": {
+            "background.background_profile": "legacy_mixed8",
+            "background.background_rate_mbps": 1.1042,
+            "background.random_off_mean_ms": 67.8,
+            "background.random_on_mean_ms": 53.87,
+            "obss.obss_dl_max_rate_mbps": 11.7922,
+            "obss.obss_off_mean_ms": 122.74,
+            "obss.obss_on_mean_ms": 100.06,
+            "obss.obss_ul_max_rate_mbps": 2.6309,
+            "propagation.path_loss_exponent": 2.7843,
+            "propagation.station_distance_m": 13.776,
+            "stream.deadline_us": 22222,
+            "stream.fps": 45,
+            "stream.frame_size": 10800,
+            "stream.gop_length": 30,
+            "stream.keyframe_size_multiplier": 2.208
+          },
+          "family_id": "compound_shift",
+          "parameter_sample": 15,
+          "runs": [
+            1
+          ],
+          "scenario_id": "compound-shift-collection-p15",
+          "seeds": [
+            20381,
+            20382,
+            20383,
+            20384
+          ]
+        }
+      ]
+    }
+  },
+  "reserved_confirmation_seed_audit": {
+    "first": 1301,
+    "last": 1348,
+    "must_remain_unopened": true,
+    "overlap_count": 0
+  },
+  "sampling": {
+    "algorithm": "sha256_latin_hypercube_v1",
+    "family_order": [
+      "radio_propagation",
+      "obss_intensity",
+      "obss_geometry_mac",
+      "video_workload",
+      "legacy_coexistence",
+      "compound_shift"
+    ],
+    "salt": "wifi-streaming-environment-generalization-v1"
+  },
+  "schema_version": 1
+}
