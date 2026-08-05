@@ -92,6 +92,11 @@ P99.
 | Complete distributional ceiling replay | `dd9be5f` | Checksum-closed cross-fit, static, reference, and online artifacts |
 | Freeze shadow-priced future credit | `ba4dfe9` | Single-mechanism repayable-credit contract and go/no-go screen |
 | Replay shadow-priced future credit | `4a5bf74` | Exact baseline, debt, action-transition, DR, report, and figure evidence |
+| Archive shadow borrow/repay screen | `4ffe58e` | Checksum-closed passing mechanism evidence and direct substitutions |
+| Freeze distributional shadow runtime | `b6566c5` | Full-refit, reference, accounting, seed, and qualification contract |
+| Fit distributional shadow runtime | `cd094f1` | Checksum-closed two-head refit and deployment-reference builder |
+| Emit distributional runtime data | `49c7452` | Deterministic generated data, goldens, and compile-correct array contract |
+| Compile distributional T2 model | `f233402` | Exact multiclass, shadow-reference, and credit parity in C++ |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -154,7 +159,11 @@ at `0528610`; V2 remains the engineering champion.
   primary-miss capture from 51.36% to 73.78%.  Next integrate the selected
   congestion policy into the runtime, validate its exported model/reference
   identities and exact repayment accounting, and qualify it against STR on
-  already-opened engineering seeds before touching confirmation seeds.
+  already-opened engineering seeds before touching confirmation seeds.  The
+  frozen full-data refit, reachable reference curves, generated C++ model,
+  independent multiclass/CDF parity, and credit goldens are complete through
+  `f233402`.  Next build the exact paired primary-plus-secondary feature
+  adapter, then the permanent-debit runtime ledger and controller profile.
   Preserve conservative reservations, the less-than-1.20 sender-airtime gate,
   and the background throughput gate.
 
@@ -576,8 +585,35 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Added schema-aware V2/V5 action comparison and shared-bootstrap direct
   miss/P99 intervals through `a16bcb3`; established that V5 is null versus V2
   despite passing every STR gate.
-- Kept V2 as the engineering champion.  The next work is an exact ceiling
-  decomposition, not another score/threshold-only runtime variant.
+- Kept V2 as the engineering champion while completing the exact ceiling
+  decomposition and repayable-credit mechanism screen.  The selected
+  distributional HGB64 model and reachable congestion reference are now
+  compiled through `f233402`; the next boundary is paired-feature parity,
+  followed by permanent-debit allocator integration.
+
+### 2026-08-05 - Compile the distributional shadow runtime
+
+- Froze the deployment refit and runtime accounting contract before fitting
+  in `b6566c5`; reserved seeds `1301` through `1348` remain unread.
+- Fit CONTROL and FULL_COPY_T2 six-class HGB64 heads on all 73,400 opened
+  action-clean temporal rows.  The selected 308-feature family has 62 passive
+  secondary queue/PHY inputs in addition to the exact primary temporal family.
+- Reconstructed both heads independently with zero absolute difference from
+  sklearn on the parity sample.  The full-data construction replay records
+  15,792 actions, 1,550 observed primary-miss captures, 326.329 ms mean
+  canonical reservation per run, 139.611 ms maximum debt, and nonnegative
+  final balance in every run.  This is in-sample deployment construction, not
+  independent performance evidence.
+- Generated and compiled 384 class trees per arm, exact Dirichlet-smoothed
+  completion CDFs, separate deadline-rescue and 18 ms tail outputs, all
+  reachable congestion shadow-price prefixes, and borrow/repay goldens.
+- Passed the exporter `--check`, 10 focused Python tests, module build, and
+  `wifi-streaming-temporal-t2-distribution-model` C++ suite; committed and
+  pushed the boundary as `f233402`.
+- Retained the 31 MB full reference JSON under ignored local results for audit;
+  the compiled policy embeds only congestion curves and only the credit prefix
+  reachable at or below 372,000 us.  The next implementation is the paired
+  feature adapter, not another predictor screen.
 
 ### 2026-08-05 - Export and preflight cost-free score-aware V5
 
