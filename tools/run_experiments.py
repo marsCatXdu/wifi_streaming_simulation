@@ -19,10 +19,6 @@ from typing import Any, Iterable
 
 import yaml
 
-from plot_results import plot
-from plot_ofdma_comparison import plot_ofdma_comparison
-from plot_selective_duplication import plot_selective_control
-from plot_adaptive_airtime_duplication import plot_adaptive_airtime
 from summarize_runs import summarize, write_outputs
 from validate_outputs import validate_run
 
@@ -1176,6 +1172,13 @@ def main() -> None:
     if failures:
         raise SystemExit("\n".join(failures))
     if not args.no_analysis:
+        # Keep plotting dependencies optional for callers that only import the
+        # deterministic matrix-expansion and run-identity helpers.
+        from plot_adaptive_airtime_duplication import plot_adaptive_airtime
+        from plot_ofdma_comparison import plot_ofdma_comparison
+        from plot_results import plot
+        from plot_selective_duplication import plot_selective_control
+
         aggregate = summarize([output_root / spec["run_id"] for spec in specs])
         aggregate_json = output_root / "aggregate.json"
         aggregate_csv = output_root / "aggregate.csv"
