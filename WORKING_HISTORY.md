@@ -81,6 +81,13 @@ P99.
 | Qualify and archive cost-free V5 | `0528610` | Strict all-gate STR pass and exact V2 null comparison |
 | Add closed-loop ceiling decomposition | `e60b519` | Per-run scalar-score and perfect-primary-information frontiers |
 | Plot temporal-T2 ceiling gap | `aa9a20d` | Resource-band and miss-sensitivity visualization |
+| Archive temporal-T2 ceiling split | `b73dfc2` | Checksum-closed compact stage-one ceiling evidence |
+| Freeze distributional T2 screen | `56e4826` | Six-bin CDF, feature-family, model, and cross-fit contract |
+| Cross-fit T2 completion distributions | `1e47792` | Memory-bounded four-variant outer-fold fitter |
+| Add static distributional frontier | `62bcf82` | Exact two-cost future-score frontier and DR replay |
+| Freeze online shadow allocator | `04e3f43` | Causal time, credit, regime, and evaluation contract |
+| Fit fold-honest shadow references | `473af75` | Exact selected-model reproduction and training-fold scores |
+| Add fold-honest online allocator | `1aeddc0` | Nonclairvoyant shadow-price replay, report, and figure |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -131,9 +138,13 @@ at `0528610`; V2 remains the engineering champion.
   nonclairvoyant online allocator.  Replay canonical reservations and resource
   constraints exactly, then decide whether prediction, allocation, or the
   full-copy action is limiting.  The factual, per-run canonical, primary-oracle,
-  and action-outcome-support stage is complete through `aa9a20d`; next fit the
-  cross-fitted distributional policy and online allocator.  Do not create a
-  score/threshold-only V6.
+  and action-outcome-support stage is archived through `b73dfc2`.  The
+  distributional and online contracts/tools are complete through `1aeddc0`.
+  The canonical four-variant cross-fit is running on the 64-vCPU VM from clean
+  detached commit `1e47792`; after it completes, checksum-fetch the output,
+  generate the static frontier, refit the selected model's fold-honest shadow
+  references, and run the online replay.  Do not create a score/threshold-only
+  V6.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -216,8 +227,18 @@ all-threshold calculation is not per-run feasible: 26/48 runs exceed both
 canonical budget proxies even though the aggregate mean is 339.636 ms/run.
 Only 871/1,103 eligible primary misses have any V2/V4/V5 action outcome, and
 18 observed outcomes change across policies, so secondary-outcome and P99
-oracles remain unidentified.  Next build cross-fitted completion
-distributions and a nonclairvoyant allocator; freeze score-only variants.
+oracles remain unidentified.
+
+The next decomposition stage is now frozen and executing.  It cross-fits
+separate no-duplication and duplication completion CDFs at 12, 18, 24, 30,
+and 33.333 ms for four primary/secondary-feature and model-size variants.
+The live canonical fit uses only the 96 already-opened randomized run groups;
+reserved seeds remain untouched.  Static exact-knapsack and nonclairvoyant
+shadow-price analyzers are ready.  The online analyzer uses held-out OOF
+scores for decisions and separately reproduced outer-model scores on only its
+84 training groups for opportunity pricing.  It explicitly discloses that
+the global engineering-model selection is not independent confirmation and
+that the training-score reference may retain in-sample optimism.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -375,8 +396,36 @@ Do not repeat an entry unless relevant code changed after it ran.
   `ecde7ffa6a3267668f487e415fe63aaff2a9b037cc6b43c14d34d7d8981cbc7d`.
   Figure SHA-256:
   `fd8b2d8c8e414a63041f364d2ba8bffde76d3c75fb78cc8975ac7a41620ab755`.
+- Distributional/static/reference/online tooling through `1aeddc0`: 24
+  focused tests passed together with `py_compile`, line-length, CLI, report,
+  PNG-rendering, and diff checks.  Regression tests enforce held-out-fold
+  exclusion, exact frozen predictor-selection order, and frame-ID-first
+  score-tie resolution.
 
 ## Work log
+
+### 2026-08-05 - Launch the distributional and online ceiling stage
+
+- Froze the six-bin completion-distribution screen, implemented four-variant
+  eight-fold randomized T-learners, and added an exact canonical two-cost
+  static frontier through `62bcf82`.
+- Froze the nonclairvoyant allocator before reading the cross-fitted results,
+  then implemented exact causal credit replay, global/congestion-regime shadow
+  prices, direct miss capture, DR outcomes, and compact plotting through
+  `1aeddc0`.
+- Removed a subtle fold leak from shadow-price calibration.  Each selected
+  outer model is now reproduced exactly and scores only its own 84 training
+  groups; evaluation rows remain absent and reproduced OOF predictions must
+  match the canonical artifact within `1e-12`.
+- Corrected selection and tie semantics before results were available:
+  completed-late18 is a binary nonregression gate before airtime cost, and
+  equal score densities resolve by smaller frame ID before stable identity.
+- Launched the canonical 96-group four-variant cross-fit on the 64-vCPU VM as
+  PID `50959`, logging to
+  `/home/jingweili/temporal-t2-distributional-crossfit.log`.  The remote
+  checkout must remain detached at `1e47792` until this fit records its final
+  provenance.  Next checksum-fetch its output and execute the already-frozen
+  static, fold-honest reference, and online analyses.
 
 ### 2026-08-05 - Establish the closed-loop ceiling split
 
