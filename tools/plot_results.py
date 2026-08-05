@@ -68,6 +68,11 @@ def _approach_label(item: dict, run_count: int | None = None) -> str:
         label = "Adaptive primary-deficit duplication"
     elif topology == "dual_interface" and policy == "paired_value_duplication_t2":
         label = "Temporal-T2 selective duplication"
+    elif (
+        topology == "dual_interface"
+        and policy == "distributional_shadow_duplication_t2"
+    ):
+        label = "Distributional shadow T2"
     elif topology == "dual_interface" and policy == "fixed_link_0":
         label = "Single 2.4 GHz interface"
     elif topology == "dual_interface" and policy == "fixed_link_1":

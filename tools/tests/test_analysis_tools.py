@@ -826,6 +826,14 @@ class MatrixTests(unittest.TestCase):
             _approach_label(paired), "Temporal-T2 selective duplication"
         )
 
+    def test_distributional_shadow_t2_has_a_distinct_plot_label(self) -> None:
+        policy = {
+            "topology": "dual_interface",
+            "policy": "distributional_shadow_duplication_t2",
+            "config": {"wifi": {"sta_max_inflights": 1}},
+        }
+        self.assertEqual(_approach_label(policy), "Distributional shadow T2")
+
     def test_obss_cli_translation(self) -> None:
         arguments = cli_arguments({
             "propagation": {
