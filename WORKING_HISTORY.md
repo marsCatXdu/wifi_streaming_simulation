@@ -117,6 +117,9 @@ P99.
 | Freeze environment policy replay | `16d0e38` | Exact resource-oracle, baseline, uncertainty, and exploration contract |
 | Add environment policy primitives | `06d6a81` | Decimal knapsack, uniform replay, DR/HT value, and artifact validation |
 | Analyze environment resource policies | `e6ddcf3` | Shared hierarchical bootstrap, regret, confidence gates, and action archive |
+| Plot environment policy analysis | `5bfc082` | Five checksum-bound frontier, family, OOD, allocation, and regret figures |
+| Add deployment exploration wrapper | `e04093f` | Exact OOD fallback, SplitMix64 forcing, budget, propensity, and compliance logs |
+| Orchestrate environment analysis | `3dd6855` | One clean-worktree VM entry point with top-level provenance closure |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -207,9 +210,10 @@ remains the engineering champion after the distributional closed-loop test.
   and pushed through `e6ddcf3`.  At the last metadata-only poll, 245/384 runs
   were complete; no randomized frame, latency, airtime, or policy outcome has
   been read.  Once all runs close, build the source-closed dataset, execute the
-  frozen analyses, plot and archive them, then implement the OOD-aware logged
-  exploration wrapper and a nested nonclairvoyant allocator before closed-loop
-  qualification.
+  frozen analyses, plot and archive them, then design a nested nonclairvoyant
+  allocator from the measured ceiling before closed-loop qualification.  The
+  OOD-aware logged exploration wrapper and single-entry remote analysis runner
+  are complete through `3dd6855`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -222,8 +226,9 @@ collection is running as six full 64-worker waves and was at 245 complete at
 the last metadata-only poll.  The LOFO completion-distribution, robust OOD,
 exact decimal resource replay, uniform/myopic baselines, cross-fitted resource
 oracle, DR/HT value, shared 10,000-sample hierarchical bootstrap, confidence
-gates, and checksum-closed row-action output are implemented and pushed
-through `e6ddcf3`.  Build and analyze the full dataset immediately after the
+gates, checksum-closed row-action output, five-figure plot suite, OOD-aware
+logged exploration, and detachable VM pipeline are implemented and pushed
+through `3dd6855`.  Build and analyze the full dataset immediately after the
 collection closes; do not inspect qualification outcomes.
 
 Score-aware emergency admission V2 is complete and is the first candidate to
@@ -631,6 +636,11 @@ Do not repeat an entry unless relevant code changed after it ran.
   tests pass.  The six real preflight datasets also satisfy exact cost and
   372,000-us resource bounds.  The last metadata-only VM poll showed 245/384
   collection runs complete.  No randomized outcome file has been opened.
+- Added five checksum-closed plots in `5bfc082`, the frozen OOD-aware 1%/1%/
+  0.2% deployment-exploration wrapper in `e04093f`, and the clean-worktree
+  dataset-to-plots VM entry point in `3dd6855`.  The entry point resolves only
+  the exact 384 complete manifest directories and closes every stage manifest
+  into one top-level provenance record.
 
 ### 2026-08-05 - Pass the scenario preflight and launch the 64-way collection
 
