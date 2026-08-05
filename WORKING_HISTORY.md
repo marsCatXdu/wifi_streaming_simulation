@@ -97,6 +97,7 @@ P99.
 | Fit distributional shadow runtime | `cd094f1` | Checksum-closed two-head refit and deployment-reference builder |
 | Emit distributional runtime data | `49c7452` | Deterministic generated data, goldens, and compile-correct array contract |
 | Compile distributional T2 model | `f233402` | Exact multiclass, shadow-reference, and credit parity in C++ |
+| Add paired distribution predictor | `c33ed15` | Exact 308-feature primary-plus-secondary history adapter and tests |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -162,8 +163,9 @@ at `0528610`; V2 remains the engineering champion.
   already-opened engineering seeds before touching confirmation seeds.  The
   frozen full-data refit, reachable reference curves, generated C++ model,
   independent multiclass/CDF parity, and credit goldens are complete through
-  `f233402`.  Next build the exact paired primary-plus-secondary feature
-  adapter, then the permanent-debit runtime ledger and controller profile.
+  `f233402`.  The exact paired primary-plus-secondary feature adapter is
+  complete through `c33ed15`; next build the permanent-debit runtime ledger
+  and controller profile.
   Preserve conservative reservations, the less-than-1.20 sender-airtime gate,
   and the background throughput gate.
 
@@ -289,10 +291,12 @@ protects later high-value opportunities.
 The replay does not yet promote a runtime candidate.  Fifty-five runs enter
 debt and worst transient debt is 144.82 ms, so changed contention, queues,
 sender airtime, secondary rescue, background throughput, and completed P99
-must be measured closed loop.  Next export a full-data runtime predictor and
-shadow reference, implement exact congestion/debt state, and pass the existing
-paired STR gates on already-opened engineering seeds.  Compact evidence is
-under `key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
+must be measured closed loop.  The full-data runtime predictor, shadow
+reference, compiled evaluator, and exact paired 308-feature adapter are now
+complete through `c33ed15`.  Next implement exact permanent-debit congestion
+and repayment state, then pass the existing paired STR gates on already-opened
+engineering seeds.  Compact replay evidence is under
+`key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -480,8 +484,32 @@ Do not repeat an entry unless relevant code changed after it ran.
   `134e2632a02fc3979284700e3bd9531353c18d0fa6e4d27f6e1adea4b2d6f4bb`
   and `b21c2109f3d1d0c4ab50e17656302471560804997174a24975d25db81e301fcb`.
   Every source hash closes and the generated figure was visually inspected.
+- Paired distribution adapter at `c33ed15`: the module target and both
+  `wifi-streaming-temporal-t2-distribution-predictor` test cases passed.  The
+  unchanged primary predictor suite and compiled distribution-model suite
+  also passed.  The adapter preserves all 246 primary words, appends 62 exact
+  current/lagged passive-secondary words, owns caller data, and rejects
+  cadence, watermark, paired-capture, support, and exact-lag drift.
 
 ## Work log
+
+### 2026-08-05 - Compile the paired distribution feature adapter
+
+- Added `TemporalT2DistributionPredictor` as a separate paired-history owner;
+  the proven 246-feature primary adapter is reused without reinterpretation
+  and 62 current/lagged passive-secondary queue/PHY features are appended in
+  the compiled model's exact order.
+- Closed two implementation-time contract gaps before controller wiring:
+  secondary polling must remain on the frozen 1 ms cadence, and primary and
+  secondary endpoints must carry the same delayed-report capture and
+  availability times used by the training augmenter.
+- Added monotonic secondary live/polling watermark checks, exact support-mask
+  enforcement, untreated-current-frame checks, exact lag-1/3/8 ownership,
+  float32 word-order tests, caller-mutation tests, and direct evaluator parity.
+- Built the module and passed the new paired-predictor suite plus the existing
+  primary-predictor and compiled-distribution-model suites.  Committed this
+  policy-neutral boundary as `c33ed15`; permanent-debit admission remains the
+  next implementation boundary.
 
 ### 2026-08-05 - Validate shadow-priced future credit
 
