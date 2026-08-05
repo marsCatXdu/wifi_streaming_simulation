@@ -85,6 +85,7 @@ P99.
 | Freeze distributional T2 screen | `56e4826` | Six-bin CDF, feature-family, model, and cross-fit contract |
 | Cross-fit T2 completion distributions | `1e47792` | Memory-bounded four-variant outer-fold fitter |
 | Add static distributional frontier | `62bcf82` | Exact two-cost future-score frontier and DR replay |
+| Correct distributional DR weighting | `ecc5e0b` | Pooled-frame point estimates with whole-run resampling |
 | Freeze online shadow allocator | `04e3f43` | Causal time, credit, regime, and evaluation contract |
 | Fit fold-honest shadow references | `473af75` | Exact selected-model reproduction and training-fold scores |
 | Add fold-honest online allocator | `1aeddc0` | Nonclairvoyant shadow-price replay, report, and figure |
@@ -396,7 +397,7 @@ Do not repeat an entry unless relevant code changed after it ran.
   `ecde7ffa6a3267668f487e415fe63aaff2a9b037cc6b43c14d34d7d8981cbc7d`.
   Figure SHA-256:
   `fd8b2d8c8e414a63041f364d2ba8bffde76d3c75fb78cc8975ac7a41620ab755`.
-- Distributional/static/reference/online tooling through `1aeddc0`: 24
+- Distributional/static/reference/online tooling through `ecc5e0b`: 25
   focused tests passed together with `py_compile`, line-length, CLI, report,
   PNG-rendering, and diff checks.  Regression tests enforce held-out-fold
   exclusion, exact frozen predictor-selection order, and frame-ID-first
@@ -420,6 +421,12 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Corrected selection and tie semantics before results were available:
   completed-late18 is a binary nonregression gate before airtime cost, and
   equal score densities resolve by smaller frame ID before stable identity.
+- Corrected the downstream DR estimand before results were available.  Run
+  groups contain 202 to 1,170 action-clean rows, so point estimates now pool
+  frames; each uncertainty replicate resamples whole runs and then divides
+  pooled pseudo-outcome sums by pooled row counts.  The earlier equal-run
+  average would have overweighted sparse runs.  This change does not affect
+  model fitting or require a restart.
 - Launched the canonical 96-group four-variant cross-fit on the 64-vCPU VM as
   PID `50959`, logging to
   `/home/jingweili/temporal-t2-distributional-crossfit.log`.  The remote
