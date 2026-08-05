@@ -57,6 +57,7 @@ class TemporalFixture:
         cadence_failure: bool = False,
         counter_reset: bool = False,
         rolling_counter_failure: bool = False,
+        missing_ahead_frame: int | None = None,
     ) -> None:
         self.path = path
         self.run_id = "temporal-run"
@@ -139,6 +140,7 @@ class TemporalFixture:
             cadence_failure=cadence_failure,
             counter_reset=counter_reset,
             rolling_counter_failure=rolling_counter_failure,
+            missing_ahead_frame=missing_ahead_frame,
         )
 
     @staticmethod
@@ -155,6 +157,7 @@ class TemporalFixture:
         cadence_failure: bool,
         counter_reset: bool,
         rolling_counter_failure: bool,
+        missing_ahead_frame: int | None,
     ) -> None:
         frames: list[dict[str, object]] = []
         assignments: list[dict[str, object]] = []
@@ -264,6 +267,9 @@ class TemporalFixture:
                             "mac_service_bytes_ahead_of_frame": 1_200,
                         }
                     )
+                    if frame_id == missing_ahead_frame and path_id == PRIMARY_PATH[0]:
+                        sample["packets_ahead_of_frame"] = ""
+                        sample["mac_service_bytes_ahead_of_frame"] = ""
                     samples.append(sample)
 
                     poll: dict[str, object] = {
@@ -561,6 +567,27 @@ class TemporalDatasetBuilderTest(unittest.TestCase):
             self.assertEqual(row["x_primary_lag1_mpdu_attempts_20ms"], "8")
             self.assertEqual(row["x_primary_lag3_mpdu_attempts_20ms"], "6")
             self.assertEqual(row["x_primary_lag8_mpdu_attempts_20ms"], "1")
+
+    def test_missing_ahead_state_propagates_to_derived_features(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            _, output, _ = self._build(root, missing_ahead_frame=9)
+            row = next(
+                item
+                for item in _read_csv(output / OUTPUT_CSV)
+                if item["frame_id"] == "9"
+            )
+            self.assertEqual(row["x_primary_packets_ahead_of_frame"], "")
+            self.assertEqual(row["x_primary_mac_service_bytes_ahead_of_frame"], "")
+            self.assertEqual(
+                row["x_physics_ahead_clearance_margin_1ms_us"], ""
+            )
+            self.assertEqual(
+                row["x_physics_ahead_clearance_margin_5ms_us"], ""
+            )
+            self.assertNotEqual(
+                row["x_physics_queue_clearance_margin_5ms_us"], ""
+            )
 
     def test_timing_cadence_rolling_and_reset_fail_closed(self) -> None:
         cases = (
