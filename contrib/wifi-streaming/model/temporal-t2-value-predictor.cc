@@ -1053,6 +1053,13 @@ TemporalT2ValuePredictor::Evaluate(uint64_t frameId) const
     return result;
 }
 
+TemporalT2ValuePredictor::FeatureArray
+TemporalT2ValuePredictor::GetFeatureArray(uint64_t frameId) const
+{
+    ValidateModelContract();
+    return BuildStoredFeatures(frameId);
+}
+
 bool
 TemporalT2ValuePredictor::PassesFrameGate(FrameType frameType)
 {

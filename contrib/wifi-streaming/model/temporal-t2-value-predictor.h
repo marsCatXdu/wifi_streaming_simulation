@@ -87,6 +87,18 @@ class TemporalT2ValuePredictor
     TemporalT2ValueModelResult Evaluate(uint64_t frameId) const;
 
     /**
+     * Build the raw primary-only feature vector for the latest stored frame.
+     *
+     * This exposes the already-validated adapter for composition with a
+     * separately frozen predictor. It does not evaluate a model or apply a
+     * policy gate.
+     *
+     * @param frameId Exact identity of the latest owned primary sample.
+     * @return Frozen 246-feature primary adapter output.
+     */
+    FeatureArray GetFeatureArray(uint64_t frameId) const;
+
+    /**
      * Apply the frozen caller-owned frame gate.
      *
      * @param frameType Frame type to inspect.
