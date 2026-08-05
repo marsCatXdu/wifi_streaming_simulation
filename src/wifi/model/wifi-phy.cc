@@ -1984,6 +1984,19 @@ WifiPhy::StartReceivePreamble(Ptr<const WifiPpdu> ppdu,
                               Time rxDuration)
 {
     NS_LOG_FUNCTION(this << ppdu << rxDuration);
+    if (m_state->GetState() == WifiPhyState::IDLE && m_currentEvent)
+    {
+        // A state boundary can report IDLE before a same-time field or payload
+        // completion callback has cleared the current event. Defer once so the
+        // already-scheduled completion runs before dispatching the new PPDU.
+        Simulator::ScheduleNow([this, ppdu, rxPowersW, rxDuration]() mutable {
+            NS_ASSERT_MSG(m_state->GetState() != WifiPhyState::IDLE || !m_currentEvent,
+                          "Wi-Fi PHY state transition remained incomplete after a same-time "
+                          "defer");
+            StartReceivePreamble(ppdu, rxPowersW, rxDuration);
+        });
+        return;
+    }
     WifiModulationClass modulation = ppdu->GetModulation();
     NS_ASSERT(m_maxModClassSupported != WIFI_MOD_CLASS_UNKNOWN);
     if (auto it = m_phyEntities.find(modulation);

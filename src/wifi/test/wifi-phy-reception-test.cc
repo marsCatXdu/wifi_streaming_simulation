@@ -54,6 +54,27 @@ static const MHz_u CHANNEL_WIDTH{20};
 static const MHz_u GUARD_WIDTH = CHANNEL_WIDTH; // expanded to channel width to model spectrum mask
 
 /**
+ * Test SpectrumWifiPhy exposing a controlled same-time state boundary.
+ */
+class BoundaryTestSpectrumWifiPhy : public SpectrumWifiPhy
+{
+  public:
+    /** Install a non-null current event while the state helper remains IDLE. */
+    void HoldArtificialCurrentEvent()
+    {
+        m_currentEvent = Create<Event>(Ptr<const WifiPpdu>{},
+                                       MicroSeconds(1),
+                                       RxPowerWattPerChannelBand{});
+    }
+
+    /** Clear the artificial current event. */
+    void ClearArtificialCurrentEvent()
+    {
+        m_currentEvent = nullptr;
+    }
+};
+
+/**
  * @ingroup wifi-test
  * @ingroup tests
  *
@@ -96,8 +117,8 @@ class WifiPhyReceptionTest : public TestCase
      */
     void DoCheckPhyState(WifiPhyState expectedState);
 
-    Ptr<SpectrumWifiPhy> m_phy; //!< the PHY
-    uint64_t m_uid{0};          //!< the UID to use for the PPDU
+    Ptr<BoundaryTestSpectrumWifiPhy> m_phy; //!< the PHY
+    uint64_t m_uid{0};                      //!< the UID to use for the PPDU
 };
 
 WifiPhyReceptionTest::WifiPhyReceptionTest(std::string test_name)
@@ -175,7 +196,7 @@ WifiPhyReceptionTest::DoSetup()
     Ptr<MultiModelSpectrumChannel> spectrumChannel = CreateObject<MultiModelSpectrumChannel>();
     Ptr<Node> node = CreateObject<Node>();
     Ptr<WifiNetDevice> dev = CreateObject<WifiNetDevice>();
-    m_phy = CreateObject<SpectrumWifiPhy>();
+    m_phy = CreateObject<BoundaryTestSpectrumWifiPhy>();
     Ptr<InterferenceHelper> interferenceHelper = CreateObject<InterferenceHelper>();
     m_phy->SetInterferenceHelper(interferenceHelper);
     Ptr<ErrorRateModel> error = CreateObject<NistErrorRateModel>();
@@ -5025,6 +5046,56 @@ TestPhyDropDueToTx::DoRun()
  * @ingroup wifi-test
  * @ingroup tests
  *
+ * @brief Defer a PPDU when a same-time cleanup has not cleared the current event.
+ *
+ * SpectrumWifiPhy already dispatches reception with ScheduleNow. A completion
+ * callback can itself be ordered after that dispatch, leaving the state helper
+ * IDLE while m_currentEvent is still non-null. The receive path must defer once
+ * more instead of asserting.
+ */
+class TestPpduArrivalBeforeNestedCleanup : public WifiPhyReceptionTest
+{
+  public:
+    /** Constructor. */
+    TestPpduArrivalBeforeNestedCleanup()
+        : WifiPhyReceptionTest("Defer PPDU arrival until nested same-time cleanup completes")
+    {
+    }
+
+  private:
+    /** Create the transient inconsistent state and deliver a PPDU. */
+    void SendAtBoundary()
+    {
+        m_phy->HoldArtificialCurrentEvent();
+        SendPacket(dBm_u{-50}, 1000, 7);
+        Simulator::ScheduleNow(
+            &BoundaryTestSpectrumWifiPhy::ClearArtificialCurrentEvent,
+            m_phy);
+    }
+
+    void DoRun() override
+    {
+        RngSeedManager::SetSeed(1);
+        RngSeedManager::SetRun(1);
+        m_phy->AssignStreams(0);
+
+        Simulator::Schedule(Seconds(1),
+                            &TestPpduArrivalBeforeNestedCleanup::SendAtBoundary,
+                            this);
+        Simulator::Schedule(Seconds(1) + WifiPhy::GetPreambleDetectionDuration(),
+                            &TestPpduArrivalBeforeNestedCleanup::CheckPhyState,
+                            this,
+                            WifiPhyState::CCA_BUSY);
+
+        Simulator::Run();
+        Simulator::Destroy();
+    }
+};
+
+/**
+ * @ingroup wifi-test
+ * @ingroup tests
+ *
  * @brief Regression test for issue #1244
  * Send one packet, then a second one at T+24us, which coincides with the start
  * of the HE-SIG-A field (the boundary after L-SIG/RL-SIG). At that instant,
@@ -5245,6 +5316,7 @@ WifiPhyReceptionTestSuite::WifiPhyReceptionTestSuite()
     AddTestCase(new TestPhyDropDueToTx(MicroSeconds(5), RECEPTION_ABORTED_BY_TX),
                 TestCase::Duration::QUICK);
 
+    AddTestCase(new TestPpduArrivalBeforeNestedCleanup, TestCase::Duration::QUICK);
     AddTestCase(new TestPpduArrivalAtCcaEnd, TestCase::Duration::QUICK);
     AddTestCase(new TestPpduArrivalAtRxEnd, TestCase::Duration::QUICK);
 }
