@@ -109,6 +109,8 @@ P99.
 | Qualify distributional shadow against STR | `bf9e5c1` | Strict 48-pair gates, direct mechanisms, and paired heterogeneity |
 | Compare distributional shadow with V2 | `544008c` | Exact action transitions, paired uncertainty, and reviewed figures |
 | Freeze environment scenario catalog | `10863e8` | Deterministic six-family matrices, unopened held-out catalog, and checksum manifest |
+| Repair generalized-scenario PHY reception | `8c38753` | Exact crash replay, two negative-control regressions, and six full VM preflights |
+| Build scenario-aware temporal dataset | `af1f29c` | Streaming manifest-bound builder, sender-known context, and leakage checks |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -192,11 +194,21 @@ remains the engineering champion after the distributional closed-loop test.
   exploration rate for post-deployment treatment-effect recalibration.  Keep
   seeds `1301` through `1348` untouched and freeze all family, split, gate,
   fallback, exploration, and regret contracts before reading held-out results.
+  The six-family full preflight now passes at `8c38753`; the 384-run randomized
+  collection is active as six exact 64-worker waves.  The source-closed
+  scenario-aware temporal builder is complete through `af1f29c`; LOFO fitting,
+  OOD calibration, exploration replay, and regret analysis remain in progress.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
+
+The active boundary is environment-level generalization.  The six-family
+preflight and source-closed scenario dataset path pass; the 384-run randomized
+collection is running as six full 64-worker waves.  Next complete the LOFO and
+OOD/exploration analysis plumbing against the fetched preflight while the VM
+runs, then build the full dataset as soon as the collection closes.
 
 Score-aware emergency admission V2 is complete and is the first candidate to
 pass every frozen engineering gate against STR.  On seeds `1251` through
@@ -348,10 +360,12 @@ manifest metadata rather than simulator/model inputs.
 The generated collection and preflight YAMLs, all-phase scenario catalog,
 and artifact manifest are byte-reproducible with
 `tools/generate_environment_generalization_v1.py --check`.  Phase seed sets
-are disjoint and have zero overlap with `1301` through `1348`.  The next
-boundary is a clean six-scenario VM preflight, followed by environment-context
-dataset construction, LOFO/OOD evaluation plumbing, and the 384-run randomized
-collection.  Do not read the 48 qualification scenarios' results before the
+are disjoint and have zero overlap with `1301` through `1348`.  All six full
+preflights passed at `8c38753`, and the 384-run collection is running on the VM
+with all 64 vCPUs.  The new builder consumes one validated run at a time,
+rederives every run ID from the frozen matrix, keeps scenario/family identity
+out of the feature allowlist, and adds only five sender-known stream-context
+features.  Do not read the 48 qualification scenarios' results before the
 model, fallback, exploration, regret, and closed-loop comparison contracts are
 implemented and frozen.
 
@@ -576,6 +590,45 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-05 - Pass the scenario preflight and launch the 64-way collection
+
+- Reproduced the generalized-scenario assertion under GDB.  A below-sensitivity
+  Wi-Fi arrival refreshed interference CCA with a shorter duration while an
+  active PPDU header was still being decoded, exposing `IDLE` before the
+  scheduled field or failed-header cleanup.
+- Preserved the active header/cleanup CCA reservation in `8c38753`.  Both the
+  pending-field and failed-header paths have negative-control regressions; the
+  exact radio replay and the `wifi-phy-reception`, `wifi-phy-cca`,
+  `wifi-spectrum-phy`, and `wifi-streaming` suites pass.
+- Built the fix on the 64-vCPU VM and ran all six frozen 60-second preflight
+  scenarios concurrently.  Every run completed and passed an independent raw
+  validation locally and remotely.  The fetched experiment-manifest SHA-256 is
+  `d8201e660e352dfa742558a3e1dd723abcda1e3149600c865ad1435590ed8445`.
+- Launched the 384-run randomized collection from project commit `8c38753`
+  with `workers=64`; process inspection confirmed exactly 64 simulators.  Its
+  resolved matrix SHA-256 is
+  `eb20e7bdefc285b8c757dee946907ea8e45b2aa925c61fc4a9156a34a801ee59`,
+  giving six complete 64-run waves.
+
+### 2026-08-05 - Build the scenario-aware temporal dataset boundary
+
+- Added a separate streaming builder in `af1f29c` so the historical
+  single-environment builders retain their fail-closed design invariant.
+  It rederives run IDs from the hash-verified matrix, joins scenario metadata
+  from the complete experiment manifest, validates every raw run before source
+  reads, and holds only one run in memory.
+- Preserved the existing action-clean T2 temporal feature logic and appended
+  only stream FPS, interframe bytes, GOP length, keyframe multiplier, and
+  deadline.  Scenario ID, family ID, parameter sample, seeds, run IDs, and
+  frame IDs are explicit non-features.
+- Thirty-five related dataset, scenario, and generator tests pass.  Two fresh
+  builds from the real six-family preflight are byte-identical and contain
+  5,110 rows across all families.  The CSV, metadata, and artifact-manifest
+  SHA-256 values are respectively
+  `026078174c0772f8ebf906ab67592ca933ca01c48038be09ca38f46614302938`,
+  `af728c8aa29906b67a82bff4f32e2ce2b87faf9bfb80d02aa15be47538446562`,
+  and `469b647149048d40f56e8ed815d149dcb6edccb2914505779091aac539bed4dc`.
 
 ### 2026-08-05 - Freeze environment-generalization scenarios
 
