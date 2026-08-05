@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "analysis_id": "temporal-t2-distributional-frontier-v1",
+  "status": "frozen_before_cross_fitted_fit",
+  "purpose": "Separate the causal T2 information ceiling from the online allocation ceiling using randomized action-clean data, without changing the full-copy action.",
+  "evidence_role": "retrospective_engineering_screen",
+  "dataset": {
+    "path": "results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+    "feature_contract_id": "randomized_intervention_t2_temporal_action_clean_v1",
+    "artifact_manifest_sha256": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+    "dataset_metadata_sha256": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+    "randomized_t2_temporal_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+    "run_group_count": 96,
+    "row_count": 73400,
+    "known_t2_treatment_probability": 0.09090909090909091,
+    "opened_seed_range": [
+      1101,
+      1196
+    ],
+    "reserved_confirmation_seeds_read": false
+  },
+  "cross_fitting": {
+    "unit": "(seed, run_number)",
+    "fold_count": 8,
+    "groups_per_fold": 12,
+    "random_seed": 20260805,
+    "assignment_algorithm": "sort_by_sha256_seed_run_analysis_seed_then_round_robin_v1",
+    "prediction_rule": "Every row is scored only by arm models fit without its entire run group.",
+    "candidate_selection_role": "All cross-fitted comparisons are engineering evidence; no fresh confirmation claim is permitted."
+  },
+  "completion_distribution": {
+    "latency_definition": "union completion latency from frame generation; incomplete is positive infinity",
+    "thresholds_us": [
+      12000,
+      18000,
+      24000,
+      30000,
+      33333
+    ],
+    "bins": [
+      "(-infinity,12000]",
+      "(12000,18000]",
+      "(18000,24000]",
+      "(24000,30000]",
+      "(30000,33333]",
+      "(33333,infinity]"
+    ],
+    "model_form": "separate six-class T-learner for CONTROL and FULL_COPY_T2",
+    "cdf_derivation": "cumulative sum of mutually exclusive class probabilities",
+    "rare_class_guard": "symmetric Dirichlet one-half pseudocount mixed into each arm prediction using that fold's arm training count",
+    "deadline_rescue_output": "max(P(L1 <= 33333 | x) - P(L0 <= 33333 | x), 0)",
+    "tail_acceleration_outputs": "Keep P(L1 <= t | x) - P(L0 <= t | x) separate at every threshold; do not use bad12 as a surrogate deadline label."
+  },
+  "feature_families": [
+    {
+      "id": "primary_compact_physics_temporal",
+      "role": "main",
+      "encoded_feature_count": 246,
+      "definition": "The existing strictly primary/frame T2 family with compact primary physics and exact lags 1, 3, and 8."
+    },
+    {
+      "id": "primary_compact_physics_temporal_plus_passive_secondary",
+      "role": "secondary_link_ablation",
+      "encoded_feature_count": 308,
+      "definition": "The main family plus the 62 action-clean current and lagged passive secondary queue/PHY features already present in the frozen temporal dataset."
+    }
+  ],
+  "model_specs": [
+    {
+      "id": "hgb64_depth3_7leaf_multiclass_v1",
+      "learning_rate": 0.05,
+      "max_iter": 64,
+      "max_leaf_nodes": 7,
+      "max_depth": 3,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "max_bins": 63,
+      "early_stopping": false
+    },
+    {
+      "id": "hgb128_depth4_15leaf_multiclass_v1",
+      "learning_rate": 0.05,
+      "max_iter": 128,
+      "max_leaf_nodes": 15,
+      "max_depth": 4,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "max_bins": 127,
+      "early_stopping": false
+    }
+  ],
+  "predictor_assessment": {
+    "observed_arm_metrics": [
+      "multiclass_log_loss",
+      "multiclass_brier_score",
+      "CDF Brier score at every threshold",
+      "mean predicted versus observed CDF at every threshold"
+    ],
+    "primary_information_metrics": [
+      "deadline-miss ranking AUC against the reconstructed primary-copy label",
+      "per-run canonical-budget primary-miss capture frontier"
+    ],
+    "causal_policy_evaluation": "known-propensity doubly robust estimates using the cross-fitted arm CDFs",
+    "selection_priority": [
+      "deadline rescue",
+      "18 ms tail acceleration without deadline regression",
+      "lower exact canonical reservation",
+      "smaller primary-only model"
+    ]
+  },
+  "resource_contract": {
+    "action": "canonical_full_secondary_copy_at_T2",
+    "reservation_field": "action_estimated_airtime_us",
+    "reservation_values_are_known_before_action": true,
+    "budget_fraction": 0.006,
+    "measurement_duration_us": 60000000,
+    "refill_only_budget_us_per_run": 360000,
+    "initial_credit_us": 12000,
+    "finite_run_budget_us_per_run": 372000,
+    "full_horizon_capacity_us": 360000,
+    "unused_credit_transfer_between_runs": false,
+    "frame_gates": [
+      "p_frames_only",
+      "all_frames_cost_aware"
+    ]
+  },
+  "frontiers": {
+    "static_cross_fitted": {
+      "future_score_visibility": true,
+      "role": "predictor_information_ceiling_not_implementable_policy",
+      "optimization": "exact per-run predicted-benefit knapsack under decimal canonical reservations",
+      "objectives_reported_separately": [
+        "deadline rescue",
+        "completion by 18 ms",
+        "deadline-capped distributional acceleration"
+      ]
+    },
+    "online_nonclairvoyant": {
+      "future_score_visibility": false,
+      "causal_state": [
+        "current cross-fitted benefit vector",
+        "frame type and canonical reservation",
+        "measurement time remaining",
+        "currently spendable credit",
+        "causally observed primary congestion regime"
+      ],
+      "opportunity_cost": "training-derived finite-horizon shadow price conditioned on time, remaining resource, and congestion regime",
+      "accounting": "causal refill, full-horizon carry capacity, conservative reservation at admission, and no cross-run credit",
+      "evaluation": "cross-fitted known-propensity doubly robust outcome screen plus exact reservation replay"
+    }
+  },
+  "decision_rules": {
+    "freeze_v2_as_current_engineering_champion": true,
+    "stop_scalar_threshold_only_v6_variants": true,
+    "change_action_only_if": "The cross-fitted causal predictor and nonclairvoyant allocator cannot approach the less-than-0.40-percent miss target within the 1.20 sender-airtime bound.",
+    "next_action_if_required": "systematic erasure-coded striping or adaptive repair, not deficit duplication of currently unacknowledged packets",
+    "confirmation_seed_range_must_remain_unopened": [
+      1301,
+      1348
+    ]
+  },
+  "interpretation_limits": [
+    "The temporal dataset excludes lag-8 startup and action-dirty secondary endpoints, so its risks are not directly comparable with all-generated-frame closed-loop rates.",
+    "Frame-level doubly robust replay assumes away policy-induced queue and interference feedback; only a closed-loop campaign can establish final miss rate or P99.",
+    "The static frontier sees future predicted scores and is not deployable.",
+    "The secondary-feature family is an ablation, not an assumption that secondary failure prediction is the main source of deadline-miss headroom.",
+    "Completed-frame P99 is not identified by five CDF thresholds; completion by 18 ms is an offline tail gate, and final P99 requires closed-loop measurement."
+  ]
+}
