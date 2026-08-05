@@ -380,15 +380,33 @@ some of those valuable frames into the action set but leaves 748 misses among
 5,442 current-credit rejections.  The high-value decisions arrive in bursts
 faster than the strict 0.6% token refill makes them spendable.
 
-Do not respond by restoring V4's unpriced chronological borrowing.  V4 already
-showed that such borrowing displaces later, better actions and regresses.  The
-next isolated mechanism should allow repayment-enforced future credit only
-after the current reward clears the fold-honest opportunity price.  It must
-retain per-run conservative reservation, close with nonnegative balance at
-measurement stop, and pass a closed-loop sender-airtime/background check before
-promotion.  Sixteen of 48 V5 runs individually exceed a 1.20 sender-airtime
-ratio and have descriptively worse miss and P99 deltas, which supports retaining
-congestion state without claiming causality.
+The frozen repayment-enforced mechanism has now been tested through `4a5bf74`,
+with compact evidence under
+`key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.  It permits a
+reservation to debit deterministic future refill only after the current reward
+clears the unchanged fold-honest opportunity price.  Its predeclared
+congestion-tertile policy passes every screen: 1,517 primary-miss captures
+(73.78%), 0.748% DR misses, 2.002% completed-late18, at most 370.964 ms/run of
+reservation, and a positive final balance in all 96 runs.
+
+This is a reallocation result, not an action-count artifact.  Compared with
+strict congestion admission, borrow/repay has only 199 more net actions but
+replaces 3,449 strict-only frames containing 167 primary misses (4.84%) with
+3,648 borrow-only frames containing 628 (17.21%).  Borrow-only frames have
+median frame ID 551 and predicted reward 0.11080; displaced strict-only frames
+have median frame ID 1,268 and reward 0.02749.  Opportunity pricing therefore
+spends early only when the action is valuable enough to displace later
+capacity, exactly the protection absent from failed V4.
+
+Do not promote this replay directly.  Fifty-five runs enter debt, worst debt
+is 144.82 ms, and one run has 180 borrowed actions.  Those bursts can change
+contention, queues, rescue outcomes, sender airtime, completed-frame P99, and
+background throughput.  The next boundary is a checksum-bound full-data model
+and shadow-reference export plus exact compiled congestion/debt accounting,
+followed by the normal paired closed-loop STR qualification on already-opened
+engineering seeds.  Sixteen of 48 V5 runs individually exceed a 1.20
+sender-airtime ratio and have descriptively worse miss and P99 deltas, so keep
+the congestion state and resource checks without claiming causality.
 
 The frozen V5 JSON contains an unsupported note that unarchived
 secondary-feature and larger-model prototypes were null.  Its adjacent

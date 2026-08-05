@@ -1,0 +1,2484 @@
+{
+  "analysis_id": "temporal-t2-shadow-priced-borrow-repay-v1",
+  "analysis_schema_version": 1,
+  "bootstrap": {
+    "confidence_level": 0.95,
+    "point_estimand": "pooled action-clean frame mean",
+    "random_seed": 20260805,
+    "replications": 2000,
+    "resample_reduction": "sum sampled whole-run numerators divided by sum sampled whole-run row counts",
+    "shared_resample_matrix_for_all_policies": true,
+    "unit": "(seed, run_number)"
+  },
+  "design_contract": {
+    "path": "experiments/model-selection/temporal-t2-shadow-priced-borrow-repay-v1.json",
+    "sha256": "95913ef204aa5b9bc36b785cbc5bcf1d9a28d13a8da39d940262a83849bba8c7"
+  },
+  "engineering_screen": {
+    "checks": {
+      "canonical_reservation": {
+        "actual_maximum_us_per_run": 370963.2447885193,
+        "pass": true,
+        "required_maximum_us_per_run": 372000
+      },
+      "dr_completed_late18_ratio": {
+        "actual": 0.020018054178805453,
+        "pass": true,
+        "required_maximum": 0.02395111591511279
+      },
+      "dr_deadline_miss_probability": {
+        "actual": 0.00748090146922642,
+        "pass": true,
+        "required_maximum": 0.008
+      },
+      "primary_miss_capture_fraction": {
+        "actual": 0.7378404669260701,
+        "pass": true,
+        "required_minimum": 0.7
+      },
+      "repayment": {
+        "actual_minimum_final_balance_us": 1036.755211480705,
+        "pass": true,
+        "required_minimum_final_balance_us": 0
+      }
+    },
+    "decision": "advance to compiled closed-loop integration only if every screen passes; otherwise retain V2 and diagnose the failed boundary without consuming confirmation seeds",
+    "overall_pass": true,
+    "primary_policy": "congestion_tertile borrow-repay"
+  },
+  "evidence_role": "retrospective_cross_fitted_allocator_mechanism_screen",
+  "interpretation_limits": [
+    "This screen reuses the 96 opened randomized groups and is not independent confirmation.",
+    "The action-clean lag-8 population excludes startup and action-dirty rows, so its absolute risks are not directly comparable with all-generated-frame closed-loop campaigns.",
+    "Doubly robust frame replay does not reproduce action-induced contention, queues, sender airtime, background throughput, or completed-frame P99.",
+    "Borrowing deterministic accounting credit can create transient airtime bursts; only a closed-loop campaign can qualify the less-than-1.20 sender-airtime and background-throughput gates.",
+    "Reserved seeds 1301 through 1348 must not be read by this screen."
+  ],
+  "mechanism": {
+    "borrow_admission_rule": "after the unchanged positive-reward and opportunity-price tests pass, admit exactly when canonical reservation is no greater than repayable credit",
+    "causal_refill_rate_us_per_us": 0.006,
+    "debt_limit": "causally remaining deterministic refill only; balance must be at least the negative of remaining refill after every decision",
+    "initial_credit_us": 12000,
+    "maximum_total_generated_credit_us": 372000,
+    "measured_settlement_release": false,
+    "measurement_duration_us": 60000000,
+    "negative_balance_allowed": true,
+    "positive_balance_capacity_us": 360000,
+    "repayable_credit_at_decision": "current_balance_us + 0.006 * max(0, 60000000 - decision_time_us)",
+    "repayment_deadline_us": 60000000,
+    "required_final_balance": "greater than or equal to zero after exact refill through measurement stop",
+    "reservation": "action_estimated_airtime_us",
+    "reservation_is_debited_at_admission": true,
+    "unused_credit_transfer_between_runs": false
+  },
+  "policies": [
+    {
+      "action_count": 15392,
+      "action_fraction": 0.20970027247956402,
+      "action_transition_from_strict": {
+        "borrow_only": {
+          "canonical_reservation_us": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "median_frame_id": null,
+          "median_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "common": {
+          "canonical_reservation_us": 30534044.191363044,
+          "frame_count": 15392,
+          "mean_predicted_reward": 0.0672922132680919,
+          "median_frame_id": 1043.0,
+          "median_predicted_reward": 0.029882325106030172,
+          "primary_deadline_misses": 989,
+          "primary_miss_fraction": 0.064254158004158
+        },
+        "neither": {
+          "canonical_reservation_us": 128803868.67244966,
+          "frame_count": 58008,
+          "mean_predicted_reward": 0.017745928898172142,
+          "median_frame_id": 860.0,
+          "median_predicted_reward": 0.002177037109461155,
+          "primary_deadline_misses": 1067,
+          "primary_miss_fraction": 0.018394014618673286
+        },
+        "strict_only": {
+          "canonical_reservation_us": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "median_frame_id": null,
+          "median_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        }
+      },
+      "baseline_online_v1_exact_reproduction": true,
+      "borrow_minus_strict": {
+        "action_count": 0,
+        "captured_primary_deadline_misses": 0,
+        "dr_completed_late18_ratio": {
+          "ci_lower": 0.0,
+          "ci_upper": 0.0,
+          "estimate": 0.0
+        },
+        "dr_deadline_miss_probability": {
+          "ci_lower": -0.0,
+          "ci_upper": 0.0,
+          "estimate": -0.0
+        }
+      },
+      "captured_primary_deadline_misses": 989,
+      "credit_mode": "strict_current_credit",
+      "debt": {
+        "maximum_borrowed_actions_per_run": 0,
+        "maximum_debt_us": 0.0,
+        "maximum_final_balance_us": 250990.59929358462,
+        "mean_borrowed_actions_per_run": 0.0,
+        "mean_maximum_debt_us": 0.0,
+        "minimum_final_balance_us": 5004.276546117275,
+        "runs_with_debt": 0
+      },
+      "decision_outcomes": {
+        "borrowed_action": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "current_credit": {
+          "canonical_reservation_us_if_all_acted": 11206264.009680992,
+          "frame_count": 5649,
+          "mean_predicted_reward": 0.13621317032874805,
+          "primary_deadline_misses": 813,
+          "primary_miss_fraction": 0.14391927774827404
+        },
+        "gate": {
+          "canonical_reservation_us_if_all_acted": 18449246.5102008,
+          "frame_count": 2379,
+          "mean_predicted_reward": 0.03788130173072552,
+          "primary_deadline_misses": 108,
+          "primary_miss_fraction": 0.04539722572509458
+        },
+        "horizon_credit": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "nonpositive_reward": {
+          "canonical_reservation_us_if_all_acted": 5951.282001954854,
+          "frame_count": 3,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "opportunity_price": {
+          "canonical_reservation_us_if_all_acted": 99142406.87056594,
+          "frame_count": 49977,
+          "mean_predicted_reward": 0.0033979235952673365,
+          "primary_deadline_misses": 146,
+          "primary_miss_fraction": 0.002921343818156352
+        },
+        "strict_action": {
+          "canonical_reservation_us_if_all_acted": 30534044.191363044,
+          "frame_count": 15392,
+          "mean_predicted_reward": 0.0672922132680919,
+          "primary_deadline_misses": 989,
+          "primary_miss_fraction": 0.064254158004158
+        }
+      },
+      "dr_policy_completed_late18_ratio": 0.024474567809852105,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9225144895398337,
+        "18000": 0.9610981703861895,
+        "24000": 0.9753913099121788,
+        "30000": 0.9826771293971701,
+        "33333": 0.985210778388865
+      },
+      "dr_policy_deadline_miss_probability": 0.01478922161113505,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.020857138887305504,
+        "ci_upper": -0.016685005670058244,
+        "estimate": -0.01888670124523993
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.01501799719600185,
+        "ci_upper": -0.01151920664725564,
+        "estimate": -0.01326510870783093
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "frame_gate": "p_frames_only",
+      "future_evaluation_score_visibility": false,
+      "maximum_actions_per_run": 185,
+      "maximum_canonical_reservation_us_per_run": 366995.72345388273,
+      "mean_actions_per_run": 160.33333333333334,
+      "mean_canonical_reservation_us_per_run": 318062.9603266984,
+      "minimum_actions_per_run": 61,
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 1067,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.4810311284046693,
+      "regime_mode": "global",
+      "selected_primary_miss_fraction": 0.064254158004158,
+      "static_372ms_comparator": {
+        "action_count": 17943,
+        "captured_primary_deadline_misses": 1634,
+        "dr_policy_completed_late18_ratio": 0.01838677932867867,
+        "dr_policy_deadline_miss_probability": 0.005879779097996307,
+        "mean_canonical_reservation_us_per_run": 370777.2672259581,
+        "primary_miss_capture_fraction": 0.7947470817120622
+      },
+      "time_bin_outcomes": [
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 571,
+              "primary_deadline_misses": 85
+            },
+            "gate": {
+              "frame_count": 162,
+              "primary_deadline_misses": 13
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3879,
+              "primary_deadline_misses": 11
+            },
+            "strict_action": {
+              "frame_count": 1256,
+              "primary_deadline_misses": 181
+            }
+          },
+          "start_us": 0,
+          "stop_us": 5000000,
+          "time_bin": 0
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 540,
+              "primary_deadline_misses": 79
+            },
+            "gate": {
+              "frame_count": 157,
+              "primary_deadline_misses": 4
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4592,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 989,
+              "primary_deadline_misses": 70
+            }
+          },
+          "start_us": 5000000,
+          "stop_us": 10000000,
+          "time_bin": 1
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 539,
+              "primary_deadline_misses": 78
+            },
+            "gate": {
+              "frame_count": 251,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4342,
+              "primary_deadline_misses": 14
+            },
+            "strict_action": {
+              "frame_count": 1017,
+              "primary_deadline_misses": 83
+            }
+          },
+          "start_us": 10000000,
+          "stop_us": 15000000,
+          "time_bin": 2
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 500,
+              "primary_deadline_misses": 71
+            },
+            "gate": {
+              "frame_count": 164,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4464,
+              "primary_deadline_misses": 6
+            },
+            "strict_action": {
+              "frame_count": 1053,
+              "primary_deadline_misses": 85
+            }
+          },
+          "start_us": 15000000,
+          "stop_us": 20000000,
+          "time_bin": 3
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 449,
+              "primary_deadline_misses": 51
+            },
+            "gate": {
+              "frame_count": 249,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4481,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 1066,
+              "primary_deadline_misses": 49
+            }
+          },
+          "start_us": 20000000,
+          "stop_us": 25000000,
+          "time_bin": 4
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 570,
+              "primary_deadline_misses": 95
+            },
+            "gate": {
+              "frame_count": 166,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4269,
+              "primary_deadline_misses": 11
+            },
+            "strict_action": {
+              "frame_count": 1168,
+              "primary_deadline_misses": 86
+            }
+          },
+          "start_us": 25000000,
+          "stop_us": 30000000,
+          "time_bin": 5
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 528,
+              "primary_deadline_misses": 77
+            },
+            "gate": {
+              "frame_count": 254,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4260,
+              "primary_deadline_misses": 11
+            },
+            "strict_action": {
+              "frame_count": 1193,
+              "primary_deadline_misses": 82
+            }
+          },
+          "start_us": 30000000,
+          "stop_us": 35000000,
+          "time_bin": 6
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 367,
+              "primary_deadline_misses": 39
+            },
+            "gate": {
+              "frame_count": 161,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4313,
+              "primary_deadline_misses": 8
+            },
+            "strict_action": {
+              "frame_count": 1293,
+              "primary_deadline_misses": 58
+            }
+          },
+          "start_us": 35000000,
+          "stop_us": 40000000,
+          "time_bin": 7
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 497,
+              "primary_deadline_misses": 82
+            },
+            "gate": {
+              "frame_count": 231,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4184,
+              "primary_deadline_misses": 16
+            },
+            "strict_action": {
+              "frame_count": 1424,
+              "primary_deadline_misses": 84
+            }
+          },
+          "start_us": 40000000,
+          "stop_us": 45000000,
+          "time_bin": 8
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 413,
+              "primary_deadline_misses": 54
+            },
+            "gate": {
+              "frame_count": 168,
+              "primary_deadline_misses": 3
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3997,
+              "primary_deadline_misses": 10
+            },
+            "strict_action": {
+              "frame_count": 1532,
+              "primary_deadline_misses": 72
+            }
+          },
+          "start_us": 45000000,
+          "stop_us": 50000000,
+          "time_bin": 9
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 386,
+              "primary_deadline_misses": 62
+            },
+            "gate": {
+              "frame_count": 256,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3901,
+              "primary_deadline_misses": 14
+            },
+            "strict_action": {
+              "frame_count": 1739,
+              "primary_deadline_misses": 74
+            }
+          },
+          "start_us": 50000000,
+          "stop_us": 55000000,
+          "time_bin": 10
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 289,
+              "primary_deadline_misses": 40
+            },
+            "gate": {
+              "frame_count": 160,
+              "primary_deadline_misses": 6
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3295,
+              "primary_deadline_misses": 21
+            },
+            "strict_action": {
+              "frame_count": 1662,
+              "primary_deadline_misses": 65
+            }
+          },
+          "start_us": 55000000,
+          "stop_us": 60000000,
+          "time_bin": 11
+        }
+      ],
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 15586,
+      "action_fraction": 0.2123433242506812,
+      "action_transition_from_strict": {
+        "borrow_only": {
+          "canonical_reservation_us": 7581933.270490485,
+          "frame_count": 3822,
+          "mean_predicted_reward": 0.17011314711015443,
+          "median_frame_id": 578.0,
+          "median_predicted_reward": 0.11629681757444355,
+          "primary_deadline_misses": 681,
+          "primary_miss_fraction": 0.1781789638932496
+        },
+        "common": {
+          "canonical_reservation_us": 23336960.490332305,
+          "frame_count": 11764,
+          "mean_predicted_reward": 0.07546759954031865,
+          "median_frame_id": 934.0,
+          "median_predicted_reward": 0.03321604359845576,
+          "primary_deadline_misses": 824,
+          "primary_miss_fraction": 0.07004420265215913
+        },
+        "neither": {
+          "canonical_reservation_us": 121221935.4019592,
+          "frame_count": 54186,
+          "mean_predicted_reward": 0.006998733903040622,
+          "median_frame_id": 882.0,
+          "median_predicted_reward": 0.0019046128738494095,
+          "primary_deadline_misses": 386,
+          "primary_miss_fraction": 0.007123611264902374
+        },
+        "strict_only": {
+          "canonical_reservation_us": 7197083.701030739,
+          "frame_count": 3628,
+          "mean_predicted_reward": 0.040783050063440456,
+          "median_frame_id": 1273.0,
+          "median_predicted_reward": 0.025879008430681916,
+          "primary_deadline_misses": 165,
+          "primary_miss_fraction": 0.04547960308710033
+        }
+      },
+      "baseline_online_v1_exact_reproduction": false,
+      "borrow_minus_strict": {
+        "action_count": 194,
+        "captured_primary_deadline_misses": 516,
+        "dr_completed_late18_ratio": {
+          "ci_lower": -0.005833346720392442,
+          "ci_upper": -0.003519973649793776,
+          "estimate": -0.0046420227021292115
+        },
+        "dr_deadline_miss_probability": {
+          "ci_lower": -0.008850353003405333,
+          "ci_upper": -0.005697890795642954,
+          "estimate": -0.0072505159289606436
+        }
+      },
+      "captured_primary_deadline_misses": 1505,
+      "credit_mode": "shadow_borrow_repay",
+      "debt": {
+        "maximum_borrowed_actions_per_run": 180,
+        "maximum_debt_us": 132059.79211147188,
+        "maximum_final_balance_us": 250990.59929358462,
+        "mean_borrowed_actions_per_run": 90.54166666666667,
+        "mean_maximum_debt_us": 43967.15404186141,
+        "minimum_final_balance_us": 1036.755211480705,
+        "runs_with_debt": 53
+      },
+      "decision_outcomes": {
+        "borrowed_action": {
+          "canonical_reservation_us_if_all_acted": 17242847.720330536,
+          "frame_count": 8692,
+          "mean_predicted_reward": 0.14346906088696953,
+          "primary_deadline_misses": 1313,
+          "primary_miss_fraction": 0.1510584445467096
+        },
+        "current_credit": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "gate": {
+          "canonical_reservation_us_if_all_acted": 18449246.5102008,
+          "frame_count": 2379,
+          "mean_predicted_reward": 0.03788130173072552,
+          "primary_deadline_misses": 108,
+          "primary_miss_fraction": 0.04539722572509458
+        },
+        "horizon_credit": {
+          "canonical_reservation_us_if_all_acted": 87285.46936200456,
+          "frame_count": 44,
+          "mean_predicted_reward": 0.5322664909846484,
+          "primary_deadline_misses": 27,
+          "primary_miss_fraction": 0.6136363636363636
+        },
+        "nonpositive_reward": {
+          "canonical_reservation_us_if_all_acted": 5951.282001954854,
+          "frame_count": 3,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "opportunity_price": {
+          "canonical_reservation_us_if_all_acted": 109876535.84142518,
+          "frame_count": 55388,
+          "mean_predicted_reward": 0.007468313686711936,
+          "primary_deadline_misses": 416,
+          "primary_miss_fraction": 0.007510652126814473
+        },
+        "strict_action": {
+          "canonical_reservation_us_if_all_acted": 13676046.040492259,
+          "frame_count": 6894,
+          "mean_predicted_reward": 0.04220194546239916,
+          "primary_deadline_misses": 192,
+          "primary_miss_fraction": 0.0278503046127067
+        }
+      },
+      "dr_policy_completed_late18_ratio": 0.019832545107722893,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9344291414307971,
+        "18000": 0.9727782609305983,
+        "24000": 0.9844137845377884,
+        "30000": 0.9904543235722376,
+        "33333": 0.9924612943178256
+      },
+      "dr_policy_deadline_miss_probability": 0.007538705682174407,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.026081407214667018,
+        "ci_upper": -0.020881146618074078,
+        "estimate": -0.023528723947369143
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.023476726612919403,
+        "ci_upper": -0.01756677989721159,
+        "estimate": -0.020515624636791574
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "frame_gate": "p_frames_only",
+      "future_evaluation_score_visibility": false,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 162.35416666666666,
+      "mean_canonical_reservation_us_per_run": 322071.8100085707,
+      "minimum_actions_per_run": 61,
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 551,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7320038910505836,
+      "regime_mode": "global",
+      "selected_primary_miss_fraction": 0.0965610162966765,
+      "static_372ms_comparator": {
+        "action_count": 17943,
+        "captured_primary_deadline_misses": 1634,
+        "dr_policy_completed_late18_ratio": 0.01838677932867867,
+        "dr_policy_deadline_miss_probability": 0.005879779097996307,
+        "mean_canonical_reservation_us_per_run": 370777.2672259581,
+        "primary_miss_capture_fraction": 0.7947470817120622
+      },
+      "time_bin_outcomes": [
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 898,
+              "primary_deadline_misses": 126
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 162,
+              "primary_deadline_misses": 13
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3907,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 901,
+              "primary_deadline_misses": 139
+            }
+          },
+          "start_us": 0,
+          "stop_us": 5000000,
+          "time_bin": 0
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 1062,
+              "primary_deadline_misses": 131
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 157,
+              "primary_deadline_misses": 4
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4711,
+              "primary_deadline_misses": 14
+            },
+            "strict_action": {
+              "frame_count": 348,
+              "primary_deadline_misses": 16
+            }
+          },
+          "start_us": 5000000,
+          "stop_us": 10000000,
+          "time_bin": 1
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 1075,
+              "primary_deadline_misses": 151
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 251,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4515,
+              "primary_deadline_misses": 18
+            },
+            "strict_action": {
+              "frame_count": 308,
+              "primary_deadline_misses": 6
+            }
+          },
+          "start_us": 10000000,
+          "stop_us": 15000000,
+          "time_bin": 2
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 1026,
+              "primary_deadline_misses": 143
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 164,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4694,
+              "primary_deadline_misses": 14
+            },
+            "strict_action": {
+              "frame_count": 297,
+              "primary_deadline_misses": 5
+            }
+          },
+          "start_us": 15000000,
+          "stop_us": 20000000,
+          "time_bin": 3
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 855,
+              "primary_deadline_misses": 93
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 249,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4838,
+              "primary_deadline_misses": 16
+            },
+            "strict_action": {
+              "frame_count": 303,
+              "primary_deadline_misses": 3
+            }
+          },
+          "start_us": 20000000,
+          "stop_us": 25000000,
+          "time_bin": 4
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 907,
+              "primary_deadline_misses": 161
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 166,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4711,
+              "primary_deadline_misses": 26
+            },
+            "strict_action": {
+              "frame_count": 389,
+              "primary_deadline_misses": 5
+            }
+          },
+          "start_us": 25000000,
+          "stop_us": 30000000,
+          "time_bin": 5
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 793,
+              "primary_deadline_misses": 139
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 254,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4751,
+              "primary_deadline_misses": 28
+            },
+            "strict_action": {
+              "frame_count": 437,
+              "primary_deadline_misses": 3
+            }
+          },
+          "start_us": 30000000,
+          "stop_us": 35000000,
+          "time_bin": 6
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 599,
+              "primary_deadline_misses": 80
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 161,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4853,
+              "primary_deadline_misses": 23
+            },
+            "strict_action": {
+              "frame_count": 521,
+              "primary_deadline_misses": 2
+            }
+          },
+          "start_us": 35000000,
+          "stop_us": 40000000,
+          "time_bin": 7
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 591,
+              "primary_deadline_misses": 125
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 231,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4875,
+              "primary_deadline_misses": 54
+            },
+            "strict_action": {
+              "frame_count": 639,
+              "primary_deadline_misses": 3
+            }
+          },
+          "start_us": 40000000,
+          "stop_us": 45000000,
+          "time_bin": 8
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 428,
+              "primary_deadline_misses": 79
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 168,
+              "primary_deadline_misses": 3
+            },
+            "horizon_credit": {
+              "frame_count": 1,
+              "primary_deadline_misses": 1
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4736,
+              "primary_deadline_misses": 52
+            },
+            "strict_action": {
+              "frame_count": 777,
+              "primary_deadline_misses": 4
+            }
+          },
+          "start_us": 45000000,
+          "stop_us": 50000000,
+          "time_bin": 9
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 287,
+              "primary_deadline_misses": 54
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 256,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 15,
+              "primary_deadline_misses": 11
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4731,
+              "primary_deadline_misses": 80
+            },
+            "strict_action": {
+              "frame_count": 993,
+              "primary_deadline_misses": 5
+            }
+          },
+          "start_us": 50000000,
+          "stop_us": 55000000,
+          "time_bin": 10
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 171,
+              "primary_deadline_misses": 31
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 160,
+              "primary_deadline_misses": 6
+            },
+            "horizon_credit": {
+              "frame_count": 28,
+              "primary_deadline_misses": 15
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4066,
+              "primary_deadline_misses": 79
+            },
+            "strict_action": {
+              "frame_count": 981,
+              "primary_deadline_misses": 1
+            }
+          },
+          "start_us": 55000000,
+          "stop_us": 60000000,
+          "time_bin": 11
+        }
+      ],
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 15520,
+      "action_fraction": 0.2114441416893733,
+      "action_transition_from_strict": {
+        "borrow_only": {
+          "canonical_reservation_us": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "median_frame_id": null,
+          "median_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "common": {
+          "canonical_reservation_us": 30787965.556779787,
+          "frame_count": 15520,
+          "mean_predicted_reward": 0.06906282697310853,
+          "median_frame_id": 1033.0,
+          "median_predicted_reward": 0.030919556065832743,
+          "primary_deadline_misses": 1056,
+          "primary_miss_fraction": 0.06804123711340206
+        },
+        "neither": {
+          "canonical_reservation_us": 128549947.30703293,
+          "frame_count": 57880,
+          "mean_predicted_reward": 0.017161584580597713,
+          "median_frame_id": 861.0,
+          "median_predicted_reward": 0.002170846767608703,
+          "primary_deadline_misses": 1000,
+          "primary_miss_fraction": 0.017277125086385625
+        },
+        "strict_only": {
+          "canonical_reservation_us": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "median_frame_id": null,
+          "median_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        }
+      },
+      "baseline_online_v1_exact_reproduction": true,
+      "borrow_minus_strict": {
+        "action_count": 0,
+        "captured_primary_deadline_misses": 0,
+        "dr_completed_late18_ratio": {
+          "ci_lower": 0.0,
+          "ci_upper": 0.0,
+          "estimate": 0.0
+        },
+        "dr_deadline_miss_probability": {
+          "ci_lower": -0.0,
+          "ci_upper": 0.0,
+          "estimate": -0.0
+        }
+      },
+      "captured_primary_deadline_misses": 1056,
+      "credit_mode": "strict_current_credit",
+      "debt": {
+        "maximum_borrowed_actions_per_run": 0,
+        "maximum_debt_us": 0.0,
+        "maximum_final_balance_us": 260909.40263017605,
+        "mean_borrowed_actions_per_run": 0.0,
+        "mean_maximum_debt_us": 0.0,
+        "minimum_final_balance_us": 5004.276546117275,
+        "runs_with_debt": 0
+      },
+      "decision_outcomes": {
+        "borrowed_action": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "current_credit": {
+          "canonical_reservation_us_if_all_acted": 10795625.551546108,
+          "frame_count": 5442,
+          "mean_predicted_reward": 0.13259523301219517,
+          "primary_deadline_misses": 748,
+          "primary_miss_fraction": 0.137449467107681
+        },
+        "gate": {
+          "canonical_reservation_us_if_all_acted": 18449246.5102008,
+          "frame_count": 2379,
+          "mean_predicted_reward": 0.03788130173072552,
+          "primary_deadline_misses": 108,
+          "primary_miss_fraction": 0.04539722572509458
+        },
+        "horizon_credit": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "nonpositive_reward": {
+          "canonical_reservation_us_if_all_acted": 5951.282001954854,
+          "frame_count": 3,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "opportunity_price": {
+          "canonical_reservation_us_if_all_acted": 99299123.96328408,
+          "frame_count": 50056,
+          "mean_predicted_reward": 0.003628129308279397,
+          "primary_deadline_misses": 144,
+          "primary_miss_fraction": 0.002876778008630334
+        },
+        "strict_action": {
+          "canonical_reservation_us_if_all_acted": 30787965.556779787,
+          "frame_count": 15520,
+          "mean_predicted_reward": 0.06906282697310853,
+          "primary_deadline_misses": 1056,
+          "primary_miss_fraction": 0.06804123711340206
+        }
+      },
+      "dr_policy_completed_late18_ratio": 0.02395111591511279,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9241999138589604,
+        "18000": 0.9624919060645382,
+        "24000": 0.9765306519451524,
+        "30000": 0.9836840948705374,
+        "33333": 0.9861103493468366
+      },
+      "dr_policy_deadline_miss_probability": 0.013889650653163388,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.021513888344846015,
+        "ci_upper": -0.01714538787893048,
+        "estimate": -0.019410153139979246
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.015981549606608265,
+        "ci_upper": -0.012240426072065953,
+        "estimate": -0.014164679665802593
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "frame_gate": "p_frames_only",
+      "future_evaluation_score_visibility": false,
+      "maximum_actions_per_run": 185,
+      "maximum_canonical_reservation_us_per_run": 366995.72345388273,
+      "mean_actions_per_run": 161.66666666666666,
+      "mean_canonical_reservation_us_per_run": 320707.9745497894,
+      "minimum_actions_per_run": 56,
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 1000,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.5136186770428015,
+      "regime_mode": "congestion_tertile",
+      "selected_primary_miss_fraction": 0.06804123711340206,
+      "static_372ms_comparator": {
+        "action_count": 17943,
+        "captured_primary_deadline_misses": 1634,
+        "dr_policy_completed_late18_ratio": 0.01838677932867867,
+        "dr_policy_deadline_miss_probability": 0.005879779097996307,
+        "mean_canonical_reservation_us_per_run": 370777.2672259581,
+        "primary_miss_capture_fraction": 0.7947470817120622
+      },
+      "time_bin_outcomes": [
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 581,
+              "primary_deadline_misses": 84
+            },
+            "gate": {
+              "frame_count": 162,
+              "primary_deadline_misses": 13
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3857,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 1268,
+              "primary_deadline_misses": 181
+            }
+          },
+          "start_us": 0,
+          "stop_us": 5000000,
+          "time_bin": 0
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 552,
+              "primary_deadline_misses": 81
+            },
+            "gate": {
+              "frame_count": 157,
+              "primary_deadline_misses": 4
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4572,
+              "primary_deadline_misses": 11
+            },
+            "strict_action": {
+              "frame_count": 997,
+              "primary_deadline_misses": 69
+            }
+          },
+          "start_us": 5000000,
+          "stop_us": 10000000,
+          "time_bin": 1
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 520,
+              "primary_deadline_misses": 81
+            },
+            "gate": {
+              "frame_count": 251,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4361,
+              "primary_deadline_misses": 11
+            },
+            "strict_action": {
+              "frame_count": 1017,
+              "primary_deadline_misses": 83
+            }
+          },
+          "start_us": 10000000,
+          "stop_us": 15000000,
+          "time_bin": 2
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 494,
+              "primary_deadline_misses": 74
+            },
+            "gate": {
+              "frame_count": 164,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4449,
+              "primary_deadline_misses": 8
+            },
+            "strict_action": {
+              "frame_count": 1074,
+              "primary_deadline_misses": 80
+            }
+          },
+          "start_us": 15000000,
+          "stop_us": 20000000,
+          "time_bin": 3
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 435,
+              "primary_deadline_misses": 47
+            },
+            "gate": {
+              "frame_count": 249,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4470,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 1091,
+              "primary_deadline_misses": 53
+            }
+          },
+          "start_us": 20000000,
+          "stop_us": 25000000,
+          "time_bin": 4
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 527,
+              "primary_deadline_misses": 88
+            },
+            "gate": {
+              "frame_count": 166,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4270,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 1210,
+              "primary_deadline_misses": 92
+            }
+          },
+          "start_us": 25000000,
+          "stop_us": 30000000,
+          "time_bin": 5
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 502,
+              "primary_deadline_misses": 68
+            },
+            "gate": {
+              "frame_count": 254,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4277,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 1202,
+              "primary_deadline_misses": 90
+            }
+          },
+          "start_us": 30000000,
+          "stop_us": 35000000,
+          "time_bin": 6
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 313,
+              "primary_deadline_misses": 29
+            },
+            "gate": {
+              "frame_count": 161,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4341,
+              "primary_deadline_misses": 8
+            },
+            "strict_action": {
+              "frame_count": 1319,
+              "primary_deadline_misses": 68
+            }
+          },
+          "start_us": 35000000,
+          "stop_us": 40000000,
+          "time_bin": 7
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 459,
+              "primary_deadline_misses": 73
+            },
+            "gate": {
+              "frame_count": 231,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4208,
+              "primary_deadline_misses": 15
+            },
+            "strict_action": {
+              "frame_count": 1438,
+              "primary_deadline_misses": 94
+            }
+          },
+          "start_us": 40000000,
+          "stop_us": 45000000,
+          "time_bin": 8
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 399,
+              "primary_deadline_misses": 46
+            },
+            "gate": {
+              "frame_count": 168,
+              "primary_deadline_misses": 3
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4000,
+              "primary_deadline_misses": 10
+            },
+            "strict_action": {
+              "frame_count": 1543,
+              "primary_deadline_misses": 80
+            }
+          },
+          "start_us": 45000000,
+          "stop_us": 50000000,
+          "time_bin": 9
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 374,
+              "primary_deadline_misses": 48
+            },
+            "gate": {
+              "frame_count": 256,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3936,
+              "primary_deadline_misses": 13
+            },
+            "strict_action": {
+              "frame_count": 1716,
+              "primary_deadline_misses": 89
+            }
+          },
+          "start_us": 50000000,
+          "stop_us": 55000000,
+          "time_bin": 10
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "current_credit": {
+              "frame_count": 286,
+              "primary_deadline_misses": 29
+            },
+            "gate": {
+              "frame_count": 160,
+              "primary_deadline_misses": 6
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3315,
+              "primary_deadline_misses": 20
+            },
+            "strict_action": {
+              "frame_count": 1645,
+              "primary_deadline_misses": 77
+            }
+          },
+          "start_us": 55000000,
+          "stop_us": 60000000,
+          "time_bin": 11
+        }
+      ],
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 15719,
+      "action_fraction": 0.21415531335149865,
+      "action_transition_from_strict": {
+        "borrow_only": {
+          "canonical_reservation_us": 7236758.9143771045,
+          "frame_count": 3648,
+          "mean_predicted_reward": 0.1661407858983218,
+          "median_frame_id": 551.0,
+          "median_predicted_reward": 0.11079806852848989,
+          "primary_deadline_misses": 628,
+          "primary_miss_fraction": 0.17214912280701755
+        },
+        "common": {
+          "canonical_reservation_us": 23945975.01519902,
+          "frame_count": 12071,
+          "mean_predicted_reward": 0.07712359883976654,
+          "median_frame_id": 936.0,
+          "median_predicted_reward": 0.03348022082214985,
+          "primary_deadline_misses": 889,
+          "primary_miss_fraction": 0.07364758512136525
+        },
+        "neither": {
+          "canonical_reservation_us": 121313188.39265582,
+          "frame_count": 54232,
+          "mean_predicted_reward": 0.007140266421447075,
+          "median_frame_id": 885.0,
+          "median_predicted_reward": 0.0019093976941528812,
+          "primary_deadline_misses": 372,
+          "primary_miss_fraction": 0.00685941879333235
+        },
+        "strict_only": {
+          "canonical_reservation_us": 6841990.541580766,
+          "frame_count": 3449,
+          "mean_predicted_reward": 0.04085129400632725,
+          "median_frame_id": 1268.0,
+          "median_predicted_reward": 0.027494834227040243,
+          "primary_deadline_misses": 167,
+          "primary_miss_fraction": 0.048419831835314585
+        }
+      },
+      "baseline_online_v1_exact_reproduction": false,
+      "borrow_minus_strict": {
+        "action_count": 199,
+        "captured_primary_deadline_misses": 461,
+        "dr_completed_late18_ratio": {
+          "ci_lower": -0.005339697213814188,
+          "ci_upper": -0.002734222761241421,
+          "estimate": -0.003933061736307336
+        },
+        "dr_deadline_miss_probability": {
+          "ci_lower": -0.007945041598070178,
+          "ci_upper": -0.004945918223442997,
+          "estimate": -0.006408749183936968
+        }
+      },
+      "captured_primary_deadline_misses": 1517,
+      "credit_mode": "shadow_borrow_repay",
+      "debt": {
+        "maximum_borrowed_actions_per_run": 180,
+        "maximum_debt_us": 144817.0574304696,
+        "maximum_final_balance_us": 260909.40263017605,
+        "mean_borrowed_actions_per_run": 87.92708333333333,
+        "mean_maximum_debt_us": 43421.99665209993,
+        "minimum_final_balance_us": 1036.755211480705,
+        "runs_with_debt": 55
+      },
+      "decision_outcomes": {
+        "borrowed_action": {
+          "canonical_reservation_us_if_all_acted": 16744923.792833645,
+          "frame_count": 8441,
+          "mean_predicted_reward": 0.1441866275338386,
+          "primary_deadline_misses": 1299,
+          "primary_miss_fraction": 0.1538917189906409
+        },
+        "current_credit": {
+          "canonical_reservation_us_if_all_acted": 0.0,
+          "frame_count": 0,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "gate": {
+          "canonical_reservation_us_if_all_acted": 18449246.5102008,
+          "frame_count": 2379,
+          "mean_predicted_reward": 0.03788130173072552,
+          "primary_deadline_misses": 108,
+          "primary_miss_fraction": 0.04539722572509458
+        },
+        "horizon_credit": {
+          "canonical_reservation_us_if_all_acted": 111090.59736982397,
+          "frame_count": 56,
+          "mean_predicted_reward": 0.45370069403940033,
+          "primary_deadline_misses": 24,
+          "primary_miss_fraction": 0.42857142857142855
+        },
+        "nonpositive_reward": {
+          "canonical_reservation_us_if_all_acted": 5951.282001954854,
+          "frame_count": 3,
+          "mean_predicted_reward": 0.0,
+          "primary_deadline_misses": 0,
+          "primary_miss_fraction": 0.0
+        },
+        "opportunity_price": {
+          "canonical_reservation_us_if_all_acted": 109588890.54466403,
+          "frame_count": 55243,
+          "mean_predicted_reward": 0.007468822944303134,
+          "primary_deadline_misses": 407,
+          "primary_miss_fraction": 0.007367449269590718
+        },
+        "strict_action": {
+          "canonical_reservation_us_if_all_acted": 14437810.13674248,
+          "frame_count": 7278,
+          "mean_predicted_reward": 0.043962795484854086,
+          "primary_deadline_misses": 218,
+          "primary_miss_fraction": 0.029953283869194835
+        }
+      },
+      "dr_policy_completed_late18_ratio": 0.020018054178805453,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9345627938608329,
+        "18000": 0.9726507974428854,
+        "24000": 0.9845106494519168,
+        "30000": 0.9905265165915633,
+        "33333": 0.9925190985307736
+      },
+      "dr_policy_deadline_miss_probability": 0.00748090146922642,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02588455330893728,
+        "ci_upper": -0.020594862988969072,
+        "estimate": -0.023343214876286583
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.023487954474643198,
+        "ci_upper": -0.017562827324052892,
+        "estimate": -0.02057342884973956
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "frame_gate": "p_frames_only",
+      "future_evaluation_score_visibility": false,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 163.73958333333334,
+      "mean_canonical_reservation_us_per_run": 324820.14509975124,
+      "minimum_actions_per_run": 56,
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 539,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7378404669260701,
+      "regime_mode": "congestion_tertile",
+      "selected_primary_miss_fraction": 0.09650741141293975,
+      "static_372ms_comparator": {
+        "action_count": 17943,
+        "captured_primary_deadline_misses": 1634,
+        "dr_policy_completed_late18_ratio": 0.01838677932867867,
+        "dr_policy_deadline_miss_probability": 0.005879779097996307,
+        "mean_canonical_reservation_us_per_run": 370777.2672259581,
+        "primary_miss_capture_fraction": 0.7947470817120622
+      },
+      "time_bin_outcomes": [
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 898,
+              "primary_deadline_misses": 124
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 162,
+              "primary_deadline_misses": 13
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 3895,
+              "primary_deadline_misses": 12
+            },
+            "strict_action": {
+              "frame_count": 913,
+              "primary_deadline_misses": 141
+            }
+          },
+          "start_us": 0,
+          "stop_us": 5000000,
+          "time_bin": 0
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 1057,
+              "primary_deadline_misses": 126
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 157,
+              "primary_deadline_misses": 4
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4684,
+              "primary_deadline_misses": 13
+            },
+            "strict_action": {
+              "frame_count": 380,
+              "primary_deadline_misses": 22
+            }
+          },
+          "start_us": 5000000,
+          "stop_us": 10000000,
+          "time_bin": 1
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 1015,
+              "primary_deadline_misses": 148
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 251,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4543,
+              "primary_deadline_misses": 19
+            },
+            "strict_action": {
+              "frame_count": 340,
+              "primary_deadline_misses": 8
+            }
+          },
+          "start_us": 10000000,
+          "stop_us": 15000000,
+          "time_bin": 2
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 995,
+              "primary_deadline_misses": 142
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 164,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4686,
+              "primary_deadline_misses": 15
+            },
+            "strict_action": {
+              "frame_count": 336,
+              "primary_deadline_misses": 5
+            }
+          },
+          "start_us": 15000000,
+          "stop_us": 20000000,
+          "time_bin": 3
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 843,
+              "primary_deadline_misses": 91
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 249,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4792,
+              "primary_deadline_misses": 18
+            },
+            "strict_action": {
+              "frame_count": 361,
+              "primary_deadline_misses": 3
+            }
+          },
+          "start_us": 20000000,
+          "stop_us": 25000000,
+          "time_bin": 4
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 887,
+              "primary_deadline_misses": 164
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 166,
+              "primary_deadline_misses": 10
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4673,
+              "primary_deadline_misses": 24
+            },
+            "strict_action": {
+              "frame_count": 447,
+              "primary_deadline_misses": 4
+            }
+          },
+          "start_us": 25000000,
+          "stop_us": 30000000,
+          "time_bin": 5
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 731,
+              "primary_deadline_misses": 135
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 254,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4776,
+              "primary_deadline_misses": 31
+            },
+            "strict_action": {
+              "frame_count": 474,
+              "primary_deadline_misses": 4
+            }
+          },
+          "start_us": 30000000,
+          "stop_us": 35000000,
+          "time_bin": 6
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 532,
+              "primary_deadline_misses": 79
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 161,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4846,
+              "primary_deadline_misses": 23
+            },
+            "strict_action": {
+              "frame_count": 595,
+              "primary_deadline_misses": 3
+            }
+          },
+          "start_us": 35000000,
+          "stop_us": 40000000,
+          "time_bin": 7
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 558,
+              "primary_deadline_misses": 122
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 231,
+              "primary_deadline_misses": 8
+            },
+            "horizon_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4895,
+              "primary_deadline_misses": 56
+            },
+            "strict_action": {
+              "frame_count": 652,
+              "primary_deadline_misses": 4
+            }
+          },
+          "start_us": 40000000,
+          "stop_us": 45000000,
+          "time_bin": 8
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 419,
+              "primary_deadline_misses": 74
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 168,
+              "primary_deadline_misses": 3
+            },
+            "horizon_credit": {
+              "frame_count": 4,
+              "primary_deadline_misses": 3
+            },
+            "nonpositive_reward": {
+              "frame_count": 1,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4721,
+              "primary_deadline_misses": 53
+            },
+            "strict_action": {
+              "frame_count": 798,
+              "primary_deadline_misses": 6
+            }
+          },
+          "start_us": 45000000,
+          "stop_us": 50000000,
+          "time_bin": 9
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 325,
+              "primary_deadline_misses": 62
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 256,
+              "primary_deadline_misses": 15
+            },
+            "horizon_credit": {
+              "frame_count": 16,
+              "primary_deadline_misses": 8
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4683,
+              "primary_deadline_misses": 74
+            },
+            "strict_action": {
+              "frame_count": 1002,
+              "primary_deadline_misses": 6
+            }
+          },
+          "start_us": 50000000,
+          "stop_us": 55000000,
+          "time_bin": 10
+        },
+        {
+          "decisions": {
+            "borrowed_action": {
+              "frame_count": 181,
+              "primary_deadline_misses": 32
+            },
+            "current_credit": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "gate": {
+              "frame_count": 160,
+              "primary_deadline_misses": 6
+            },
+            "horizon_credit": {
+              "frame_count": 36,
+              "primary_deadline_misses": 13
+            },
+            "nonpositive_reward": {
+              "frame_count": 0,
+              "primary_deadline_misses": 0
+            },
+            "opportunity_price": {
+              "frame_count": 4049,
+              "primary_deadline_misses": 69
+            },
+            "strict_action": {
+              "frame_count": 980,
+              "primary_deadline_misses": 12
+            }
+          },
+          "start_us": 55000000,
+          "stop_us": 60000000,
+          "time_bin": 11
+        }
+      ],
+      "variant": "primary_secondary_hgb64"
+    }
+  ],
+  "population": {
+    "primary_deadline_misses": 2056,
+    "row_count": 73400,
+    "run_group_count": 96,
+    "scope": "action-clean lag-8 temporal T2 rows; not all generated frames"
+  },
+  "provenance": {
+    "project_git_commit": "4a5bf74ee21e5ac0d14384957636e497630256af",
+    "project_git_status_porcelain": "",
+    "tool": "tools/analyze_temporal_t2_shadow_borrow.py",
+    "tool_sha256": "811f0b3049ed3de98ba063dc4225dad7a1f45764910c79df52c67d584b0f70f3"
+  },
+  "selected_predictor": {
+    "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+    "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+    "selection_record": {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1634,
+      "dr_policy_completed_late18_ratio": 0.01838677932867867,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9388742520613594,
+        "18000": 0.9758415517741013,
+        "24000": 0.9867078067571047,
+        "30000": 0.9923521353027396,
+        "33333": 0.9941202209020037
+      },
+      "dr_policy_deadline_miss_probability": 0.005879779097996307,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02773548964821838,
+        "ci_upper": -0.02213879137353685,
+        "estimate": -0.024974489726413366
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025480438915913565,
+        "ci_upper": -0.018809438357183062,
+        "estimate": -0.022174551220969674
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 422,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7947470817120622,
+      "selected_primary_miss_fraction": 0.09106615393189545,
+      "variant": "primary_secondary_hgb64"
+    },
+    "selection_uses_all_opened_engineering_folds": true,
+    "variant": "primary_secondary_hgb64"
+  },
+  "source": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "online_v1_manifest_sha256": "4a023387681441c598deafd706e729dcee2eeae2d006292fb8f950cee9f3c4fd",
+    "online_v1_metrics_sha256": "7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074",
+    "shadow_reference_manifest_sha256": "691766862ac2673d2464302cdbf17b28b74260d32d84bd3944f87c5833e97a55",
+    "shadow_reference_metrics_sha256": "c710dff1873c9f00c4beae2c824f365247b2cfc92943af738f59887d916978d6",
+    "shadow_reference_predictions_sha256": "82c48787d877e1d9a492e3234798917b614a0171f98dfe5a7eeabad0cb990cd8",
+    "static_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+    "static_metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96"
+  }
+}

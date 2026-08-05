@@ -90,6 +90,8 @@ P99.
 | Fit fold-honest shadow references | `473af75` | Exact selected-model reproduction and training-fold scores |
 | Add fold-honest online allocator | `1aeddc0` | Nonclairvoyant shadow-price replay, report, and figure |
 | Complete distributional ceiling replay | `dd9be5f` | Checksum-closed cross-fit, static, reference, and online artifacts |
+| Freeze shadow-priced future credit | `ba4dfe9` | Single-mechanism repayable-credit contract and go/no-go screen |
+| Replay shadow-priced future credit | `4a5bf74` | Exact baseline, debt, action-transition, DR, report, and figure evidence |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -148,11 +150,13 @@ at `0528610`; V2 remains the engineering champion.
 - [ ] Combine the fold-honest shadow price with exact future-credit borrowing
   that must be repaid by measurement stop.  First replay the single frozen
   mechanism on the already-opened randomized groups and record direct rejection
-  outcomes.  If it materially closes the static gap, integrate the selected
-  policy into the runtime and qualify it against STR on already-opened
-  engineering seeds before touching confirmation seeds.  Preserve conservative
-  reservations, the less-than-1.20 sender-airtime gate, and the background
-  throughput gate.
+  outcomes.  The replay passes all five gates through `4a5bf74`, raising
+  primary-miss capture from 51.36% to 73.78%.  Next integrate the selected
+  congestion policy into the runtime, validate its exported model/reference
+  identities and exact repayment accounting, and qualify it against STR on
+  already-opened engineering seeds before touching confirmation seeds.
+  Preserve conservative reservations, the less-than-1.20 sender-airtime gate,
+  and the background throughput gate.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -257,13 +261,29 @@ contain 813 primary misses, versus 146 among opportunity-price rejections;
 the corresponding congestion counts are 748 and 144.  Credit-rejected frames
 are the riskier population.
 
-This does not revive naive V4 borrowing.  V4 already proved that making future
-refill available without valuing displaced later actions spends chronologically
-and regresses.  The next isolated screen must debit future credit only when the
-current distributional reward exceeds the fold-honest opportunity price, then
-enforce full repayment at measurement stop.  The compact completed ceiling is
-archived under
-`key_experiment_results/13_temporal_t2_distributional_online_ceiling_v1`.
+The isolated shadow-priced borrowing screen now passes.  With congestion
+tertiles it captures 1,517 primary misses (73.78%), estimates 0.748% misses and
+2.002% completed-late18, averages 324.82 ms/run of reservation, and never
+exceeds 370.964 ms/run.  All 96 balances close positive at measurement stop;
+the minimum is 1.037 ms.  Relative to strict congestion admission, the shared
+bootstrap miss-risk delta is -0.6409 percentage points with interval
+[-0.7945, -0.4946], and late18 changes by -0.3933 points with interval
+[-0.5339, -0.2734].
+
+This succeeds for the reason V4 failed.  Borrow/repay substitutes 3,648
+borrow-only actions containing 628 primary misses (17.21%) for 3,449
+strict-only actions containing 167 (4.84%).  Borrow-only frames are earlier
+(median frame 551 versus 1,268) and have four times the median predicted
+reward.  The opportunity price raises as debt consumes future capacity and
+protects later high-value opportunities.
+
+The replay does not yet promote a runtime candidate.  Fifty-five runs enter
+debt and worst transient debt is 144.82 ms, so changed contention, queues,
+sender airtime, secondary rescue, background throughput, and completed P99
+must be measured closed loop.  Next export a full-data runtime predictor and
+shadow reference, implement exact congestion/debt state, and pass the existing
+paired STR gates on already-opened engineering seeds.  Compact evidence is
+under `key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -444,8 +464,36 @@ Do not repeat an entry unless relevant code changed after it ran.
   respectively.  The online primary JSON has SHA-256
   `7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074`.
   Both generated figures were visually inspected after checksum verification.
+- Shadow-priced borrowing through `4a5bf74`: 7 focused borrow tests and 13
+  online/static compatibility tests pass; `py_compile`, 88-column, diff, exact
+  online-v1 reproduction, and clean-worktree provenance checks pass.  The
+  canonical result and manifest SHA-256 values are
+  `134e2632a02fc3979284700e3bd9531353c18d0fa6e4d27f6e1adea4b2d6f4bb`
+  and `b21c2109f3d1d0c4ab50e17656302471560804997174a24975d25db81e301fcb`.
+  Every source hash closes and the generated figure was visually inspected.
 
 ## Work log
+
+### 2026-08-05 - Validate shadow-priced future credit
+
+- Froze the single borrow/repay mechanism at `ba4dfe9` before reading its
+  result.  Predictor, reward, P-frame gate, shadow curves, congestion state,
+  reservation, and total resource remain identical to the no-borrow replay.
+- Added exact strict-baseline reproduction, repayable-credit accounting,
+  decision-route outcomes, time-bin diagnostics, per-run debt closure, shared
+  bootstrap deltas, and a four-panel plot through `4a5bf74`.
+- Passed all five predeclared gates.  Congestion-aware capture rises from
+  51.36% to 73.78%, with DR miss risk falling from 1.389% to 0.748% and every
+  run staying below 372 ms of reservation and repaying by measurement stop.
+- Proved the mechanism reallocates rather than merely spends more: 3,648
+  borrow-only actions carry 17.21% primary-miss risk, versus 4.84% for 3,449
+  displaced strict-only actions.
+- Archived the checksum-closed machine evidence, generated report, and
+  reviewed plot under
+  `key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
+- Advanced to compiled closed-loop integration on opened engineering seeds.
+  Transient debt reaches 144.82 ms, so runtime contention and resource gates
+  remain unproven.
 
 ### 2026-08-05 - Complete the distributional and online ceiling stage
 

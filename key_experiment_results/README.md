@@ -41,6 +41,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `11_cost_free_t2_str_engineering_v5` | Cost-free raw-value T2 V5 versus STR MLO | Strict 48-pair all-gate pass, exact V2/V5 action comparison, raw-archive identity, and qualification plus standard figures |
 | `12_temporal_t2_ceiling_decomposition_v1` | Closed-loop V2/V5 action, score, and resource ceilings | Per-run canonical frontiers, primary-information oracle, counterfactual support audit, report, and figure |
 | `13_temporal_t2_distributional_online_ceiling_v1` | Cross-fitted distributional T2 and nonclairvoyant allocation ceiling | Four predictor variants, exact static frontier, fold-honest shadow references, online replay, reports, and figures |
+| `14_temporal_t2_shadow_borrow_repay_v1` | Opportunity-priced deterministic future-credit replay | Exact strict baseline, repayment-bounded allocation, decision-route and action-substitution diagnostics, shared-bootstrap outcomes, and figure |
 
 ## Current best STR result
 
@@ -97,6 +98,15 @@ shadow-price replays capture only 48.10% and 51.36%, respectively, and leave
 about 50 ms/run of reservation unused.  Prediction has enough static headroom;
 chronological access to credit is now the dominant replay limitation.  See
 `13_temporal_t2_distributional_online_ceiling_v1/README.md`.
+
+The frozen shadow-priced borrow/repay screen materially closes that gap.  Its
+predeclared congestion-aware policy captures 73.78% of primary misses versus
+51.36% without borrowing and 79.47% for the static frontier.  It estimates
+0.748% doubly robust misses, reserves at most 370.96 ms/run, and repays every
+run.  The gain comes from replacing 3,449 later 4.84%-risk actions with 3,648
+earlier 17.21%-risk actions, rather than merely adding airtime.  Transient debt
+reaches 144.82 ms, so this is authorization for closed-loop engineering, not a
+promotion over V2.  See `14_temporal_t2_shadow_borrow_repay_v1/README.md`.
 
 ## Principal streaming results
 

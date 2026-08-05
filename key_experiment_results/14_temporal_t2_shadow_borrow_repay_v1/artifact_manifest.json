@@ -1,0 +1,23 @@
+{
+  "analysis_id": "temporal-t2-shadow-priced-borrow-repay-v1",
+  "artifacts_sha256": {
+    "temporal_t2_shadow_borrow.json": "134e2632a02fc3979284700e3bd9531353c18d0fa6e4d27f6e1adea4b2d6f4bb",
+    "temporal_t2_shadow_borrow.md": "f7ee63941c2c185dad46f3fcf8b15108910a20ec6a1d971e7a270dae0284d665",
+    "temporal_t2_shadow_borrow.png": "29d3d94226de76ba87f64e16766a3ae386386f67689904bbafba3b7b3616e941"
+  },
+  "design_contract_sha256": "95913ef204aa5b9bc36b785cbc5bcf1d9a28d13a8da39d940262a83849bba8c7",
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "source_artifacts_sha256": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "online_v1_manifest_sha256": "4a023387681441c598deafd706e729dcee2eeae2d006292fb8f950cee9f3c4fd",
+    "online_v1_metrics_sha256": "7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074",
+    "shadow_reference_manifest_sha256": "691766862ac2673d2464302cdbf17b28b74260d32d84bd3944f87c5833e97a55",
+    "shadow_reference_metrics_sha256": "c710dff1873c9f00c4beae2c824f365247b2cfc92943af738f59887d916978d6",
+    "shadow_reference_predictions_sha256": "82c48787d877e1d9a492e3234798917b614a0171f98dfe5a7eeabad0cb990cd8",
+    "static_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+    "static_metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96"
+  }
+}
