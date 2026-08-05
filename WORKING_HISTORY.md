@@ -111,6 +111,12 @@ P99.
 | Freeze environment scenario catalog | `10863e8` | Deterministic six-family matrices, unopened held-out catalog, and checksum manifest |
 | Repair generalized-scenario PHY reception | `8c38753` | Exact crash replay, two negative-control regressions, and six full VM preflights |
 | Build scenario-aware temporal dataset | `af1f29c` | Streaming manifest-bound builder, sender-known context, and leakage checks |
+| Freeze environment LOFO analysis | `76c6872` | Held-out-family distributions, OOD, exploration, and regret contract |
+| Add environment LOFO data primitives | `f519710` | Source-closed loader, deterministic splits, and robust OOD calibration |
+| Cross-fit environment distributions | `82ca34e` | Two-arm CDF fitting, hierarchical diagnostics, and row-level artifacts |
+| Freeze environment policy replay | `16d0e38` | Exact resource-oracle, baseline, uncertainty, and exploration contract |
+| Add environment policy primitives | `06d6a81` | Decimal knapsack, uniform replay, DR/HT value, and artifact validation |
+| Analyze environment resource policies | `e6ddcf3` | Shared hierarchical bootstrap, regret, confidence gates, and action archive |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -196,8 +202,14 @@ remains the engineering champion after the distributional closed-loop test.
   fallback, exploration, and regret contracts before reading held-out results.
   The six-family full preflight now passes at `8c38753`; the 384-run randomized
   collection is active as six exact 64-worker waves.  The source-closed
-  scenario-aware temporal builder is complete through `af1f29c`; LOFO fitting,
-  OOD calibration, exploration replay, and regret analysis remain in progress.
+  scenario-aware temporal builder is complete through `af1f29c`.  The frozen
+  LOFO predictor/OOD path and exact policy/oracle/regret analyzer are complete
+  and pushed through `e6ddcf3`.  At the last metadata-only poll, 245/384 runs
+  were complete; no randomized frame, latency, airtime, or policy outcome has
+  been read.  Once all runs close, build the source-closed dataset, execute the
+  frozen analyses, plot and archive them, then implement the OOD-aware logged
+  exploration wrapper and a nested nonclairvoyant allocator before closed-loop
+  qualification.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -206,9 +218,13 @@ item only when the research objective genuinely changes.
 
 The active boundary is environment-level generalization.  The six-family
 preflight and source-closed scenario dataset path pass; the 384-run randomized
-collection is running as six full 64-worker waves.  Next complete the LOFO and
-OOD/exploration analysis plumbing against the fetched preflight while the VM
-runs, then build the full dataset as soon as the collection closes.
+collection is running as six full 64-worker waves and was at 245 complete at
+the last metadata-only poll.  The LOFO completion-distribution, robust OOD,
+exact decimal resource replay, uniform/myopic baselines, cross-fitted resource
+oracle, DR/HT value, shared 10,000-sample hierarchical bootstrap, confidence
+gates, and checksum-closed row-action output are implemented and pushed
+through `e6ddcf3`.  Build and analyze the full dataset immediately after the
+collection closes; do not inspect qualification outcomes.
 
 Score-aware emergency admission V2 is complete and is the first candidate to
 pass every frozen engineering gate against STR.  On seeds `1251` through
@@ -590,6 +606,31 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-05 - Complete pre-outcome LOFO and resource replay tooling
+
+- Froze the held-out-family completion-distribution and robust OOD contract at
+  `76c6872`, then added the source-closed 313-feature loader, deterministic
+  scenario folds, and group-OOF shrinkage-Mahalanobis calibration through
+  `f519710`.
+- Implemented separate-arm HGB64 completion CDFs, exact class alignment and
+  rare-class smoothing, equal family/scenario/replicate diagnostics, row-level
+  checksum-closed predictions, and OOD fallback output in `82ca34e`.
+- Froze policy replay before reading randomized outcomes in `16d0e38`.  The
+  contract SHA-256 is
+  `8f797ac303025e0451288d92d8e171bbd8a3f3b333b9e650c3b0bb8b4a92ed69`;
+  it defines no-copy, 64 deterministic uniform replays, myopic primary risk,
+  and the nondeployable cross-fitted resource oracle under exactly 372,000 us
+  per run.
+- Added exact decimal two-cost optimization, source-closed prediction joins,
+  known-propensity DR deadline value, HT completed-late18 value, and real
+  preflight resource replays in `06d6a81`.  Added the shared stratified
+  10,000-sample scenario/run bootstrap, confidence-bound gates, partial-ratio
+  identification, family values, and row-action archive in `e6ddcf3`.
+- Forty-nine related policy, LOFO, OOD, dataset, generator, and SplitMix64
+  tests pass.  The six real preflight datasets also satisfy exact cost and
+  372,000-us resource bounds.  The last metadata-only VM poll showed 245/384
+  collection runs complete.  No randomized outcome file has been opened.
 
 ### 2026-08-05 - Pass the scenario preflight and launch the 64-way collection
 
