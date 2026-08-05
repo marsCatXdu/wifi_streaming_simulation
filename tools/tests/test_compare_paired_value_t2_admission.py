@@ -33,6 +33,7 @@ def write_campaign(
     actions: set[int],
     final_misses: set[int],
     seed: int = 1,
+    policy_scores: list[float] | None = None,
 ) -> Path:
     """Write the minimal raw campaign accepted by the comparison tool."""
     runs = root / name / "runs"
@@ -45,19 +46,20 @@ def write_campaign(
     primary_misses = {0, 1, 2}
     for frame_id in range(4):
         action = frame_id in actions
-        decisions.append(
-            {
-                "frame_id": frame_id,
-                "decision_status": "action" if action else "airtime_guard_rejected",
-                "secondary_launched": int(action),
-                "primary_copy_id": 0,
-                "generation_time_ns": 1_000_000_000 + frame_id * 1_000_000,
-                "value_per_cost_score_float32": scores[frame_id],
-                "primary_bad12_probability": scores[frame_id] + 0.1,
-                "passes_score_threshold": 1,
-                "admission_tier": "strict" if action else "none",
-            }
-        )
+        decision = {
+            "frame_id": frame_id,
+            "decision_status": "action" if action else "airtime_guard_rejected",
+            "secondary_launched": int(action),
+            "primary_copy_id": 0,
+            "generation_time_ns": 1_000_000_000 + frame_id * 1_000_000,
+            "value_per_cost_score_float32": scores[frame_id],
+            "primary_bad12_probability": scores[frame_id] + 0.1,
+            "passes_score_threshold": 1,
+            "admission_tier": "strict" if action else "none",
+        }
+        if policy_scores is not None:
+            decision["policy_score_float32"] = policy_scores[frame_id]
+        decisions.append(decision)
         frames.append(
             {
                 "frame_id": frame_id,
@@ -114,6 +116,9 @@ class ComparePairedValueT2AdmissionTest(unittest.TestCase):
         self.assertEqual(report["paired_units"], 1)
         self.assertEqual(report["frame_rows"], 4)
         self.assertEqual(report["decision_invariants"]["score_different_rows"], 0)
+        self.assertEqual(
+            report["decision_invariants"]["active_policy_score_different_rows"], 0
+        )
         admission = report["admission"]
         self.assertEqual(admission["baseline_actions"], 2)
         self.assertEqual(admission["candidate_actions"], 2)
@@ -136,6 +141,26 @@ class ComparePairedValueT2AdmissionTest(unittest.TestCase):
         plot_path = self.root / "comparison.png"
         plot_comparison(report, plot_path)
         self.assertGreater(plot_path.stat().st_size, 1000)
+
+    def test_compares_schema_v4_active_policy_score(self) -> None:
+        baseline = write_campaign(self.root, "baseline", {0, 2}, {1})
+        candidate = write_campaign(
+            self.root,
+            "candidate",
+            {0, 1},
+            {2},
+            policy_scores=[0.8, 0.7, 0.6, 0.5],
+        )
+
+        report = compare_campaigns(baseline, candidate, "V2", "V5")
+
+        invariants = report["decision_invariants"]
+        self.assertEqual(invariants["score_different_rows"], 0)
+        self.assertEqual(
+            invariants["diagnostic_value_per_cost_score_different_rows"], 0
+        )
+        self.assertEqual(invariants["active_policy_score_different_rows"], 4)
+        self.assertIn("active policy scores changed on 4 rows", render_markdown(report))
 
     def test_rejects_mismatched_seed_run_units(self) -> None:
         baseline = write_campaign(self.root, "baseline", {0}, set(), seed=1)

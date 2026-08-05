@@ -97,6 +97,19 @@ def as_optional_float(value: str) -> float | None:
     return result
 
 
+def active_policy_score(row: dict[str, str]) -> str:
+    """Return the serialized score that governed the runtime decision.
+
+    Schema V4 records the active score separately because cost-free V5 keeps
+    the historical value-per-cost score as a diagnostic.  Earlier schemas use
+    value-per-cost directly, so it remains the exact fallback.
+    """
+    policy_score = row.get("policy_score_float32", "")
+    if policy_score != "":
+        return policy_score
+    return row.get("value_per_cost_score_float32", "")
+
+
 def percentile(values: list[float], probability: float) -> float:
     """Return the Hyndman-Fan type-7 percentile."""
     ordered = sorted(values)
@@ -234,7 +247,8 @@ def compare_campaigns(
     candidate_frames_all: dict[tuple[tuple[int, int], int], dict[str, str]] = {}
     status_transitions: Counter[str] = Counter()
     tier_transitions: Counter[str] = Counter()
-    score_differences = 0
+    diagnostic_score_differences = 0
+    active_score_differences = 0
     threshold_differences = 0
     primary_miss_transitions: Counter[str] = Counter()
     final_miss_transitions: Counter[str] = Counter()
@@ -284,9 +298,13 @@ def compare_campaigns(
                     f"{baseline_decision.get('admission_tier', '') or 'none'} -> "
                     f"{candidate_decision.get('admission_tier', '') or 'none'}"
                 ] += 1
-            score_differences += int(
+            diagnostic_score_differences += int(
                 baseline_decision.get("value_per_cost_score_float32", "")
                 != candidate_decision.get("value_per_cost_score_float32", "")
+            )
+            active_score_differences += int(
+                active_policy_score(baseline_decision)
+                != active_policy_score(candidate_decision)
             )
             threshold_differences += int(
                 baseline_decision.get("passes_score_threshold", "")
@@ -330,6 +348,22 @@ def compare_campaigns(
             ))
             is not None
         ]
+        baseline_active_scores = [
+            value
+            for key in keys
+            if (value := as_optional_float(
+                active_policy_score(baseline_decisions_all[key])
+            ))
+            is not None
+        ]
+        candidate_active_scores = [
+            value
+            for key in keys
+            if (value := as_optional_float(
+                active_policy_score(candidate_decisions_all[key])
+            ))
+            is not None
+        ]
         baseline_risks = [
             value
             for key in keys
@@ -359,6 +393,8 @@ def compare_campaigns(
             ),
             "baseline_score": numeric_summary(baseline_scores),
             "candidate_score": numeric_summary(candidate_scores),
+            "baseline_active_policy_score": numeric_summary(baseline_active_scores),
+            "candidate_active_policy_score": numeric_summary(candidate_active_scores),
             "baseline_primary_bad12_probability": numeric_summary(baseline_risks),
             "candidate_primary_bad12_probability": numeric_summary(candidate_risks),
             "generation_time_s": numeric_summary(candidate_times),
@@ -375,7 +411,7 @@ def compare_campaigns(
     )
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "analysis": "paired_value_t2_admission_campaign_comparison",
         "evidence_role": "diagnostic_only_not_a_qualification_gate",
         "labels": {"baseline": baseline_label, "candidate": candidate_label},
@@ -386,7 +422,11 @@ def compare_campaigns(
             "candidate": campaign_manifest(candidate_aggregate),
         },
         "decision_invariants": {
-            "score_different_rows": score_differences,
+            "score_different_rows": diagnostic_score_differences,
+            "diagnostic_value_per_cost_score_different_rows": (
+                diagnostic_score_differences
+            ),
+            "active_policy_score_different_rows": active_score_differences,
             "score_threshold_pass_different_rows": threshold_differences,
         },
         "admission": {
@@ -428,7 +468,10 @@ def render_markdown(report: dict[str, Any]) -> str:
             "Diagnostic only; qualification gates remain in the frozen campaign reports.",
             "",
             f"Matched units: {report['paired_units']}; frame rows: {report['frame_rows']}.",
-            f"Scores changed on {report['decision_invariants']['score_different_rows']} rows and "
+            "Diagnostic value-per-cost scores changed on "
+            f"{report['decision_invariants']['diagnostic_value_per_cost_score_different_rows']} "
+            "rows; active policy scores changed on "
+            f"{report['decision_invariants']['active_policy_score_different_rows']} rows; "
             "score-threshold membership changed on "
             f"{report['decision_invariants']['score_threshold_pass_different_rows']} rows.",
             "",
@@ -523,10 +566,12 @@ def plot_comparison(report: dict[str, Any], output: Path) -> None:
 
     interval_panel(
         axes[1, 0],
-        [displaced["baseline_score"], added["candidate_score"]],
-        "Predictor score (median and 10-90% interval)",
-        "Value-per-cost score * 1e4",
-        1e4,
+        [
+            displaced["baseline_primary_bad12_probability"],
+            added["candidate_primary_bad12_probability"],
+        ],
+        "Primary risk (median and 10-90% interval)",
+        "Primary bad12 probability",
     )
     interval_panel(
         axes[1, 1],
@@ -536,7 +581,7 @@ def plot_comparison(report: dict[str, Any], output: Path) -> None:
     )
     fig.suptitle(
         f"Admission shift: {labels['baseline']} to {labels['candidate']}\n"
-        "Candidate borrowing spends future refill on earlier, lower-risk frames"
+        "Matched action-set, risk, and chronology comparison"
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output, dpi=180)
