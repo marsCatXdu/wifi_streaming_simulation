@@ -1428,7 +1428,7 @@ def emit_data_source(
         "{",
         "namespace",
         "{",
-        f"constexpr std::array<std::string_view, {len(model['feature_names'])}> g_featureNames{{",
+        f"constexpr std::array<std::string_view, {len(model['feature_names'])}> g_featureNames{{{{",
     ]
     lines.extend(
         f"    {legacy_export.cpp_string(name)}," for name in model["feature_names"]
