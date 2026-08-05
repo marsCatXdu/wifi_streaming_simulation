@@ -21,6 +21,7 @@ build_lib(
     model/selective-duplication-controller.cc
     model/canonical-secondary-airtime-estimator.cc
     model/secondary-airtime-budget-guard.cc
+    model/permanent-airtime-credit-ledger.cc
     model/adaptive-airtime-duplication-controller.cc
     model/secondary-airtime-meter.cc
     model/metrics-collector.cc
@@ -54,6 +55,7 @@ build_lib(
     model/selective-duplication-controller.h
     model/canonical-secondary-airtime-estimator.h
     model/secondary-airtime-budget-guard.h
+    model/permanent-airtime-credit-ledger.h
     model/adaptive-airtime-duplication-controller.h
     model/secondary-airtime-meter.h
     model/metrics-collector.h
@@ -80,5 +82,6 @@ build_lib(
     test/paired-value-t2-controller-test.cc
     test/randomized-intervention-controller-test.cc
     test/secondary-airtime-primitives-test.cc
+    test/permanent-airtime-credit-ledger-test.cc
     test/wifi-streaming-test-suite.cc
 )
