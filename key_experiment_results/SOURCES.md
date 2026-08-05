@@ -31,16 +31,17 @@ following ignored result roots:
 | `12_temporal_t2_ceiling_decomposition_v1` | `results/paired_value_t2_ceiling_decomposition_v1` generated from the restored V2, V4, and V5 raw campaign roots |
 | `13_temporal_t2_distributional_online_ceiling_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_distributional_frontier_v1`, `temporal_t2_static_distributional_frontier_v1`, `temporal_t2_shadow_reference_v1`, and `temporal_t2_online_shadow_price_v1` |
 | `14_temporal_t2_shadow_borrow_repay_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_shadow_borrow_repay_v1` |
+| `15_distributional_shadow_t2_str_engineering_v1` | `/home/jingweili/distributional_shadow_preliminary_e2c770b_run2` and `/home/jingweili/str_same_commit_e2c770b`, with exact raw-archive identities recorded in the snapshot README |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
 without modifying the original replay directory.
 
-The complete V2, V3, V4, and V5 raw archives are intentionally not committed
-because they are 94,939,663, 95,546,464, 96,983,224, and 97,159,582 compressed
-bytes, respectively. Their local paths and SHA-256 identities are recorded in
-each snapshot README; publishing those exact archives as release assets
-remains a reproducibility task.
+The complete V2, V3, V4, V5, distributional-shadow, and same-build STR raw
+archives are intentionally not committed. Their paths, compressed sizes, and
+SHA-256 identities are recorded in the corresponding snapshot READMEs;
+publishing those exact archives as release assets remains a reproducibility
+task.
 
 `SHA256SUMS` covers every curated artifact except itself. It can be checked
 from the repository root with:

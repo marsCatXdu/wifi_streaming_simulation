@@ -1,0 +1,1476 @@
+{
+  "analysis": "distributional_shadow_t2_str_engineering_v1",
+  "bootstrap": {
+    "draws_per_replication": 48,
+    "endpoint_quantile": "Hyndman-Fan type 7",
+    "index_matrix_sha256": "2df6a6e3458bf1336ba8dc652db4cb8a07de2cb2bfb6ea0dee06778e1c97080d",
+    "method": "one shared deterministic 10000x48 matched-unit index matrix",
+    "replications": 10000,
+    "seed": 20260804
+  },
+  "campaign_checks": {
+    "all_96_runs_strictly_validated": true,
+    "all_metrics_reconstructed_from_raw_artifacts": true,
+    "build_identity": {
+      "build_profile": "optimized",
+      "compiler": "13.3.0",
+      "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+      "ns3_version": "ns-3.48",
+      "project_git_commit": "e2c770b21cb8f69318a8cd5958815f4ab9c09392"
+    },
+    "exact_48_paired_units": true,
+    "exact_two_declared_arms": true,
+    "nominal_resolved_config_sha256": {
+      "policy": "71044b00a62311b707f29cc1de6932b969d3bb60f5e59c3f0708e370152fbd38",
+      "str_mlo": "d47b7308137ff202b0340afea92545a04e5ed78a047b44b27c14fbf39d3a7e5e"
+    },
+    "paired_common_inputs_match": true,
+    "paired_environment_realizations_match": true,
+    "reserved_confirmation_seeds_unopened": true,
+    "single_build_identity": true
+  },
+  "comparison_against_str": {
+    "background_throughput_loss": {
+      "ci95_high": 7.359423117052898e-05,
+      "ci95_low": 2.6045245530673113e-05,
+      "confidence_level": 0.95,
+      "estimate": 4.96215513022813e-05,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "one minus ratio of resampled policy and STR background-throughput means"
+    },
+    "completed_p99_us": {
+      "ci95_high": -1108.7997968749971,
+      "ci95_low": -3057.0416822916723,
+      "confidence_level": 0.95,
+      "estimate": -2043.0412500000018,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "mean per-run policy-minus-STR completed-P99 difference"
+    },
+    "deadline_miss_rate": {
+      "ci95_high": -0.0015969328703703744,
+      "ci95_low": -0.003935185185185185,
+      "confidence_level": 0.95,
+      "estimate": -0.0027314814814814814,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "mean per-run policy-minus-STR miss-rate difference"
+    },
+    "relative_deadline_miss_reduction": 0.34153400868306805,
+    "sender_airtime_ratio": {
+      "ci95_high": 1.1906205500447118,
+      "ci95_low": 1.1404794594849454,
+      "confidence_level": 0.95,
+      "estimate": 1.1661831253541906,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "ratio of resampled policy and STR sender-airtime means"
+    }
+  },
+  "evidence_role": "opened-seed engineering qualification",
+  "paired_heterogeneity": {
+    "correlations": {
+      "sender_airtime_ratio_vs_completed_p99_delta": 0.7976135826757937,
+      "sender_airtime_ratio_vs_deadline_miss_delta": 0.2574913822136112
+    },
+    "individual_runs_above_sender_airtime_ratio_1_20": 21,
+    "paired_direction_counts": {
+      "both_metrics_better": 26,
+      "completed_p99": {
+        "policy_better": 35,
+        "policy_worse": 13,
+        "tie": 0
+      },
+      "deadline_miss_rate": {
+        "policy_better": 32,
+        "policy_worse": 8,
+        "tie": 8
+      }
+    }
+  },
+  "paired_metrics": [
+    {
+      "background_throughput_loss": -3.5747692784360297e-05,
+      "completed_p99_delta_us": -1028.1199999999917,
+      "miss_delta_percentage_points": -0.44444444444444453,
+      "policy_background_throughput_mbps": 26.85584,
+      "policy_completed_p99_us": 22433.32000000001,
+      "policy_deadline_miss_count": 15,
+      "policy_deadline_miss_rate": 0.008333333333333333,
+      "policy_run_id": "shadow-prelim-1251",
+      "policy_sender_airtime_us": 5840663.0,
+      "run": 1,
+      "seed": 1251,
+      "sender_airtime_ratio": 1.2466570332076856,
+      "str_background_throughput_mbps": 26.85488,
+      "str_completed_p99_us": 23461.440000000002,
+      "str_deadline_miss_count": 23,
+      "str_deadline_miss_rate": 0.012777777777777779,
+      "str_run_id": "str-e2c770b-1251",
+      "str_sender_airtime_us": 4685060.0
+    },
+    {
+      "background_throughput_loss": 0.0002549235822097984,
+      "completed_p99_delta_us": -8598.499999999978,
+      "miss_delta_percentage_points": -0.3888888888888889,
+      "policy_background_throughput_mbps": 26.9816,
+      "policy_completed_p99_us": 9432.419999999998,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1252",
+      "policy_sender_airtime_us": 4036707.0,
+      "run": 1,
+      "seed": 1252,
+      "sender_airtime_ratio": 1.0264957869168614,
+      "str_background_throughput_mbps": 26.98848,
+      "str_completed_p99_us": 18030.919999999976,
+      "str_deadline_miss_count": 7,
+      "str_deadline_miss_rate": 0.0038888888888888888,
+      "str_run_id": "str-e2c770b-1252",
+      "str_sender_airtime_us": 3932512.0
+    },
+    {
+      "background_throughput_loss": 0.00011643084314305607,
+      "completed_p99_delta_us": 3316.529999999995,
+      "miss_delta_percentage_points": 0.44444444444444453,
+      "policy_background_throughput_mbps": 26.10688,
+      "policy_completed_p99_us": 24823.75,
+      "policy_deadline_miss_count": 24,
+      "policy_deadline_miss_rate": 0.013333333333333334,
+      "policy_run_id": "shadow-prelim-1253",
+      "policy_sender_airtime_us": 5785764.0,
+      "run": 1,
+      "seed": 1253,
+      "sender_airtime_ratio": 1.2778441584944764,
+      "str_background_throughput_mbps": 26.10992,
+      "str_completed_p99_us": 21507.220000000005,
+      "str_deadline_miss_count": 16,
+      "str_deadline_miss_rate": 0.008888888888888889,
+      "str_run_id": "str-e2c770b-1253",
+      "str_sender_airtime_us": 4527754.0
+    },
+    {
+      "background_throughput_loss": 2.9083125388962294e-05,
+      "completed_p99_delta_us": -786.039999999999,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 27.50656,
+      "policy_completed_p99_us": 10993.64,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1254",
+      "policy_sender_airtime_us": 4037499.0,
+      "run": 1,
+      "seed": 1254,
+      "sender_airtime_ratio": 1.1239158211198796,
+      "str_background_throughput_mbps": 27.50736,
+      "str_completed_p99_us": 11779.679999999998,
+      "str_deadline_miss_count": 0,
+      "str_deadline_miss_rate": 0.0,
+      "str_run_id": "str-e2c770b-1254",
+      "str_sender_airtime_us": 3592350.0
+    },
+    {
+      "background_throughput_loss": 1.805847333669064e-05,
+      "completed_p99_delta_us": -2308.4700000001394,
+      "miss_delta_percentage_points": -0.27777777777777773,
+      "policy_background_throughput_mbps": 26.57984,
+      "policy_completed_p99_us": 17744.809999999878,
+      "policy_deadline_miss_count": 12,
+      "policy_deadline_miss_rate": 0.006666666666666667,
+      "policy_run_id": "shadow-prelim-1255",
+      "policy_sender_airtime_us": 5519471.0,
+      "run": 1,
+      "seed": 1255,
+      "sender_airtime_ratio": 1.1613582039304802,
+      "str_background_throughput_mbps": 26.58032,
+      "str_completed_p99_us": 20053.280000000017,
+      "str_deadline_miss_count": 17,
+      "str_deadline_miss_rate": 0.009444444444444445,
+      "str_run_id": "str-e2c770b-1255",
+      "str_sender_airtime_us": 4752600.0
+    },
+    {
+      "background_throughput_loss": 0.00012302068504954633,
+      "completed_p99_delta_us": -407.91999999995824,
+      "miss_delta_percentage_points": -0.27777777777777773,
+      "policy_background_throughput_mbps": 27.30912,
+      "policy_completed_p99_us": 10452.399999999998,
+      "policy_deadline_miss_count": 2,
+      "policy_deadline_miss_rate": 0.0011111111111111111,
+      "policy_run_id": "shadow-prelim-1256",
+      "policy_sender_airtime_us": 4095161.0,
+      "run": 1,
+      "seed": 1256,
+      "sender_airtime_ratio": 1.183062732215684,
+      "str_background_throughput_mbps": 27.31248,
+      "str_completed_p99_us": 10860.319999999956,
+      "str_deadline_miss_count": 7,
+      "str_deadline_miss_rate": 0.0038888888888888888,
+      "str_run_id": "str-e2c770b-1256",
+      "str_sender_airtime_us": 3461491.0
+    },
+    {
+      "background_throughput_loss": 0.00013164114623542833,
+      "completed_p99_delta_us": -1843.2600000000275,
+      "miss_delta_percentage_points": -0.3888888888888889,
+      "policy_background_throughput_mbps": 26.73584,
+      "policy_completed_p99_us": 18988.479999999992,
+      "policy_deadline_miss_count": 11,
+      "policy_deadline_miss_rate": 0.006111111111111111,
+      "policy_run_id": "shadow-prelim-1257",
+      "policy_sender_airtime_us": 5254514.0,
+      "run": 1,
+      "seed": 1257,
+      "sender_airtime_ratio": 1.2559436367365104,
+      "str_background_throughput_mbps": 26.73936,
+      "str_completed_p99_us": 20831.74000000002,
+      "str_deadline_miss_count": 18,
+      "str_deadline_miss_rate": 0.01,
+      "str_run_id": "str-e2c770b-1257",
+      "str_sender_airtime_us": 4183718.0
+    },
+    {
+      "background_throughput_loss": 0.0001298157206837125,
+      "completed_p99_delta_us": -151.20999999995547,
+      "miss_delta_percentage_points": 0.1666666666666666,
+      "policy_background_throughput_mbps": 27.11184,
+      "policy_completed_p99_us": 21888.750000000044,
+      "policy_deadline_miss_count": 14,
+      "policy_deadline_miss_rate": 0.0077777777777777776,
+      "policy_run_id": "shadow-prelim-1258",
+      "policy_sender_airtime_us": 5404614.0,
+      "run": 1,
+      "seed": 1258,
+      "sender_airtime_ratio": 1.2083087499650673,
+      "str_background_throughput_mbps": 27.11536,
+      "str_completed_p99_us": 22039.96,
+      "str_deadline_miss_count": 11,
+      "str_deadline_miss_rate": 0.006111111111111111,
+      "str_run_id": "str-e2c770b-1258",
+      "str_sender_airtime_us": 4472875.0
+    },
+    {
+      "background_throughput_loss": 0.00014888751250652366,
+      "completed_p99_delta_us": -9681.539999999972,
+      "miss_delta_percentage_points": -0.4444444444444444,
+      "policy_background_throughput_mbps": 26.86192,
+      "policy_completed_p99_us": 7986.8499999999985,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1259",
+      "policy_sender_airtime_us": 3537650.0,
+      "run": 1,
+      "seed": 1259,
+      "sender_airtime_ratio": 0.9783153667400153,
+      "str_background_throughput_mbps": 26.86592,
+      "str_completed_p99_us": 17668.38999999997,
+      "str_deadline_miss_count": 8,
+      "str_deadline_miss_rate": 0.0044444444444444444,
+      "str_run_id": "str-e2c770b-1259",
+      "str_sender_airtime_us": 3616063.0
+    },
+    {
+      "background_throughput_loss": 0.00010334472151640739,
+      "completed_p99_delta_us": -823.9999999999818,
+      "miss_delta_percentage_points": 0.4444444444444444,
+      "policy_background_throughput_mbps": 26.31696,
+      "policy_completed_p99_us": 22463.700000000015,
+      "policy_deadline_miss_count": 17,
+      "policy_deadline_miss_rate": 0.009444444444444445,
+      "policy_run_id": "shadow-prelim-1260",
+      "policy_sender_airtime_us": 5689261.0,
+      "run": 1,
+      "seed": 1260,
+      "sender_airtime_ratio": 1.276050225939572,
+      "str_background_throughput_mbps": 26.31968,
+      "str_completed_p99_us": 23287.699999999997,
+      "str_deadline_miss_count": 9,
+      "str_deadline_miss_rate": 0.005,
+      "str_run_id": "str-e2c770b-1260",
+      "str_sender_airtime_us": 4458493.0
+    },
+    {
+      "background_throughput_loss": 0.0,
+      "completed_p99_delta_us": -576.659999999998,
+      "miss_delta_percentage_points": 0.05555555555555555,
+      "policy_background_throughput_mbps": 26.8496,
+      "policy_completed_p99_us": 9145.32,
+      "policy_deadline_miss_count": 1,
+      "policy_deadline_miss_rate": 0.0005555555555555556,
+      "policy_run_id": "shadow-prelim-1261",
+      "policy_sender_airtime_us": 3662047.0,
+      "run": 1,
+      "seed": 1261,
+      "sender_airtime_ratio": 1.0852426087688374,
+      "str_background_throughput_mbps": 26.8496,
+      "str_completed_p99_us": 9721.979999999998,
+      "str_deadline_miss_count": 0,
+      "str_deadline_miss_rate": 0.0,
+      "str_run_id": "str-e2c770b-1261",
+      "str_sender_airtime_us": 3374404.0
+    },
+    {
+      "background_throughput_loss": -0.000143527793559306,
+      "completed_p99_delta_us": -950.5199999999786,
+      "miss_delta_percentage_points": -0.33333333333333337,
+      "policy_background_throughput_mbps": 26.75824,
+      "policy_completed_p99_us": 23713.83999999998,
+      "policy_deadline_miss_count": 27,
+      "policy_deadline_miss_rate": 0.015,
+      "policy_run_id": "shadow-prelim-1262",
+      "policy_sender_airtime_us": 5874136.0,
+      "run": 1,
+      "seed": 1262,
+      "sender_airtime_ratio": 1.2153330347139824,
+      "str_background_throughput_mbps": 26.7544,
+      "str_completed_p99_us": 24664.359999999957,
+      "str_deadline_miss_count": 33,
+      "str_deadline_miss_rate": 0.018333333333333333,
+      "str_run_id": "str-e2c770b-1262",
+      "str_sender_airtime_us": 4833355.0
+    },
+    {
+      "background_throughput_loss": -8.135561702427019e-05,
+      "completed_p99_delta_us": 2127.919999999991,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 27.53568,
+      "policy_completed_p99_us": 11026.21999999999,
+      "policy_deadline_miss_count": 1,
+      "policy_deadline_miss_rate": 0.0005555555555555556,
+      "policy_run_id": "shadow-prelim-1263",
+      "policy_sender_airtime_us": 4086712.0,
+      "run": 1,
+      "seed": 1263,
+      "sender_airtime_ratio": 1.1833557550700826,
+      "str_background_throughput_mbps": 27.53344,
+      "str_completed_p99_us": 8898.3,
+      "str_deadline_miss_count": 1,
+      "str_deadline_miss_rate": 0.0005555555555555556,
+      "str_run_id": "str-e2c770b-1263",
+      "str_sender_airtime_us": 3453494.0
+    },
+    {
+      "background_throughput_loss": 1.7760937777500097e-05,
+      "completed_p99_delta_us": 559.4999999999018,
+      "miss_delta_percentage_points": -0.3888888888888889,
+      "policy_background_throughput_mbps": 27.02512,
+      "policy_completed_p99_us": 26229.99999999997,
+      "policy_deadline_miss_count": 11,
+      "policy_deadline_miss_rate": 0.006111111111111111,
+      "policy_run_id": "shadow-prelim-1264",
+      "policy_sender_airtime_us": 5989020.0,
+      "run": 1,
+      "seed": 1264,
+      "sender_airtime_ratio": 1.2457864622216361,
+      "str_background_throughput_mbps": 27.0256,
+      "str_completed_p99_us": 25670.50000000007,
+      "str_deadline_miss_count": 18,
+      "str_deadline_miss_rate": 0.01,
+      "str_run_id": "str-e2c770b-1264",
+      "str_sender_airtime_us": 4807421.0
+    },
+    {
+      "background_throughput_loss": -1.8428424001237786e-05,
+      "completed_p99_delta_us": -10474.11000000011,
+      "miss_delta_percentage_points": -0.8888888888888888,
+      "policy_background_throughput_mbps": 26.0472,
+      "policy_completed_p99_us": 8521.64,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1265",
+      "policy_sender_airtime_us": 3603230.0,
+      "run": 1,
+      "seed": 1265,
+      "sender_airtime_ratio": 0.956627173911312,
+      "str_background_throughput_mbps": 26.04672,
+      "str_completed_p99_us": 18995.75000000011,
+      "str_deadline_miss_count": 16,
+      "str_deadline_miss_rate": 0.008888888888888889,
+      "str_run_id": "str-e2c770b-1265",
+      "str_sender_airtime_us": 3766598.0
+    },
+    {
+      "background_throughput_loss": 0.00017481091286253303,
+      "completed_p99_delta_us": -746.0599999999831,
+      "miss_delta_percentage_points": -1.6111111111111112,
+      "policy_background_throughput_mbps": 27.45344,
+      "policy_completed_p99_us": 25678.0,
+      "policy_deadline_miss_count": 24,
+      "policy_deadline_miss_rate": 0.013333333333333334,
+      "policy_run_id": "shadow-prelim-1266",
+      "policy_sender_airtime_us": 6001421.0,
+      "run": 1,
+      "seed": 1266,
+      "sender_airtime_ratio": 1.14831205568454,
+      "str_background_throughput_mbps": 27.45824,
+      "str_completed_p99_us": 26424.059999999983,
+      "str_deadline_miss_count": 53,
+      "str_deadline_miss_rate": 0.029444444444444443,
+      "str_run_id": "str-e2c770b-1266",
+      "str_sender_airtime_us": 5226298.0
+    },
+    {
+      "background_throughput_loss": -4.830101190633762e-05,
+      "completed_p99_delta_us": -3473.8299999999435,
+      "miss_delta_percentage_points": -0.3333333333333333,
+      "policy_background_throughput_mbps": 26.50176,
+      "policy_completed_p99_us": 12485.399999999994,
+      "policy_deadline_miss_count": 2,
+      "policy_deadline_miss_rate": 0.0011111111111111111,
+      "policy_run_id": "shadow-prelim-1267",
+      "policy_sender_airtime_us": 4554800.0,
+      "run": 1,
+      "seed": 1267,
+      "sender_airtime_ratio": 1.121957035164244,
+      "str_background_throughput_mbps": 26.50048,
+      "str_completed_p99_us": 15959.229999999938,
+      "str_deadline_miss_count": 8,
+      "str_deadline_miss_rate": 0.0044444444444444444,
+      "str_run_id": "str-e2c770b-1267",
+      "str_sender_airtime_us": 4059692.0
+    },
+    {
+      "background_throughput_loss": 0.00015350796399304922,
+      "completed_p99_delta_us": -9068.060000000003,
+      "miss_delta_percentage_points": -0.4444444444444444,
+      "policy_background_throughput_mbps": 26.05328,
+      "policy_completed_p99_us": 8505.569999999998,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1268",
+      "policy_sender_airtime_us": 3743929.0,
+      "run": 1,
+      "seed": 1268,
+      "sender_airtime_ratio": 1.0075524810508456,
+      "str_background_throughput_mbps": 26.05728,
+      "str_completed_p99_us": 17573.63,
+      "str_deadline_miss_count": 8,
+      "str_deadline_miss_rate": 0.0044444444444444444,
+      "str_run_id": "str-e2c770b-1268",
+      "str_sender_airtime_us": 3715865.0
+    },
+    {
+      "background_throughput_loss": 4.813448775886631e-05,
+      "completed_p99_delta_us": -440.14999999995416,
+      "miss_delta_percentage_points": -1.1666666666666667,
+      "policy_background_throughput_mbps": 26.59088,
+      "policy_completed_p99_us": 25112.05000000002,
+      "policy_deadline_miss_count": 14,
+      "policy_deadline_miss_rate": 0.0077777777777777776,
+      "policy_run_id": "shadow-prelim-1269",
+      "policy_sender_airtime_us": 6104536.0,
+      "run": 1,
+      "seed": 1269,
+      "sender_airtime_ratio": 1.1561262112313178,
+      "str_background_throughput_mbps": 26.59216,
+      "str_completed_p99_us": 25552.199999999975,
+      "str_deadline_miss_count": 35,
+      "str_deadline_miss_rate": 0.019444444444444445,
+      "str_run_id": "str-e2c770b-1269",
+      "str_sender_airtime_us": 5280164.0
+    },
+    {
+      "background_throughput_loss": 0.00022570881248218377,
+      "completed_p99_delta_us": -4549.4999999999945,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 27.64,
+      "policy_completed_p99_us": 8797.3,
+      "policy_deadline_miss_count": 1,
+      "policy_deadline_miss_rate": 0.0005555555555555556,
+      "policy_run_id": "shadow-prelim-1270",
+      "policy_sender_airtime_us": 3742768.0,
+      "run": 1,
+      "seed": 1270,
+      "sender_airtime_ratio": 1.0618766620336129,
+      "str_background_throughput_mbps": 27.64624,
+      "str_completed_p99_us": 13346.799999999994,
+      "str_deadline_miss_count": 1,
+      "str_deadline_miss_rate": 0.0005555555555555556,
+      "str_run_id": "str-e2c770b-1270",
+      "str_sender_airtime_us": 3524673.0
+    },
+    {
+      "background_throughput_loss": 1.2345602804830769e-05,
+      "completed_p99_delta_us": -868.25,
+      "miss_delta_percentage_points": -0.055555555555555566,
+      "policy_background_throughput_mbps": 25.91984,
+      "policy_completed_p99_us": 25604.14,
+      "policy_deadline_miss_count": 25,
+      "policy_deadline_miss_rate": 0.013888888888888888,
+      "policy_run_id": "shadow-prelim-1271",
+      "policy_sender_airtime_us": 6360284.0,
+      "run": 1,
+      "seed": 1271,
+      "sender_airtime_ratio": 1.2298341344945336,
+      "str_background_throughput_mbps": 25.92016,
+      "str_completed_p99_us": 26472.39,
+      "str_deadline_miss_count": 26,
+      "str_deadline_miss_rate": 0.014444444444444444,
+      "str_run_id": "str-e2c770b-1271",
+      "str_sender_airtime_us": 5171660.0
+    },
+    {
+      "background_throughput_loss": 4.7368109420409255e-05,
+      "completed_p99_delta_us": -791.5700000000106,
+      "miss_delta_percentage_points": -0.16666666666666666,
+      "policy_background_throughput_mbps": 27.02112,
+      "policy_completed_p99_us": 19623.549999999956,
+      "policy_deadline_miss_count": 4,
+      "policy_deadline_miss_rate": 0.0022222222222222222,
+      "policy_run_id": "shadow-prelim-1272",
+      "policy_sender_airtime_us": 4941346.0,
+      "run": 1,
+      "seed": 1272,
+      "sender_airtime_ratio": 1.1246114717814206,
+      "str_background_throughput_mbps": 27.0224,
+      "str_completed_p99_us": 20415.119999999966,
+      "str_deadline_miss_count": 7,
+      "str_deadline_miss_rate": 0.0038888888888888888,
+      "str_run_id": "str-e2c770b-1272",
+      "str_sender_airtime_us": 4393825.0
+    },
+    {
+      "background_throughput_loss": -3.51883456199964e-05,
+      "completed_p99_delta_us": 260.22000000001935,
+      "miss_delta_percentage_points": -0.8333333333333334,
+      "policy_background_throughput_mbps": 27.28272,
+      "policy_completed_p99_us": 23666.720000000016,
+      "policy_deadline_miss_count": 17,
+      "policy_deadline_miss_rate": 0.009444444444444445,
+      "policy_run_id": "shadow-prelim-1273",
+      "policy_sender_airtime_us": 5944683.0,
+      "run": 1,
+      "seed": 1273,
+      "sender_airtime_ratio": 1.2452831730124683,
+      "str_background_throughput_mbps": 27.28176,
+      "str_completed_p99_us": 23406.499999999996,
+      "str_deadline_miss_count": 32,
+      "str_deadline_miss_rate": 0.017777777777777778,
+      "str_run_id": "str-e2c770b-1273",
+      "str_sender_airtime_us": 4773760.0
+    },
+    {
+      "background_throughput_loss": 6.023515805697599e-06,
+      "completed_p99_delta_us": -2366.5499999999975,
+      "miss_delta_percentage_points": 0.1111111111111111,
+      "policy_background_throughput_mbps": 26.5624,
+      "policy_completed_p99_us": 9221.12,
+      "policy_deadline_miss_count": 2,
+      "policy_deadline_miss_rate": 0.0011111111111111111,
+      "policy_run_id": "shadow-prelim-1274",
+      "policy_sender_airtime_us": 3641284.0,
+      "run": 1,
+      "seed": 1274,
+      "sender_airtime_ratio": 1.0540572539159327,
+      "str_background_throughput_mbps": 26.56256,
+      "str_completed_p99_us": 11587.669999999998,
+      "str_deadline_miss_count": 0,
+      "str_deadline_miss_rate": 0.0,
+      "str_run_id": "str-e2c770b-1274",
+      "str_sender_airtime_us": 3454541.0
+    },
+    {
+      "background_throughput_loss": 4.7987235395452466e-05,
+      "completed_p99_delta_us": 476.5200000000332,
+      "miss_delta_percentage_points": -0.7777777777777778,
+      "policy_background_throughput_mbps": 26.67248,
+      "policy_completed_p99_us": 24114.800000000017,
+      "policy_deadline_miss_count": 19,
+      "policy_deadline_miss_rate": 0.010555555555555556,
+      "policy_run_id": "shadow-prelim-1275",
+      "policy_sender_airtime_us": 5884071.0,
+      "run": 1,
+      "seed": 1275,
+      "sender_airtime_ratio": 1.2349136777631962,
+      "str_background_throughput_mbps": 26.67376,
+      "str_completed_p99_us": 23638.279999999984,
+      "str_deadline_miss_count": 33,
+      "str_deadline_miss_rate": 0.018333333333333333,
+      "str_run_id": "str-e2c770b-1275",
+      "str_sender_airtime_us": 4764763.0
+    },
+    {
+      "background_throughput_loss": 3.546329844139606e-05,
+      "completed_p99_delta_us": -8216.160000000038,
+      "miss_delta_percentage_points": -0.611111111111111,
+      "policy_background_throughput_mbps": 27.06928,
+      "policy_completed_p99_us": 11547.799999999997,
+      "policy_deadline_miss_count": 4,
+      "policy_deadline_miss_rate": 0.0022222222222222222,
+      "policy_run_id": "shadow-prelim-1276",
+      "policy_sender_airtime_us": 4181836.0,
+      "run": 1,
+      "seed": 1276,
+      "sender_airtime_ratio": 1.0520450651189106,
+      "str_background_throughput_mbps": 27.07024,
+      "str_completed_p99_us": 19763.960000000036,
+      "str_deadline_miss_count": 15,
+      "str_deadline_miss_rate": 0.008333333333333333,
+      "str_run_id": "str-e2c770b-1276",
+      "str_sender_airtime_us": 3974959.0
+    },
+    {
+      "background_throughput_loss": 0.00013313645276069597,
+      "completed_p99_delta_us": -101.75999999999112,
+      "miss_delta_percentage_points": -0.16666666666666669,
+      "policy_background_throughput_mbps": 26.43552,
+      "policy_completed_p99_us": 15443.32,
+      "policy_deadline_miss_count": 3,
+      "policy_deadline_miss_rate": 0.0016666666666666668,
+      "policy_run_id": "shadow-prelim-1277",
+      "policy_sender_airtime_us": 4990882.0,
+      "run": 1,
+      "seed": 1277,
+      "sender_airtime_ratio": 1.215901571768393,
+      "str_background_throughput_mbps": 26.43904,
+      "str_completed_p99_us": 15545.07999999999,
+      "str_deadline_miss_count": 6,
+      "str_deadline_miss_rate": 0.0033333333333333335,
+      "str_run_id": "str-e2c770b-1277",
+      "str_sender_airtime_us": 4104676.0
+    },
+    {
+      "background_throughput_loss": 5.469794578816245e-05,
+      "completed_p99_delta_us": 1185.6800000000003,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 26.32496,
+      "policy_completed_p99_us": 22790.840000000037,
+      "policy_deadline_miss_count": 15,
+      "policy_deadline_miss_rate": 0.008333333333333333,
+      "policy_run_id": "shadow-prelim-1278",
+      "policy_sender_airtime_us": 5907628.0,
+      "run": 1,
+      "seed": 1278,
+      "sender_airtime_ratio": 1.2734706934557851,
+      "str_background_throughput_mbps": 26.3264,
+      "str_completed_p99_us": 21605.160000000036,
+      "str_deadline_miss_count": 15,
+      "str_deadline_miss_rate": 0.008333333333333333,
+      "str_run_id": "str-e2c770b-1278",
+      "str_sender_airtime_us": 4638998.0
+    },
+    {
+      "background_throughput_loss": -6.522460983826583e-05,
+      "completed_p99_delta_us": -4797.58999999999,
+      "miss_delta_percentage_points": -0.2777777777777778,
+      "policy_background_throughput_mbps": 26.98544,
+      "policy_completed_p99_us": 7932.329999999999,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1279",
+      "policy_sender_airtime_us": 3566980.0,
+      "run": 1,
+      "seed": 1279,
+      "sender_airtime_ratio": 1.0198542460856048,
+      "str_background_throughput_mbps": 26.98368,
+      "str_completed_p99_us": 12729.91999999999,
+      "str_deadline_miss_count": 5,
+      "str_deadline_miss_rate": 0.002777777777777778,
+      "str_run_id": "str-e2c770b-1279",
+      "str_sender_airtime_us": 3497539.0
+    },
+    {
+      "background_throughput_loss": -2.9118524040416816e-05,
+      "completed_p99_delta_us": -1467.8400000000292,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 27.47472,
+      "policy_completed_p99_us": 20188.52,
+      "policy_deadline_miss_count": 15,
+      "policy_deadline_miss_rate": 0.008333333333333333,
+      "policy_run_id": "shadow-prelim-1280",
+      "policy_sender_airtime_us": 5828133.0,
+      "run": 1,
+      "seed": 1280,
+      "sender_airtime_ratio": 1.2814403606244438,
+      "str_background_throughput_mbps": 27.47392,
+      "str_completed_p99_us": 21656.36000000003,
+      "str_deadline_miss_count": 15,
+      "str_deadline_miss_rate": 0.008333333333333333,
+      "str_run_id": "str-e2c770b-1280",
+      "str_sender_airtime_us": 4548111.0
+    },
+    {
+      "background_throughput_loss": -3.1155753844602785e-05,
+      "completed_p99_delta_us": -688.119999999999,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 25.67824,
+      "policy_completed_p99_us": 12151.039999999997,
+      "policy_deadline_miss_count": 1,
+      "policy_deadline_miss_rate": 0.0005555555555555556,
+      "policy_run_id": "shadow-prelim-1281",
+      "policy_sender_airtime_us": 4267000.0,
+      "run": 1,
+      "seed": 1281,
+      "sender_airtime_ratio": 1.203876669084577,
+      "str_background_throughput_mbps": 25.67744,
+      "str_completed_p99_us": 12839.159999999996,
+      "str_deadline_miss_count": 1,
+      "str_deadline_miss_rate": 0.0005555555555555556,
+      "str_run_id": "str-e2c770b-1281",
+      "str_sender_airtime_us": 3544383.0
+    },
+    {
+      "background_throughput_loss": 0.00014079937313671298,
+      "completed_p99_delta_us": 1216.3400000000365,
+      "miss_delta_percentage_points": 0.44444444444444453,
+      "policy_background_throughput_mbps": 26.1328,
+      "policy_completed_p99_us": 26440.66,
+      "policy_deadline_miss_count": 36,
+      "policy_deadline_miss_rate": 0.02,
+      "policy_run_id": "shadow-prelim-1282",
+      "policy_sender_airtime_us": 5967173.0,
+      "run": 1,
+      "seed": 1282,
+      "sender_airtime_ratio": 1.2530644275255436,
+      "str_background_throughput_mbps": 26.13648,
+      "str_completed_p99_us": 25224.319999999963,
+      "str_deadline_miss_count": 28,
+      "str_deadline_miss_rate": 0.015555555555555555,
+      "str_run_id": "str-e2c770b-1282",
+      "str_sender_airtime_us": 4762064.0
+    },
+    {
+      "background_throughput_loss": 1.1891171993960725e-05,
+      "completed_p99_delta_us": -6068.280000000001,
+      "miss_delta_percentage_points": -0.05555555555555555,
+      "policy_background_throughput_mbps": 26.9104,
+      "policy_completed_p99_us": 8599.88,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1283",
+      "policy_sender_airtime_us": 3646536.0,
+      "run": 1,
+      "seed": 1283,
+      "sender_airtime_ratio": 1.0118546628655085,
+      "str_background_throughput_mbps": 26.91072,
+      "str_completed_p99_us": 14668.16,
+      "str_deadline_miss_count": 1,
+      "str_deadline_miss_rate": 0.0005555555555555556,
+      "str_run_id": "str-e2c770b-1283",
+      "str_sender_airtime_us": 3603814.0
+    },
+    {
+      "background_throughput_loss": 0.00013481512742952173,
+      "completed_p99_delta_us": 262.74999999996726,
+      "miss_delta_percentage_points": 0.27777777777777785,
+      "policy_background_throughput_mbps": 27.29296,
+      "policy_completed_p99_us": 23912.75,
+      "policy_deadline_miss_count": 24,
+      "policy_deadline_miss_rate": 0.013333333333333334,
+      "policy_run_id": "shadow-prelim-1284",
+      "policy_sender_airtime_us": 5811348.0,
+      "run": 1,
+      "seed": 1284,
+      "sender_airtime_ratio": 1.2747639491756977,
+      "str_background_throughput_mbps": 27.29664,
+      "str_completed_p99_us": 23650.000000000033,
+      "str_deadline_miss_count": 19,
+      "str_deadline_miss_rate": 0.010555555555555556,
+      "str_run_id": "str-e2c770b-1284",
+      "str_sender_airtime_us": 4558764.0
+    },
+    {
+      "background_throughput_loss": 0.00015583325841350693,
+      "completed_p99_delta_us": -1171.6900000000005,
+      "miss_delta_percentage_points": -0.1111111111111111,
+      "policy_background_throughput_mbps": 26.69104,
+      "policy_completed_p99_us": 7454.4,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1285",
+      "policy_sender_airtime_us": 3548623.0,
+      "run": 1,
+      "seed": 1285,
+      "sender_airtime_ratio": 1.0792484907467952,
+      "str_background_throughput_mbps": 26.6952,
+      "str_completed_p99_us": 8626.09,
+      "str_deadline_miss_count": 2,
+      "str_deadline_miss_rate": 0.0011111111111111111,
+      "str_run_id": "str-e2c770b-1285",
+      "str_sender_airtime_us": 3288050.0
+    },
+    {
+      "background_throughput_loss": -1.1845674551924645e-05,
+      "completed_p99_delta_us": 1612.680000000044,
+      "miss_delta_percentage_points": -0.3333333333333332,
+      "policy_background_throughput_mbps": 27.0144,
+      "policy_completed_p99_us": 24831.400000000034,
+      "policy_deadline_miss_count": 19,
+      "policy_deadline_miss_rate": 0.010555555555555556,
+      "policy_run_id": "shadow-prelim-1286",
+      "policy_sender_airtime_us": 6072597.0,
+      "run": 1,
+      "seed": 1286,
+      "sender_airtime_ratio": 1.2577195511426476,
+      "str_background_throughput_mbps": 27.01408,
+      "str_completed_p99_us": 23218.71999999999,
+      "str_deadline_miss_count": 25,
+      "str_deadline_miss_rate": 0.013888888888888888,
+      "str_run_id": "str-e2c770b-1286",
+      "str_sender_airtime_us": 4828260.0
+    },
+    {
+      "background_throughput_loss": 1.2264671613526623e-05,
+      "completed_p99_delta_us": 418.60000000000946,
+      "miss_delta_percentage_points": 0.1111111111111111,
+      "policy_background_throughput_mbps": 26.09088,
+      "policy_completed_p99_us": 14694.519999999982,
+      "policy_deadline_miss_count": 5,
+      "policy_deadline_miss_rate": 0.002777777777777778,
+      "policy_run_id": "shadow-prelim-1287",
+      "policy_sender_airtime_us": 4880094.0,
+      "run": 1,
+      "seed": 1287,
+      "sender_airtime_ratio": 1.2388446473041685,
+      "str_background_throughput_mbps": 26.0912,
+      "str_completed_p99_us": 14275.919999999973,
+      "str_deadline_miss_count": 3,
+      "str_deadline_miss_rate": 0.0016666666666666668,
+      "str_run_id": "str-e2c770b-1287",
+      "str_sender_airtime_us": 3939230.0
+    },
+    {
+      "background_throughput_loss": -9.729223547139121e-05,
+      "completed_p99_delta_us": 333.83000000000084,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 26.31504,
+      "policy_completed_p99_us": 7938.48,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1288",
+      "policy_sender_airtime_us": 3523405.0,
+      "run": 1,
+      "seed": 1288,
+      "sender_airtime_ratio": 1.105608805696918,
+      "str_background_throughput_mbps": 26.31248,
+      "str_completed_p99_us": 7604.649999999999,
+      "str_deadline_miss_count": 0,
+      "str_deadline_miss_rate": 0.0,
+      "str_run_id": "str-e2c770b-1288",
+      "str_sender_airtime_us": 3186846.0
+    },
+    {
+      "background_throughput_loss": 0.00014651209640492713,
+      "completed_p99_delta_us": -2997.4300000000076,
+      "miss_delta_percentage_points": -0.9444444444444443,
+      "policy_background_throughput_mbps": 26.2056,
+      "policy_completed_p99_us": 21314.959999999992,
+      "policy_deadline_miss_count": 11,
+      "policy_deadline_miss_rate": 0.006111111111111111,
+      "policy_run_id": "shadow-prelim-1289",
+      "policy_sender_airtime_us": 5859038.0,
+      "run": 1,
+      "seed": 1289,
+      "sender_airtime_ratio": 1.1876549551282585,
+      "str_background_throughput_mbps": 26.20944,
+      "str_completed_p99_us": 24312.39,
+      "str_deadline_miss_count": 28,
+      "str_deadline_miss_rate": 0.015555555555555555,
+      "str_run_id": "str-e2c770b-1289",
+      "str_sender_airtime_us": 4933283.0
+    },
+    {
+      "background_throughput_loss": 3.776292436086237e-05,
+      "completed_p99_delta_us": -11496.51000000006,
+      "miss_delta_percentage_points": -1.0555555555555556,
+      "policy_background_throughput_mbps": 25.4208,
+      "policy_completed_p99_us": 9853.89,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1290",
+      "policy_sender_airtime_us": 4089376.0,
+      "run": 1,
+      "seed": 1290,
+      "sender_airtime_ratio": 1.0028995331268533,
+      "str_background_throughput_mbps": 25.42176,
+      "str_completed_p99_us": 21350.40000000006,
+      "str_deadline_miss_count": 19,
+      "str_deadline_miss_rate": 0.010555555555555556,
+      "str_run_id": "str-e2c770b-1290",
+      "str_sender_airtime_us": 4077553.0
+    },
+    {
+      "background_throughput_loss": 7.230222329335234e-05,
+      "completed_p99_delta_us": -1646.969999999983,
+      "miss_delta_percentage_points": -0.49999999999999994,
+      "policy_background_throughput_mbps": 26.55328,
+      "policy_completed_p99_us": 23170.80000000001,
+      "policy_deadline_miss_count": 19,
+      "policy_deadline_miss_rate": 0.010555555555555556,
+      "policy_run_id": "shadow-prelim-1291",
+      "policy_sender_airtime_us": 5852425.0,
+      "run": 1,
+      "seed": 1291,
+      "sender_airtime_ratio": 1.2177854934659067,
+      "str_background_throughput_mbps": 26.5552,
+      "str_completed_p99_us": 24817.769999999993,
+      "str_deadline_miss_count": 28,
+      "str_deadline_miss_rate": 0.015555555555555555,
+      "str_run_id": "str-e2c770b-1291",
+      "str_sender_airtime_us": 4805793.0
+    },
+    {
+      "background_throughput_loss": 2.3935469972924395e-05,
+      "completed_p99_delta_us": -2730.989999999989,
+      "miss_delta_percentage_points": -0.33333333333333337,
+      "policy_background_throughput_mbps": 26.73792,
+      "policy_completed_p99_us": 10982.93,
+      "policy_deadline_miss_count": 0,
+      "policy_deadline_miss_rate": 0.0,
+      "policy_run_id": "shadow-prelim-1292",
+      "policy_sender_airtime_us": 4029438.0,
+      "run": 1,
+      "seed": 1292,
+      "sender_airtime_ratio": 1.0779299574171657,
+      "str_background_throughput_mbps": 26.73856,
+      "str_completed_p99_us": 13713.91999999999,
+      "str_deadline_miss_count": 6,
+      "str_deadline_miss_rate": 0.0033333333333333335,
+      "str_run_id": "str-e2c770b-1292",
+      "str_sender_airtime_us": 3738126.0
+    },
+    {
+      "background_throughput_loss": 6.760411032979974e-05,
+      "completed_p99_delta_us": -1323.0199999999895,
+      "miss_delta_percentage_points": -0.44444444444444436,
+      "policy_background_throughput_mbps": 26.03216,
+      "policy_completed_p99_us": 23055.700000000004,
+      "policy_deadline_miss_count": 22,
+      "policy_deadline_miss_rate": 0.012222222222222223,
+      "policy_run_id": "shadow-prelim-1293",
+      "policy_sender_airtime_us": 6350052.0,
+      "run": 1,
+      "seed": 1293,
+      "sender_airtime_ratio": 1.2153342151292368,
+      "str_background_throughput_mbps": 26.03392,
+      "str_completed_p99_us": 24378.719999999994,
+      "str_deadline_miss_count": 30,
+      "str_deadline_miss_rate": 0.016666666666666666,
+      "str_run_id": "str-e2c770b-1293",
+      "str_sender_airtime_us": 5224943.0
+    },
+    {
+      "background_throughput_loss": 2.4058847942098893e-05,
+      "completed_p99_delta_us": -3477.92,
+      "miss_delta_percentage_points": 0.0,
+      "policy_background_throughput_mbps": 26.6008,
+      "policy_completed_p99_us": 8070.249999999998,
+      "policy_deadline_miss_count": 2,
+      "policy_deadline_miss_rate": 0.0011111111111111111,
+      "policy_run_id": "shadow-prelim-1294",
+      "policy_sender_airtime_us": 3581318.0,
+      "run": 1,
+      "seed": 1294,
+      "sender_airtime_ratio": 1.0516903518254062,
+      "str_background_throughput_mbps": 26.60144,
+      "str_completed_p99_us": 11548.169999999998,
+      "str_deadline_miss_count": 2,
+      "str_deadline_miss_rate": 0.0011111111111111111,
+      "str_run_id": "str-e2c770b-1294",
+      "str_sender_airtime_us": 3405297.0
+    },
+    {
+      "background_throughput_loss": 7.954086564931906e-05,
+      "completed_p99_delta_us": -4435.80000000009,
+      "miss_delta_percentage_points": -0.22222222222222218,
+      "policy_background_throughput_mbps": 26.148,
+      "policy_completed_p99_us": 20160.839999999975,
+      "policy_deadline_miss_count": 11,
+      "policy_deadline_miss_rate": 0.006111111111111111,
+      "policy_run_id": "shadow-prelim-1295",
+      "policy_sender_airtime_us": 5446338.0,
+      "run": 1,
+      "seed": 1295,
+      "sender_airtime_ratio": 1.199293416472724,
+      "str_background_throughput_mbps": 26.15008,
+      "str_completed_p99_us": 24596.640000000065,
+      "str_deadline_miss_count": 15,
+      "str_deadline_miss_rate": 0.008333333333333333,
+      "str_run_id": "str-e2c770b-1295",
+      "str_sender_airtime_us": 4541289.0
+    },
+    {
+      "background_throughput_loss": 1.794698460744204e-05,
+      "completed_p99_delta_us": 54.50000000005093,
+      "miss_delta_percentage_points": -0.33333333333333337,
+      "policy_background_throughput_mbps": 26.74496,
+      "policy_completed_p99_us": 16855.339999999997,
+      "policy_deadline_miss_count": 5,
+      "policy_deadline_miss_rate": 0.002777777777777778,
+      "policy_run_id": "shadow-prelim-1296",
+      "policy_sender_airtime_us": 4727175.0,
+      "run": 1,
+      "seed": 1296,
+      "sender_airtime_ratio": 1.138902675250082,
+      "str_background_throughput_mbps": 26.74544,
+      "str_completed_p99_us": 16800.839999999946,
+      "str_deadline_miss_count": 11,
+      "str_deadline_miss_rate": 0.006111111111111111,
+      "str_run_id": "str-e2c770b-1296",
+      "str_sender_airtime_us": 4150640.0
+    },
+    {
+      "background_throughput_loss": -3.059788262649299e-05,
+      "completed_p99_delta_us": -2959.6499999999833,
+      "miss_delta_percentage_points": -0.27777777777777785,
+      "policy_background_throughput_mbps": 26.1464,
+      "policy_completed_p99_us": 19464.40000000004,
+      "policy_deadline_miss_count": 15,
+      "policy_deadline_miss_rate": 0.008333333333333333,
+      "policy_run_id": "shadow-prelim-1297",
+      "policy_sender_airtime_us": 5583229.0,
+      "run": 1,
+      "seed": 1297,
+      "sender_airtime_ratio": 1.1645123827870312,
+      "str_background_throughput_mbps": 26.1456,
+      "str_completed_p99_us": 22424.050000000025,
+      "str_deadline_miss_count": 20,
+      "str_deadline_miss_rate": 0.011111111111111112,
+      "str_run_id": "str-e2c770b-1297",
+      "str_sender_airtime_us": 4794478.0
+    },
+    {
+      "background_throughput_loss": 6.581545346850959e-05,
+      "completed_p99_delta_us": 3622.999999999989,
+      "miss_delta_percentage_points": -0.2777777777777778,
+      "policy_background_throughput_mbps": 26.73968,
+      "policy_completed_p99_us": 22406.179999999986,
+      "policy_deadline_miss_count": 5,
+      "policy_deadline_miss_rate": 0.002777777777777778,
+      "policy_run_id": "shadow-prelim-1298",
+      "policy_sender_airtime_us": 5417127.0,
+      "run": 1,
+      "seed": 1298,
+      "sender_airtime_ratio": 1.2492331129181558,
+      "str_background_throughput_mbps": 26.74144,
+      "str_completed_p99_us": 18783.179999999997,
+      "str_deadline_miss_count": 10,
+      "str_deadline_miss_rate": 0.005555555555555556,
+      "str_run_id": "str-e2c770b-1298",
+      "str_sender_airtime_us": 4336362.0
+    }
+  ],
+  "paired_unit_count": 48,
+  "paired_units": [
+    {
+      "run": 1,
+      "seed": 1251
+    },
+    {
+      "run": 1,
+      "seed": 1252
+    },
+    {
+      "run": 1,
+      "seed": 1253
+    },
+    {
+      "run": 1,
+      "seed": 1254
+    },
+    {
+      "run": 1,
+      "seed": 1255
+    },
+    {
+      "run": 1,
+      "seed": 1256
+    },
+    {
+      "run": 1,
+      "seed": 1257
+    },
+    {
+      "run": 1,
+      "seed": 1258
+    },
+    {
+      "run": 1,
+      "seed": 1259
+    },
+    {
+      "run": 1,
+      "seed": 1260
+    },
+    {
+      "run": 1,
+      "seed": 1261
+    },
+    {
+      "run": 1,
+      "seed": 1262
+    },
+    {
+      "run": 1,
+      "seed": 1263
+    },
+    {
+      "run": 1,
+      "seed": 1264
+    },
+    {
+      "run": 1,
+      "seed": 1265
+    },
+    {
+      "run": 1,
+      "seed": 1266
+    },
+    {
+      "run": 1,
+      "seed": 1267
+    },
+    {
+      "run": 1,
+      "seed": 1268
+    },
+    {
+      "run": 1,
+      "seed": 1269
+    },
+    {
+      "run": 1,
+      "seed": 1270
+    },
+    {
+      "run": 1,
+      "seed": 1271
+    },
+    {
+      "run": 1,
+      "seed": 1272
+    },
+    {
+      "run": 1,
+      "seed": 1273
+    },
+    {
+      "run": 1,
+      "seed": 1274
+    },
+    {
+      "run": 1,
+      "seed": 1275
+    },
+    {
+      "run": 1,
+      "seed": 1276
+    },
+    {
+      "run": 1,
+      "seed": 1277
+    },
+    {
+      "run": 1,
+      "seed": 1278
+    },
+    {
+      "run": 1,
+      "seed": 1279
+    },
+    {
+      "run": 1,
+      "seed": 1280
+    },
+    {
+      "run": 1,
+      "seed": 1281
+    },
+    {
+      "run": 1,
+      "seed": 1282
+    },
+    {
+      "run": 1,
+      "seed": 1283
+    },
+    {
+      "run": 1,
+      "seed": 1284
+    },
+    {
+      "run": 1,
+      "seed": 1285
+    },
+    {
+      "run": 1,
+      "seed": 1286
+    },
+    {
+      "run": 1,
+      "seed": 1287
+    },
+    {
+      "run": 1,
+      "seed": 1288
+    },
+    {
+      "run": 1,
+      "seed": 1289
+    },
+    {
+      "run": 1,
+      "seed": 1290
+    },
+    {
+      "run": 1,
+      "seed": 1291
+    },
+    {
+      "run": 1,
+      "seed": 1292
+    },
+    {
+      "run": 1,
+      "seed": 1293
+    },
+    {
+      "run": 1,
+      "seed": 1294
+    },
+    {
+      "run": 1,
+      "seed": 1295
+    },
+    {
+      "run": 1,
+      "seed": 1296
+    },
+    {
+      "run": 1,
+      "seed": 1297
+    },
+    {
+      "run": 1,
+      "seed": 1298
+    }
+  ],
+  "performance_victory_against_str": {
+    "criteria": {
+      "completed_p99": {
+        "observed": -1108.7997968749971,
+        "paired_bootstrap": {
+          "ci95_high": -1108.7997968749971,
+          "ci95_low": -3057.0416822916723,
+          "confidence_level": 0.95,
+          "estimate": -2043.0412500000018,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 48,
+          "replications": 10000,
+          "seed": 20260804,
+          "statistic": "mean per-run policy-minus-STR completed-P99 difference"
+        },
+        "rule": "policy-minus-STR completed-P99 95% interval is strictly below zero",
+        "status": "pass",
+        "threshold": 0.0
+      },
+      "deadline_miss_rate": {
+        "observed": -0.0015969328703703744,
+        "paired_bootstrap": {
+          "ci95_high": -0.0015969328703703744,
+          "ci95_low": -0.003935185185185185,
+          "confidence_level": 0.95,
+          "estimate": -0.0027314814814814814,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 48,
+          "replications": 10000,
+          "seed": 20260804,
+          "statistic": "mean per-run policy-minus-STR miss-rate difference"
+        },
+        "rule": "policy-minus-STR miss-rate 95% interval is strictly below zero",
+        "status": "pass",
+        "threshold": 0.0
+      }
+    },
+    "status": "pass"
+  },
+  "promotion_readiness": {
+    "criteria": {
+      "engineering_completed_p99": {
+        "observed": 16831.562916666666,
+        "rule": "policy mean per-run completed P99 <= 17000 us",
+        "status": "pass",
+        "threshold": 17000.0
+      },
+      "engineering_miss_rate": {
+        "observed": 0.0052662037037037035,
+        "rule": "policy all-generated miss rate <= 0.005",
+        "status": "fail",
+        "threshold": 0.005
+      },
+      "long_term_relative_miss_reduction": {
+        "observed": 0.34153400868306805,
+        "rule": "relative miss reduction versus STR >= 0.50",
+        "status": "fail",
+        "threshold": 0.5
+      },
+      "str_qualification": {
+        "observed": 1.0,
+        "rule": "all performance and resource criteria pass",
+        "status": "pass",
+        "threshold": 1.0
+      }
+    },
+    "status": "fail"
+  },
+  "reserved_confirmation_seeds_used": false,
+  "resource_target_against_str": {
+    "criteria": {
+      "background_throughput": {
+        "exact_byte_gate": {
+          "passed": true,
+          "policy_bytes_received": 9600190800,
+          "rule": "100 * policy bytes >= 99 * STR bytes",
+          "str_bytes_received": 9600667200
+        },
+        "observed": 7.359423117052898e-05,
+        "paired_bootstrap": {
+          "ci95_high": 7.359423117052898e-05,
+          "ci95_low": 2.6045245530673113e-05,
+          "confidence_level": 0.95,
+          "estimate": 4.96215513022813e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 48,
+          "replications": 10000,
+          "seed": 20260804,
+          "statistic": "one minus ratio of resampled policy and STR background-throughput means"
+        },
+        "rule": "exact background byte gate passes and loss upper 95% endpoint <= 0.01",
+        "status": "pass",
+        "threshold": 0.01
+      },
+      "sender_airtime": {
+        "observed": 1.1906205500447118,
+        "paired_bootstrap": {
+          "ci95_high": 1.1906205500447118,
+          "ci95_low": 1.1404794594849454,
+          "confidence_level": 0.95,
+          "estimate": 1.1661831253541906,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 48,
+          "replications": 10000,
+          "seed": 20260804,
+          "statistic": "ratio of resampled policy and STR sender-airtime means"
+        },
+        "rule": "sender-airtime ratio upper 95% endpoint <= 1.20",
+        "status": "pass",
+        "threshold": 1.2
+      }
+    },
+    "status": "pass"
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "portable_model_replay": {
+      "path": "/home/jingweili/wifi_streaming_simulation/experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+      "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+    },
+    "raw_archives": {
+      "policy": {
+        "available": true,
+        "compressed_size_bytes": 89685591,
+        "path": "/home/jingweili/distributional-shadow-t2-engineering-e2c770b-raw.tar.zst",
+        "sha256": "fe1fe1532655ca4d422612b1bbddb8e44869d94535286816941cbef0c3a6cb27"
+      },
+      "str_mlo": {
+        "available": true,
+        "compressed_size_bytes": 5755083,
+        "path": "/home/jingweili/str-same-commit-e2c770b-complete-raw.tar.zst",
+        "sha256": "9ff159b9ce2752da58834c7a3804bdcd52747b76f37c2c2f1bea5754a39038a1"
+      }
+    },
+    "runtime_contract": {
+      "path": "/home/jingweili/wifi_streaming_simulation/experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+      "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+    },
+    "shadow_reference_replay": {
+      "path": "/home/jingweili/wifi_streaming_simulation/experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+      "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+    },
+    "simulation_project_commit": "e2c770b21cb8f69318a8cd5958815f4ab9c09392",
+    "strict_validator_commit": "34e9296108f54ea0738cbc43b7b6c20df9d419dd"
+  },
+  "str_qualification": {
+    "status": "pass"
+  },
+  "treatments": {
+    "policy": {
+      "all_generated_deadline_miss_rate": {
+        "campaign_estimator": "mean of per-run rates",
+        "mean": 0.0052662037037037035,
+        "total_generated_frames": 86400,
+        "total_misses": 455
+      },
+      "background_throughput_mbps": {
+        "definition": "raw received background-flow bytes over measurement duration",
+        "mean": 26.667196666666666
+      },
+      "completed_frame_count": {
+        "per_run_max": 1800,
+        "per_run_min": 1764,
+        "total": 85945
+      },
+      "completed_frame_p99_us": {
+        "campaign_estimator": "mean of per-run P99 values",
+        "mean": 16831.562916666666,
+        "minimum_completed_frames_per_run": 100,
+        "per_run_quantile": "Hyndman-Fan type 7 at probability 0.99"
+      },
+      "generated_frame_count": {
+        "per_run_max": 1800,
+        "per_run_min": 1800,
+        "total": 86400
+      },
+      "label": "Distributional shadow T2",
+      "run_count": 48,
+      "sender_phy_tx_airtime_us": {
+        "definition": "sum of link-0 and link-1 sender PHY TX intervals",
+        "mean": 4926319.208333333
+      }
+    },
+    "str_mlo": {
+      "all_generated_deadline_miss_rate": {
+        "campaign_estimator": "mean of per-run rates",
+        "mean": 0.007997685185185186,
+        "total_generated_frames": 86400,
+        "total_misses": 691
+      },
+      "background_throughput_mbps": {
+        "definition": "raw received background-flow bytes over measurement duration",
+        "mean": 26.66852
+      },
+      "completed_frame_count": {
+        "per_run_max": 1800,
+        "per_run_min": 1747,
+        "total": 85709
+      },
+      "completed_frame_p99_us": {
+        "campaign_estimator": "mean of per-run P99 values",
+        "mean": 18874.604166666668,
+        "minimum_completed_frames_per_run": 100,
+        "per_run_quantile": "Hyndman-Fan type 7 at probability 0.99"
+      },
+      "generated_frame_count": {
+        "per_run_max": 1800,
+        "per_run_min": 1800,
+        "total": 86400
+      },
+      "label": "STR MLO",
+      "run_count": 48,
+      "sender_phy_tx_airtime_us": {
+        "definition": "sum of link-0 and link-1 sender PHY TX intervals",
+        "mean": 4224310.145833333
+      }
+    }
+  }
+}

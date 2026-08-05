@@ -1,0 +1,129 @@
+{
+  "acted_primary_misses": 809,
+  "action_dirty_scored_decisions": 127,
+  "action_outcomes": {
+    "primary_miss_late_or_incomplete": 32,
+    "primary_miss_rescued": 777,
+    "primary_on_time_accelerated": 4163,
+    "primary_on_time_no_completion_benefit": 3364
+  },
+  "actions": 8336,
+  "allocation": {
+    "actions_by_congestion_regime": [
+      2533,
+      1649,
+      4154
+    ],
+    "actions_by_time_bin": [
+      1190,
+      941,
+      747,
+      771,
+      683,
+      650,
+      631,
+      597,
+      560,
+      531,
+      492,
+      543
+    ],
+    "canonical_reservation_us_by_congestion_regime": [
+      5024865.770317217,
+      3271221.340407849,
+      8240541.812040156
+    ],
+    "canonical_reservation_us_by_time_bin": [
+      2360675.1941087586,
+      1866718.7879465055,
+      1481869.2184867586,
+      1529479.474502397,
+      1354908.5357783884,
+      1289444.4337568854,
+      1251752.9810778375,
+      1184305.1183890163,
+      1110905.9736982393,
+      1053376.914346009,
+      976010.2483205962,
+      1077182.0423538284
+    ]
+  },
+  "analysis": "distributional_shadow_t2_policy_diagnostics_v1",
+  "conditional_rescue_efficiency": 0.9604449938195303,
+  "final_union_deadline_misses": 455,
+  "generated_frames": 86400,
+  "ledger": {
+    "all_runs_repaid": true,
+    "maximum_debt_us_across_runs": 161308.51010551484,
+    "mean_maximum_debt_us": 61080.74353062854,
+    "minimum_final_balance_us": 1036.7552114802932
+  },
+  "measured_secondary_airtime_us": 20445312.4,
+  "primary_copy_deadline_misses": 1232,
+  "primary_miss_capture_rate": 0.6566558441558441,
+  "rescued_primary_misses": 777,
+  "schema_version": 1,
+  "source_report_analysis": "distributional_shadow_t2_str_engineering_v1",
+  "terminal_status": {
+    "action": {
+      "final_union_misses": 32,
+      "frames": 8336,
+      "primary_copy_misses": 809,
+      "primary_miss_rate": 0.0970489443378119
+    },
+    "descriptor_unavailable": {
+      "final_union_misses": 0,
+      "frames": 0,
+      "primary_copy_misses": 0,
+      "primary_miss_rate": null
+    },
+    "frame_type_restricted": {
+      "final_union_misses": 48,
+      "frames": 1392,
+      "primary_copy_misses": 48,
+      "primary_miss_rate": 0.034482758620689655
+    },
+    "history_warmup": {
+      "final_union_misses": 72,
+      "frames": 384,
+      "primary_copy_misses": 72,
+      "primary_miss_rate": 0.1875
+    },
+    "horizon_credit_rejected": {
+      "final_union_misses": 11,
+      "frames": 25,
+      "primary_copy_misses": 11,
+      "primary_miss_rate": 0.44
+    },
+    "launch_rejected": {
+      "final_union_misses": 0,
+      "frames": 0,
+      "primary_copy_misses": 0,
+      "primary_miss_rate": null
+    },
+    "nonpositive_reward": {
+      "final_union_misses": 0,
+      "frames": 1,
+      "primary_copy_misses": 0,
+      "primary_miss_rate": 0.0
+    },
+    "not_actionable": {
+      "final_union_misses": 0,
+      "frames": 41121,
+      "primary_copy_misses": 0,
+      "primary_miss_rate": 0.0
+    },
+    "opportunity_price_rejected": {
+      "final_union_misses": 283,
+      "frames": 34373,
+      "primary_copy_misses": 283,
+      "primary_miss_rate": 0.008233206295639018
+    },
+    "outside_decision_window": {
+      "final_union_misses": 9,
+      "frames": 768,
+      "primary_copy_misses": 9,
+      "primary_miss_rate": 0.01171875
+    }
+  }
+}

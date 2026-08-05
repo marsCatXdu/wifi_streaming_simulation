@@ -11,8 +11,9 @@ source of truth; reconcile this document with them before continuing work.
 ## Stable objective
 
 Improve selective duplication until an engineering candidate decisively beats
-STR MLO in the unchanged neutral mixed-4x4 environment, then qualify the
-frozen candidate on untouched confirmation seeds.
+STR MLO in the unchanged neutral mixed-4x4 environment and demonstrates value
+across held-out environment families, then qualify the frozen candidate on
+untouched confirmation seeds.
 
 The policy defeats STR MLO only if the paired campaign establishes all of the
 following:
@@ -40,6 +41,9 @@ P99.
 - Cost-free score-aware V5 also reuses opened seeds `1251` through `1298`.
   It changes only the active ranking score and its calibrated primary and
   emergency thresholds; the V2 guard and environment remain fixed.
+- Distributional shadow T2 reuses opened seeds `1251` through `1298` for its
+  closed-loop mechanism test.  Its same-build STR arm is a new simulation at
+  project commit `e2c770b`; it does not consume confirmation units.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -99,12 +103,17 @@ P99.
 | Compile distributional T2 model | `f233402` | Exact multiclass, shadow-reference, and credit parity in C++ |
 | Add paired distribution predictor | `c33ed15` | Exact 308-feature primary-plus-secondary history adapter and tests |
 | Add permanent airtime ledger | `49371b0` | Repayment-enforced canonical debit and generated-credit golden parity |
+| Add distributional shadow controller | `472ed16` | Exact reward, opportunity-price, congestion, credit, and action telemetry |
+| Integrate distributional shadow policy | `e2c770b` | Executable policy, output ownership, and runtime wiring |
+| Validate distributional shadow evidence | `34e9296` | Independent model, reference, decision, and permanent-ledger replay |
+| Qualify distributional shadow against STR | `bf9e5c1` | Strict 48-pair gates, direct mechanisms, and paired heterogeneity |
+| Compare distributional shadow with V2 | `544008c` | Exact action transitions, paired uncertainty, and reviewed figures |
 
-The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
-compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
-profiles, and adds schema-V4 reconstruction of the diagnostic divided score
-and active raw float32 score used by V5.  The completed V5 result is archived
-at `0528610`; V2 remains the engineering champion.
+The latest validator milestone is `34e9296`.  It retains the exact historical
+paired-T2 checks and adds independent reconstruction of the distributional
+multiclass model, completion CDFs, shadow reference, congestion regime,
+repayable permanent ledger, decision routes, and runtime summaries.  V2
+remains the engineering champion after the distributional closed-loop test.
 
 ## One authoritative TODO checklist
 
@@ -154,7 +163,7 @@ at `0528610`; V2 remains the engineering champion.
   artifact hashes close, the static predictor frontier succeeds, and the
   nonclairvoyant no-borrow replay exposes chronological credit as the dominant
   gap.  Do not create a score/threshold-only V6.
-- [ ] Combine the fold-honest shadow price with exact future-credit borrowing
+- [x] Combine the fold-honest shadow price with exact future-credit borrowing
   that must be repaid by measurement stop.  First replay the single frozen
   mechanism on the already-opened randomized groups and record direct rejection
   outcomes.  The replay passes all five gates through `4a5bf74`, raising
@@ -164,11 +173,24 @@ at `0528610`; V2 remains the engineering champion.
   already-opened engineering seeds before touching confirmation seeds.  The
   frozen full-data refit, reachable reference curves, generated C++ model,
   independent multiclass/CDF parity, and credit goldens are complete through
-  `f233402`.  The exact paired primary-plus-secondary feature adapter is
-  complete through `c33ed15`, and the permanent-debit ledger is complete
-  through `49371b0`; next build the shadow-price controller profile.
-  Preserve conservative reservations, the less-than-1.20 sender-airtime gate,
-  and the background throughput gate.
+  `f233402`.  The paired adapter, permanent ledger, controller, runtime
+  integration, and independent validator are complete through `34e9296`.
+  The 48-pair closed-loop result passes every STR gate at 0.5266% misses,
+  16.832 ms P99, and a sender-airtime upper interval endpoint of 1.1906, but
+  reaches only a 34.15% miss reduction and is action-inefficient versus V2.
+  The exact qualification and V2 comparison are complete through `544008c`;
+  V2 remains champion and confirmation seeds remain unopened.
+- [ ] Build environment-level generalization qualification before final
+  confirmation.  Freeze a broad randomized scenario-parameter domain and
+  explicit scenario-family identities; expose only causally observable
+  environment variables to the model; perform leave-one-family-out fitting;
+  and measure value in actual randomized and closed-loop held-out runs.  Report
+  regret against a scenario-specific resource oracle and simple deployable
+  baselines, not only predictor metrics.  Add a telemetry-support/OOD detector
+  that falls back to a conservative policy, plus a small logged randomized
+  exploration rate for post-deployment treatment-effect recalibration.  Keep
+  seeds `1301` through `1348` untouched and freeze all family, split, gate,
+  fallback, exploration, and regret contracts before reading held-out results.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -289,22 +311,31 @@ strict-only actions containing 167 (4.84%).  Borrow-only frames are earlier
 reward.  The opportunity price raises as debt consumes future capacity and
 protects later high-value opportunities.
 
-The replay does not yet promote a runtime candidate.  Fifty-five runs enter
-debt and worst transient debt is 144.82 ms, so changed contention, queues,
-sender airtime, secondary rescue, background throughput, and completed P99
-must be measured closed loop.  The full-data runtime predictor, shadow
-reference, compiled evaluator, and exact paired 308-feature adapter are now
-complete through `c33ed15`.  Exact permanent-debit congestion-independent
-credit and repayment state is complete through `49371b0`; next combine it
-with the congestion shadow price and sender/meter evidence, then pass the
-existing paired STR gates on already-opened engineering seeds.  Compact replay
-evidence is under
-`key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
+The distributional runtime and its closed-loop test are complete.  On the 48
+opened engineering pairs, it records 455/86,400 misses (0.5266%) versus STR's
+691 (0.7998%) and 16.832 ms mean per-run P99 versus 18.875 ms.  The paired
+miss and P99 intervals are strictly favorable.  Sender-airtime ratio is
+1.1662 with interval `[1.1405, 1.1906]`, and background loss is 0.0050%; all
+STR gates pass.  Every ledger repays despite 161.309 ms worst transient debt.
+
+This does not promote the candidate.  Its 34.15% relative miss reduction is
+short of the greater-than-50% objective.  Against V2 it launches 8,336 versus
+4,944 actions but captures only 809 versus 771 primary misses.  Candidate-only
+actions carry 3.22% primary-miss risk versus 9.46% for V2-only actions.  The
+direct miss interval includes zero, although P99 is decisively lower.  V2
+therefore remains the engineering champion; selection efficiency, not the
+96.04% conditional rescue action, is limiting.  Compact evidence is under
+`key_experiment_results/15_distributional_shadow_t2_str_engineering_v1`.
+
+The next work boundary is environment-level generalization infrastructure,
+not another neutral-environment threshold or borrowing variant.  It must
+separate random seeds from scenario variation, test held-out scenario
+families by direct policy value and regret, and fail conservatively under
+unfamiliar telemetry while retaining logged randomized exploration.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
-pass, not final confirmation, and its 28.36% relative miss reduction is still
-short of the longer-term greater-than-50% aspiration.  Freeze the final
-candidate and final analyzer before consuming those seeds.
+pass, not final confirmation.  Freeze the generalization domain, candidate,
+fallback, exploration, and analyzer before consuming those seeds.
 
 The V1 event schema does not record its per-frame byte split or equal-time
 callback sequence, and the portable compiled cost path does not freeze FMA
@@ -498,8 +529,52 @@ Do not repeat an entry unless relevant code changed after it ran.
   replay matches all four deployment goldens, including negative debt,
   positive-cap discard, horizon rejection, and stop-time repayment.  Accepted
   canonical reservations have no release or measured-airtime refund path.
+- Distributional evidence validation at `34e9296`: 6 new focused tests, 21
+  existing paired-validator tests, and 96 adaptive/randomized/analysis
+  compatibility tests passed.  All 48 candidate runs passed strict validation
+  remotely, covering 86,400 decisions and frame outcomes.
+- Final qualification tooling at `544008c`: 41 focused analyzer, comparator,
+  plotting-label, and generic analysis tests passed with `py_compile` and
+  `git diff --check`.  The real analyzer freshly strict-validated all 96
+  candidate/STR runs; the exact V2 comparison freshly validated all 48
+  candidate runs and verified V2's checksum-bound archive and embedded strict
+  report.
+- Distributional raw archive SHA-256:
+  `fe1fe1532655ca4d422612b1bbddb8e44869d94535286816941cbef0c3a6cb27`
+  at 89,685,591 compressed bytes.  Complete same-build STR archive SHA-256:
+  `9ff159b9ce2752da58834c7a3804bdcd52747b76f37c2c2f1bea5754a39038a1`
+  at 5,755,083 bytes.  Both pass `zstd -t`.
+- Final distributional 48-pair report: policy 0.5266% misses and 16.832 ms
+  P99; STR 0.7998% and 18.875 ms; sender-airtime ratio 1.1662; background loss
+  0.0050%; STR qualification `pass`, promotion readiness `fail`.
+- Exact V2 comparison: primary-copy outcomes match on all 86,400 frames;
+  candidate-minus-V2 miss interval `[-0.1181, 0.0255]` percentage points and
+  P99 interval `[-0.687, -0.041]` ms.  V2 remains champion.  All five
+  qualification plots, all eight historical plots, and the V2 comparison plot
+  were visually inspected.
 
 ## Work log
+
+### 2026-08-05 - Qualify distributional shadow T2 closed loop
+
+- Completed the compiled controller, runtime wiring, independent model and
+  ledger replay, and strict validation through `34e9296`; pushed each clean
+  implementation/validation boundary before the campaign analysis.
+- Recovered all 48 distributional runs and generated a complete same-build
+  48-run STR arm on the 64-vCPU VM without reading reserved seeds.
+- Strictly validated all 96 runs, reconstructed exact HF7 P99, miss, sender
+  airtime, and background metrics, and passed every frozen STR gate.
+- Diagnosed the promotion failure: 96.04% conditional rescue remains strong,
+  but the candidate spends 3,392 extra actions versus V2 for only 38 extra
+  captured primary misses.  The miss gain over V2 is not statistically
+  resolved; V2 stays champion.
+- Added and pushed the strict analyzer, exact V2 action comparison, paired
+  heterogeneity, qualification figures, and historical CDF/PDF/burst plots
+  through `544008c`.
+- Archived the compact evidence and raw-archive identities under
+  `key_experiment_results/15_distributional_shadow_t2_str_engineering_v1`.
+  The next boundary is a frozen environment-generalization pipeline with
+  held-out-family value/regret tests, OOD fallback, and logged exploration.
 
 ### 2026-08-05 - Isolate permanent borrow-and-repay accounting
 

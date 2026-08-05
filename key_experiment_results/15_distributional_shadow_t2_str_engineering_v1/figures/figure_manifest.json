@@ -1,0 +1,39 @@
+{
+  "analysis": "distributional_shadow_t2_str_engineering_plots_v1",
+  "figures": [
+    {
+      "path": "paired_metric_deltas.png",
+      "sha256": "11e10f5067e372a3f83e5ab236d43fc6267adcc2701bd504d5b7c01f02a00f01",
+      "size_bytes": 114864
+    },
+    {
+      "path": "paired_performance_tradeoff.png",
+      "sha256": "ed004833cd616b3a09eedcbf4f5728c4d140dd8b6c959daaf5a8d815cec94b5c",
+      "size_bytes": 90209
+    },
+    {
+      "path": "resource_gates.png",
+      "sha256": "4a1196dd20c0c130ce470849a540d6745e7ba1f65b78cd2555887201c148c444",
+      "size_bytes": 85984
+    },
+    {
+      "path": "policy_terminal_diagnostics.png",
+      "sha256": "55b0ef1ef5947bdc8393d5e180582814facc8466ed91514e15ac8c91383e8875",
+      "size_bytes": 90301
+    },
+    {
+      "path": "allocator_diagnostics.png",
+      "sha256": "94c55a9d745f8096b537921f00620302c24a325f864649bca7ebeb3e41c48b63",
+      "size_bytes": 151962
+    }
+  ],
+  "schema_version": 1,
+  "source_diagnostics": {
+    "path": "/tmp/distributional_shadow_t2_engineering_analysis_34e9296/policy_diagnostics.json",
+    "sha256": "ff35d7cbb505b0a9eb704c9ac34e2d59da63f1162f9ca1f43da985d44369f433"
+  },
+  "source_report": {
+    "path": "/tmp/distributional_shadow_t2_engineering_analysis_34e9296/distributional_shadow_t2_str_engineering.json",
+    "sha256": "7faf18186fd8d5c2eb8d0d3a3472d58bedb40cc9489db195c15f276d9e9fae83"
+  }
+}

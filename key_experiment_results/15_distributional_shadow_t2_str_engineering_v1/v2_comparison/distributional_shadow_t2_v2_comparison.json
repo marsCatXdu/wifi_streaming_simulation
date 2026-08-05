@@ -1,0 +1,149 @@
+{
+  "action_transition_populations": {
+    "candidate_only": {
+      "candidate_final_misses": 6,
+      "frames": 4534,
+      "primary_copy_miss_rate": 0.032201146890163214,
+      "primary_copy_misses": 146,
+      "v2_final_misses": 146
+    },
+    "common_action": {
+      "candidate_final_misses": 26,
+      "frames": 3802,
+      "primary_copy_miss_rate": 0.17438190426091532,
+      "primary_copy_misses": 663,
+      "v2_final_misses": 32
+    },
+    "neither": {
+      "candidate_final_misses": 315,
+      "frames": 76922,
+      "primary_copy_miss_rate": 0.004095057330802631,
+      "primary_copy_misses": 315,
+      "v2_final_misses": 315
+    },
+    "v2_only": {
+      "candidate_final_misses": 108,
+      "frames": 1142,
+      "primary_copy_miss_rate": 0.09457092819614711,
+      "primary_copy_misses": 108,
+      "v2_final_misses": 2
+    }
+  },
+  "analysis": "distributional_shadow_t2_v2_comparison_v1",
+  "archived_v2_report_status": "pass",
+  "candidate_report_status": "pass",
+  "evidence_role": "opened-seed direct engineering comparison",
+  "headline": {
+    "candidate_acted_primary_misses": 809,
+    "candidate_actions": 8336,
+    "candidate_deadline_miss_rate": 0.0052662037037037035,
+    "candidate_final_misses": 455,
+    "candidate_mean_per_run_completed_p99_us": 16831.562916666666,
+    "v2_acted_primary_misses": 771,
+    "v2_actions": 4944,
+    "v2_deadline_miss_rate": 0.005729166666666666,
+    "v2_final_misses": 495,
+    "v2_mean_per_run_completed_p99_us": 17192.269791666662
+  },
+  "interpretation": {
+    "action_mechanism_remains_effective": true,
+    "candidate_added_actions_per_extra_captured_primary_miss": 89.26315789473684,
+    "candidate_miss_improvement_supported_by_95pct_interval": false,
+    "candidate_p99_improvement_supported_by_95pct_interval": true,
+    "selection_efficiency_regressed": true,
+    "v2_remains_engineering_champion": true
+  },
+  "invariants": {
+    "candidate_48_runs_freshly_current_strict_validated": true,
+    "frame_id_sets_match": true,
+    "primary_copy_deadline_outcomes_match": true,
+    "primary_copy_outcome_difference_count": 0,
+    "v2_archive_bundle_and_embedded_strict_report_verified": true,
+    "v2_archived_96_run_strict_validation": true,
+    "v2_schema_compatible_validator_commit": "cff64f7a1044e9934f9f4a3acad79dac200eec4e"
+  },
+  "paired_comparison_candidate_minus_v2": {
+    "background_throughput_loss": {
+      "ci95_high": 2.493263801156553e-06,
+      "ci95_low": -1.1507629520701723e-05,
+      "confidence_level": 0.95,
+      "estimate": -4.2499335948242845e-06,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "one minus candidate/V2 background-throughput ratio"
+    },
+    "completed_p99_us": {
+      "ci95_high": -41.172645833331515,
+      "ci95_low": -687.2494791666585,
+      "confidence_level": 0.95,
+      "estimate": -360.70687499999605,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "mean per-run candidate-minus-V2 completed-P99 difference"
+    },
+    "deadline_miss_rate": {
+      "ci95_high": 0.00025462962962962955,
+      "ci95_low": -0.0011805555555555556,
+      "confidence_level": 0.95,
+      "estimate": -0.00046296296296296303,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "mean per-run candidate-minus-V2 miss-rate difference"
+    },
+    "sender_airtime_ratio": {
+      "ci95_high": 1.0519259943124255,
+      "ci95_low": 1.028995718193174,
+      "confidence_level": 0.95,
+      "estimate": 1.0396508176501826,
+      "method": "deterministic paired whole-run percentile bootstrap",
+      "paired_unit_count": 48,
+      "replications": 10000,
+      "seed": 20260804,
+      "statistic": "ratio of candidate and V2 sender-airtime means"
+    }
+  },
+  "paired_unit_count": 48,
+  "reserved_confirmation_seeds_used": false,
+  "schema_version": 1,
+  "source_closure": {
+    "candidate_project_commit": "e2c770b21cb8f69318a8cd5958815f4ab9c09392",
+    "candidate_qualification": {
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/key_experiment_results/15_distributional_shadow_t2_str_engineering_v1/distributional_shadow_t2_str_engineering.json",
+      "sha256": "7faf18186fd8d5c2eb8d0d3a3472d58bedb40cc9489db195c15f276d9e9fae83"
+    },
+    "v2_aggregate": {
+      "path": "v2_raw_archive::runs/aggregate.json",
+      "sha256": "7b4777f423072cd635a00261ff23a5ce17dc460020cab9082acc704750098c6d"
+    },
+    "v2_project_commit": "eb7f9600fab33876bce4538f665b69785f493d74",
+    "v2_qualification": {
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/key_experiment_results/07_score_aware_t2_str_engineering_v2/qualification.json",
+      "sha256": "75b8797ade357d9877a594be8972fb7a68a84ff197cdea47baca02df6000773a"
+    },
+    "v2_raw_archive": {
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_score_aware_str_engineering_v2/paired-value-t2-score-aware-str-engineering-v2-eb7f960.tar.zst",
+      "sha256": "382e4a3508cd013dc028b849301096054c12eef4cb302ed101f14d0434d6da3f"
+    }
+  },
+  "status_transitions": {
+    "action -> action": 3802,
+    "action -> horizon_credit_rejected": 22,
+    "action -> opportunity_price_rejected": 1120,
+    "airtime_guard_rejected -> action": 1187,
+    "airtime_guard_rejected -> horizon_credit_rejected": 3,
+    "airtime_guard_rejected -> opportunity_price_rejected": 1350,
+    "below_score_threshold -> action": 3347,
+    "below_score_threshold -> nonpositive_reward": 1,
+    "below_score_threshold -> opportunity_price_rejected": 31903,
+    "frame_type_restricted -> frame_type_restricted": 1392,
+    "history_warmup -> history_warmup": 384,
+    "not_actionable -> not_actionable": 41121,
+    "outside_decision_window -> outside_decision_window": 768
+  }
+}

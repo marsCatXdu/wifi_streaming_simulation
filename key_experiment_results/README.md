@@ -42,6 +42,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `12_temporal_t2_ceiling_decomposition_v1` | Closed-loop V2/V5 action, score, and resource ceilings | Per-run canonical frontiers, primary-information oracle, counterfactual support audit, report, and figure |
 | `13_temporal_t2_distributional_online_ceiling_v1` | Cross-fitted distributional T2 and nonclairvoyant allocation ceiling | Four predictor variants, exact static frontier, fold-honest shadow references, online replay, reports, and figures |
 | `14_temporal_t2_shadow_borrow_repay_v1` | Opportunity-priced deterministic future-credit replay | Exact strict baseline, repayment-bounded allocation, decision-route and action-substitution diagnostics, shared-bootstrap outcomes, and figure |
+| `15_distributional_shadow_t2_str_engineering_v1` | Closed-loop distributional shadow T2 versus same-build STR and score-aware V2 | Strict 48-pair qualification, action and ledger diagnostics, exact V2 comparison, raw-archive identities, and qualification plus standard figures |
 
 ## Current best STR result
 
@@ -107,6 +108,15 @@ run.  The gain comes from replacing 3,449 later 4.84%-risk actions with 3,648
 earlier 17.21%-risk actions, rather than merely adding airtime.  Transient debt
 reaches 144.82 ms, so this is authorization for closed-loop engineering, not a
 promotion over V2.  See `14_temporal_t2_shadow_borrow_repay_v1/README.md`.
+
+The compiled closed-loop test confirms a real but smaller gain.  Distributional
+shadow T2 reaches 0.5266% misses and 16.832 ms P99 versus STR's 0.7998% and
+18.875 ms, with a 1.1662 sender-airtime ratio whose upper 95% endpoint is
+1.1906.  Every frozen STR gate passes, but the 34.15% miss reduction is short
+of the greater-than-50% objective.  Against V2 it uses 3,392 more actions for
+only 38 additional captured primary misses; the direct miss interval includes
+zero even though P99 improves.  V2 therefore remains the engineering
+champion.  See `15_distributional_shadow_t2_str_engineering_v1/README.md`.
 
 ## Principal streaming results
 
@@ -337,3 +347,6 @@ For online prediction:
 9. The ceiling decomposition's canonical-reservation frontiers are static
    resource proxies. Constant-rescue projections and pooled-credit
    sensitivities are not closed-loop performance estimates.
+10. The distributional-shadow result is opened-seed engineering evidence.
+    Reserved seeds `1301` through `1348` remain unopened, and the raw archives
+    are checksum-bound but not yet published as durable release assets.
