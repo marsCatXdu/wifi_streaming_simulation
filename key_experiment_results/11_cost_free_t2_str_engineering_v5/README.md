@@ -71,6 +71,38 @@ promote V5 or tune it on new seeds. A future candidate must optimize the
 score and admission allocation together rather than treating threshold
 ranking and guard chronology as independent layers.
 
+This is a local ceiling for the present scalar ranking plus chronological
+airtime-admission pipeline. It is not evidence that selective full-copy
+duplication has reached its fundamental ceiling. As an intentionally
+optimistic sensitivity calculation, applying V5's factual acted-frame rescue
+rate, `736/763`, to all 193 guard-rejected primary misses gives
+`496 - 193 * 736 / 763 = 309.83` expected misses, or 0.3586%. That is 55.16%
+below STR's 691 misses, but it is not a performance estimate or an exact
+oracle: those rejected frames have no factual secondary-copy outcome, their
+costs and rescue probabilities may differ, and admitting them would displace
+other actions and alter contention.
+
+The next boundary is a ceiling decomposition, not another score/threshold-only
+V6. It must distinguish factual V2/V5 performance, an offline resource oracle
+over outcomes that are actually identified (plus explicit bounds for missing
+counterfactuals), a cross-fitted causal policy using only T2-available
+features, and an implementable nonclairvoyant online allocator. Canonical
+reservations and all resource constraints must be replayed exactly. This will
+separate limitations in the action, available information, and sequential
+allocation before another simulation campaign is opened.
+
+Sixteen of 48 V5 runs individually have a sender-airtime ratio above 1.20.
+That does not violate the frozen campaign-level confidence-interval gate, but
+it motivates a congestion-regime state: the high-ratio subgroup has a mean
+V5-minus-STR miss delta of -0.1771 percentage points and P99 delta of
+-0.564 ms, versus -0.2500 percentage points and -2.408 ms in the other 32
+runs. This association is descriptive and must not be interpreted causally.
+
+The frozen V5 contract also contains one unsupported historical note about
+unarchived secondary-feature and larger-model prototypes. The adjacent
+`experiments/model-selection/paired-value-duplication-t2-cost-free-score-aware-v5-errata.md`
+supersedes that note without changing the checksum-bound contract.
+
 ## Figures
 
 Qualification figures are directly under `figures/`:

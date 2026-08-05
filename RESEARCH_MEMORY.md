@@ -278,15 +278,80 @@ Its completed-late18 ratio is 1.4889% versus 1.5918%, with paired interval
 `[-0.1861, -0.0313]` percentage points.  It uses 1.49 percentage points more
 actions and 30.47 us more DR airtime per eligible frame.
 
-Adopt cost-free value ranking as the baseline, but do not yet claim a runtime
-improvement or remove cost prediction from conservative reservation.  The
-winner still uses legacy bad12 rather than an explicit deadline/tail signal
-and nearly saturates the offline airtime ceiling.  Next, add causally
-available action-clean secondary-path state to the treated-outcome model so
-it can predict whether the identical 2.4 GHz copy rescues the union outcome.
-Compare that finite candidate set on the same opened data before another VM
-campaign.  The compact artifact is
+This result motivated the V5 closed-loop test; it did not establish a runtime
+improvement or justify removing conservative cost reservation.  V5 later
+falsified the assumption that a better static offline ranker necessarily
+improves a chronological budgeted controller.  The compact ablation artifact
+is
 `key_experiment_results/10_temporal_t2_cost_denominator_ablation_v1`.
+
+## Cost-free score-aware V5 closed-loop result
+
+V5 exported the cost-ablation winner while retaining V2's exact guard,
+reservation, frame gate, action, and environment.  Its 48-pair campaign on
+the already-opened seeds `1251` through `1298` passes every frozen STR gate:
+
+| Metric | Cost-free T2 V5 | STR MLO | Paired V5-minus-STR result |
+| --- | ---: | ---: | ---: |
+| All-generated miss rate | 0.5741% (496/86,400) | 0.7998% (691/86,400) | 95% interval [-0.3113, -0.1435] pp |
+| Mean per-run completed P99 | 17.081 ms | 18.875 ms | 95% interval [-2.756, -0.886] ms |
+| Sender-airtime ratio | - | - | 1.1236, 95% interval [1.0865, 1.1587] |
+| Background-throughput loss | - | - | 0.0047%, 95% interval [0.0023%, 0.0073%] |
+
+V5 does not improve V2 on these paired development seeds.  V2 has 495 misses,
+17.192 ms P99, and 4,944 actions; V5 has 496 misses, 17.081 ms P99, and 5,147
+actions.  The direct V5-minus-V2 95% intervals include zero for both misses
+(`[-0.0255, +0.0312]` percentage points) and P99
+(`[-0.296, +0.057]` ms).  V5 also consumes 3.42% more measured secondary
+airtime.  Freeze V2 as the engineering champion and do not create another
+score/threshold-only V6.
+
+The exact miss decomposition explains the null result.  Below-threshold
+misses improve from 170 to 147, guard-rejected misses worsen from 162 to 193,
+and residual misses after acting improve from 34 to 27.  Thus the final
+change is `-23 + 31 - 7 = +1` miss.  V2-only actions contain 57/518 primary
+misses (11.00%), while V5-only actions contain only 49/721 (6.80%).  The
+offline ranker improved threshold filtering but passed a worse population to
+the sequential budget controller.
+
+This establishes only a local ceiling for the current scalar ranking plus
+chronological airtime admission.  It does not establish a fundamental ceiling
+for selective full-copy duplication.  V5 rescues 736 of 763 acted primary
+misses (96.46%).  Applying that factual rate to all 193 guard-rejected primary
+misses gives the optimistic sensitivity `496 - 193 * 736 / 763 = 309.83`
+misses, or 0.3586%, 55.16% below STR.  This is not an oracle estimate: rejected
+frames lack observed secondary-copy outcomes, may have different costs and
+rescue probabilities, and admitting them would displace actions and change
+contention.
+
+The next boundary is a ceiling decomposition using exact canonical airtime
+reservations:
+
+- factual V2 and V5;
+- an offline resource oracle only where action outcomes are identified,
+  accompanied by explicit bounds or new counterfactual data for unobserved
+  actions;
+- a cross-fitted policy using only causally available T2 features; and
+- an implementable nonclairvoyant online allocator that values future action
+  opportunities.
+
+This decomposition must distinguish an action ceiling, an information ceiling,
+and a sequential-allocation ceiling before another campaign.  If causal
+prediction is limiting, estimate separate completion distributions with and
+without duplication at `12`, `18`, `24`, `30`, and `33.333 ms`.  Keep deadline
+rescue, tail acceleration, and conservative airtime cost as separate outputs;
+make secondary-link features an ablation.  If allocation is limiting, learn a
+time-, credit-, and congestion-dependent shadow price instead of granting
+unpriced future credit.  Sixteen of 48 V5 runs individually exceed a 1.20
+sender-airtime ratio and have descriptively worse miss and P99 deltas, which
+supports including congestion regime without claiming causality.
+
+The frozen V5 JSON contains an unsupported note that unarchived
+secondary-feature and larger-model prototypes were null.  Its adjacent
+erratum withdraws that evidence claim while preserving the checksum-bound
+contract bytes.  Do not infer that either model family has been ruled out.
+The compact V5 evidence is
+`key_experiment_results/11_cost_free_t2_str_engineering_v5`.
 
 ## Randomized-policy population mapping
 

@@ -76,11 +76,15 @@ P99.
 | Evaluate frozen-head cost divisor | `8d8f246` | Paired cost-free ranking grid and whole-run delta uncertainty |
 | Add cost-free score-aware V5 | `179a283` | Raw-value runtime profile with V2 admission semantics |
 | Validate cost-free V5 evidence | `c61fa98` | Schema-V4 replay of both diagnostic and active scores |
+| Compare active V2/V5 scores | `dce883f` | Schema-aware exact action and outcome transitions |
+| Quantify paired V2/V5 deltas | `a16bcb3` | Shared-bootstrap direct miss and P99 intervals |
+| Qualify and archive cost-free V5 | `0528610` | Strict all-gate STR pass and exact V2 null comparison |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
 profiles, and adds schema-V4 reconstruction of the diagnostic divided score
-and active raw float32 score used by V5.
+and active raw float32 score used by V5.  The completed V5 result is archived
+at `0528610`; V2 remains the engineering champion.
 
 ## One authoritative TODO checklist
 
@@ -114,11 +118,17 @@ and active raw float32 score used by V5.
   its measured-airtime guard or conservative reservation.  Freeze and
   independently validate the resulting V5 runtime contract, then pass a
   same-commit local preflight (`179a283`, `c61fa98`).
-- [ ] Run cost-free V5 against STR on the 48 already-opened engineering seeds,
+- [x] Run cost-free V5 against STR on the 48 already-opened engineering seeds,
   fetch and checksum the 96 raw runs, strictly revalidate them locally, then
   generate the qualification and historical CDF/PDF/burst/resource figures.
-  Archive the result and decide whether V5 replaces V2.  Do not consume seeds
-  `1301` through `1348`.
+  Archive the result and decide whether V5 replaces V2 (`0528610`).  V5 passes
+  STR but does not improve V2; seeds `1301` through `1348` remain unopened.
+- [ ] Build the exact ceiling decomposition before another simulation
+  campaign: factual V2/V5, an identified-outcome resource oracle with explicit
+  counterfactual bounds, a cross-fitted causal T2 policy, and an implementable
+  nonclairvoyant online allocator.  Replay canonical reservations and resource
+  constraints exactly, then decide whether prediction, allocation, or the
+  full-copy action is limiting.  Do not create a score/threshold-only V6.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -164,32 +174,37 @@ Conditional rescue remains about 95.7%, so chronological future-credit
 spending, not duplication, causes the loss.  Do not run another bucket or
 remaining-refill variant.
 
-The first predictor boundary is complete.  With all fitted primary-only heads
-held fixed, removing the learned cost divisor improves both calibration
-objectives at the same 15% action fraction and lowers estimated airtime.  The
-cost-free grid selects raw bad12 value at 16.5% requested actions.  On the
-already-opened engineering test it estimates 0.4723% misses instead of
-0.5229%, with a paired 95% delta interval of `[-0.1016, -0.0006]` percentage
-points.  Completed-late18 also improves, while action fraction rises by 1.49
-percentage points and DR airtime by 30.47 us per eligible frame.  This is
-development evidence, not a closed-loop STR result.
+The cost-free predictor boundary is complete.  Its static opened-data
+ablation favored raw bad12 value, but closed-loop V5 falsified the assumption
+that a better static ranking necessarily improves a chronological budgeted
+controller.  V5 preserves V2's guard, reservation, P-frame gate, action, and
+environment while replacing only the active ranker and thresholds.
 
-Cost-free score-aware V5 is now the next closed-loop experiment.  It keeps
-V2's exact 10-second measured-airtime guard, 0.6% refill, startup credit,
-60,000 us emergency debt, conservative canonical reservation, P-frame gate,
-action timing, and environment.  It replaces the learned-cost-divided ranker
-with raw legacy-bad12 value.  Its primary threshold is the calibrated top
-16.5% cutoff `0.18692325055599213`; its emergency threshold is the calibrated
-top 8.25% cutoff `0.3069669306278229`.  Learned cost remains serialized only
-as a diagnostic and is never used for admission accounting.
+V5 passes every frozen STR gate on the 48 opened engineering pairs: 496/86,400
+misses (0.5741%) versus STR's 691 (0.7998%), 17.081 ms mean per-run completed
+P99 versus 18.875 ms, 1.1236 sender-airtime ratio, and 0.0047% background
+loss.  It nevertheless does not improve V2's 495 misses and 17.192 ms P99.
+The direct V5-minus-V2 95% intervals include zero for both misses
+(`[-0.0255, +0.0312]` percentage points) and P99
+(`[-0.296, +0.057]` ms).  V5 uses 5,147 actions versus V2's 4,944 and 3.42%
+more measured secondary airtime.  V2 remains the engineering champion.
 
-The clean `c61fa98` seed-43 preflight produced 9/1,800 misses versus STR's
-10/1,800 and completed-frame P99s of 21.363 ms versus 23.086 ms.  V5 evaluated
-1,244 frames, passed 311 scores, admitted 105 strictly and 110 through the
-high-score emergency tier, and rejected 96 at the guard.  Its measured
-secondary airtime was 363,556.8 us.  This single pair establishes runtime and
-evidence integrity only; it does not qualify performance or resources.  Run
-the 48 opened pairs next and plot immediately after local restoration.
+The exact component change is decisive: below-threshold misses improve
+170 to 147 (-23), guard-rejected misses worsen 162 to 193 (+31), and residual
+misses after acting improve 34 to 27 (-7), for one additional final miss.
+V2-only actions carry 11.00% primary misses, while V5-only actions carry only
+6.80%.  V5 improved the first filter but sent a worse population through the
+sequential budget controller.
+
+This is a local ceiling for scalar ranking plus chronological admission, not
+a fundamental ceiling for selective full-copy duplication.  Applying V5's
+factual 736/763 acted-frame rescue rate to all 193 guard-rejected primary
+misses gives an optimistic sensitivity of 309.83 misses (0.3586%), but that is
+not an oracle result: rejected frames lack factual secondary outcomes, action
+costs and rescue rates may differ, and substitutions alter contention.  The
+next boundary is the exact ceiling decomposition in the authoritative
+checklist.  Freeze score/threshold-only variants until it distinguishes the
+action, information, and sequential-allocation ceilings.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -316,8 +331,44 @@ Do not repeat an entry unless relevant code changed after it ran.
   `c56c7a0864a01b166def` each passed strict validation with 1,800 frames.
   Schema V4 records and independently replays the raw float32 policy score;
   the policy summary reports all integrity checks true.
+- The V5 96-run campaign completed at simulation commit `ed21d0a` on the
+  64-vCPU VM, consuming 9 h 53 min of CPU time with 2.4 GB peak memory.  All
+  raw runs passed strict validation remotely and again after local archive
+  restoration.
+- V5 manifest SHA-256:
+  `e341438bb43dcef81a62862632bb95b643336dd8e08a4961cf3c58ba2587161a`.
+  Strict report SHA-256:
+  `d86cee0418069ee5337d9a9a84d8930b96959bf6f22d6529a077d493320fc373`.
+  Aggregate SHA-256:
+  `4126beba63873cc24b9c33ab017a3131277d751e5dcd9bd5f6835929e2dfe62e`.
+- The V5 raw archive passes `zstd -t` locally and remotely, contains exactly
+  96 canonical run directories, and has SHA-256
+  `fce039fa28e3ecc8ba8c9bee6759eb6ba71f9af0a16277a7e7f834b01fbd5694`
+  at 97,159,582 compressed bytes.
+- Final V5 48-pair report: policy 0.5741% misses and 17.081 ms P99; STR
+  0.7998% and 18.875 ms; sender-airtime ratio 1.1236; background loss
+  0.0047%; performance, resource, and overall status all `pass`.
+- Exact V2/V5 analysis through `a16bcb3` found 203 additional V5 actions,
+  one additional miss, 3.42% more secondary airtime, and direct paired miss
+  and P99 intervals containing zero.  Its 3 Python tests, `py_compile`, and
+  diff checks passed.  The complete compact result is archived at `0528610`.
 
 ## Work log
+
+### 2026-08-05 - Qualify and archive cost-free score-aware V5
+
+- Completed the 96-run V5/STR campaign on the 64-vCPU VM using only opened
+  seeds `1251` through `1298`; reserved seeds remain untouched.
+- Fetched and checksum-verified the raw archive, restored it locally, and
+  strictly validated all runs through both analysis and plotting.
+- Generated the paired qualification figures and the historical
+  CDF/PDF/deadline/burst/resource suite, then archived the compact evidence
+  under `key_experiment_results/11_cost_free_t2_str_engineering_v5`.
+- Added schema-aware V2/V5 action comparison and shared-bootstrap direct
+  miss/P99 intervals through `a16bcb3`; established that V5 is null versus V2
+  despite passing every STR gate.
+- Kept V2 as the engineering champion.  The next work is an exact ceiling
+  decomposition, not another score/threshold-only runtime variant.
 
 ### 2026-08-05 - Export and preflight cost-free score-aware V5
 
