@@ -69,6 +69,7 @@ def write_campaign(
                     1100 + frame_id * 100 if frame_id in primary_misses else 1040 + frame_id * 100
                 ),
                 "copy_1_completion_us": "",
+                "union_latency_us": 40 + frame_id,
                 "deadline_miss": int(frame_id in final_misses),
             }
         )
@@ -137,6 +138,14 @@ class ComparePairedValueT2AdmissionTest(unittest.TestCase):
                 "on_time -> on_time": 2,
             },
         )
+        miss_delta = report["paired_performance_deltas"][
+            "all_generated_deadline_miss_rate"
+        ]
+        p99_delta = report["paired_performance_deltas"]["completed_frame_p99_us"]
+        self.assertEqual(miss_delta["estimate"], 0.0)
+        self.assertEqual(miss_delta["ci95_low"], 0.0)
+        self.assertEqual(miss_delta["ci95_high"], 0.0)
+        self.assertEqual(p99_delta["estimate"], 0.0)
         self.assertIn("| Actions | 2 | 2 | +0 |", render_markdown(report))
         plot_path = self.root / "comparison.png"
         plot_comparison(report, plot_path)

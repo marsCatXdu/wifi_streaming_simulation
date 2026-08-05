@@ -12,8 +12,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable
 
+import numpy as np
+
 
 POLICY = "paired_value_duplication_t2"
+BOOTSTRAP_REPLICATIONS = 10_000
+BOOTSTRAP_SEED = 20260804
 
 
 class ComparisonError(RuntimeError):
@@ -146,6 +150,37 @@ def numeric_summary(values: Iterable[float]) -> dict[str, float | int | None]:
     }
 
 
+def paired_mean_delta(
+    baseline: list[float],
+    candidate: list[float],
+    bootstrap_indexes: np.ndarray,
+    statistic: str,
+) -> dict[str, float | int | str]:
+    """Return a paired mean delta and deterministic whole-run interval."""
+    baseline_values = np.asarray(baseline, dtype=np.float64)
+    candidate_values = np.asarray(candidate, dtype=np.float64)
+    if baseline_values.shape != candidate_values.shape or baseline_values.ndim != 1:
+        raise ComparisonError("paired metric vectors must be matching one-dimensional arrays")
+    if baseline_values.size == 0:
+        raise ComparisonError("cannot bootstrap an empty paired metric")
+    differences = candidate_values - baseline_values
+    samples = np.mean(differences[bootstrap_indexes], axis=1)
+    low, high = np.percentile(samples, [2.5, 97.5])
+    return {
+        "baseline_mean": float(np.mean(baseline_values)),
+        "candidate_mean": float(np.mean(candidate_values)),
+        "estimate": float(np.mean(differences)),
+        "ci95_low": float(low),
+        "ci95_high": float(high),
+        "confidence_level": 0.95,
+        "paired_unit_count": int(baseline_values.size),
+        "replications": BOOTSTRAP_REPLICATIONS,
+        "seed": BOOTSTRAP_SEED,
+        "method": "deterministic paired whole-run percentile bootstrap",
+        "statistic": statistic,
+    }
+
+
 def is_action(row: dict[str, str]) -> bool:
     """Return whether a decision row launched the secondary copy."""
     launched = row.get("secondary_launched") == "1"
@@ -252,6 +287,10 @@ def compare_campaigns(
     threshold_differences = 0
     primary_miss_transitions: Counter[str] = Counter()
     final_miss_transitions: Counter[str] = Counter()
+    baseline_run_miss_rates: list[float] = []
+    candidate_run_miss_rates: list[float] = []
+    baseline_run_p99_us: list[float] = []
+    candidate_run_p99_us: list[float] = []
 
     for unit in sorted(baseline_runs):
         _, baseline_dir = baseline_runs[unit]
@@ -265,6 +304,35 @@ def compare_campaigns(
             raise ComparisonError(f"{unit}: decision frame IDs differ")
         if frame_ids != baseline_frames.keys() or frame_ids != candidate_frames.keys():
             raise ComparisonError(f"{unit}: decision and outcome frame IDs differ")
+
+        baseline_run_miss_rates.append(
+            sum(frame["deadline_miss"] == "1" for frame in baseline_frames.values())
+            / len(baseline_frames)
+        )
+        candidate_run_miss_rates.append(
+            sum(frame["deadline_miss"] == "1" for frame in candidate_frames.values())
+            / len(candidate_frames)
+        )
+        baseline_run_p99_us.append(
+            percentile(
+                [
+                    value
+                    for frame in baseline_frames.values()
+                    if (value := as_optional_float(frame["union_latency_us"])) is not None
+                ],
+                0.99,
+            )
+        )
+        candidate_run_p99_us.append(
+            percentile(
+                [
+                    value
+                    for frame in candidate_frames.values()
+                    if (value := as_optional_float(frame["union_latency_us"])) is not None
+                ],
+                0.99,
+            )
+        )
 
         for frame_id in frame_ids:
             key = (unit, frame_id)
@@ -409,9 +477,14 @@ def compare_campaigns(
     candidate_all_outcomes = outcome_summary(
         all_keys, candidate_decisions_all, candidate_frames_all
     )
+    bootstrap_indexes = np.random.default_rng(BOOTSTRAP_SEED).integers(
+        0,
+        len(baseline_run_miss_rates),
+        size=(BOOTSTRAP_REPLICATIONS, len(baseline_run_miss_rates)),
+    )
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "analysis": "paired_value_t2_admission_campaign_comparison",
         "evidence_role": "diagnostic_only_not_a_qualification_gate",
         "labels": {"baseline": baseline_label, "candidate": candidate_label},
@@ -428,6 +501,20 @@ def compare_campaigns(
             ),
             "active_policy_score_different_rows": active_score_differences,
             "score_threshold_pass_different_rows": threshold_differences,
+        },
+        "paired_performance_deltas": {
+            "all_generated_deadline_miss_rate": paired_mean_delta(
+                baseline_run_miss_rates,
+                candidate_run_miss_rates,
+                bootstrap_indexes,
+                "mean per-run candidate-minus-baseline miss-rate difference",
+            ),
+            "completed_frame_p99_us": paired_mean_delta(
+                baseline_run_p99_us,
+                candidate_run_p99_us,
+                bootstrap_indexes,
+                "mean per-run candidate-minus-baseline completed-P99 difference",
+            ),
         },
         "admission": {
             "baseline_actions": baseline_action_count,
@@ -461,6 +548,10 @@ def render_markdown(report: dict[str, Any]) -> str:
         - baseline["acted_primary_misses_rescued"]
     )
     final_transitions = outcomes["final_miss_transitions"]
+    miss_delta = report["paired_performance_deltas"][
+        "all_generated_deadline_miss_rate"
+    ]
+    p99_delta = report["paired_performance_deltas"]["completed_frame_p99_us"]
     return "\n".join(
         [
             f"# {labels['baseline']} versus {labels['candidate']} admission comparison",
@@ -474,6 +565,21 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{report['decision_invariants']['active_policy_score_different_rows']} rows; "
             "score-threshold membership changed on "
             f"{report['decision_invariants']['score_threshold_pass_different_rows']} rows.",
+            "",
+            "| Paired metric | Baseline | Candidate | Candidate - baseline (95% CI) |",
+            "| --- | ---: | ---: | ---: |",
+            "| All-generated deadline-miss rate | "
+            f"{100 * miss_delta['baseline_mean']:.4f}% | "
+            f"{100 * miss_delta['candidate_mean']:.4f}% | "
+            f"{100 * miss_delta['estimate']:+.4f}% "
+            f"[{100 * miss_delta['ci95_low']:+.4f}%, "
+            f"{100 * miss_delta['ci95_high']:+.4f}%] |",
+            "| Mean per-run completed-frame P99 | "
+            f"{p99_delta['baseline_mean'] / 1000:.3f} ms | "
+            f"{p99_delta['candidate_mean'] / 1000:.3f} ms | "
+            f"{p99_delta['estimate'] / 1000:+.3f} ms "
+            f"[{p99_delta['ci95_low'] / 1000:+.3f}, "
+            f"{p99_delta['ci95_high'] / 1000:+.3f}] ms |",
             "",
             "| Metric | Baseline | Candidate | Candidate - baseline |",
             "| --- | ---: | ---: | ---: |",
