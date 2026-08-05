@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "analysis_id": "temporal-t2-shadow-priced-borrow-repay-v1",
+  "status": "frozen_after_online_v1_before_borrow_replay",
+  "purpose": "Test whether opportunity-priced, repayment-enforced access to deterministic future refill closes the temporal-T2 static-to-online allocation gap.",
+  "source_contract": {
+    "path": "experiments/model-selection/temporal-t2-online-shadow-price-v1.json",
+    "sha256": "ac6a0718ee12037b3cd4343e2e29c059602414998fb289c172edc06b9700bf6e"
+  },
+  "source_result": {
+    "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_online_shadow_price_v1",
+    "artifact_manifest_sha256": "4a023387681441c598deafd706e729dcee2eeae2d006292fb8f950cee9f3c4fd",
+    "metrics_sha256": "7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074"
+  },
+  "evidence_role": "retrospective_cross_fitted_allocator_mechanism_screen",
+  "frozen_policy": {
+    "predictor": "primary_secondary_hgb64",
+    "objective": "deadline_rescue",
+    "frame_gate": "p_frames_only",
+    "shadow_reference": "outer-model scores on only its 84 non-evaluation training groups",
+    "time_bin_count": 12,
+    "time_bin_width_us": 5000000,
+    "regime_modes": [
+      "global",
+      "congestion_tertile"
+    ],
+    "primary_candidate_regime": "congestion_tertile",
+    "future_evaluation_scores_visible": false,
+    "observed_outcomes_used_for_decisions": false
+  },
+  "credit_accounting": {
+    "measurement_duration_us": 60000000,
+    "initial_credit_us": 12000,
+    "positive_balance_capacity_us": 360000,
+    "causal_refill_rate_us_per_us": 0.006,
+    "maximum_total_generated_credit_us": 372000,
+    "reservation": "action_estimated_airtime_us",
+    "reservation_is_debited_at_admission": true,
+    "measured_settlement_release": false,
+    "repayable_credit_at_decision": "current_balance_us + 0.006 * max(0, 60000000 - decision_time_us)",
+    "borrow_admission_rule": "after the unchanged positive-reward and opportunity-price tests pass, admit exactly when canonical reservation is no greater than repayable credit",
+    "negative_balance_allowed": true,
+    "debt_limit": "causally remaining deterministic refill only; balance must be at least the negative of remaining refill after every decision",
+    "repayment_deadline_us": 60000000,
+    "required_final_balance": "greater than or equal to zero after exact refill through measurement stop",
+    "unused_credit_transfer_between_runs": false
+  },
+  "mechanism_isolation": {
+    "baseline": "reproduce the frozen strict-current-credit online-v1 policy exactly",
+    "changed_dimension": "replace current spendable-credit admission with repayable-credit admission after the unchanged shadow-price test",
+    "unchanged_dimensions": [
+      "cross-fitted evaluation predictions",
+      "fold-honest shadow reference",
+      "deadline-rescue reward",
+      "P-frame gate",
+      "global and congestion-tertile state definitions",
+      "time bins and opportunity-cost curves",
+      "canonical conservative reservation",
+      "total per-run generated credit",
+      "tie order"
+    ],
+    "relation_to_failed_v4": "V4 exposed future refill before valuing displaced actions. This mechanism first requires the current reward density to clear a fold-honest future-opportunity price."
+  },
+  "required_diagnostics": [
+    "exact baseline action-bit reproduction",
+    "decision counts and observed primary misses by gate, nonpositive reward, opportunity price, current credit, horizon credit, strict action, and borrowed action",
+    "action and captured-primary-miss counts by five-second time bin",
+    "per-run canonical reservation",
+    "per-run maximum debt and final balance after measurement-stop refill",
+    "direct primary-miss capture",
+    "pooled-frame doubly robust deadline-miss and completed-late18 estimates with shared whole-run bootstrap",
+    "same-predictor exact static 372 ms/run comparator"
+  ],
+  "engineering_screen": {
+    "primary_policy": "congestion_tertile borrow-repay",
+    "minimum_primary_miss_capture_fraction": 0.70,
+    "maximum_dr_deadline_miss_probability": 0.008,
+    "maximum_dr_completed_late18_ratio": 0.02395111591511279,
+    "maximum_canonical_reservation_us_per_run": 372000,
+    "required_final_balance_nonnegative_for_every_run": true,
+    "decision": "advance to compiled closed-loop integration only if every screen passes; otherwise retain V2 and diagnose the failed boundary without consuming confirmation seeds"
+  },
+  "interpretation_limits": [
+    "This screen reuses the 96 opened randomized groups and is not independent confirmation.",
+    "The action-clean lag-8 population excludes startup and action-dirty rows, so its absolute risks are not directly comparable with all-generated-frame closed-loop campaigns.",
+    "Doubly robust frame replay does not reproduce action-induced contention, queues, sender airtime, background throughput, or completed-frame P99.",
+    "Borrowing deterministic accounting credit can create transient airtime bursts; only a closed-loop campaign can qualify the less-than-1.20 sender-airtime and background-throughput gates.",
+    "Reserved seeds 1301 through 1348 must not be read by this screen."
+  ]
+}
