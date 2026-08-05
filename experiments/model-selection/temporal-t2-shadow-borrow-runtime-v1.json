@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "temporal-t2-shadow-borrow-runtime-v1",
+  "status": "frozen_before_full_data_refit_and_runtime_implementation",
+  "purpose": "Compile the selected distributional temporal-T2 predictor and the validated shadow-priced borrow/repay allocator for an opened-seed closed-loop engineering qualification without changing the full-copy action or environment.",
+  "evidence_boundary": {
+    "predictor_and_allocator_selected_on_opened_data": true,
+    "runtime_refit_and_reference_role": "deployment artifact construction, not new model-selection evidence",
+    "closed_loop_engineering_seed_range": [
+      1251,
+      1298
+    ],
+    "reserved_confirmation_seed_range": [
+      1301,
+      1348
+    ],
+    "reserved_confirmation_seeds_must_remain_unread": true,
+    "final_confirmation_is_forbidden_until_opened_seed_engineering_gates_pass": true
+  },
+  "source_evidence": {
+    "distributional_design_contract": {
+      "path": "experiments/model-selection/temporal-t2-distributional-frontier-v1.json",
+      "sha256": "7351064d437022b99c3e7481f44a4dba9c6b4e6435b3c8b957ca18e7c8d7d6f3"
+    },
+    "online_design_contract": {
+      "path": "experiments/model-selection/temporal-t2-online-shadow-price-v1.json",
+      "sha256": "ac6a0718ee12037b3cd4343e2e29c059602414998fb289c172edc06b9700bf6e"
+    },
+    "borrow_repay_design_contract": {
+      "path": "experiments/model-selection/temporal-t2-shadow-priced-borrow-repay-v1.json",
+      "sha256": "95913ef204aa5b9bc36b785cbc5bcf1d9a28d13a8da39d940262a83849bba8c7"
+    },
+    "temporal_dataset": {
+      "path": "results/randomized_full_copy_exploration_collection_v1/temporal_dataset",
+      "artifact_manifest_sha256": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+      "dataset_metadata_sha256": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+      "randomized_t2_temporal_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+      "row_count": 73400,
+      "run_group_count": 96,
+      "control_rows": 66759,
+      "treated_rows": 6641,
+      "opened_seed_range": [
+        1101,
+        1196
+      ]
+    },
+    "crossfit_result": {
+      "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_distributional_frontier_v1",
+      "artifact_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+      "metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f"
+    },
+    "static_frontier_result": {
+      "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_static_distributional_frontier_v1",
+      "artifact_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+      "metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96"
+    },
+    "borrow_repay_result": {
+      "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_shadow_borrow_repay_v1",
+      "artifact_manifest_sha256": "b21c2109f3d1d0c4ab50e17656302471560804997174a24975d25db81e301fcb",
+      "metrics_sha256": "134e2632a02fc3979284700e3bd9531353c18d0fa6e4d27f6e1adea4b2d6f4bb",
+      "primary_policy": "congestion_tertile shadow_borrow_repay",
+      "screen_passed": true
+    }
+  },
+  "full_data_refit": {
+    "selected_variant": "primary_secondary_hgb64",
+    "selection_is_frozen": true,
+    "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+    "raw_feature_count": 308,
+    "feature_order_source": "crossfit_result.metrics.feature_families.primary_compact_physics_temporal_plus_passive_secondary.ordered_feature_names",
+    "numeric_adapter": "parse or derive in the frozen order, quantize each finite numeric or missing NaN to binary32, then widen exactly to binary64",
+    "current_and_lagged_secondary_feature_count": 62,
+    "secondary_features_are_passive_queue_and_phy_only": true,
+    "completion_thresholds_us": [
+      12000,
+      18000,
+      24000,
+      30000,
+      33333
+    ],
+    "class_count": 6,
+    "heads": "independent CONTROL and FULL_COPY_T2 six-class T-learners",
+    "model_spec": {
+      "id": "hgb64_depth3_7leaf_multiclass_v1",
+      "learning_rate": 0.05,
+      "max_iter": 64,
+      "max_leaf_nodes": 7,
+      "max_depth": 3,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "max_bins": 63,
+      "early_stopping": false
+    },
+    "control_random_seed": 20262885,
+    "treated_random_seed": 20262886,
+    "control_training_rows": 66759,
+    "treated_training_rows": 6641,
+    "control_outcome_bin_counts": [
+      58339,
+      3718,
+      1655,
+      851,
+      315,
+      1881
+    ],
+    "treated_outcome_bin_counts": [
+      6540,
+      79,
+      13,
+      6,
+      1,
+      2
+    ],
+    "probability_alignment": {
+      "all_six_classes_required_in_the_full_refit": true,
+      "dirichlet_alpha_per_class": 0.5,
+      "formula": "(training_count * aligned_softmax_probability + 0.5) / (training_count + 3.0)"
+    },
+    "runtime_outputs": {
+      "control_and_treated_class_probabilities": true,
+      "control_and_treated_cdfs_at_every_threshold": true,
+      "deadline_rescue_reward": "max(FULL_COPY_T2 CDF at 33333 us - CONTROL CDF at 33333 us, 0)",
+      "tail_acceleration_is_diagnostic_only": "FULL_COPY_T2 CDF at 18000 us - CONTROL CDF at 18000 us",
+      "deadline_reward_and_tail_acceleration_must_not_be_collapsed": true
+    }
+  },
+  "deployment_shadow_reference": {
+    "role": "fixed in-sample deployment reference for the already cross-fitted selected mechanism; never reported as independent performance evidence",
+    "scoring_model": "the two full-data refit heads",
+    "scored_rows": "all 73400 opened action-clean temporal rows",
+    "time_bin_count": 12,
+    "time_bin_width_us": 5000000,
+    "frame_generation_time": "ceil(frame_id * 1000000000 / 30) ns after measurement start",
+    "decision_offset_us": 2000,
+    "frame_gate": "P_FRAME only",
+    "positive_reward_gate": "deadline rescue reward strictly greater than zero",
+    "congestion_signal": "causal running mean of current primary PHY busy fraction over 20 ms",
+    "training_group_state": "mean signal through the exclusive end of each five-second bin",
+    "congestion_cutpoints": "one-third and two-thirds quantiles across all 96 opened run groups, separately for every time bin",
+    "regime_assignment": "numpy searchsorted with side right, yielding regimes 0, 1, or 2",
+    "curve_pool": "P-frame, positive-reward rows in groups assigned to the regime whose decision time is at or after the current bin start",
+    "density": "deadline rescue reward divided by the exact canonical P-frame reservation",
+    "sort_order": "density descending, then frame_id ascending, seed ascending, run_number ascending",
+    "curve_resource": "cumulative exact canonical reservation divided by the number of contributing run groups",
+    "opportunity_cost": "the marginal density at repayable_credit_us times contributing_run_count; infinity if none is affordable, zero if the complete curve is affordable",
+    "global_regime_curve_is_exported_for_diagnostics_only": true,
+    "compiled_policy_uses": "congestion_tertile"
+  },
+  "runtime_population_and_state": {
+    "pairing": "one primary path-1 copy-0 T2 endpoint immediately followed by its hypothetical untreated secondary path-0 copy-1 endpoint",
+    "history_ingestion": "validate and retain both paired endpoints before policy gates so exact frame lags 1, 3, and 8 remain available",
+    "history_warmup": "frames without all three exact lags cannot be scored",
+    "congestion_running_mean_updates": "update on each in-window, history-ready, primary-actionable row before the P-frame and reward gates",
+    "primary_gate": "primary copy remains actionable at T2",
+    "frame_gate": "P_FRAME only",
+    "descriptor_gate": "the canonical full-secondary-copy descriptor exists and matches immutable frame metadata",
+    "secondary_self_contamination_diagnostic": {
+      "training_population_excluded_action_dirty_secondary_endpoints": true,
+      "runtime_policy_does_not_hide_or_impute_away_action-induced_secondary_state": true,
+      "required_minimum_counter": "number of scored decisions made while at least one earlier launched secondary reservation remains unsettled",
+      "interpretation": "closed-loop regression relative to replay may indicate predictor feedback through passive secondary features"
+    }
+  },
+  "shadow_priced_borrow_repay": {
+    "measurement_start_ns": 1000000000,
+    "measurement_stop_ns": 61000000000,
+    "measurement_duration_us": 60000000,
+    "decision_stop_ns": 60466000000,
+    "initial_credit_us": 12000,
+    "positive_balance_capacity_us": 360000,
+    "causal_refill_rate_us_per_us": 0.006,
+    "maximum_generated_credit_us": 372000,
+    "canonical_p_frame_reservation_us": "1983.760667318285",
+    "reservation_debit": "debit the canonical reservation once, immediately after a successful full-copy launch",
+    "measured_settlement_release": false,
+    "meter_role": "separate measured-airtime evidence and settlement integrity; it never refunds allocator credit",
+    "balance_refill": "before every decision, add only refill elapsed since the previous accounting time and cap positive balance at 360000 us",
+    "remaining_refill": "0.006 * max(0, measurement_stop_us - decision_time_us)",
+    "repayable_credit": "current balance plus deterministic remaining refill",
+    "admission_order": [
+      "runtime population and descriptor gates",
+      "strictly positive deadline-rescue reward",
+      "reward density greater than or equal to the exported congestion-regime opportunity cost",
+      "canonical reservation no greater than repayable credit",
+      "sender accepts the requested full secondary copy",
+      "debit canonical reservation"
+    ],
+    "negative_balance_allowed": true,
+    "debt_limit": "after every debit, balance must be at least negative remaining deterministic refill",
+    "repayment_requirement": "after refill through measurement stop, every run balance must be nonnegative",
+    "unused_credit_transfer_between_runs": false,
+    "launch_rejection_debits_no_credit": true
+  },
+  "compiled_artifact_requirements": {
+    "export_tool": "tools/export_temporal_t2_shadow_runtime_v1.py",
+    "result_directory": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_shadow_borrow_runtime_v1",
+    "result_files": [
+      "temporal_t2_shadow_runtime_models.pkl",
+      "temporal_t2_shadow_runtime_model.json",
+      "temporal_t2_shadow_runtime_reference.json",
+      "temporal_t2_shadow_runtime_refit_metrics.json",
+      "artifact_manifest.json"
+    ],
+    "generated_cpp_files": [
+      "contrib/wifi-streaming/model/temporal-t2-distribution-model-data-v1.h",
+      "contrib/wifi-streaming/model/temporal-t2-distribution-model-data-v1.cc",
+      "contrib/wifi-streaming/test/temporal-t2-distribution-model-goldens-v1.h"
+    ],
+    "required_exact_goldens": [
+      "raw 308-feature vectors including finite, missing, and real-row fixtures",
+      "per-head imputed vectors and raw six logits",
+      "softmax and Dirichlet-smoothed class probabilities",
+      "CDFs and nonnegative deadline-rescue reward",
+      "congestion cutpoints, regime assignment, opportunity cost, and boundary decisions",
+      "credit refill, debt, and final repayment"
+    ],
+    "runtime_contract_and_every_source_artifact_must_be_hash_verified_before_unpickling_or_fitting": true,
+    "generated_cpp_must_embed_model_reference_and_contract_digests": true,
+    "check_mode_must_reproduce_tracked_generated_files_byte_for_byte": true
+  },
+  "closed_loop_engineering_qualification": {
+    "comparators": [
+      "STR_MLO",
+      "paired-value V2 engineering champion"
+    ],
+    "environment": "unchanged canonical neutral environment used by the prior paired campaigns",
+    "paired_unit": "seed and run_number",
+    "primary_target": "beat STR MLO on both all-generated-frame deadline-miss rate and completed-frame P99 latency",
+    "engineering_miss_target": "approximately 0.50 percent or lower before fresh confirmation",
+    "engineering_mean_per_run_p99_target_ms": 17.0,
+    "sender_airtime_ratio_upper_confidence_bound_maximum": 1.2,
+    "background_throughput_noninferiority_required": true,
+    "required_allocator_diagnostics": [
+      "gate, nonpositive-reward, opportunity-price, horizon-credit, launch-rejection, and action counts",
+      "action and canonical reservation by five-second bin and congestion regime",
+      "minimum balance, maximum debt, final balance, and repayment closure per run",
+      "predicted reward and opportunity-cost distributions",
+      "decisions with an earlier unsettled secondary reservation",
+      "measured secondary airtime, reservation settlement, and sender-airtime reconciliation"
+    ]
+  },
+  "interpretation_limits": [
+    "The full-data refit and deployment shadow curves reuse all 96 opened model-development groups and cannot support an independent performance claim.",
+    "The cross-fitted replay excludes lag-8 startup and action-dirty secondary endpoints, while the closed-loop campaign evaluates all generated frames and policy feedback.",
+    "The 308-feature winner exceeded the primary-only HGB64 static frontier by only two captured primary misses; secondary-feature feedback is therefore a serious ablation risk, not evidence that secondary state is indispensable.",
+    "The offline replay does not identify completed-frame P99, sender airtime, contention feedback, or background throughput.",
+    "Borrowing deterministic future credit may create transient bursts even when every run repays by measurement stop.",
+    "EMLSR completed-frame P99 is not an optimization gate because its large miss population creates survivor bias; STR MLO is the engineering target."
+  ]
+}
