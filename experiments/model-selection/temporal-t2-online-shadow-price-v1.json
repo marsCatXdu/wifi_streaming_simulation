@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "analysis_id": "temporal-t2-online-shadow-price-v1",
+  "status": "frozen_before_cross_fitted_results_read",
+  "purpose": "Test a deployable causal allocator that prices future predicted opportunities instead of spending airtime chronologically.",
+  "source_contract": {
+    "path": "experiments/model-selection/temporal-t2-distributional-frontier-v1.json",
+    "sha256": "7351064d437022b99c3e7481f44a4dba9c6b4e6435b3c8b957ca18e7c8d7d6f3"
+  },
+  "evidence_role": "retrospective_engineering_screen",
+  "cross_fit_boundary": {
+    "unit": "(seed, run_number)",
+    "fold_count": 8,
+    "evaluation_fold_visibility": "current row only",
+    "shadow_price_training_groups": "all seven non-evaluation folds",
+    "observed_outcomes_used_to_build_shadow_price": false,
+    "future_evaluation_scores_visible": false
+  },
+  "causal_time": {
+    "measurement_duration_us": 60000000,
+    "decision_offset_us": 2000,
+    "frame_generation_period": "one second divided by 30 with integer nanosecond generation timestamps",
+    "time_bin_count": 12,
+    "time_bin_width_us": 5000000
+  },
+  "congestion_state": {
+    "signal": "causal running mean of x_primary_phy_busy_fraction_20ms within the current run",
+    "regime_count": 3,
+    "regime_boundaries": "training-group tertiles computed separately for each outer fold and time bin",
+    "training_group_state": "mean signal through the end of the current five-second bin",
+    "evaluation_group_state": "mean signal through the current decision only",
+    "ablation": "also evaluate one global regime with otherwise identical accounting"
+  },
+  "shadow_price": {
+    "score": "nonnegative predicted benefit divided by exact canonical reservation",
+    "future_pool": "all candidate rows at or after the current time-bin start from training groups in the current learned congestion regime",
+    "resource_curve": "sort the future pool by score descending and accumulate exact canonical reservation per contributing training run",
+    "opportunity_cost": "the marginal score at the current balance plus causally remaining refill",
+    "admission_rule": "act exactly when current score is at least the opportunity cost, score is positive, and current spendable credit covers the reservation",
+    "tie_break": "smaller frame_id, then stable row identity",
+    "future_pool_empty": "do not act",
+    "remaining_budget_exceeds_curve": "use zero opportunity cost and admit any positive-score action that current credit permits"
+  },
+  "benefit_outputs_kept_separate": [
+    "deadline_rescue",
+    "completion_by_18ms",
+    "deadline_capped_acceleration"
+  ],
+  "frame_gates": [
+    "p_frames_only",
+    "all_frames_cost_aware"
+  ],
+  "airtime_accounting": {
+    "budget_fraction": 0.006,
+    "initial_credit_us": 12000,
+    "full_horizon_capacity_us": 360000,
+    "causal_refill_rate_us_per_us": 0.006,
+    "maximum_total_generated_credit_us": 372000,
+    "reservation": "action_estimated_airtime_us",
+    "reservation_is_debited_at_admission": true,
+    "hypothetical_measured_settlement_release": false,
+    "future_credit_borrowing": false,
+    "unused_credit_transfer_between_runs": false
+  },
+  "evaluation": {
+    "primary_information": "direct primary deadline-miss capture",
+    "counterfactual_outcomes": "known-propensity doubly robust CDF replay with cross-fitted arm nuisances",
+    "paired_unit": "(seed, run_number)",
+    "bootstrap_replications": 2000,
+    "confidence_level": 0.95,
+    "bootstrap_random_seed": 20260805,
+    "comparators": [
+      "treat none",
+      "same-variant exact static per-run 372000-us predictor frontier"
+    ],
+    "selection_priority": [
+      "higher direct primary-miss capture",
+      "lower doubly robust deadline-miss estimate",
+      "no doubly robust completed-late18 regression",
+      "lower canonical reservation",
+      "primary-only features and smaller model"
+    ]
+  },
+  "interpretation_limits": [
+    "The shadow price is a nonparametric fractional-knapsack approximation to the finite-horizon value difference, not a perfect dynamic program.",
+    "Cross-fitted frame replay does not reproduce policy-induced contention or queue feedback.",
+    "The action-clean lag-8 population excludes startup and other generated frames, so a closed-loop campaign remains necessary.",
+    "The full-horizon carry setting isolates allocation quality; it is not a claim that unused credit alone helped V3.",
+    "No reserved confirmation seed may be read during this screen."
+  ]
+}
