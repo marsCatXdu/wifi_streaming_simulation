@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "environment-generalization-qualification-execution-v1",
+  "status": "frozen_before_closed_loop_qualification_runs",
+  "purpose": "Execute the predeclared held-out environment comparison of STR MLO, score-aware T2 V2, and distributional-shadow T2 without consuming reserved neutral-confirmation seeds.",
+  "parent_generalization_contract": {
+    "path": "experiments/model-selection/environment-generalization-v1.json",
+    "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+  },
+  "scenario_catalog": {
+    "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+    "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593",
+    "phase": "closed_loop_qualification",
+    "scenario_list_sha256": "1d6b2280d8e3e370bfb24c84c82fd52d5f98ff9f2e3b8710aa3d1ed5f5141313"
+  },
+  "base_config": {
+    "path": "experiments/configs/paired_value_t2_str_qualification_v1.yaml",
+    "file_sha256": "67612a496b9c60cc8d3efb017e42af307e87e608762aa006d72a676fde5330c5",
+    "resolved_sha256": "72fdd59f515e542870988968cc791fff7f011be5e55708effc5fd7a7a4d299fa"
+  },
+  "campaign": {
+    "name": "environment-generalization-closed-loop-qualification-v1",
+    "output_root": "results/environment_generalization_closed_loop_qualification_v1/runs",
+    "workers": 64,
+    "family_count": 6,
+    "scenarios_per_family": 8,
+    "scenario_count": 48,
+    "replicates_per_scenario": 4,
+    "paired_unit_count": 192,
+    "arm_count": 3,
+    "simulation_run_count": 576,
+    "worker_wave_count": 9
+  },
+  "arms": [
+    {
+      "arm_id": "str_mlo_nmaxinflights_1",
+      "topology": "mlo_str",
+      "policy": "fixed_link_0",
+      "config": {}
+    },
+    {
+      "arm_id": "score_aware_t2_v2",
+      "topology": "dual_interface",
+      "policy": "paired_value_duplication_t2",
+      "admission_profile": "score_aware_emergency_v2",
+      "config": {
+        "prediction.paired_value_t2_admission_profile": "score_aware_emergency_v2",
+        "prediction.prediction_event_log_enabled": false,
+        "prediction.prediction_history_windows_us": [
+          1000,
+          5000,
+          20000
+        ],
+        "prediction.prediction_oracle_features_enabled": false,
+        "prediction.prediction_polling_interval_us": 1000,
+        "prediction.prediction_polling_report_delay_us": 1000,
+        "prediction.prediction_sample_offsets_us": [
+          0,
+          2000
+        ],
+        "prediction.prediction_telemetry_enabled": true,
+        "prediction.secondary_airtime_meter_enabled": true
+      }
+    },
+    {
+      "arm_id": "distributional_shadow_t2",
+      "topology": "dual_interface",
+      "policy": "distributional_shadow_duplication_t2",
+      "config": {
+        "prediction.prediction_event_log_enabled": false,
+        "prediction.prediction_history_windows_us": [
+          1000,
+          5000,
+          20000
+        ],
+        "prediction.prediction_oracle_features_enabled": false,
+        "prediction.prediction_polling_interval_us": 1000,
+        "prediction.prediction_polling_report_delay_us": 1000,
+        "prediction.prediction_sample_offsets_us": [
+          0,
+          2000
+        ],
+        "prediction.prediction_telemetry_enabled": true,
+        "prediction.secondary_airtime_meter_enabled": true
+      }
+    }
+  ],
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "distributional_portable_model": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+          "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+        },
+        "distributional_runtime_contract": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+          "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+        },
+        "distributional_shadow_reference": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+          "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+        },
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "parent_generalization_contract": {
+          "path": "experiments/model-selection/environment-generalization-v1.json",
+          "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+        },
+        "qualification_base_config": {
+          "path": "experiments/configs/paired_value_t2_str_qualification_v1.yaml",
+          "sha256": "67612a496b9c60cc8d3efb017e42af307e87e608762aa006d72a676fde5330c5"
+        },
+        "scenario_catalog": {
+          "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+          "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+        },
+        "v2_runtime_contract": {
+          "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+          "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+        }
+      }
+    }
+  },
+  "analysis": {
+    "weighting": "equal_family_then_equal_scenario_then_equal_replicate",
+    "paired_unit": "scenario_id_seed_run",
+    "bootstrap": {
+      "method": "fixed_family_stratified_scenario_then_replicate_cluster_bootstrap_v1",
+      "replications": 10000,
+      "confidence_level": 0.95,
+      "random_seed": 8231415969872262531,
+      "shared_resamples_for_all_metrics_and_contrasts": true
+    },
+    "comparisons": [
+      "score_aware_t2_v2_minus_str_mlo_nmaxinflights_1",
+      "distributional_shadow_t2_minus_str_mlo_nmaxinflights_1",
+      "distributional_shadow_t2_minus_score_aware_t2_v2"
+    ],
+    "aggregate_and_family_gates_source": "parent_generalization_contract.closed_loop_qualification",
+    "all_generated_frame_metrics": [
+      "deadline_miss_rate",
+      "completed_frame_hf7_p99_us",
+      "sender_phy_airtime_us",
+      "background_throughput_mbps"
+    ]
+  },
+  "interpretation_limits": [
+    "This campaign compares the previously frozen V2 and distributional-shadow implementations; it does not deploy a model refit on the new randomized collection.",
+    "The qualification scenarios were generated and checksum-bound before randomized-collection outcomes were read.",
+    "The 576 runs use phase-specific seeds 21001 through 21192 and do not consume reserved neutral-confirmation seeds 1301 through 1348.",
+    "A campaign-level victory does not erase a failed per-family safety gate.",
+    "EMLSR is not an arm or a gate in this STR-focused campaign."
+  ]
+}
