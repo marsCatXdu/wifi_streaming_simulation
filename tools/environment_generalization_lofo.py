@@ -66,6 +66,7 @@ class LofoDataset:
     primary_deadline_miss: np.ndarray
     completed_late18: np.ndarray
     canonical_reservation_us: np.ndarray
+    canonical_reservation_texts: tuple[str, ...]
     frame_types: tuple[str, ...]
 
 
@@ -429,6 +430,7 @@ def load_dataset(
     scenario_ids: list[str] = []
     family_ids: list[str] = []
     frame_types: list[str] = []
+    reservation_texts: list[str] = []
     seeds = np.empty(row_count, dtype=np.int32)
     run_numbers = np.empty(row_count, dtype=np.int16)
     frame_ids = np.empty(row_count, dtype=np.int32)
@@ -605,9 +607,11 @@ def load_dataset(
                     outcomes[f"primary_bad_{trainer.TARGET_DEADLINE}"]
                 )
                 completed_late18[index] = int(outcomes[trainer.TARGET_LATE18])
+                reservation_text = row.get("action_estimated_airtime_us", "")
                 reservations[index] = _positive_number(
                     row, "action_estimated_airtime_us", source
                 )
+                reservation_texts.append(reservation_text)
                 frame_types.append(frame_type)
                 seen.add(key)
                 prior_key = key
@@ -661,6 +665,7 @@ def load_dataset(
         primary_deadline_miss=primary_deadline_miss,
         completed_late18=completed_late18,
         canonical_reservation_us=reservations,
+        canonical_reservation_texts=tuple(reservation_texts),
         frame_types=tuple(frame_types),
     )
 

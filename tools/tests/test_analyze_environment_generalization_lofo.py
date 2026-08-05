@@ -200,7 +200,8 @@ class AnalyzeEnvironmentGeneralizationLofoTest(unittest.TestCase):
             primary_deadline_miss=primary_miss,
             completed_late18=completed_late18,
             canonical_reservation_us=np.full(row_count, 100.0),
-            frame_types=tuple("P" for _ in range(row_count)),
+            canonical_reservation_texts=tuple("100.0" for _ in range(row_count)),
+            frame_types=tuple("P_FRAME" for _ in range(row_count)),
         )
 
     def test_lofo_fit_predicts_each_family_once(self) -> None:

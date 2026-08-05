@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "analysis_id": "environment-generalization-policy-replay-v1",
+  "status": "frozen_during_collection_before_randomized_outcomes_read",
+  "freeze_note": "Only campaign completion status (128 of 384 runs) was inspected before this contract was frozen; no frame, latency, airtime, or policy outcome was read.",
+  "purpose": "Separate cross-family treatment-effect information from offline resource allocation before selecting an implementable closed-loop candidate.",
+  "sources": {
+    "lofo_contract": {
+      "path": "experiments/model-selection/environment-generalization-lofo-v1.json",
+      "sha256": "1566fba76e39f9e677d1c133199a47ff5275f4b3981149dd5871f599a278a9d4"
+    },
+    "dataset_loader": {
+      "path": "tools/environment_generalization_lofo.py",
+      "sha256": "8f01f0a362e6aa7e4fc7fe422076854ea64e89e7d9784bd143036423a3eb551b"
+    },
+    "lofo_predictor": {
+      "path": "tools/analyze_environment_generalization_lofo.py",
+      "sha256": "c6b73552fdd27b33e98d51a860cefd1c98172afe6affec19aa341fcddf640ca1"
+    }
+  },
+  "population": {
+    "phase": "randomized_collection",
+    "expected_run_count": 384,
+    "expected_scenario_count": 96,
+    "expected_family_count": 6,
+    "replicates_per_scenario": 4,
+    "scope": "common-T2-eligible action-clean temporal rows",
+    "all_generated_frame_claim_permitted": false,
+    "qualification_results_must_remain_unread": true,
+    "reserved_neutral_seeds_1301_through_1348_must_remain_unopened": true
+  },
+  "resource": {
+    "action": "canonical_full_secondary_copy_at_T2",
+    "budget_us_per_60s_run": 372000,
+    "budget_derivation": "12000 us initial credit plus 0.006 times 60000000 us refill",
+    "unused_credit_transfer_between_runs": false,
+    "cost_field": "action_estimated_airtime_us",
+    "cost_arithmetic": "exact decimal text from the source dataset",
+    "per_run_cost_invariant": "at most one positive constant cost for each of I_FRAME and P_FRAME",
+    "frame_gate": "all_frames_cost_aware"
+  },
+  "predicted_objectives": {
+    "deadline_rescue": "max(T2 CDF at the row deadline minus control CDF at the row deadline, 0)",
+    "tail18_acceleration": "max(T2 CDF at 18000 us minus control CDF at 18000 us, 0)",
+    "primary_deadline_risk": "1 minus control CDF at the row deadline",
+    "priority": [
+      "deadline_rescue",
+      "tail18_acceleration",
+      "lower_canonical_reservation"
+    ],
+    "negative_predicted_gains_are_clipped_to_zero": true
+  },
+  "policies": [
+    {
+      "id": "no_secondary_copy",
+      "role": "resource-free_reference",
+      "action_rule": "never act"
+    },
+    {
+      "id": "uniform_random_t2_same_canonical_budget",
+      "role": "simple_baseline",
+      "replications": 64,
+      "random_generator": "splitmix64_v1",
+      "salt_base": 15726070495360670683,
+      "key_fields": [
+        "seed",
+        "run_number",
+        "frame_id",
+        "replication"
+      ],
+      "action_rule": "Within each run, order all rows by the unsigned random key then frame_id and greedily admit a row exactly when its decimal canonical cost fits the remaining budget.",
+      "evaluation_rule": "Average the 64 deterministic action indicators per row before known-propensity policy-value evaluation; also report across-replication resource and point-value spread."
+    },
+    {
+      "id": "myopic_deadline_risk_same_canonical_budget",
+      "role": "simple_baseline",
+      "future_score_visibility": true,
+      "primary_reward": "primary_deadline_risk",
+      "secondary_reward": "zero",
+      "optimization": "exact two-cost per-run lexicographic knapsack"
+    },
+    {
+      "id": "cross_fitted_scenario_resource_oracle_v1",
+      "role": "identified_predicted_benefit_resource_ceiling",
+      "future_score_visibility": true,
+      "primary_reward": "deadline_rescue",
+      "secondary_reward": "tail18_acceleration",
+      "optimization": "exact two-cost per-run lexicographic knapsack",
+      "information": "LOFO cross-fitted potential completion distributions and pre-action canonical costs only",
+      "perfect_information": false,
+      "may_not_be_described_as_perfect_information": true,
+      "may_not_be_deployed_online": true
+    }
+  ],
+  "exact_two_cost_knapsack": {
+    "candidate_rule": "A row is a candidate iff its primary reward is positive or its secondary reward is positive.",
+    "within_frame_type_order": [
+      "descending primary reward",
+      "descending secondary reward",
+      "ascending frame_id"
+    ],
+    "enumeration": "Enumerate every feasible I-frame prefix count; for each count take the longest affordable positive P-frame prefix.",
+    "solution_order": [
+      "maximum summed primary reward",
+      "maximum summed secondary reward",
+      "minimum exact decimal spend",
+      "minimum action count",
+      "lexicographically smallest sorted frame-id vector"
+    ]
+  },
+  "policy_value": {
+    "deadline_miss": {
+      "estimator": "known-propensity doubly robust potential CDF at each row's deadline",
+      "reported_scale": "eligible-frame deadline-miss probability"
+    },
+    "completed_late18": {
+      "definition": "finite observed union completion latency strictly greater than 18000 us",
+      "estimator": "known-propensity Horvitz-Thompson because the frozen finite-threshold CDF does not distinguish incomplete outcomes from every completion above 41667 us",
+      "reported_scale": "eligible-frame completed-late18 probability",
+      "precision_warning_required": true
+    },
+    "bounded_tail_diagnostic": {
+      "definition": "completion after 18000 us and no later than the row deadline",
+      "estimator": "known-propensity doubly robust difference between row-deadline CDF and 18000-us CDF"
+    },
+    "canonical_reservation": "deterministic exact sum of selected source reservation text",
+    "weighting": "equal_family_then_equal_scenario_then_equal_replicate_then_equal_eligible_frame"
+  },
+  "uncertainty": {
+    "method": "hierarchical_stratified_cluster_bootstrap_v1",
+    "family_strata": "keep all six families fixed and equally weighted",
+    "within_family": "sample the family's 16 scenarios with replacement",
+    "within_scenario": "for each sampled scenario, sample its four whole-run replicates with replacement",
+    "frame_resampling_within_run": false,
+    "replications": 10000,
+    "confidence_level": 0.95,
+    "random_seed": 11562461410679940143,
+    "shared_resamples_for_all_policy_contrasts": true
+  },
+  "deployment_exploration": {
+    "assignment_algorithm": "splitmix64_v1",
+    "assignment_salt": 13503953896175478587,
+    "draw_key_order": [
+      "seed",
+      "run_number",
+      "frame_id"
+    ],
+    "in_support": {
+      "forced_t2_probability": 0.01,
+      "forced_control_probability": 0.01,
+      "base_policy_probability": 0.98
+    },
+    "soft_ood": {
+      "forced_t2_probability": 0.002,
+      "base_policy": "no_secondary_copy"
+    },
+    "hard_failure": {
+      "forced_t2_probability": 0.0,
+      "base_policy": "no_secondary_copy"
+    },
+    "forced_t2_requires_exact_remaining_budget": true,
+    "forced_control_overrides_base_action": true,
+    "log_realized_propensity_and_compliance": true
+  },
+  "go_no_go": {
+    "oracle_target_deadline_miss_probability_below": 0.004,
+    "oracle_fractional_improvement_over_no_copy_at_least": 0.5,
+    "interpretation": "If the identified resource ceiling fails, change the action space; if it succeeds, continue with a nested, nonclairvoyant allocator and then actual held-out closed-loop qualification."
+  },
+  "interpretation_limits": [
+    "Every learned score for a held-out family comes from models trained without that entire family.",
+    "The resource oracle sees the complete sequence of cross-fitted predicted scores in a run and is not an implementable controller.",
+    "Randomized replay does not reproduce queue, collision, or interference feedback induced by a closed-loop policy.",
+    "The dataset excludes startup and action-dirty temporal rows, so its absolute rate is not an all-generated-frame qualification result.",
+    "Actual held-out-family simulation is required before promoting any controller.",
+    "Completed-frame P99 remains a closed-loop metric and is not inferred from the finite CDF grid."
+  ]
+}
