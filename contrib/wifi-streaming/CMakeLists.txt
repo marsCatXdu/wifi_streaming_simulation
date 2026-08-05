@@ -11,6 +11,8 @@ build_lib(
     model/primary-tail-t4-model-evaluator.cc
     model/temporal-t2-value-model-data-v1.cc
     model/temporal-t2-value-model-evaluator.cc
+    model/temporal-t2-distribution-model-data-v1.cc
+    model/temporal-t2-distribution-model-evaluator.cc
     model/temporal-t2-value-predictor.cc
     model/paired-value-t2-controller.cc
     model/closed-loop-risk-predictor.cc
@@ -41,6 +43,8 @@ build_lib(
     model/primary-tail-t4-model-evaluator.h
     model/temporal-t2-value-model-data-v1.h
     model/temporal-t2-value-model-evaluator.h
+    model/temporal-t2-distribution-model-data-v1.h
+    model/temporal-t2-distribution-model-evaluator.h
     model/temporal-t2-value-predictor.h
     model/paired-value-t2-controller.h
     model/closed-loop-risk-predictor.h
@@ -68,6 +72,7 @@ build_lib(
   TEST_SOURCES
     test/primary-tail-t4-model-evaluator-test.cc
     test/temporal-t2-value-model-evaluator-test.cc
+    test/temporal-t2-distribution-model-evaluator-test.cc
     test/temporal-t2-value-predictor-test.cc
     test/paired-value-t2-controller-test.cc
     test/randomized-intervention-controller-test.cc

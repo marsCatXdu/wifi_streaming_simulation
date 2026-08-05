@@ -19,6 +19,12 @@ if str(TOOLS) not in sys.path:
 import crossfit_temporal_t2_distributions as crossfit
 import export_temporal_t2_shadow_runtime_v1 as exporter
 
+ROOT = Path(__file__).resolve().parents[2]
+CAMPAIGN = ROOT / "results/randomized_full_copy_exploration_collection_v1"
+ARTIFACT = CAMPAIGN / "temporal_t2_shadow_borrow_runtime_v1"
+DATA_SOURCE = ROOT / exporter.DEFAULT_DATA_SOURCE
+DATA_HEADER = ROOT / exporter.DEFAULT_DATA_HEADER
+
 
 class TemporalT2ShadowRuntimeExporterTest(unittest.TestCase):
     @classmethod
@@ -127,6 +133,21 @@ class TemporalT2ShadowRuntimeExporterTest(unittest.TestCase):
         self.assertIn("MulticlassClassifier", first)
         self.assertIn("std::array<ShadowCurve, 3>", first)
         self.assertNotIn("globalCurves", first)
+
+    def test_canonical_artifact_and_compiled_data_are_current(self) -> None:
+        model, reference, metrics, manifest = exporter.load_runtime_artifacts(
+            ARTIFACT
+        )
+        self.assertEqual(metrics["provenance"]["project_git_status_porcelain"], "")
+        self.assertEqual(
+            DATA_HEADER.read_text(encoding="utf-8"), exporter.emit_data_header()
+        )
+        self.assertEqual(
+            DATA_SOURCE.read_text(encoding="utf-8"),
+            exporter.emit_data_source(
+                ARTIFACT.resolve(), model, reference, metrics, manifest
+            ),
+        )
 
     def test_credit_goldens_include_action_debt_cap_and_rejection(self) -> None:
         rows = exporter._credit_golden_cases(Decimal("1983.760667318285"))
