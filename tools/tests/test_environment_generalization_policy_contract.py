@@ -34,7 +34,7 @@ class EnvironmentGeneralizationPolicyContractTest(unittest.TestCase):
         )
         self.assertEqual(
             self.contract["status"],
-            "frozen_during_collection_before_randomized_outcomes_read",
+            "support_amended_before_policy_outcomes_read",
         )
         for source in self.contract["sources"].values():
             self.assertEqual(_sha256(ROOT / source["path"]), source["sha256"])
@@ -42,6 +42,11 @@ class EnvironmentGeneralizationPolicyContractTest(unittest.TestCase):
     def test_campaign_and_monte_carlo_fill_64_way_units(self) -> None:
         population = self.contract["population"]
         self.assertEqual(population["expected_run_count"], 384)
+        self.assertEqual(population["expected_represented_run_count"], 383)
+        self.assertEqual(population["maximum_zero_eligible_source_runs"], 1)
+        self.assertEqual(
+            population["minimum_represented_replicates_per_scenario"], 3
+        )
         self.assertEqual(population["expected_run_count"] % 64, 0)
         policies = {row["id"]: row for row in self.contract["policies"]}
         self.assertEqual(
@@ -77,9 +82,16 @@ class EnvironmentGeneralizationPolicyContractTest(unittest.TestCase):
         self.assertEqual(
             value["weighting"],
             (
-                "equal_family_then_equal_scenario_then_equal_replicate_then_"
-                "equal_eligible_frame"
+                "equal_family_then_equal_scenario_then_equal_represented_"
+                "nonempty_replicate_then_equal_eligible_frame"
             ),
+        )
+        amendment = self.contract["support_amendment"]
+        self.assertFalse(amendment["failed_analysis_output_published"])
+        self.assertEqual(amendment["represented_run_count"], 383)
+        self.assertEqual(
+            amendment["zero_eligible_source_run"]["run_id"],
+            "79c0388a0d75a32f2909",
         )
         expected = self.lofo["deployment_exploration"]
         actual = self.contract["deployment_exploration"]

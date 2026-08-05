@@ -49,7 +49,7 @@ class BootstrapPlan:
     scenario_order: dict[str, tuple[str, ...]]
     run_order: dict[tuple[str, str], tuple[str, ...]]
     scenario_draws: dict[str, np.ndarray]
-    run_draws: dict[str, np.ndarray]
+    run_draws: dict[str, dict[int, np.ndarray]]
     replications: int
 
 
@@ -121,25 +121,38 @@ def _interval(
     }
 
 
-def _hierarchy(data: lofo.LofoDataset) -> tuple[
+def _source_hierarchy(data: lofo.LofoDataset) -> tuple[
     tuple[str, ...],
     dict[str, tuple[str, ...]],
     dict[tuple[str, str], tuple[str, ...]],
 ]:
+    """Return the complete source-run hierarchy, including empty runs."""
+
     family_order = tuple(data.contract["cross_fitting"]["outer_family_order"])
     scenario_sets = {family: set() for family in family_order}
     run_sets: dict[tuple[str, str], set[str]] = {}
     run_identity: dict[str, tuple[str, str]] = {}
-    for family, scenario, run_id in zip(
-        data.family_ids, data.scenario_ids, data.run_ids, strict=True
-    ):
+    source_runs = data.metadata.get("source_runs")
+    if not isinstance(source_runs, list) or len(source_runs) != 384:
+        raise policy.PolicyError("source-run hierarchy is absent")
+    for row in source_runs:
+        if not isinstance(row, dict):
+            raise policy.PolicyError("source-run hierarchy row differs")
+        family = row.get("family_id")
+        scenario = row.get("scenario_id")
+        run_id = row.get("run_id")
+        if not all(
+            isinstance(value, str) and value
+            for value in (family, scenario, run_id)
+        ):
+            raise policy.PolicyError("source-run hierarchy identity differs")
         if family not in scenario_sets:
-            raise policy.PolicyError("bootstrap family differs")
+            raise policy.PolicyError("source-run family differs")
         scenario_sets[family].add(scenario)
         run_sets.setdefault((family, scenario), set()).add(run_id)
         previous = run_identity.setdefault(run_id, (family, scenario))
         if previous != (family, scenario):
-            raise policy.PolicyError("run belongs to multiple scenarios")
+            raise policy.PolicyError("source run belongs to multiple scenarios")
     scenarios = {
         family: tuple(sorted(scenario_sets[family])) for family in family_order
     }
@@ -149,8 +162,109 @@ def _hierarchy(data: lofo.LofoDataset) -> tuple[
         or set(len(values) for values in runs.values()) != {4}
         or len(run_identity) != 384
     ):
-        raise policy.PolicyError("bootstrap hierarchy differs from frozen campaign")
+        raise policy.PolicyError("source-run hierarchy differs from frozen campaign")
     return family_order, scenarios, runs
+
+
+def _hierarchy(data: lofo.LofoDataset) -> tuple[
+    tuple[str, ...],
+    dict[str, tuple[str, ...]],
+    dict[tuple[str, str], tuple[str, ...]],
+]:
+    """Return represented nonempty runs for the eligible-row estimand."""
+
+    family_order, scenarios, source_runs = _source_hierarchy(data)
+    represented: dict[tuple[str, str], set[str]] = {}
+    run_identity: dict[str, tuple[str, str]] = {}
+    for family, scenario, run_id in zip(
+        data.family_ids, data.scenario_ids, data.run_ids, strict=True
+    ):
+        key = (family, scenario)
+        if family not in scenarios or scenario not in scenarios[family]:
+            raise policy.PolicyError("represented hierarchy family differs")
+        if run_id not in source_runs[key]:
+            raise policy.PolicyError("represented run is absent from source hierarchy")
+        represented.setdefault(key, set()).add(run_id)
+        previous = run_identity.setdefault(run_id, key)
+        if previous != key:
+            raise policy.PolicyError("represented run belongs to multiple scenarios")
+    runs = {
+        key: tuple(sorted(represented.get(key, set()))) for key in source_runs
+    }
+    population = policy.load_policy_contract()["population"]
+    represented_counts = [len(values) for values in runs.values()]
+    zero_count = len(
+        {run for values in source_runs.values() for run in values}
+    ) - len(run_identity)
+    if (
+        min(represented_counts)
+        < population["minimum_represented_replicates_per_scenario"]
+        or max(represented_counts) > population["replicates_per_scenario"]
+        or len(run_identity) < population["expected_represented_run_count"]
+        or zero_count > population["maximum_zero_eligible_source_runs"]
+    ):
+        raise policy.PolicyError("represented bootstrap hierarchy differs")
+    return family_order, scenarios, runs
+
+
+def _support_diagnostics(data: lofo.LofoDataset) -> dict[str, Any]:
+    """Describe source runs with no rows in the eligible policy population."""
+
+    family_order, scenarios, source_runs = _source_hierarchy(data)
+    _, _, represented = _hierarchy(data)
+    empty: list[dict[str, Any]] = []
+    source_by_id = {
+        row["run_id"]: row for row in data.metadata["source_runs"]
+    }
+    for family in family_order:
+        for scenario in scenarios[family]:
+            missing = set(source_runs[(family, scenario)]) - set(
+                represented[(family, scenario)]
+            )
+            empty.extend(
+                {
+                    "run_id": run_id,
+                    "seed": source_by_id[run_id]["seed"],
+                    "run_number": source_by_id[run_id]["run_number"],
+                    "scenario_id": scenario,
+                    "family_id": family,
+                    "parameter_sample": source_by_id[run_id]["parameter_sample"],
+                }
+                for run_id in sorted(missing)
+            )
+    return {
+        "source_run_count": sum(len(values) for values in source_runs.values()),
+        "represented_nonempty_run_count": sum(
+            len(values) for values in represented.values()
+        ),
+        "zero_eligible_source_run_count": len(empty),
+        "zero_eligible_source_runs": empty,
+        "policy_value_handling": (
+            "condition within each scenario on represented nonempty runs"
+        ),
+        "resource_handling": "retain empty source runs at zero action and reservation",
+    }
+
+
+def _validate_frozen_support(
+    data: lofo.LofoDataset,
+    support: dict[str, Any],
+    contract: dict[str, Any],
+) -> None:
+    """Bind the published real dataset to the recorded support amendment."""
+
+    if "experiment_identity" not in data.metadata:
+        return
+    amendment = contract["support_amendment"]
+    expected_empty = amendment["zero_eligible_source_run"]
+    if (
+        support["source_run_count"] != amendment["source_run_count"]
+        or support["represented_nonempty_run_count"]
+        != amendment["represented_run_count"]
+        or support["zero_eligible_source_run_count"] != 1
+        or support["zero_eligible_source_runs"] != [expected_empty]
+    ):
+        raise policy.PolicyError("eligible support differs from frozen amendment")
 
 
 def make_bootstrap_plan(
@@ -165,10 +279,9 @@ def make_bootstrap_plan(
     family_order, scenarios, runs = _hierarchy(data)
     generator = np.random.default_rng(random_seed)
     scenario_draws: dict[str, np.ndarray] = {}
-    run_draws: dict[str, np.ndarray] = {}
+    run_draws: dict[str, dict[int, np.ndarray]] = {}
     for family in family_order:
         scenario_count = len(scenarios[family])
-        run_count = len(runs[(family, scenarios[family][0])])
         scenario_draws[family] = generator.integers(
             0,
             scenario_count,
@@ -176,13 +289,18 @@ def make_bootstrap_plan(
             endpoint=False,
             dtype=np.int16,
         )
-        run_draws[family] = generator.integers(
-            0,
-            run_count,
-            size=(replications, scenario_count, run_count),
-            endpoint=False,
-            dtype=np.int16,
+        run_draws[family] = {}
+        represented_counts = sorted(
+            {len(runs[(family, scenario)]) for scenario in scenarios[family]}
         )
+        for run_count in represented_counts:
+            run_draws[family][run_count] = generator.integers(
+                0,
+                run_count,
+                size=(replications, scenario_count, run_count),
+                endpoint=False,
+                dtype=np.int16,
+            )
     return BootstrapPlan(
         family_order=family_order,
         scenario_order=scenarios,
@@ -223,20 +341,32 @@ def bootstrap_policy_values(
         (len(plan.family_order), plan.replications, len(names)), dtype=float
     )
     for family_index, family in enumerate(plan.family_order):
-        scenario_values = np.asarray(
-            [
-                [run_means[run_id] for run_id in plan.run_order[(family, scenario)]]
-                for scenario in plan.scenario_order[family]
-            ],
-            dtype=float,
-        )
-        selected_scenarios = scenario_values[plan.scenario_draws[family]]
-        selected_runs = np.take_along_axis(
-            selected_scenarios,
-            plan.run_draws[family][..., None],
-            axis=2,
-        )
-        family_samples[family_index] = np.mean(selected_runs, axis=(1, 2))
+        scenario_order = plan.scenario_order[family]
+        selected_scenarios = plan.scenario_draws[family]
+        reduced = np.zeros((plan.replications, len(names)), dtype=float)
+        for position in range(len(scenario_order)):
+            selected_at_position = selected_scenarios[:, position]
+            position_values = np.empty(
+                (plan.replications, len(names)), dtype=float
+            )
+            for scenario_index, scenario in enumerate(scenario_order):
+                selected = selected_at_position == scenario_index
+                if not np.any(selected):
+                    continue
+                values = np.asarray(
+                    [
+                        run_means[run_id]
+                        for run_id in plan.run_order[(family, scenario)]
+                    ],
+                    dtype=float,
+                )
+                run_count = len(values)
+                draws = plan.run_draws[family][run_count][
+                    selected, position, :
+                ]
+                position_values[selected] = np.mean(values[draws], axis=1)
+            reduced += position_values
+        family_samples[family_index] = reduced / len(scenario_order)
     samples = np.mean(family_samples, axis=0)
     if samples.shape != (plan.replications, len(names)) or not np.all(
         np.isfinite(samples)
@@ -270,13 +400,22 @@ def _resource_metrics(
         raise policy.PolicyError("resource action probabilities differ")
     costs = action * data.canonical_reservation_us
     run_rows = policy.indices_by_run(data)
-    family_order, scenarios, runs = _hierarchy(data)
+    family_order, scenarios, runs = _source_hierarchy(data)
+    all_source_runs = {
+        run_id for values in runs.values() for run_id in values
+    }
     actions_by_run = {
-        run_id: float(np.sum(action[rows])) for run_id, rows in run_rows.items()
+        run_id: 0.0 for run_id in all_source_runs
     }
     spend_by_run = {
-        run_id: float(np.sum(costs[rows])) for run_id, rows in run_rows.items()
+        run_id: 0.0 for run_id in all_source_runs
     }
+    actions_by_run.update(
+        {run_id: float(np.sum(action[rows])) for run_id, rows in run_rows.items()}
+    )
+    spend_by_run.update(
+        {run_id: float(np.sum(costs[rows])) for run_id, rows in run_rows.items()}
+    )
     if max(spend_by_run.values()) > budget_us + 1e-6:
         raise policy.PolicyError("policy exceeds the canonical run budget")
 
@@ -306,6 +445,8 @@ def _resource_metrics(
     return {
         "expected_action_count": float(np.sum(action)),
         "hierarchical_action_fraction": float(np.sum(weights * action)),
+        "source_run_count": len(all_source_runs),
+        "zero_eligible_source_run_count": len(all_source_runs - set(run_rows)),
         "hierarchical_mean_actions_per_run": hierarchical_run_mean(actions_by_run),
         "hierarchical_mean_canonical_reservation_us_per_run": hierarchical_run_mean(
             spend_by_run
@@ -320,6 +461,7 @@ def _resource_metrics(
 
 
 def _zero_trace(data: lofo.LofoDataset) -> policy.PolicyTrace:
+    _, _, source_runs = _source_hierarchy(data)
     return policy.PolicyTrace(
         action_probability=np.zeros(len(data.run_ids), dtype=float),
         run_details={
@@ -328,7 +470,9 @@ def _zero_trace(data: lofo.LofoDataset) -> policy.PolicyTrace:
                 "canonical_reservation_text_us": "0",
                 "canonical_reservation_us": 0.0,
             }
-            for run_id in policy.indices_by_run(data)
+            for run_id in sorted(
+                {run for values in source_runs.values() for run in values}
+            )
         },
     )
 
@@ -341,8 +485,12 @@ def _uniform_trace(
     salt_base: int,
 ) -> tuple[policy.PolicyTrace, dict[str, Any]]:
     action_sum = np.zeros(len(data.run_ids), dtype=float)
+    _, _, source_runs = _source_hierarchy(data)
+    all_source_runs = tuple(
+        sorted(run_id for values in source_runs.values() for run_id in values)
+    )
     run_actions: dict[str, list[float]] = {
-        run_id: [] for run_id in policy.indices_by_run(data)
+        run_id: [] for run_id in all_source_runs
     }
     run_spend: dict[str, list[float]] = {run_id: [] for run_id in run_actions}
     point_values: list[dict[str, float]] = []
@@ -380,20 +528,36 @@ def _uniform_trace(
                 for name in none_components
             }
         )
-        for run_id, details in trace.run_details.items():
-            run_actions[run_id].append(float(details["actions"]))
-            run_spend[run_id].append(details["canonical_reservation_us"])
+        for run_id in all_source_runs:
+            details = trace.run_details.get(run_id)
+            run_actions[run_id].append(
+                0.0 if details is None else float(details["actions"])
+            )
+            run_spend[run_id].append(
+                0.0 if details is None else details["canonical_reservation_us"]
+            )
         replication_resources.append(
             {
                 "action_count": float(np.sum(trace.action_probability)),
                 "mean_actions_per_run": float(
-                    np.mean([row["actions"] for row in trace.run_details.values()])
+                    np.mean(
+                        [
+                            0.0
+                            if run_id not in trace.run_details
+                            else trace.run_details[run_id]["actions"]
+                            for run_id in all_source_runs
+                        ]
+                    )
                 ),
                 "mean_reservation_us_per_run": float(
                     np.mean(
                         [
-                            row["canonical_reservation_us"]
-                            for row in trace.run_details.values()
+                            0.0
+                            if run_id not in trace.run_details
+                            else trace.run_details[run_id][
+                                "canonical_reservation_us"
+                            ]
+                            for run_id in all_source_runs
                         ]
                     )
                 ),
@@ -630,17 +794,23 @@ def _analyze_bundle(
     improvement_interval["bootstrap_valid_fraction"] = float(
         np.mean(valid_improvement)
     )
+    support = _support_diagnostics(data)
+    _validate_frozen_support(data, support, contract)
     result = {
         "analysis_schema_version": ANALYSIS_SCHEMA_VERSION,
         "analysis_id": contract["analysis_id"],
         "evidence_role": "predeclared_randomized_lofo_resource_ceiling",
         "population": {
             "row_count": len(data.run_ids),
-            "run_count": len(set(data.run_ids)),
+            "run_count": support["source_run_count"],
+            "represented_nonempty_run_count": support[
+                "represented_nonempty_run_count"
+            ],
             "scenario_count": len(set(data.scenario_ids)),
             "family_count": len(set(data.family_ids)),
             "scope": contract["population"]["scope"],
             "all_generated_frame_claim_permitted": False,
+            "eligible_support": support,
         },
         "resource": contract["resource"],
         "uncertainty": {

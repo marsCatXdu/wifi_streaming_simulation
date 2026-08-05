@@ -37,6 +37,7 @@ class AnalyzeEnvironmentGeneralizationPolicyTest(unittest.TestCase):
         seeds: list[int] = []
         run_numbers: list[int] = []
         frame_ids: list[int] = []
+        source_runs: list[dict[str, object]] = []
         for family_index, family in enumerate(
             self.contract["cross_fitting"]["outer_family_order"]
         ):
@@ -51,9 +52,20 @@ class AnalyzeEnvironmentGeneralizationPolicyTest(unittest.TestCase):
                     seeds.append(10_000 + len(seeds))
                     run_numbers.append(1)
                     frame_ids.append(0)
+                    source_runs.append(
+                        {
+                            "run_id": run_ids[-1],
+                            "seed": seeds[-1],
+                            "run_number": 1,
+                            "scenario_id": scenario_id,
+                            "family_id": family,
+                            "parameter_sample": scenario_index,
+                        }
+                    )
         row_count = len(run_ids)
         return SimpleNamespace(
             contract=self.contract,
+            metadata={"source_runs": source_runs},
             run_ids=tuple(run_ids),
             scenario_ids=tuple(scenario_ids),
             family_ids=tuple(family_ids),
@@ -84,13 +96,80 @@ class AnalyzeEnvironmentGeneralizationPolicyTest(unittest.TestCase):
             np.testing.assert_array_equal(
                 first.scenario_draws[family], second.scenario_draws[family]
             )
-            np.testing.assert_array_equal(
-                first.run_draws[family], second.run_draws[family]
-            )
+            self.assertEqual(set(first.run_draws[family]), {4})
+            for run_count in first.run_draws[family]:
+                np.testing.assert_array_equal(
+                    first.run_draws[family][run_count],
+                    second.run_draws[family][run_count],
+                )
         names, samples = analysis.bootstrap_policy_values(data, components, first)
         self.assertEqual(names, ("one", "family_index"))
         np.testing.assert_allclose(samples[:, 0], 1.0)
         np.testing.assert_allclose(samples[:, 1], 2.5)
+
+    def test_bootstrap_conditions_on_a_zero_eligible_run_without_losing_source(self) -> None:
+        data = self._campaign_data()
+        removed = 0
+        keep = np.ones(len(data.run_ids), dtype=bool)
+        keep[removed] = False
+        for name in ("run_ids", "scenario_ids", "family_ids"):
+            setattr(data, name, tuple(np.asarray(getattr(data, name))[keep]))
+        for name in (
+            "seeds",
+            "run_numbers",
+            "frame_ids",
+            "treatment",
+            "canonical_reservation_us",
+        ):
+            setattr(data, name, np.asarray(getattr(data, name))[keep])
+        plan = analysis.make_bootstrap_plan(data, 128, 999)
+        family = self.contract["cross_fitting"]["outer_family_order"][0]
+        scenario = f"{family}-p00"
+        self.assertEqual(len(plan.run_order[(family, scenario)]), 3)
+        self.assertEqual(set(plan.run_draws[family]), {3, 4})
+        row_values = np.arange(len(data.run_ids), dtype=float)
+        names, samples = analysis.bootstrap_policy_values(
+            data,
+            {"one": np.ones(len(data.run_ids)), "row_value": row_values},
+            plan,
+        )
+        self.assertEqual(names, ("one", "row_value"))
+        np.testing.assert_allclose(samples[:, 0], 1.0)
+        value_by_run = dict(zip(data.run_ids, row_values, strict=True))
+        expected: list[float] = []
+        for replication in range(plan.replications):
+            family_values: list[float] = []
+            for current_family in plan.family_order:
+                scenario_values: list[float] = []
+                for position, scenario_index in enumerate(
+                    plan.scenario_draws[current_family][replication]
+                ):
+                    current_scenario = plan.scenario_order[current_family][
+                        scenario_index
+                    ]
+                    runs = plan.run_order[(current_family, current_scenario)]
+                    draws = plan.run_draws[current_family][len(runs)][
+                        replication, position
+                    ]
+                    scenario_values.append(
+                        float(np.mean([value_by_run[runs[index]] for index in draws]))
+                    )
+                family_values.append(float(np.mean(scenario_values)))
+            expected.append(float(np.mean(family_values)))
+        np.testing.assert_allclose(samples[:, 1], expected)
+        support = analysis._support_diagnostics(data)
+        self.assertEqual(support["source_run_count"], 384)
+        self.assertEqual(support["represented_nonempty_run_count"], 383)
+        self.assertEqual(support["zero_eligible_source_run_count"], 1)
+
+        trace = policy.PolicyTrace(
+            action_probability=np.ones(len(data.run_ids)), run_details={}
+        )
+        resource = analysis._resource_metrics(data, trace, budget_us=100)
+        self.assertEqual(resource["source_run_count"], 384)
+        self.assertAlmostEqual(
+            resource["hierarchical_mean_actions_per_run"], 383 / 384
+        )
 
     def test_resource_metrics_use_hierarchy_and_enforce_run_budget(self) -> None:
         data = self._campaign_data()

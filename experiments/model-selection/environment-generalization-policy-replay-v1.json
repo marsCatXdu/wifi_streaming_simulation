@@ -1,9 +1,27 @@
 {
   "schema_version": 1,
   "analysis_id": "environment-generalization-policy-replay-v1",
-  "status": "frozen_during_collection_before_randomized_outcomes_read",
-  "freeze_note": "Only campaign completion status (128 of 384 runs) was inspected before this contract was frozen; no frame, latency, airtime, or policy outcome was read.",
+  "status": "support_amended_before_policy_outcomes_read",
+  "freeze_note": "The policy, value, and gate definitions were frozen after only campaign completion status (128 of 384 runs) was inspected. The support amendment was made after the completed dataset exposed one zero-eligible-row source run and after the first policy invocation failed its hierarchy assertion; no policy value, latency result, airtime result, or qualification outcome was read.",
   "purpose": "Separate cross-family treatment-effect information from offline resource allocation before selecting an implementable closed-loop candidate.",
+  "support_amendment": {
+    "reason": "An action-clean eligible-row estimand has no per-run value for a source run containing zero retained eligible rows.",
+    "failed_analysis_output_published": false,
+    "inspected_information": "Dataset row coverage and source identity only",
+    "source_run_count": 384,
+    "represented_run_count": 383,
+    "zero_eligible_source_run": {
+      "run_id": "79c0388a0d75a32f2909",
+      "seed": 20379,
+      "run_number": 1,
+      "scenario_id": "compound-shift-collection-p14",
+      "family_id": "compound_shift",
+      "parameter_sample": 14
+    },
+    "policy_value_rule": "Condition each scenario's eligible-row policy value and run-cluster bootstrap on represented nonempty runs; preserve equal family and equal scenario weight.",
+    "resource_rule": "Retain every source run in per-run action and reservation summaries, assigning zero actions and zero reservation to a zero-eligible-row run.",
+    "forbidden_shortcut": "Do not assign a zero policy outcome to an empty eligible-row run and do not drop its source identity from the audit."
+  },
   "sources": {
     "lofo_contract": {
       "path": "experiments/model-selection/environment-generalization-lofo-v1.json",
@@ -24,6 +42,9 @@
     "expected_scenario_count": 96,
     "expected_family_count": 6,
     "replicates_per_scenario": 4,
+    "expected_represented_run_count": 383,
+    "maximum_zero_eligible_source_runs": 1,
+    "minimum_represented_replicates_per_scenario": 3,
     "scope": "common-T2-eligible action-clean temporal rows",
     "all_generated_frame_claim_permitted": false,
     "qualification_results_must_remain_unread": true,
@@ -124,13 +145,13 @@
       "estimator": "known-propensity doubly robust difference between row-deadline CDF and 18000-us CDF"
     },
     "canonical_reservation": "deterministic exact sum of selected source reservation text",
-    "weighting": "equal_family_then_equal_scenario_then_equal_replicate_then_equal_eligible_frame"
+    "weighting": "equal_family_then_equal_scenario_then_equal_represented_nonempty_replicate_then_equal_eligible_frame"
   },
   "uncertainty": {
-    "method": "hierarchical_stratified_cluster_bootstrap_v1",
+    "method": "hierarchical_stratified_cluster_bootstrap_v2_nonempty_run_support",
     "family_strata": "keep all six families fixed and equally weighted",
     "within_family": "sample the family's 16 scenarios with replacement",
-    "within_scenario": "for each sampled scenario, sample its four whole-run replicates with replacement",
+    "within_scenario": "for each sampled scenario, sample its represented nonempty whole-run replicates with replacement using a sample size equal to its represented replicate count",
     "frame_resampling_within_run": false,
     "replications": 10000,
     "confidence_level": 0.95,
@@ -172,6 +193,7 @@
     "The resource oracle sees the complete sequence of cross-fitted predicted scores in a run and is not an implementable controller.",
     "Randomized replay does not reproduce queue, collision, or interference feedback induced by a closed-loop policy.",
     "The dataset excludes startup and action-dirty temporal rows, so its absolute rate is not an all-generated-frame qualification result.",
+    "One source run has zero retained eligible rows; policy values condition on the three represented runs in that scenario, while resource summaries retain the empty source run at zero action and reservation.",
     "Actual held-out-family simulation is required before promoting any controller.",
     "Completed-frame P99 remains a closed-loop metric and is not inferred from the finite CDF grid."
   ]

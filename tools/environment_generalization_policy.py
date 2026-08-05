@@ -26,7 +26,7 @@ POLICY_CONTRACT_PATH = Path(
     "experiments/model-selection/environment-generalization-policy-replay-v1.json"
 )
 POLICY_CONTRACT_SHA256 = (
-    "8f797ac303025e0451288d92d8e171bbd8a3f3b333b9e650c3b0bb8b4a92ed69"
+    "4922b85afb5dd5341733dcd455584c29ab5a54f2ad2bea562fd2573efa9d5e31"
 )
 class PolicyError(RuntimeError):
     """Raised when a frozen policy replay invariant differs."""
@@ -101,7 +101,7 @@ def load_policy_contract() -> dict[str, Any]:
         or contract.get("analysis_id")
         != "environment-generalization-policy-replay-v1"
         or contract.get("status")
-        != "frozen_during_collection_before_randomized_outcomes_read"
+        != "support_amended_before_policy_outcomes_read"
     ):
         raise PolicyError("policy replay contract identity differs")
     sources = contract.get("sources", {})
@@ -130,6 +130,14 @@ def load_policy_contract() -> dict[str, Any]:
         ]
         or contract.get("resource", {}).get("budget_us_per_60s_run") != 372_000
         or contract.get("uncertainty", {}).get("replications") != 10_000
+        or contract.get("population", {}).get("expected_represented_run_count")
+        != 383
+        or contract.get("population", {}).get(
+            "minimum_represented_replicates_per_scenario"
+        )
+        != 3
+        or contract.get("population", {}).get("maximum_zero_eligible_source_runs")
+        != 1
     ):
         raise PolicyError("policy replay contract semantics differ")
     return contract
