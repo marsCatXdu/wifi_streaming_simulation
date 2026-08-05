@@ -7,9 +7,11 @@ import csv
 import gzip
 import hashlib
 import json
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from numbers import Integral
 from pathlib import Path
 from typing import Any, Iterator, Sequence
 
@@ -50,6 +52,19 @@ class PolicyTrace:
     """One deterministic or averaged policy and its exact resource details."""
 
     action_probability: np.ndarray
+    run_details: dict[str, dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class ExplorationTrace:
+    """Logged deployment exploration layered over one deterministic policy."""
+
+    executed_action: np.ndarray
+    assignment_action_probability: np.ndarray
+    assigned_forced_t2: np.ndarray
+    assigned_forced_control: np.ndarray
+    execution_compliance: np.ndarray
+    route: tuple[str, ...]
     run_details: dict[str, dict[str, Any]]
 
 
@@ -505,6 +520,157 @@ def uniform_policy_replications(
             data, grouped, budget_us, salt_base + replication
         )
         yield replication, PolicyTrace(action, details)
+
+
+def apply_deployment_exploration(
+    data: lofo.LofoDataset,
+    base_action: np.ndarray,
+    ood_hard_failure: np.ndarray,
+    ood_soft: np.ndarray,
+    budget_us: int,
+    *,
+    contract: dict[str, Any] | None = None,
+) -> ExplorationTrace:
+    """Apply frozen logged exploration with exact causal budget compliance."""
+
+    replay_contract = load_policy_contract() if contract is None else contract
+    exploration = replay_contract["deployment_exploration"]
+    action = np.asarray(base_action, dtype=float)
+    hard_values = np.asarray(ood_hard_failure)
+    soft_values = np.asarray(ood_soft)
+    hard = hard_values.astype(bool)
+    soft = soft_values.astype(bool)
+    row_count = len(data.run_ids)
+    if (
+        action.shape != (row_count,)
+        or not set(action.tolist()) <= {0.0, 1.0}
+        or hard.shape != (row_count,)
+        or soft.shape != (row_count,)
+        or not set(hard_values.tolist()) <= {0, 1, False, True}
+        or not set(soft_values.tolist()) <= {0, 1, False, True}
+        or np.any(hard & soft)
+        or isinstance(budget_us, bool)
+        or not isinstance(budget_us, Integral)
+        or budget_us <= 0
+        or exploration.get("assignment_algorithm")
+        != randomized_frame_assignment.ALGORITHM_ID
+    ):
+        raise PolicyError("deployment exploration inputs differ")
+    in_support = exploration["in_support"]
+    soft_policy = exploration["soft_ood"]
+    hard_policy = exploration["hard_failure"]
+    forced_t2_probability = in_support["forced_t2_probability"]
+    forced_control_probability = in_support["forced_control_probability"]
+    base_probability = in_support["base_policy_probability"]
+    soft_t2_probability = soft_policy["forced_t2_probability"]
+    if (
+        not math.isclose(
+            forced_t2_probability + forced_control_probability + base_probability,
+            1.0,
+            rel_tol=0.0,
+            abs_tol=1e-15,
+        )
+        or hard_policy["forced_t2_probability"] != 0.0
+        or soft_policy["base_policy"] != "no_secondary_copy"
+        or hard_policy["base_policy"] != "no_secondary_copy"
+        or not exploration["forced_t2_requires_exact_remaining_budget"]
+        or not exploration["forced_control_overrides_base_action"]
+        or not exploration["log_realized_propensity_and_compliance"]
+    ):
+        raise PolicyError("deployment exploration probabilities differ")
+    costs = _decimal_costs(data.canonical_reservation_texts)
+    budget = Decimal(budget_us)
+    executed = np.zeros(row_count, dtype=np.int8)
+    propensity = np.zeros(row_count, dtype=float)
+    assigned_t2 = np.zeros(row_count, dtype=np.int8)
+    assigned_control = np.zeros(row_count, dtype=np.int8)
+    compliance = np.ones(row_count, dtype=np.int8)
+    routes = [""] * row_count
+    details: dict[str, dict[str, Any]] = {}
+    for run_id, indices in indices_by_run(data).items():
+        ordered = sorted(
+            (int(index) for index in indices),
+            key=lambda index: int(data.frame_ids[index]),
+        )
+        spend = Decimal(0)
+        route_counts: defaultdict[str, int] = defaultdict(int)
+        for index in ordered:
+            desired = False
+            route: str
+            if hard[index]:
+                route = "hard_ood_fallback"
+                propensity[index] = 0.0
+            else:
+                assignment = randomized_frame_assignment.assign_frame(
+                    exploration["assignment_salt"],
+                    int(data.seeds[index]),
+                    int(data.run_numbers[index]),
+                    int(data.frame_ids[index]),
+                    0.0,
+                    0.0,
+                )
+                draw = assignment.unit_draw
+                if soft[index]:
+                    propensity[index] = soft_t2_probability
+                    if draw < soft_t2_probability:
+                        desired = True
+                        assigned_t2[index] = 1
+                        route = "soft_ood_forced_t2"
+                    else:
+                        route = "soft_ood_fallback"
+                else:
+                    propensity[index] = forced_t2_probability + (
+                        base_probability if action[index] == 1.0 else 0.0
+                    )
+                    if draw < forced_t2_probability:
+                        desired = True
+                        assigned_t2[index] = 1
+                        route = "in_support_forced_t2"
+                    elif draw < forced_t2_probability + forced_control_probability:
+                        if action[index] == 1.0:
+                            assigned_control[index] = 1
+                            route = "in_support_forced_control"
+                        else:
+                            route = "in_support_control_noop"
+                    else:
+                        desired = action[index] == 1.0
+                        route = (
+                            "in_support_base_action"
+                            if desired
+                            else "in_support_base_control"
+                        )
+            if desired:
+                if spend + costs[index] <= budget:
+                    spend += costs[index]
+                    executed[index] = 1
+                else:
+                    compliance[index] = 0
+                    route += "_budget_rejected"
+            routes[index] = route
+            route_counts[route] += 1
+        details[run_id] = {
+            "executed_actions": int(np.sum(executed[indices])),
+            "canonical_reservation_text_us": str(spend),
+            "canonical_reservation_us": float(spend),
+            "noncompliant_assignments": int(np.sum(1 - compliance[indices])),
+            "route_counts": dict(sorted(route_counts.items())),
+        }
+    if (
+        np.any(executed[hard] != 0)
+        or np.any(propensity[hard] != 0)
+        or max(row["canonical_reservation_us"] for row in details.values())
+        > budget_us
+    ):
+        raise PolicyError("deployment exploration result violates fallback or budget")
+    return ExplorationTrace(
+        executed_action=executed,
+        assignment_action_probability=propensity,
+        assigned_forced_t2=assigned_t2,
+        assigned_forced_control=assigned_control,
+        execution_compliance=compliance,
+        route=tuple(routes),
+        run_details=details,
+    )
 
 
 def policy_value_components(

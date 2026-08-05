@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 import numpy as np
 
@@ -103,6 +104,56 @@ class EnvironmentGeneralizationPolicyTest(unittest.TestCase):
             self.assertEqual(
                 details["actions"], int(np.sum(first_trace.action_probability))
             )
+
+    def test_deployment_exploration_logs_fallback_forcing_and_budget(self) -> None:
+        data = SimpleNamespace(
+            run_ids=("run-a",) * 6,
+            scenario_ids=("scenario-a",) * 6,
+            family_ids=("family-a",) * 6,
+            seeds=np.full(6, 7),
+            run_numbers=np.ones(6, dtype=int),
+            frame_ids=np.arange(6),
+            canonical_reservation_texts=("60",) * 6,
+        )
+        draws = {0: 0.5, 1: 0.001, 2: 0.005, 3: 0.015, 4: 0.5, 5: 0.5}
+
+        def assignment(
+            salt: int,
+            seed: int,
+            run: int,
+            frame_id: int,
+            t2_probability: float,
+            t4_probability: float,
+        ) -> SimpleNamespace:
+            del salt, seed, run, t2_probability, t4_probability
+            return SimpleNamespace(unit_draw=draws[frame_id])
+
+        base = np.asarray([1, 0, 0, 1, 1, 0], dtype=float)
+        hard = np.asarray([1, 0, 0, 0, 0, 0], dtype=np.int8)
+        soft = np.asarray([0, 1, 0, 0, 0, 0], dtype=np.int8)
+        with mock.patch.object(
+            policy.randomized_frame_assignment, "assign_frame", side_effect=assignment
+        ):
+            trace = policy.apply_deployment_exploration(
+                data, base, hard, soft, budget_us=100, contract=self.contract
+            )
+        np.testing.assert_array_equal(trace.executed_action, [0, 1, 0, 0, 0, 0])
+        np.testing.assert_allclose(
+            trace.assignment_action_probability, [0, 0.002, 0.01, 0.99, 0.99, 0.01]
+        )
+        np.testing.assert_array_equal(trace.assigned_forced_t2, [0, 1, 1, 0, 0, 0])
+        np.testing.assert_array_equal(
+            trace.assigned_forced_control, [0, 0, 0, 1, 0, 0]
+        )
+        np.testing.assert_array_equal(
+            trace.execution_compliance, [1, 1, 0, 1, 0, 1]
+        )
+        self.assertEqual(trace.route[0], "hard_ood_fallback")
+        self.assertEqual(trace.route[1], "soft_ood_forced_t2")
+        self.assertEqual(trace.route[2], "in_support_forced_t2_budget_rejected")
+        self.assertEqual(
+            trace.run_details["run-a"]["canonical_reservation_text_us"], "60"
+        )
 
     def test_policy_value_components_match_known_propensity_formulas(self) -> None:
         data = SimpleNamespace(
