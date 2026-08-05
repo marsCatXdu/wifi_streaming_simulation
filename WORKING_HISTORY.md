@@ -108,6 +108,7 @@ P99.
 | Validate distributional shadow evidence | `34e9296` | Independent model, reference, decision, and permanent-ledger replay |
 | Qualify distributional shadow against STR | `bf9e5c1` | Strict 48-pair gates, direct mechanisms, and paired heterogeneity |
 | Compare distributional shadow with V2 | `544008c` | Exact action transitions, paired uncertainty, and reviewed figures |
+| Freeze environment scenario catalog | `10863e8` | Deterministic six-family matrices, unopened held-out catalog, and checksum manifest |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -333,6 +334,27 @@ separate random seeds from scenario variation, test held-out scenario
 families by direct policy value and regret, and fail conservatively under
 unfamiliar telemetry while retaining logged randomized exploration.
 
+The first generalization boundary is frozen and pushed as `10863e8`.  Six
+scenario families independently vary radio propagation, OBSS intensity, OBSS
+geometry/MAC behavior, video workload, legacy coexistence, and a compound
+shift.  SHA-256 Latin-hypercube sampling creates 96 randomized-collection
+scenarios with four independent seeds each (384 runs, exactly six 64-worker
+waves), 48 unopened closed-loop scenarios with four seeds each (192 paired
+units), and six preflight scenarios.  The held-out STR/V2/distributional
+comparison is 576 runs, exactly nine 64-worker waves; fixed-5-GHz and full
+duplication are intentionally excluded.  All scenario identities remain
+manifest metadata rather than simulator/model inputs.
+
+The generated collection and preflight YAMLs, all-phase scenario catalog,
+and artifact manifest are byte-reproducible with
+`tools/generate_environment_generalization_v1.py --check`.  Phase seed sets
+are disjoint and have zero overlap with `1301` through `1348`.  The next
+boundary is a clean six-scenario VM preflight, followed by environment-context
+dataset construction, LOFO/OOD evaluation plumbing, and the 384-run randomized
+collection.  Do not read the 48 qualification scenarios' results before the
+model, fallback, exploration, regret, and closed-loop comparison contracts are
+implemented and frozen.
+
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation.  Freeze the generalization domain, candidate,
 fallback, exploration, and analyzer before consuming those seeds.
@@ -554,6 +576,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-05 - Freeze environment-generalization scenarios
+
+- Separated optional plotting imports from deterministic matrix expansion in
+  `aeaafb3`, allowing config generation and identity checks in a minimal
+  Python environment without changing run-time plotting behavior.
+- Froze six scenario families, observable-only model context, LOFO splitting,
+  OOD fallback, logged exploration, regret targets, resource gates, and the
+  actual STR/V2/distributional-shadow comparison before reading held-out
+  results.
+- Expanded the randomized collection to 384 runs and the three-arm held-out
+  comparison to 576 runs, filling six and nine complete 64-worker waves.  The
+  six-run preflight remains intentionally small.
+- Added deterministic SHA-256 Latin-hypercube generation, exact categorical
+  balancing, derived frame-period deadlines, seed and parameter-range
+  isolation, keyframe/config/CLI validation, atomic generation, and
+  byte-for-byte `--check` in `10863e8`.
+- Generated and checksum-closed both executable matrices, the unopened
+  all-phase catalog, and the artifact manifest.  Thirteen focused tests,
+  Python compilation, diff checks, exact regeneration, and the
+  `streaming-experiment` target build passed.  Next run the six scenarios on
+  the VM and repair only real feasibility or validation defects before the
+  full randomized collection.
 
 ### 2026-08-05 - Qualify distributional shadow T2 closed loop
 
