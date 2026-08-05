@@ -2241,7 +2241,37 @@ WifiPhy::SwitchMaybeToCcaBusy(const Ptr<const WifiPpdu> ppdu /* = nullptr */)
     {
         return;
     }
+
+    Ptr<const WifiPpdu> activePpdu;
+    Time activeCcaDelay;
+    if (m_currentEvent)
+    {
+        activePpdu = m_currentEvent->GetPpdu();
+        if (m_endPhyRxEvent.IsPending())
+        {
+            activeCcaDelay = Simulator::GetDelayLeft(m_endPhyRxEvent);
+        }
+        else if (activePpdu)
+        {
+            // A failed PHY header keeps a payload-end ResetReceive event but
+            // no longer has a pending field callback.
+            activeCcaDelay = GetPhyEntityForPpdu(activePpdu)->GetTimeToRxEnd().value_or(Time{0});
+        }
+    }
+
     GetLatestPhyEntity()->SwitchMaybeToCcaBusy(ppdu);
+
+    // An interference-based CCA refresh can report a shorter duration than the
+    // field currently being decoded, especially when that PPDU is below the ED
+    // threshold. PhyEntity uses CCA_BUSY to cover preamble and header reception,
+    // so preserve that reservation until its scheduled field callback.
+    if (activePpdu && activeCcaDelay.IsStrictlyPositive() &&
+        (IsStateIdle() || IsStateCcaBusy()) &&
+        m_state->GetDelayUntilIdle() < activeCcaDelay)
+    {
+        NS_LOG_DEBUG("Preserve CCA busy for active PHY reception during " << activeCcaDelay);
+        NotifyCcaBusy(activePpdu, activeCcaDelay);
+    }
 }
 
 void

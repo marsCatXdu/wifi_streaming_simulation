@@ -5096,6 +5096,113 @@ class TestPpduArrivalBeforeNestedCleanup : public WifiPhyReceptionTest
  * @ingroup wifi-test
  * @ingroup tests
  *
+ * @brief Keep CCA busy when a weak signal arrives during PHY header reception.
+ *
+ * A signal below the receive sensitivity is added as interference and refreshes
+ * the CCA indication. That refresh must not shorten the CCA reservation held by
+ * an actively decoded PHY header.
+ */
+class TestWeakSignalDuringPhyHeader : public WifiPhyReceptionTest
+{
+  public:
+    /** Constructor. */
+    TestWeakSignalDuringPhyHeader()
+        : WifiPhyReceptionTest("Weak signal does not clear active PHY header CCA")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        RngSeedManager::SetSeed(1);
+        RngSeedManager::SetRun(1);
+        m_phy->AssignStreams(0);
+
+        Simulator::Schedule(Seconds(1),
+                            &TestWeakSignalDuringPhyHeader::SendPacket,
+                            this,
+                            dBm_u{-73},
+                            1000,
+                            7);
+
+        const auto weakArrival = Seconds(1) + MicroSeconds(25);
+        Simulator::Schedule(weakArrival,
+                            &TestWeakSignalDuringPhyHeader::SendPacket,
+                            this,
+                            dBm_u{-120},
+                            1000,
+                            7);
+        Simulator::Schedule(weakArrival,
+                            &TestWeakSignalDuringPhyHeader::CheckPhyState,
+                            this,
+                            WifiPhyState::CCA_BUSY);
+
+        Simulator::Run();
+        Simulator::Destroy();
+    }
+};
+
+/**
+ * @ingroup wifi-test
+ * @ingroup tests
+ *
+ * @brief Keep CCA busy while a failed PHY header awaits PPDU-end cleanup.
+ *
+ * After a header failure, the field callback is no longer pending but the
+ * current event remains until the PPDU ends. A weak-signal CCA refresh must
+ * preserve that remaining reservation as well.
+ */
+class TestWeakSignalWhileAwaitingHeaderCleanup : public WifiPhyReceptionTest
+{
+  public:
+    /** Constructor. */
+    TestWeakSignalWhileAwaitingHeaderCleanup()
+        : WifiPhyReceptionTest("Weak signal does not clear failed PHY header cleanup")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        RngSeedManager::SetSeed(1);
+        RngSeedManager::SetRun(1);
+        m_phy->AssignStreams(0);
+
+        Simulator::Schedule(Seconds(1),
+                            &TestWeakSignalWhileAwaitingHeaderCleanup::SendPacket,
+                            this,
+                            dBm_u{-73},
+                            1000,
+                            7);
+
+        Simulator::Schedule(Seconds(1) + MicroSeconds(25),
+                            &TestWeakSignalWhileAwaitingHeaderCleanup::SendPacket,
+                            this,
+                            dBm_u{-73},
+                            1000,
+                            7);
+
+        const auto weakArrival = Seconds(1) + MicroSeconds(50);
+        Simulator::Schedule(weakArrival,
+                            &TestWeakSignalWhileAwaitingHeaderCleanup::SendPacket,
+                            this,
+                            dBm_u{-120},
+                            1000,
+                            7);
+        Simulator::Schedule(weakArrival,
+                            &TestWeakSignalWhileAwaitingHeaderCleanup::CheckPhyState,
+                            this,
+                            WifiPhyState::CCA_BUSY);
+
+        Simulator::Run();
+        Simulator::Destroy();
+    }
+};
+
+/**
+ * @ingroup wifi-test
+ * @ingroup tests
+ *
  * @brief Regression test for issue #1244
  * Send one packet, then a second one at T+24us, which coincides with the start
  * of the HE-SIG-A field (the boundary after L-SIG/RL-SIG). At that instant,
@@ -5317,6 +5424,8 @@ WifiPhyReceptionTestSuite::WifiPhyReceptionTestSuite()
                 TestCase::Duration::QUICK);
 
     AddTestCase(new TestPpduArrivalBeforeNestedCleanup, TestCase::Duration::QUICK);
+    AddTestCase(new TestWeakSignalDuringPhyHeader, TestCase::Duration::QUICK);
+    AddTestCase(new TestWeakSignalWhileAwaitingHeaderCleanup, TestCase::Duration::QUICK);
     AddTestCase(new TestPpduArrivalAtCcaEnd, TestCase::Duration::QUICK);
     AddTestCase(new TestPpduArrivalAtRxEnd, TestCase::Duration::QUICK);
 }

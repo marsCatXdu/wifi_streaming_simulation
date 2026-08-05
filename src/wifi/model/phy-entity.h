@@ -372,6 +372,13 @@ class WIFI_EXPORT PhyEntity
     virtual std::optional<Time> GetTimeToMacHdrEnd(uint16_t staId) const;
 
     /**
+     * Get the remaining time until a payload-end or failed-header cleanup event.
+     *
+     * @return the maximum remaining time, or std::nullopt if no such event is pending.
+     */
+    std::optional<Time> GetTimeToRxEnd() const;
+
+    /**
      * Return the STA ID that has been assigned to the station this PHY belongs to.
      * This is typically called for MU PPDUs, in order to pick the correct PSDU.
      *

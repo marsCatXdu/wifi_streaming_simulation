@@ -889,6 +889,21 @@ PhyEntity::GetTimeToMacHdrEnd(uint16_t staId) const
     return std::nullopt;
 }
 
+std::optional<Time>
+PhyEntity::GetTimeToRxEnd() const
+{
+    std::optional<Time> delayUntilRxEnd;
+    for (const auto& endRxPayloadEvent : m_endRxPayloadEvents)
+    {
+        if (endRxPayloadEvent.IsPending())
+        {
+            delayUntilRxEnd = std::max(delayUntilRxEnd.value_or(Time{0}),
+                                       Simulator::GetDelayLeft(endRxPayloadEvent));
+        }
+    }
+    return delayUntilRxEnd;
+}
+
 std::pair<MHz_u, WifiSpectrumBandInfo>
 PhyEntity::GetChannelWidthAndBand(const WifiTxVector& txVector, uint16_t /* staId */) const
 {
