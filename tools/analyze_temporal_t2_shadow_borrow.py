@@ -401,6 +401,52 @@ def _debt_summary(
     }
 
 
+def _transition_summary(
+    data: static.FrontierDataset,
+    rewards: np.ndarray,
+    baseline: np.ndarray,
+    candidate: np.ndarray,
+) -> dict[str, dict[str, Any]]:
+    if (
+        baseline.shape != (len(data.seeds),)
+        or candidate.shape != baseline.shape
+        or baseline.dtype != bool
+        or candidate.dtype != bool
+    ):
+        raise ShadowBorrowError("action-transition masks differ")
+    masks = {
+        "common": baseline & candidate,
+        "strict_only": baseline & ~candidate,
+        "borrow_only": candidate & ~baseline,
+        "neither": ~baseline & ~candidate,
+    }
+    primary_miss = data.primary_deadline_miss == 1
+    result: dict[str, dict[str, Any]] = {}
+    for name, selected in masks.items():
+        count = int(np.sum(selected))
+        misses = int(np.sum(selected & primary_miss))
+        result[name] = {
+            "frame_count": count,
+            "primary_deadline_misses": misses,
+            "primary_miss_fraction": misses / count if count else 0.0,
+            "mean_predicted_reward": (
+                float(np.mean(rewards[selected])) if count else 0.0
+            ),
+            "median_predicted_reward": (
+                float(np.median(rewards[selected])) if count else 0.0
+            ),
+            "median_frame_id": (
+                float(np.median(data.frame_ids[selected])) if count else None
+            ),
+            "canonical_reservation_us": float(
+                np.sum(data.canonical_cost_us[selected])
+            ),
+        }
+    if sum(row["frame_count"] for row in result.values()) != len(data.seeds):
+        raise ShadowBorrowError("action-transition coverage differs")
+    return result
+
+
 def _policy_cdf_components(
     data: static.FrontierDataset,
     cdf: np.ndarray,
@@ -608,11 +654,21 @@ def analyze_shadow_borrow(
             policies[(regime_mode, credit_mode)] = trace.policy
     for record in records:
         regime_mode = record["regime_mode"]
+        baseline_policy = policies[
+            (regime_mode, "strict_current_credit")
+        ]
+        candidate_policy = policies[(regime_mode, record["credit_mode"])]
+        record["action_transition_from_strict"] = _transition_summary(
+            data,
+            rewards,
+            baseline_policy,
+            candidate_policy,
+        )
         record["borrow_minus_strict"] = _paired_policy_delta(
             data,
             cdf,
-            policies[(regime_mode, record["credit_mode"])],
-            policies[(regime_mode, "strict_current_credit")],
+            candidate_policy,
+            baseline_policy,
             bootstrap,
         )
         record["static_372ms_comparator"] = {

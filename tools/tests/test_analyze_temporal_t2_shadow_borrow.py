@@ -107,6 +107,24 @@ class ShadowBorrowTest(unittest.TestCase):
         self.assertEqual(summary["maximum_debt_us"], 10.0)
         self.assertEqual(summary["minimum_final_balance_us"], 0.0)
 
+    def test_transition_summary_exposes_high_value_substitution(self) -> None:
+        data = SimpleNamespace(
+            seeds=np.asarray([1, 1, 1, 1]),
+            primary_deadline_miss=np.asarray([1, 0, 1, 0]),
+            frame_ids=np.asarray([10, 20, 30, 40]),
+            canonical_cost_us=np.full(4, 2.0),
+        )
+        rewards = np.asarray([0.9, 0.2, 0.8, 0.1])
+        baseline = np.asarray([False, True, False, True])
+        candidate = np.asarray([True, True, True, False])
+        summary = borrow._transition_summary(
+            data, rewards, baseline, candidate
+        )
+        self.assertEqual(summary["common"]["frame_count"], 1)
+        self.assertEqual(summary["strict_only"]["primary_deadline_misses"], 0)
+        self.assertEqual(summary["borrow_only"]["primary_deadline_misses"], 2)
+        self.assertEqual(summary["borrow_only"]["median_frame_id"], 20.0)
+
     def test_report_and_figure_render_both_credit_modes(self) -> None:
         static_comparator = {
             "primary_miss_capture_fraction": 0.8,
