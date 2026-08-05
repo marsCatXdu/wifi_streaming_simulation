@@ -98,6 +98,7 @@ P99.
 | Emit distributional runtime data | `49c7452` | Deterministic generated data, goldens, and compile-correct array contract |
 | Compile distributional T2 model | `f233402` | Exact multiclass, shadow-reference, and credit parity in C++ |
 | Add paired distribution predictor | `c33ed15` | Exact 308-feature primary-plus-secondary history adapter and tests |
+| Add permanent airtime ledger | `49371b0` | Repayment-enforced canonical debit and generated-credit golden parity |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -164,8 +165,8 @@ at `0528610`; V2 remains the engineering champion.
   frozen full-data refit, reachable reference curves, generated C++ model,
   independent multiclass/CDF parity, and credit goldens are complete through
   `f233402`.  The exact paired primary-plus-secondary feature adapter is
-  complete through `c33ed15`; next build the permanent-debit runtime ledger
-  and controller profile.
+  complete through `c33ed15`, and the permanent-debit ledger is complete
+  through `49371b0`; next build the shadow-price controller profile.
   Preserve conservative reservations, the less-than-1.20 sender-airtime gate,
   and the background throughput gate.
 
@@ -293,9 +294,11 @@ debt and worst transient debt is 144.82 ms, so changed contention, queues,
 sender airtime, secondary rescue, background throughput, and completed P99
 must be measured closed loop.  The full-data runtime predictor, shadow
 reference, compiled evaluator, and exact paired 308-feature adapter are now
-complete through `c33ed15`.  Next implement exact permanent-debit congestion
-and repayment state, then pass the existing paired STR gates on already-opened
-engineering seeds.  Compact replay evidence is under
+complete through `c33ed15`.  Exact permanent-debit congestion-independent
+credit and repayment state is complete through `49371b0`; next combine it
+with the congestion shadow price and sender/meter evidence, then pass the
+existing paired STR gates on already-opened engineering seeds.  Compact replay
+evidence is under
 `key_experiment_results/14_temporal_t2_shadow_borrow_repay_v1`.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
@@ -490,8 +493,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   also passed.  The adapter preserves all 246 primary words, appends 62 exact
   current/lagged passive-secondary words, owns caller data, and rejects
   cadence, watermark, paired-capture, support, and exact-lag drift.
+- Permanent airtime ledger at `49371b0`: both generated-credit test cases and
+  the existing secondary-airtime primitive suite passed.  The public-state
+  replay matches all four deployment goldens, including negative debt,
+  positive-cap discard, horizon rejection, and stop-time repayment.  Accepted
+  canonical reservations have no release or measured-airtime refund path.
 
 ## Work log
+
+### 2026-08-05 - Isolate permanent borrow-and-repay accounting
+
+- Added a policy-independent ledger that causally refills positive balance,
+  permits only stop-repayable debt, permanently debits a canonical reservation
+  after launch, and tracks minimum balance, peak debt, generated/discarded
+  refill, total debit, and final closure.
+- Reproduced all four generated deployment credit transitions through public
+  state rather than duplicating their formulas in the test: initial action,
+  debt action, positive-cap saturation, and horizon-credit rejection.
+- Verified invalid mutation and timestamp transitions fail closed while bad
+  admission queries remain nonmutating.  The API intentionally has no refund
+  or settlement method; the measured meter will remain independent evidence.
+- Passed `wifi-streaming-permanent-airtime-credit-ledger` and the unchanged
+  `wifi-streaming-secondary-airtime-primitives` suite, then committed this
+  accounting-only boundary as `49371b0`.
 
 ### 2026-08-05 - Compile the paired distribution feature adapter
 
