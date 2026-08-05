@@ -4,6 +4,7 @@
 
 #include "experiment-output.h"
 #include "closed-loop-risk-predictor.h"
+#include "distributional-shadow-t2-controller.h"
 #include "paired-value-t2-controller.h"
 #include "prediction-model-evaluator.h"
 #include "prediction-telemetry-collector.h"
@@ -253,7 +254,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  \"run\": " << config.rngRun << ",\n"
            << "  \"topology\": \"" << JsonEscape(config.topology) << "\",\n"
            << "  \"policy\": \"" << JsonEscape(config.policy) << "\",\n";
-    if (config.policy == "paired_value_duplication_t2")
+    if (config.policy == "paired_value_duplication_t2" ||
+        config.policy == "distributional_shadow_duplication_t2")
     {
         output << "  \"environment\": \"unchanged_neutral_mixed4x4\",\n";
     }
@@ -646,6 +648,75 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
             output << "\n";
         }
         output << "  },\n";
+    }
+    if (config.policy == "distributional_shadow_duplication_t2")
+    {
+        constexpr uint64_t nanosPerMicrosecond = 1000;
+        constexpr uint64_t decisionStopGuardUs =
+            (DistributionalShadowT2Controller::MEASUREMENT_STOP_NS -
+             DistributionalShadowT2Controller::DECISION_STOP_NS) /
+            nanosPerMicrosecond;
+        output
+            << "  \"distributionalShadowDuplicationT2\": {\n"
+            << "    \"csv_schema_version\": "
+            << DistributionalShadowT2Controller::CSV_SCHEMA_VERSION << ",\n"
+            << "    \"summary_schema_version\": "
+            << DistributionalShadowT2Controller::SUMMARY_SCHEMA_VERSION << ",\n"
+            << "    \"runtime_contract_id\": \""
+            << DistributionalShadowT2Controller::GetRuntimeContractId() << "\",\n"
+            << "    \"runtime_contract_sha256\": \""
+            << DistributionalShadowT2Controller::GetRuntimeContractSha256()
+            << "\",\n"
+            << "    \"primary_path\": "
+            << +DistributionalShadowT2Controller::PRIMARY_PATH_ID << ",\n"
+            << "    \"primary_copy_id\": "
+            << +DistributionalShadowT2Controller::PRIMARY_COPY_ID << ",\n"
+            << "    \"secondary_path\": "
+            << +DistributionalShadowT2Controller::SECONDARY_PATH_ID << ",\n"
+            << "    \"secondary_copy_id\": "
+            << +DistributionalShadowT2Controller::SECONDARY_COPY_ID << ",\n"
+            << "    \"stage\": \"T2\",\n"
+            << "    \"sample_offset_us\": "
+            << DistributionalShadowT2Controller::T2_OFFSET_US << ",\n"
+            << "    \"measurement_start_ns\": "
+            << DistributionalShadowT2Controller::MEASUREMENT_START_NS << ",\n"
+            << "    \"measurement_stop_ns\": "
+            << DistributionalShadowT2Controller::MEASUREMENT_STOP_NS << ",\n"
+            << "    \"decision_start_ns\": "
+            << DistributionalShadowT2Controller::DECISION_START_NS << ",\n"
+            << "    \"decision_stop_ns\": "
+            << DistributionalShadowT2Controller::DECISION_STOP_NS << ",\n"
+            << "    \"decision_stop_guard_us\": " << decisionStopGuardUs << ",\n"
+            << "    \"delayed_secondary_prediction_tracking_enabled\": true,\n"
+            << "    \"receiver_hold_for_delayed_secondary\": true,\n"
+            << "    \"action\": \"canonical_full_secondary_copy\",\n"
+            << "    \"predictor_variant\": \""
+            << TemporalT2DistributionModelEvaluator::GetProvenance().selectedVariant
+            << "\",\n"
+            << "    \"predictor_model_spec_id\": \""
+            << TemporalT2DistributionModelEvaluator::GetModelSpecId() << "\",\n"
+            << "    \"predictor_feature_count\": "
+            << TemporalT2DistributionModelEvaluator::RAW_FEATURE_COUNT << ",\n"
+            << "    \"deadline_reward_and_tail_gain_are_separate\": true,\n"
+            << "    \"shadow_reference\": \"congestion_tertile_5s\",\n"
+            << "    \"cost_estimator_id\": \""
+            << DistributionalShadowT2Controller::GetCostEstimatorId() << "\",\n"
+            << "    \"cost_safety_factor\": "
+            << DistributionalShadowT2Controller::COST_SAFETY_FACTOR << ",\n"
+            << "    \"canonical_p_frame_reservation_us\": "
+            << TemporalT2DistributionModelEvaluator::GetCanonicalPFrameReservationUs()
+            << ",\n"
+            << "    \"budget_fraction\": "
+            << DistributionalShadowT2Controller::BUDGET_FRACTION << ",\n"
+            << "    \"positive_balance_capacity_us\": "
+            << DistributionalShadowT2Controller::POSITIVE_BALANCE_CAPACITY_US
+            << ",\n"
+            << "    \"initial_credit_us\": "
+            << DistributionalShadowT2Controller::INITIAL_CREDIT_US << ",\n"
+            << "    \"negative_balance_allowed_when_repayable\": true,\n"
+            << "    \"accepted_reservation_is_permanent\": true,\n"
+            << "    \"measured_settlement_refunds_ledger\": false\n"
+            << "  },\n";
     }
     if (config.policy == "selective_duplication")
     {

@@ -19,6 +19,7 @@ NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveDeficitDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(RandomizedFullCopyExplorationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(PairedValueT2Policy);
+NS_OBJECT_ENSURE_REGISTERED(DistributionalShadowT2Policy);
 
 TypeId
 RedundancyPolicy::GetTypeId()
@@ -363,6 +364,39 @@ std::string
 PairedValueT2Policy::GetName() const
 {
     return "paired_value_duplication_t2";
+}
+
+TypeId
+DistributionalShadowT2Policy::GetTypeId()
+{
+    static TypeId tid = TypeId("ns3::DistributionalShadowT2Policy")
+                            .SetParent<RedundancyPolicy>()
+                            .SetGroupName("WifiStreaming")
+                            .AddConstructor<DistributionalShadowT2Policy>();
+    return tid;
+}
+
+DistributionalShadowT2Policy::DistributionalShadowT2Policy() = default;
+
+PolicyDecision
+DistributionalShadowT2Policy::Decide(const FrameDescriptor&,
+                                     const LinkTelemetrySnapshot& telemetry)
+{
+    PolicyDecision decision;
+    decision.primaryPath = 1;
+    decision.reason = "distributional shadow T2 primary";
+    if (auto score = telemetry.pathScores.find(decision.primaryPath);
+        score != telemetry.pathScores.end())
+    {
+        decision.primaryScore = score->second;
+    }
+    return decision;
+}
+
+std::string
+DistributionalShadowT2Policy::GetName() const
+{
+    return "distributional_shadow_duplication_t2";
 }
 
 } // namespace ns3

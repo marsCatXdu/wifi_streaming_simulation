@@ -393,7 +393,7 @@ ConfigureController(const std::string& runId)
     source->SetGopLength(60);
     source->SetDeadline(DEADLINE_US);
 
-    auto policy = CreateObject<PairedValueT2Policy>();
+    auto policy = CreateObject<DistributionalShadowT2Policy>();
     auto sender = CreateObject<MultipathSender>();
     sender->SetFrameSource(source);
     sender->SetPacketPayloadSize(1200);

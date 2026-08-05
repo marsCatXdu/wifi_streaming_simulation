@@ -250,6 +250,43 @@ class PairedValueT2Policy : public RedundancyPolicy
     std::string GetName() const override;
 };
 
+/**
+ * Select the frozen primary path for distributional shadow T2 control.
+ *
+ * This policy never duplicates at the frame boundary. The distributional
+ * shadow controller may later launch the canonical full secondary copy after
+ * its paired prediction, opportunity-price, and repayment gates pass.
+ */
+class DistributionalShadowT2Policy : public RedundancyPolicy
+{
+  public:
+    /**
+     * Get the policy TypeId.
+     *
+     * @return Policy TypeId.
+     */
+    static TypeId GetTypeId();
+
+    DistributionalShadowT2Policy();
+
+    /**
+     * Select frozen primary path 1 without immediate duplication.
+     *
+     * @param frame Frame being assigned to the primary path.
+     * @param telemetry Causal link telemetry at the frame boundary.
+     * @return Fixed-primary decision for later distributional-shadow control.
+     */
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+
+    /**
+     * Get the stable policy provenance name.
+     *
+     * @return Policy name.
+     */
+    std::string GetName() const override;
+};
+
 } // namespace ns3
 
 #endif // REDUNDANCY_POLICY_H
