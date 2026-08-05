@@ -79,6 +79,8 @@ P99.
 | Compare active V2/V5 scores | `dce883f` | Schema-aware exact action and outcome transitions |
 | Quantify paired V2/V5 deltas | `a16bcb3` | Shared-bootstrap direct miss and P99 intervals |
 | Qualify and archive cost-free V5 | `0528610` | Strict all-gate STR pass and exact V2 null comparison |
+| Add closed-loop ceiling decomposition | `e60b519` | Per-run scalar-score and perfect-primary-information frontiers |
+| Plot temporal-T2 ceiling gap | `aa9a20d` | Resource-band and miss-sensitivity visualization |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -128,7 +130,10 @@ at `0528610`; V2 remains the engineering champion.
   counterfactual bounds, a cross-fitted causal T2 policy, and an implementable
   nonclairvoyant online allocator.  Replay canonical reservations and resource
   constraints exactly, then decide whether prediction, allocation, or the
-  full-copy action is limiting.  Do not create a score/threshold-only V6.
+  full-copy action is limiting.  The factual, per-run canonical, primary-oracle,
+  and action-outcome-support stage is complete through `aa9a20d`; next fit the
+  cross-fitted distributional policy and online allocator.  Do not create a
+  score/threshold-only V6.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -196,15 +201,23 @@ V2-only actions carry 11.00% primary misses, while V5-only actions carry only
 6.80%.  V5 improved the first filter but sent a worse population through the
 sequential budget controller.
 
-This is a local ceiling for scalar ranking plus chronological admission, not
-a fundamental ceiling for selective full-copy duplication.  Applying V5's
-factual 736/763 acted-frame rescue rate to all 193 guard-rejected primary
-misses gives an optimistic sensitivity of 309.83 misses (0.3586%), but that is
-not an oracle result: rejected frames lack factual secondary outcomes, action
-costs and rescue rates may differ, and substitutions alter contention.  The
-next boundary is the exact ceiling decomposition in the authoritative
-checklist.  Freeze score/threshold-only variants until it distinguishes the
-action, information, and sequential-allocation ceilings.
+The first ceiling stage now establishes an information gap, not an action
+ceiling.  Separate 360 ms and 372 ms canonical proxies allow 181 and 187
+actions/run.  V5's score captures 858 and 867 primary misses at those limits;
+even perfect rescue leaves 374 and 365 misses, above the target maximum of
+345.  At the factual 736/763 rescue rate, V5 must capture 920 primary misses,
+which its current score first reaches at 236 actions/run and up to 468.168 ms
+of reservation.
+
+Perfect primary information captures all 1,103 eligible misses with only
+45.585 ms/run mean and 130.928 ms maximum reservation.  Applying V5's rescue
+rate projects 168.03 misses.  Conversely, the optimistic 309.83-miss
+all-threshold calculation is not per-run feasible: 26/48 runs exceed both
+canonical budget proxies even though the aggregate mean is 339.636 ms/run.
+Only 871/1,103 eligible primary misses have any V2/V4/V5 action outcome, and
+18 observed outcomes change across policies, so secondary-outcome and P99
+oracles remain unidentified.  Next build cross-fitted completion
+distributions and a nonclairvoyant allocator; freeze score-only variants.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -352,8 +365,37 @@ Do not repeat an entry unless relevant code changed after it ran.
   one additional miss, 3.42% more secondary airtime, and direct paired miss
   and P99 intervals containing zero.  Its 3 Python tests, `py_compile`, and
   diff checks passed.  The complete compact result is archived at `0528610`.
+- Closed-loop ceiling analysis through `aa9a20d`: 2 focused ceiling tests and
+  all 3 comparator compatibility tests passed, as did `py_compile`, line-length,
+  and diff checks.  A real-data regeneration consumed the restored,
+  checksum-bound V2/V4/V5 raw artifacts and reproduced the report and figure.
+- Ceiling JSON SHA-256:
+  `ddb8205fbe767389dd557edf32958b22b64abf2083412d97e6ed34d083c5a065`.
+  Markdown SHA-256:
+  `ecde7ffa6a3267668f487e415fe63aaff2a9b037cc6b43c14d34d7d8981cbc7d`.
+  Figure SHA-256:
+  `fd8b2d8c8e414a63041f364d2ba8bffde76d3c75fb78cc8975ac7a41620ab755`.
 
 ## Work log
+
+### 2026-08-05 - Establish the closed-loop ceiling split
+
+- Added and pushed a source-hash-bound analysis of factual V2/V5 behavior,
+  per-run canonical score frontiers, perfect-primary-information frontiers,
+  and V2/V4/V5 action-outcome support through `aa9a20d`.
+- Corrected the pooled 309.83-miss sensitivity: average canonical cost is
+  below 360 ms/run, but 26/48 individual runs exceed both the refill-only and
+  finite-run proxies, so the calculation is not implementable.
+- Established that V5's score cannot meet the 345-miss target inside either
+  canonical proxy even under perfect rescue, while perfect primary
+  information covers every eligible miss far inside the budget.
+- Quantified the remaining identification gap: 232 eligible primary misses
+  have no observed action outcome, and 18 observed outcomes differ across
+  interfering policy arms.
+- Archived the machine report, generated report, and reviewed figure under
+  `key_experiment_results/12_temporal_t2_ceiling_decomposition_v1`.  The next
+  boundary is cross-fitted completion distributions plus an implementable
+  online allocator, not another scalar threshold.
 
 ### 2026-08-05 - Qualify and archive cost-free score-aware V5
 

@@ -39,6 +39,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `09_remaining_refill_t2_str_engineering_v4` | Remaining-refill borrowing V4 versus STR MLO | Strict 48-pair pass against STR but regression from V2/V3, exact admission-shift diagnosis, raw-archive identity, and qualification plus standard figures |
 | `10_temporal_t2_cost_denominator_ablation_v1` | Frozen temporal-T2 value heads with and without learned cost normalization | Paired calibration grid, opened-test estimates, whole-run paired uncertainty, generated report, and summary figure |
 | `11_cost_free_t2_str_engineering_v5` | Cost-free raw-value T2 V5 versus STR MLO | Strict 48-pair all-gate pass, exact V2/V5 action comparison, raw-archive identity, and qualification plus standard figures |
+| `12_temporal_t2_ceiling_decomposition_v1` | Closed-loop V2/V5 action, score, and resource ceilings | Per-run canonical frontiers, primary-information oracle, counterfactual support audit, report, and figure |
 
 ## Current best STR result
 
@@ -76,6 +77,16 @@ projection is insufficient: threshold misses fall, but guard-rejected misses
 rise and erase the gain. See
 `10_temporal_t2_cost_denominator_ablation_v1/README.md` and
 `11_cost_free_t2_str_engineering_v5/README.md`.
+
+The first exact ceiling decomposition shows that this is a score/allocation
+ceiling, not an action ceiling. Inside the 372 ms finite-run reservation proxy,
+V5's score captures 867 primary misses and projects to 395.68 final misses at
+its factual rescue rate, above the target maximum of 345. A perfect
+primary-information oracle captures all 1,103 eligible primary misses with at
+most 130.93 ms of reservation in any run and projects to 168.03 misses. The
+often-cited 309.83-miss sensitivity pools credit across seeds: 26 of 48 runs
+individually exceed even the 372 ms proxy. See
+`12_temporal_t2_ceiling_decomposition_v1/README.md`.
 
 ## Principal streaming results
 
@@ -249,6 +260,22 @@ STR evidence. The next predictor experiment should use the raw value score as
 its baseline and add causal action-clean secondary-path state to model rescue
 success.
 
+## Temporal-T2 ceiling decomposition
+
+The closed-loop V2/V5 decomposition uses exact per-frame canonical
+reservations and separate budgets for every opened engineering run. The
+refill-only and finite-run proxies allow 181 and 187 actions per run. V5's
+score captures only 858 and 867 primary misses at those limits; even perfect
+rescue leaves 374 and 365 misses. The target requires at least 920 captured
+primary misses at the factual 96.46% rescue rate.
+
+Perfect knowledge of primary misses selects all 1,103 eligible misses far
+inside the same resource limit. This supports distributional prediction and
+nonmyopic allocation before changing the full-copy action. It does not provide
+an exact secondary-outcome or P99 oracle because 232 candidate actions are
+unobserved and 18 observed outcomes change across interfering closed-loop
+policies.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -287,3 +314,6 @@ For online prediction:
 8. The frozen-head cost-denominator ablation uses an already-opened test split
    and an eligible-frame DR estimand; it is not a runtime or confirmation
    result.
+9. The ceiling decomposition's canonical-reservation frontiers are static
+   resource proxies. Constant-rescue projections and pooled-credit
+   sensitivities are not closed-loop performance estimates.

@@ -1,0 +1,295 @@
+{
+  "analysis": "paired_value_t2_closed_loop_ceiling_decomposition",
+  "canonical_static_resource_contract": {
+    "budget_fraction": 0.006,
+    "initial_credit_us": 12000.0,
+    "interpretation": "reservation-cost proxy frontier; not an exact replay of measured airtime settlements or contention",
+    "maximum_actions_at_finite_budget": 187,
+    "maximum_actions_at_refill_budget": 181,
+    "measurement_duration_us": 60000000.0,
+    "no_credit_pooling_across_runs": true,
+    "per_run_finite_budget_us": 372000.0,
+    "per_run_refill_budget_us": 360000.0,
+    "unique_evaluated_canonical_costs_us": [
+      1983.760667318285
+    ]
+  },
+  "evidence_role": "engineering_diagnostic_not_a_qualification_gate",
+  "factual": {
+    "Cost-free T2 V5": {
+      "acted_primary_misses": 763,
+      "acted_primary_misses_rescued": 736,
+      "actions": 5147,
+      "all_generated_frames": 86400,
+      "canonical_reserved_airtime_us": 10210416.154687213,
+      "captured_primary_completed_late18": 930,
+      "captured_primary_misses": 763,
+      "conditional_rescue_rate": 0.9646133682830931,
+      "final_miss_rate": 0.005740740740740741,
+      "final_misses": 496,
+      "mean_measured_secondary_airtime_us": 248649.475,
+      "mean_per_run_completed_p99_us": 17081.44145833333,
+      "primary_misses": 1232
+    },
+    "Score-aware T2 V2": {
+      "acted_primary_misses": 771,
+      "acted_primary_misses_rescued": 737,
+      "actions": 4944,
+      "all_generated_frames": 86400,
+      "canonical_reserved_airtime_us": 9807712.7392216,
+      "captured_primary_completed_late18": 905,
+      "captured_primary_misses": 771,
+      "conditional_rescue_rate": 0.9559014267185474,
+      "final_miss_rate": 0.005729166666666666,
+      "final_misses": 495,
+      "mean_measured_secondary_airtime_us": 240428.68333333335,
+      "mean_per_run_completed_p99_us": 17192.269791666662,
+      "primary_misses": 1232
+    }
+  },
+  "identification_limits": [
+    "Unacted frames have no factual secondary-copy completion outcome.",
+    "Common actions can have different union outcomes under different closed-loop action sets because secondary traffic interferes.",
+    "Static canonical reservation sums do not replay transient reservations, measured airtime debits, settlements, or contention.",
+    "Counterfactual completed-frame P99 is not identified by this stage."
+  ],
+  "perfect_primary_information_oracle": {
+    "maximum_per_run_cost_to_act_on_every_eligible_primary_miss_us": 130928.20404300682,
+    "mean_per_run_cost_to_act_on_every_eligible_primary_miss_us": 45585.16700108475,
+    "oracle_information": "future primary deadline-miss label",
+    "per_run_finite_budget": {
+      "actions": 1103,
+      "all_generated_frames": 86400,
+      "canonical_reserved_airtime_us": 2188088.016052068,
+      "captured_primary_completed_late18": 0,
+      "captured_primary_misses": 1103,
+      "perfect_rescue_final_misses": 129,
+      "reference_rate_projected_final_misses": 168.03145478374836,
+      "reference_rate_projected_miss_rate": 0.0019448085044415319
+    },
+    "per_run_refill_budget": {
+      "actions": 1103,
+      "all_generated_frames": 86400,
+      "canonical_reserved_airtime_us": 2188088.016052068,
+      "captured_primary_completed_late18": 0,
+      "captured_primary_misses": 1103,
+      "perfect_rescue_final_misses": 129,
+      "reference_rate_projected_final_misses": 168.03145478374836,
+      "reference_rate_projected_miss_rate": 0.0019448085044415319
+    },
+    "secondary_outcome_assumption": "reported separately; not identified here"
+  },
+  "population": {
+    "all_generated_frames": 86400,
+    "eligible_primary_misses": 1103,
+    "feature_evaluated_action_candidates": 42735,
+    "fixed_outside_current_candidate_population_misses": 129,
+    "paired_units": 48,
+    "primary_misses": 1232
+  },
+  "reference_campaign": "Cost-free T2 V5",
+  "scalar_score_frontiers": {
+    "Cost-free T2 V5": {
+      "minimum_uniform_score_cap_for_target": {
+        "actions": 11328,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 22472040.83938153,
+        "captured_primary_completed_late18": 1181,
+        "captured_primary_misses": 920,
+        "maximum_per_run_canonical_reserved_airtime_us": 468167.5174871153,
+        "perfect_rescue_final_misses": 312,
+        "reference_rate_projected_final_misses": 344.5557011795544,
+        "reference_rate_projected_miss_rate": 0.0039879132080966944,
+        "uniform_action_cap_per_run": 236
+      },
+      "per_run_finite_budget_score_order": {
+        "actions": 8976,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 17806235.749848925,
+        "captured_primary_completed_late18": 1033,
+        "captured_primary_misses": 867,
+        "perfect_rescue_final_misses": 365,
+        "reference_rate_projected_final_misses": 395.6802096985583,
+        "reference_rate_projected_miss_rate": 0.004579632056696277
+      },
+      "per_run_refill_budget_score_order": {
+        "actions": 8688,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 17234912.67766126,
+        "captured_primary_completed_late18": 1022,
+        "captured_primary_misses": 858,
+        "perfect_rescue_final_misses": 374,
+        "reference_rate_projected_final_misses": 404.3617300131061,
+        "reference_rate_projected_miss_rate": 0.004680112615892432
+      },
+      "per_run_refill_budget_threshold_only": {
+        "actions": 5648,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 11204280.249013674,
+        "captured_primary_completed_late18": 1000,
+        "captured_primary_misses": 853,
+        "perfect_rescue_final_misses": 379,
+        "reference_rate_projected_final_misses": 409.18479685452155,
+        "reference_rate_projected_miss_rate": 0.004735935148779184
+      },
+      "pooled_all_threshold_passers_sensitivity": {
+        "actions": 8218,
+        "all_generated_frames": 86400,
+        "campaign_wide_cost_within_pooled_refill": true,
+        "canonical_reserved_airtime_us": 16302545.164021665,
+        "captured_primary_completed_late18": 1287,
+        "captured_primary_misses": 956,
+        "interpretation": "aggregate pooled-credit sensitivity only; independent runs cannot transfer unused budget",
+        "mean_per_run_canonical_reserved_airtime_us": 339636.3575837847,
+        "perfect_rescue_final_misses": 276,
+        "reference_rate_projected_final_misses": 309.829619921363,
+        "reference_rate_projected_miss_rate": 0.003585990971312072,
+        "runs_exceeding_finite_run_budget": 26,
+        "runs_exceeding_refill_budget": 26
+      },
+      "same_factual_action_count_score_order": {
+        "actions": 5147,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 10210416.154687213,
+        "captured_primary_completed_late18": 941,
+        "captured_primary_misses": 828,
+        "perfect_rescue_final_misses": 404,
+        "reference_rate_projected_final_misses": 433.3001310615989,
+        "reference_rate_projected_miss_rate": 0.00501504781321295
+      }
+    },
+    "Score-aware T2 V2": {
+      "minimum_uniform_score_cap_for_target": {
+        "actions": 11760,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 23329025.44766303,
+        "captured_primary_completed_late18": 1202,
+        "captured_primary_misses": 920,
+        "maximum_per_run_canonical_reserved_airtime_us": 486021.36349297984,
+        "perfect_rescue_final_misses": 312,
+        "reference_rate_projected_final_misses": 344.5557011795544,
+        "reference_rate_projected_miss_rate": 0.0039879132080966944,
+        "uniform_action_cap_per_run": 245
+      },
+      "per_run_finite_budget_score_order": {
+        "actions": 8976,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 17806235.749848925,
+        "captured_primary_completed_late18": 1038,
+        "captured_primary_misses": 858,
+        "perfect_rescue_final_misses": 374,
+        "reference_rate_projected_final_misses": 404.3617300131061,
+        "reference_rate_projected_miss_rate": 0.004680112615892432
+      },
+      "per_run_refill_budget_score_order": {
+        "actions": 8688,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 17234912.67766126,
+        "captured_primary_completed_late18": 1019,
+        "captured_primary_misses": 850,
+        "perfect_rescue_final_misses": 382,
+        "reference_rate_projected_final_misses": 412.0786369593709,
+        "reference_rate_projected_miss_rate": 0.004769428668511237
+      },
+      "per_run_refill_budget_threshold_only": {
+        "actions": 5548,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 11005904.182281844,
+        "captured_primary_completed_late18": 996,
+        "captured_primary_misses": 843,
+        "perfect_rescue_final_misses": 389,
+        "reference_rate_projected_final_misses": 418.8309305373525,
+        "reference_rate_projected_miss_rate": 0.004847580214552691
+      },
+      "pooled_all_threshold_passers_sensitivity": {
+        "actions": 7484,
+        "all_generated_frames": 86400,
+        "campaign_wide_cost_within_pooled_refill": true,
+        "canonical_reserved_airtime_us": 14846464.834210046,
+        "captured_primary_completed_late18": 1226,
+        "captured_primary_misses": 933,
+        "interpretation": "aggregate pooled-credit sensitivity only; independent runs cannot transfer unused budget",
+        "mean_per_run_canonical_reserved_airtime_us": 309301.3507127093,
+        "perfect_rescue_final_misses": 299,
+        "reference_rate_projected_final_misses": 332.0157273918742,
+        "reference_rate_projected_miss_rate": 0.0038427746225911364,
+        "runs_exceeding_finite_run_budget": 24,
+        "runs_exceeding_refill_budget": 25
+      },
+      "same_factual_action_count_score_order": {
+        "actions": 4944,
+        "all_generated_frames": 86400,
+        "canonical_reserved_airtime_us": 9807712.7392216,
+        "captured_primary_completed_late18": 912,
+        "captured_primary_misses": 817,
+        "perfect_rescue_final_misses": 415,
+        "reference_rate_projected_final_misses": 443.9108781127129,
+        "reference_rate_projected_miss_rate": 0.005137857385563807
+      }
+    }
+  },
+  "schema_version": 1,
+  "secondary_outcome_support": {
+    "action_observation_rescue_rate": 0.9592575826165686,
+    "action_outcome_observations": 2209,
+    "eligible_primary_miss_label_differences_from_reference": {
+      "Cost-free T2 V5": 0,
+      "Remaining-refill T2 V4": 1,
+      "Score-aware T2 V2": 0
+    },
+    "eligible_primary_misses": 1103,
+    "exact_secondary_outcome_oracle_identified": false,
+    "frames_always_rescued_when_observed": 827,
+    "frames_ever_rescued": 845,
+    "frames_with_at_least_one_action_outcome": 871,
+    "frames_with_policy_dependent_rescue_outcome": 18,
+    "frames_without_an_action_outcome": 232,
+    "guard_rejected_ever_rescued_in_support": 105,
+    "guard_rejected_with_other_policy_action_outcome": 108,
+    "reason": "some candidate actions are never observed and common actions can change outcome across closed-loop policies because traffic interferes",
+    "reference_guard_rejected_primary_misses": 193,
+    "rescue_observations": 2119,
+    "support_campaigns": [
+      "Score-aware T2 V2",
+      "Cost-free T2 V5",
+      "Remaining-refill T2 V4"
+    ]
+  },
+  "sources": {
+    "Cost-free T2 V5": {
+      "aggregate_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_cost_free_str_engineering_v5/runs/aggregate.json",
+      "aggregate_sha256": "4126beba63873cc24b9c33ab017a3131277d751e5dcd9bd5f6835929e2dfe62e",
+      "experiment": "paired-value-t2-cost-free-str-engineering-v5",
+      "manifest_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_cost_free_str_engineering_v5/runs/experiment_manifest.json",
+      "manifest_sha256": "e341438bb43dcef81a62862632bb95b643336dd8e08a4961cf3c58ba2587161a",
+      "matrix_sha256": "fcac4ba30d3c8cd2394880e9550d9f40dc7b7c2ed56b66cb5293b3d91b8be363",
+      "project_commit": "ed21d0aafa28ca33e5a1628101d7478532434693"
+    },
+    "Remaining-refill T2 V4": {
+      "aggregate_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_remaining_refill_str_engineering_v4/runs/aggregate.json",
+      "aggregate_sha256": "a6ac67796cfd5c7fcf3d80b92422634fe27c5f47be703377b148cce3c5c12d51",
+      "experiment": "paired-value-t2-remaining-refill-str-engineering-v4",
+      "manifest_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_remaining_refill_str_engineering_v4/runs/experiment_manifest.json",
+      "manifest_sha256": "1bf8ffe0b3550ad39ff1df43ade8d71ae691aa2f78ac70d7a7d48361eff8d4e6",
+      "matrix_sha256": "1b49aeebf241dd0111a958311b62c859064c84d9e4597c11f85a8753aed658d6",
+      "project_commit": "28c2b1ba80804e54281f7728a5b2ccc198d64ce0"
+    },
+    "Score-aware T2 V2": {
+      "aggregate_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_score_aware_str_engineering_v2/runs/aggregate.json",
+      "aggregate_sha256": "7b4777f423072cd635a00261ff23a5ce17dc460020cab9082acc704750098c6d",
+      "experiment": "paired-value-t2-score-aware-str-engineering-v2",
+      "manifest_path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/paired_value_t2_score_aware_str_engineering_v2/runs/experiment_manifest.json",
+      "manifest_sha256": "24a87c9ec02e7564116992367754bdcf6ffc7845a1fa26908b8dea92fe316ef2",
+      "matrix_sha256": "125370c3dfe0a0416816fb7e2a6f90b6db9d45b4eac3757c829bec123973f49a",
+      "project_commit": "eb7f9600fab33876bce4538f665b69785f493d74"
+    }
+  },
+  "target": {
+    "maximum_integer_final_misses": 345,
+    "reference_factual_rescue_rate": 0.9646133682830931,
+    "required_captured_primary_misses_at_reference_rescue_rate": 920,
+    "required_captured_primary_misses_under_perfect_rescue": 887,
+    "strict_miss_rate_below": 0.004,
+    "strict_more_than_half_reduction_from_str_misses": 691
+  }
+}

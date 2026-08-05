@@ -324,27 +324,45 @@ frames lack observed secondary-copy outcomes, may have different costs and
 rescue probabilities, and admitting them would displace actions and change
 contention.
 
-The next boundary is a ceiling decomposition using exact canonical airtime
-reservations:
+The first ceiling-decomposition stage is complete at `aa9a20d`, with compact
+evidence under
+`key_experiment_results/12_temporal_t2_ceiling_decomposition_v1`.  Every
+evaluated P-frame costs exactly `1983.760667318285 us` under the canonical
+reservation.  Separate 360 ms refill-only and 372 ms finite-run proxies permit
+181 and 187 actions per run.  V5's scalar score captures only 858 and 867
+primary misses at those limits; even perfect rescue leaves 374 and 365 misses.
+At the factual 96.46% rescue rate, the projections are 404.36 and 395.68
+misses, above the target maximum of 345.  The V5 score first captures the
+required 920 primary misses at 236 actions/run and up to 468.168 ms/run.
 
-- factual V2 and V5;
-- an offline resource oracle only where action outcomes are identified,
-  accompanied by explicit bounds or new counterfactual data for unobserved
-  actions;
-- a cross-fitted policy using only causally available T2 features; and
-- an implementable nonclairvoyant online allocator that values future action
-  opportunities.
+The 309.83-miss sensitivity is not a feasible per-run frontier.  V5's 8,218
+threshold passers average 339.636 ms/run, but 26 of 48 runs exceed both the
+360 ms and 372 ms proxies.  The aggregate calculation implicitly transfers
+quiet-run credit to congested runs.
 
-This decomposition must distinguish an action ceiling, an information ceiling,
-and a sequential-allocation ceiling before another campaign.  If causal
-prediction is limiting, estimate separate completion distributions with and
+Perfect primary information selects all 1,103 eligible primary misses with
+only 45.585 ms/run mean and 130.928 ms maximum reservation.  Perfect rescue
+leaves the 129 misses outside the current candidate population; applying V5's
+factual rescue rate projects 168.03 misses.  Therefore the full-copy action and
+canonical reservation capacity do not yet limit the target.  The current
+information/ranking does.
+
+This is an exact primary-miss capture oracle, not an exact secondary-outcome or
+P99 oracle.  Only 871/1,103 eligible primary misses have an action observation
+in V2, V4, or V5; 232 are unobserved, and 18 observed frames change rescue
+outcome across policies because the action sets interfere.  Do not relabel the
+constant-rescue projections as performance estimates.
+
+The remaining decomposition must now build a cross-fitted policy from only
+causally available T2 features and compare it with an implementable
+nonclairvoyant allocator.  Estimate separate completion distributions with and
 without duplication at `12`, `18`, `24`, `30`, and `33.333 ms`.  Keep deadline
 rescue, tail acceleration, and conservative airtime cost as separate outputs;
-make secondary-link features an ablation.  If allocation is limiting, learn a
-time-, credit-, and congestion-dependent shadow price instead of granting
-unpriced future credit.  Sixteen of 48 V5 runs individually exceed a 1.20
-sender-airtime ratio and have descriptively worse miss and P99 deltas, which
-supports including congestion regime without claiming causality.
+make secondary-link features an ablation.  Learn a time-, credit-, and
+congestion-dependent shadow price rather than granting unpriced future credit.
+Sixteen of 48 V5 runs individually exceed a 1.20 sender-airtime ratio and have
+descriptively worse miss and P99 deltas, which supports including congestion
+regime without claiming causality.
 
 The frozen V5 JSON contains an unsupported note that unarchived
 secondary-feature and larger-model prototypes were null.  Its adjacent
