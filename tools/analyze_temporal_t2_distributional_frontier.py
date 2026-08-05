@@ -511,21 +511,57 @@ def static_policy(
     return policy, run_details
 
 
-def _group_primitive(
-    values: np.ndarray, indices_by_unit: dict[Unit, np.ndarray]
-) -> np.ndarray:
-    return np.asarray(
-        [np.mean(values[indices], axis=0) for indices in indices_by_unit.values()]
+def _pooled_cluster_means(
+    values: np.ndarray,
+    indices_by_unit: dict[Unit, np.ndarray],
+    bootstrap: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return pooled-frame point and whole-run bootstrap means."""
+
+    if values.ndim != 2 or values.shape[0] == 0:
+        raise FrontierError("pooled cluster values differ")
+    groups = tuple(indices_by_unit.values())
+    if (
+        not groups
+        or bootstrap.ndim != 2
+        or bootstrap.dtype.kind not in "iu"
+        or bootstrap.shape[1] != len(groups)
+        or np.any((bootstrap < 0) | (bootstrap >= len(groups)))
+    ):
+        raise FrontierError("pooled cluster bootstrap differs")
+    counts = np.asarray([len(indices) for indices in groups], dtype=np.int64)
+    coverage = np.concatenate(groups)
+    if (
+        np.any(counts <= 0)
+        or int(np.sum(counts)) != len(values)
+        or not np.array_equal(np.sort(coverage), np.arange(len(values)))
+    ):
+        raise FrontierError("pooled cluster row coverage differs")
+    sums = np.asarray(
+        [np.sum(values[indices], axis=0) for indices in groups], dtype=float
     )
+    point = np.sum(sums, axis=0) / np.sum(counts)
+    sampled_counts = np.sum(counts[bootstrap], axis=1)
+    sampled_sums = np.sum(sums[bootstrap], axis=1)
+    replicates = sampled_sums / sampled_counts[:, None]
+    if not np.all(np.isfinite(point)) or not np.all(np.isfinite(replicates)):
+        raise FrontierError("pooled cluster mean is non-finite")
+    return point, replicates
 
 
-def _interval(values: np.ndarray, bootstrap: np.ndarray) -> dict[str, float]:
-    estimates = np.mean(values[bootstrap], axis=1)
+def _interval(estimate: float, samples: np.ndarray) -> dict[str, float]:
+    if (
+        not math.isfinite(estimate)
+        or samples.ndim != 1
+        or len(samples) == 0
+        or not np.all(np.isfinite(samples))
+    ):
+        raise FrontierError("interval values are non-finite")
     alpha = (1.0 - CONFIDENCE_LEVEL) / 2.0
     return {
-        "estimate": float(np.mean(values)),
-        "ci_lower": float(np.quantile(estimates, alpha)),
-        "ci_upper": float(np.quantile(estimates, 1.0 - alpha)),
+        "estimate": float(estimate),
+        "ci_lower": float(np.quantile(samples, alpha)),
+        "ci_upper": float(np.quantile(samples, 1.0 - alpha)),
     }
 
 
@@ -544,24 +580,31 @@ def evaluate_policy(
     selected = policy[:, None]
     policy_phi = phi0 + selected * (phi1 - phi0)
     indices_by_unit = data.indices_by_unit()
-    none_group_cdf = _group_primitive(phi0, indices_by_unit)
-    policy_group_cdf = _group_primitive(policy_phi, indices_by_unit)
-    none_cdf = np.mean(none_group_cdf, axis=0)
-    policy_cdf = np.mean(policy_group_cdf, axis=0)
+    none_cdf, none_bootstrap = _pooled_cluster_means(
+        phi0, indices_by_unit, bootstrap
+    )
+    policy_cdf, policy_bootstrap = _pooled_cluster_means(
+        policy_phi, indices_by_unit, bootstrap
+    )
+    if (
+        none_cdf[-1] <= 0
+        or policy_cdf[-1] <= 0
+        or np.any(none_bootstrap[:, -1] <= 0)
+        or np.any(policy_bootstrap[:, -1] <= 0)
+    ):
+        raise FrontierError("DR completion probability is non-positive")
     none_late18 = (none_cdf[-1] - none_cdf[1]) / none_cdf[-1]
     policy_late18 = (policy_cdf[-1] - policy_cdf[1]) / policy_cdf[-1]
-    miss_delta_by_group = -(
-        policy_group_cdf[:, -1] - none_group_cdf[:, -1]
+    miss_delta_bootstrap = -(
+        policy_bootstrap[:, -1] - none_bootstrap[:, -1]
     )
-    tail_delta_bootstrap = np.empty(len(bootstrap), dtype=float)
-    for index, sampled in enumerate(bootstrap):
-        none_sample = np.mean(none_group_cdf[sampled], axis=0)
-        policy_sample = np.mean(policy_group_cdf[sampled], axis=0)
-        tail_delta_bootstrap[index] = (
-            (policy_sample[-1] - policy_sample[1]) / policy_sample[-1]
-            - (none_sample[-1] - none_sample[1]) / none_sample[-1]
-        )
-    alpha = (1.0 - CONFIDENCE_LEVEL) / 2.0
+    none_late18_bootstrap = (
+        none_bootstrap[:, -1] - none_bootstrap[:, 1]
+    ) / none_bootstrap[:, -1]
+    policy_late18_bootstrap = (
+        policy_bootstrap[:, -1] - policy_bootstrap[:, 1]
+    ) / policy_bootstrap[:, -1]
+    tail_delta_bootstrap = policy_late18_bootstrap - none_late18_bootstrap
     total_primary = int(np.sum(data.primary_deadline_miss))
     captured_primary = int(np.sum(policy & (data.primary_deadline_miss == 1)))
     reservations = [
@@ -586,15 +629,14 @@ def evaluate_policy(
         "dr_treat_none_deadline_miss_probability": float(1.0 - none_cdf[-1]),
         "dr_policy_deadline_miss_probability": float(1.0 - policy_cdf[-1]),
         "dr_policy_minus_none_deadline_miss": _interval(
-            miss_delta_by_group, bootstrap
+            float(-(policy_cdf[-1] - none_cdf[-1])),
+            miss_delta_bootstrap,
         ),
         "dr_treat_none_completed_late18_ratio": float(none_late18),
         "dr_policy_completed_late18_ratio": float(policy_late18),
-        "dr_policy_minus_none_completed_late18_ratio": {
-            "estimate": float(policy_late18 - none_late18),
-            "ci_lower": float(np.quantile(tail_delta_bootstrap, alpha)),
-            "ci_upper": float(np.quantile(tail_delta_bootstrap, 1.0 - alpha)),
-        },
+        "dr_policy_minus_none_completed_late18_ratio": _interval(
+            float(policy_late18 - none_late18), tail_delta_bootstrap
+        ),
         "dr_policy_completion_cdf": {
             str(threshold): float(policy_cdf[index])
             for index, threshold in enumerate(crossfit.THRESHOLDS_US)
@@ -693,6 +735,11 @@ def analyze_frontiers(data: FrontierDataset) -> dict[str, Any]:
         },
         "bootstrap": {
             "unit": "(seed, run_number)",
+            "point_estimand": "pooled action-clean frame mean",
+            "resample_reduction": (
+                "sum sampled whole-run numerators divided by sum sampled "
+                "whole-run row counts"
+            ),
             "replications": BOOTSTRAP_REPLICATIONS,
             "confidence_level": CONFIDENCE_LEVEL,
             "random_seed": BOOTSTRAP_SEED,

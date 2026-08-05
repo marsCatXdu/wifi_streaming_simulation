@@ -89,6 +89,19 @@ class StaticDistributionalFrontierTest(unittest.TestCase):
             first.shape, (frontier.BOOTSTRAP_REPLICATIONS, 96)
         )
 
+    def test_cluster_bootstrap_pools_rows_after_resampling_runs(self) -> None:
+        values = np.asarray([[1.0], [0.0], [0.0], [0.0]])
+        groups = {
+            (1, 1): np.asarray([0]),
+            (2, 1): np.asarray([1, 2, 3]),
+        }
+        bootstrap = np.asarray([[0, 1], [0, 0], [1, 1]])
+        point, replicates = frontier._pooled_cluster_means(
+            values, groups, bootstrap
+        )
+        self.assertEqual(point.tolist(), [0.25])
+        np.testing.assert_allclose(replicates[:, 0], [0.25, 1.0, 0.0])
+
 
 if __name__ == "__main__":
     unittest.main()
