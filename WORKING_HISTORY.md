@@ -89,6 +89,7 @@ P99.
 | Freeze online shadow allocator | `04e3f43` | Causal time, credit, regime, and evaluation contract |
 | Fit fold-honest shadow references | `473af75` | Exact selected-model reproduction and training-fold scores |
 | Add fold-honest online allocator | `1aeddc0` | Nonclairvoyant shadow-price replay, report, and figure |
+| Complete distributional ceiling replay | `dd9be5f` | Checksum-closed cross-fit, static, reference, and online artifacts |
 
 The latest T2 validator milestone is `c61fa98`.  It retains `cff64f7`'s exact
 compiled-ridge and integer airtime-feasibility replay plus the V2-V4 guard
@@ -133,19 +134,25 @@ at `0528610`; V2 remains the engineering champion.
   generate the qualification and historical CDF/PDF/burst/resource figures.
   Archive the result and decide whether V5 replaces V2 (`0528610`).  V5 passes
   STR but does not improve V2; seeds `1301` through `1348` remain unopened.
-- [ ] Build the exact ceiling decomposition before another simulation
+- [x] Build the exact ceiling decomposition before another simulation
   campaign: factual V2/V5, an identified-outcome resource oracle with explicit
   counterfactual bounds, a cross-fitted causal T2 policy, and an implementable
   nonclairvoyant online allocator.  Replay canonical reservations and resource
   constraints exactly, then decide whether prediction, allocation, or the
   full-copy action is limiting.  The factual, per-run canonical, primary-oracle,
   and action-outcome-support stage is archived through `b73dfc2`.  The
-  distributional and online contracts/tools are complete through `1aeddc0`.
-  The canonical four-variant cross-fit is running on the 64-vCPU VM from clean
-  detached commit `1e47792`; after it completes, checksum-fetch the output,
-  generate the static frontier, refit the selected model's fold-honest shadow
-  references, and run the online replay.  Do not create a score/threshold-only
-  V6.
+  distributional stage completed from clean commits through `dd9be5f`: all
+  artifact hashes close, the static predictor frontier succeeds, and the
+  nonclairvoyant no-borrow replay exposes chronological credit as the dominant
+  gap.  Do not create a score/threshold-only V6.
+- [ ] Combine the fold-honest shadow price with exact future-credit borrowing
+  that must be repaid by measurement stop.  First replay the single frozen
+  mechanism on the already-opened randomized groups and record direct rejection
+  outcomes.  If it materially closes the static gap, integrate the selected
+  policy into the runtime and qualify it against STR on already-opened
+  engineering seeds before touching confirmation seeds.  Preserve conservative
+  reservations, the less-than-1.20 sender-airtime gate, and the background
+  throughput gate.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -230,16 +237,33 @@ Only 871/1,103 eligible primary misses have any V2/V4/V5 action outcome, and
 18 observed outcomes change across policies, so secondary-outcome and P99
 oracles remain unidentified.
 
-The next decomposition stage is now frozen and executing.  It cross-fits
-separate no-duplication and duplication completion CDFs at 12, 18, 24, 30,
-and 33.333 ms for four primary/secondary-feature and model-size variants.
-The live canonical fit uses only the 96 already-opened randomized run groups;
-reserved seeds remain untouched.  Static exact-knapsack and nonclairvoyant
-shadow-price analyzers are ready.  The online analyzer uses held-out OOF
-scores for decisions and separately reproduced outer-model scores on only its
-84 training groups for opportunity pricing.  It explicitly discloses that
-the global engineering-model selection is not independent confirmation and
-that the training-score reference may retain in-sample optimism.
+The distributional ceiling stage is complete.  On 73,400 action-clean rows
+from 96 already-opened randomized groups, all four cross-fitted variants have
+no-action deadline-risk AUC between 0.9317 and 0.9335.  The frozen priorities
+select `primary_secondary_hgb64`.  At the exact 372 ms/run static P-frame
+frontier it takes 17,943 actions and captures 1,634/2,056 primary misses
+(79.47%); the pooled doubly robust miss estimate is 0.588% versus 2.805% for
+treat none, and completed-late18 falls from 4.336% to 1.839%.
+
+The same predictor under the nonclairvoyant no-borrow allocator exposes an
+allocation rather than prediction ceiling.  The global policy captures only
+989 primary misses (48.10%), estimates 1.479% misses, and reserves 318.06
+ms/run.  Congestion tertiles improve this to 1,056 captures (51.36%), 1.389%
+misses, and 320.71 ms/run, but remain 578 captures behind the static frontier.
+The global replay rejects 5,649 candidates for current credit and the
+congestion replay rejects 5,442 while leaving roughly 50 ms/run unused.
+An exact decision re-audit found that the global current-credit rejections
+contain 813 primary misses, versus 146 among opportunity-price rejections;
+the corresponding congestion counts are 748 and 144.  Credit-rejected frames
+are the riskier population.
+
+This does not revive naive V4 borrowing.  V4 already proved that making future
+refill available without valuing displaced later actions spends chronologically
+and regresses.  The next isolated screen must debit future credit only when the
+current distributional reward exceeds the fold-honest opportunity price, then
+enforce full repayment at measurement stop.  The compact completed ceiling is
+archived under
+`key_experiment_results/13_temporal_t2_distributional_online_ceiling_v1`.
 
 Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation, and its 28.36% relative miss reduction is still
@@ -402,8 +426,47 @@ Do not repeat an entry unless relevant code changed after it ran.
   PNG-rendering, and diff checks.  Regression tests enforce held-out-fold
   exclusion, exact frozen predictor-selection order, and frame-ID-first
   score-tie resolution.
+- Full Python tool discovery after the pooled-frame correction passed all
+  `425/425` tests in 174.621 seconds.
+- The canonical cross-fit prediction stream is 25,275,886 bytes with SHA-256
+  `32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b`;
+  its manifest is
+  `b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414`.
+  All source and generated hashes close.
+- The fold-honest shadow reference reproduces every selected-model OOF score
+  with maximum absolute difference `0.0`.  Its 45 MB prediction stream has
+  SHA-256
+  `82c48787d877e1d9a492e3234798917b614a0171f98dfe5a7eeabad0cb990cd8`.
+- Static and online artifact manifests verify as
+  `b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721`
+  and
+  `4a023387681441c598deafd706e729dcee2eeae2d006292fb8f950cee9f3c4fd`,
+  respectively.  The online primary JSON has SHA-256
+  `7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074`.
+  Both generated figures were visually inspected after checksum verification.
 
 ## Work log
+
+### 2026-08-05 - Complete the distributional and online ceiling stage
+
+- Completed the four-variant 96-group cross-fit on the 64-vCPU VM, verified
+  every upstream and generated hash, and restored the 25 MB prediction stream
+  locally without reading reserved confirmation seeds.
+- Generated the exact two-cost static frontier, selected
+  `primary_secondary_hgb64` under the frozen priorities, and established a
+  79.47% direct primary-miss capture ceiling at 372 ms/run.
+- Refit 16 fold/arm shadow-reference models, reproduced selected-model OOF
+  predictions exactly, and generated the frozen global and congestion-aware
+  nonclairvoyant replays.
+- Established that congestion state helps modestly but both causal replays
+  lose hundreds of primary-miss captures and underuse their budget because
+  high-risk arrivals lack current credit.
+- Archived the compact metrics, generated reports, reviewed plots, manifests,
+  and omitted-stream identities under
+  `key_experiment_results/13_temporal_t2_distributional_online_ceiling_v1`.
+- Chose shadow-priced, repayment-enforced future credit as the next isolated
+  mechanism.  This differs from failed V4 because future actions receive an
+  explicit opportunity value before any debt is taken.
 
 ### 2026-08-05 - Launch the distributional and online ceiling stage
 

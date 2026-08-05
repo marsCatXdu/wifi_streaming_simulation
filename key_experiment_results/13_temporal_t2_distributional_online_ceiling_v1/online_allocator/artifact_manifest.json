@@ -1,0 +1,20 @@
+{
+  "analysis_id": "temporal-t2-online-shadow-price-v1",
+  "artifacts_sha256": {
+    "temporal_t2_online_allocator.json": "7e0094efee52512e122b13d8252707e336060332fdd39bff36880e742c6aa074",
+    "temporal_t2_online_allocator.md": "1b3b62d906e01b7bdf6be9b1776b9ed10e7b7e411000dffb08c82ecf2a30cf52",
+    "temporal_t2_online_allocator.png": "0e13de2324f41e23b33ec15637f9014cf3904b812230afcceece2ae7894f0782"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "source_artifacts_sha256": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "shadow_reference_manifest_sha256": "691766862ac2673d2464302cdbf17b28b74260d32d84bd3944f87c5833e97a55",
+    "shadow_reference_metrics_sha256": "c710dff1873c9f00c4beae2c824f365247b2cfc92943af738f59887d916978d6",
+    "shadow_reference_predictions_sha256": "82c48787d877e1d9a492e3234798917b614a0171f98dfe5a7eeabad0cb990cd8",
+    "static_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+    "static_metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96"
+  }
+}

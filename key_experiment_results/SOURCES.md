@@ -29,6 +29,7 @@ following ignored result roots:
 | `10_temporal_t2_cost_denominator_ablation_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_cost_denominator_ablation_v1` |
 | `11_cost_free_t2_str_engineering_v5` | `results/paired_value_t2_cost_free_str_engineering_v5/runs` plus the exact V2/V5 comparison in its result-root directory |
 | `12_temporal_t2_ceiling_decomposition_v1` | `results/paired_value_t2_ceiling_decomposition_v1` generated from the restored V2, V4, and V5 raw campaign roots |
+| `13_temporal_t2_distributional_online_ceiling_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_distributional_frontier_v1`, `temporal_t2_static_distributional_frontier_v1`, `temporal_t2_shadow_reference_v1`, and `temporal_t2_online_shadow_price_v1` |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%

@@ -1,0 +1,344 @@
+{
+  "evidence_role": "fold_honest_online_allocator_training_reference",
+  "fit_records": [
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 8377,
+      "fold": 0,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262805,
+      "reference_rows": 65023,
+      "training_rows": 59175
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 8377,
+      "fold": 0,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262806,
+      "reference_rows": 65023,
+      "training_rows": 5848
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 10326,
+      "fold": 1,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262815,
+      "reference_rows": 63074,
+      "training_rows": 57360
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 10326,
+      "fold": 1,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262816,
+      "reference_rows": 63074,
+      "training_rows": 5714
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 8791,
+      "fold": 2,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262825,
+      "reference_rows": 64609,
+      "training_rows": 58775
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 8791,
+      "fold": 2,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      "random_seed": 20262826,
+      "reference_rows": 64609,
+      "training_rows": 5834
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 9795,
+      "fold": 3,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262835,
+      "reference_rows": 63605,
+      "training_rows": 57838
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 9795,
+      "fold": 3,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262836,
+      "reference_rows": 63605,
+      "training_rows": 5767
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 8399,
+      "fold": 4,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262845,
+      "reference_rows": 65001,
+      "training_rows": 59157
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 8399,
+      "fold": 4,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262846,
+      "reference_rows": 65001,
+      "training_rows": 5844
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 9386,
+      "fold": 5,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262855,
+      "reference_rows": 64014,
+      "training_rows": 58175
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 9386,
+      "fold": 5,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262856,
+      "reference_rows": 64014,
+      "training_rows": 5839
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 9893,
+      "fold": 6,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262865,
+      "reference_rows": 63507,
+      "training_rows": 57747
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 9893,
+      "fold": 6,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262866,
+      "reference_rows": 63507,
+      "training_rows": 5760
+    },
+    {
+      "arm": 0,
+      "evaluation_rows_reproduced": 8433,
+      "fold": 7,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262875,
+      "reference_rows": 64967,
+      "training_rows": 59086
+    },
+    {
+      "arm": 1,
+      "evaluation_rows_reproduced": 8433,
+      "fold": 7,
+      "maximum_oof_absolute_difference": 0.0,
+      "observed_training_classes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "random_seed": 20262876,
+      "reference_rows": 64967,
+      "training_rows": 5881
+    }
+  ],
+  "fold_count": 8,
+  "maximum_reproduced_oof_absolute_difference": 0.0,
+  "provenance": {
+    "numpy": "1.26.4",
+    "project_git_commit": "dd9be5f378788e5246b114508808b099e6afa2c4",
+    "project_git_status_porcelain": "",
+    "python": "3.12.3",
+    "scikit_learn": "1.4.1.post1",
+    "tool": "tools/fit_temporal_t2_shadow_reference.py",
+    "tool_sha256": "f55882e2d4c7ab2aa2bebd7c95e16015fd2afa3da47859844bd5c7b37dc34e69"
+  },
+  "reference_id": "temporal-t2-shadow-reference-v1",
+  "reference_row_count": 513800,
+  "reference_schema_version": 1,
+  "reference_score_role": "in-sample scores from each deployed outer-fold model on its own 84 training groups; evaluation-fold rows and outcomes are excluded",
+  "selected_variant": "primary_secondary_hgb64",
+  "selection_record": {
+    "action_count": 17943,
+    "action_fraction": 0.2444550408719346,
+    "budget_us_per_run": 372000,
+    "captured_primary_deadline_misses": 1634,
+    "dr_policy_completed_late18_ratio": 0.01838677932867867,
+    "dr_policy_completion_cdf": {
+      "12000": 0.9388742520613594,
+      "18000": 0.9758415517741013,
+      "24000": 0.9867078067571047,
+      "30000": 0.9923521353027396,
+      "33333": 0.9941202209020037
+    },
+    "dr_policy_deadline_miss_probability": 0.005879779097996307,
+    "dr_policy_minus_none_completed_late18_ratio": {
+      "ci_lower": -0.02773548964821838,
+      "ci_upper": -0.02213879137353685,
+      "estimate": -0.024974489726413366
+    },
+    "dr_policy_minus_none_deadline_miss": {
+      "ci_lower": -0.025480438915913565,
+      "ci_upper": -0.018809438357183062,
+      "estimate": -0.022174551220969674
+    },
+    "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+    "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+    "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+    "frame_gate": "p_frames_only",
+    "future_score_visibility": true,
+    "maximum_actions_per_run": 187,
+    "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+    "mean_actions_per_run": 186.90625,
+    "mean_canonical_reservation_us_per_run": 370777.2672259581,
+    "minimum_actions_per_run": 178,
+    "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+    "objective": "deadline_rescue",
+    "perfect_rescue_residual_primary_misses": 422,
+    "primary_deadline_misses": 2056,
+    "primary_miss_capture_fraction": 0.7947470817120622,
+    "selected_primary_miss_fraction": 0.09106615393189545,
+    "variant": "primary_secondary_hgb64"
+  },
+  "selection_rule": "frozen lexicographic direct capture, DR miss, tail nonregression, canonical reservation, feature scope, model size",
+  "source": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "static_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+    "static_metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96",
+    "temporal_csv_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+  },
+  "training_groups_per_fold": 84
+}

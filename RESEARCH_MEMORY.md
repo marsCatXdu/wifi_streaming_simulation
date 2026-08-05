@@ -353,16 +353,42 @@ in V2, V4, or V5; 232 are unobserved, and 18 observed frames change rescue
 outcome across policies because the action sets interfere.  Do not relabel the
 constant-rescue projections as performance estimates.
 
-The remaining decomposition must now build a cross-fitted policy from only
-causally available T2 features and compare it with an implementable
-nonclairvoyant allocator.  Estimate separate completion distributions with and
-without duplication at `12`, `18`, `24`, `30`, and `33.333 ms`.  Keep deadline
-rescue, tail acceleration, and conservative airtime cost as separate outputs;
-make secondary-link features an ablation.  Learn a time-, credit-, and
-congestion-dependent shadow price rather than granting unpriced future credit.
-Sixteen of 48 V5 runs individually exceed a 1.20 sender-airtime ratio and have
-descriptively worse miss and P99 deltas, which supports including congestion
-regime without claiming causality.
+The distributional decomposition is complete through `dd9be5f`, with compact
+evidence under
+`key_experiment_results/13_temporal_t2_distributional_online_ceiling_v1`.
+It estimates separate completion distributions with and without duplication
+at `12`, `18`, `24`, `30`, and `33.333 ms`, keeps deadline rescue, tail
+acceleration, and conservative cost separate, and treats passive secondary
+features as an ablation.  The selected `primary_secondary_hgb64` model has a
+0.9317 no-action deadline-risk AUC.  Its exact 372 ms/run P-frame static
+frontier captures 1,634/2,056 observed primary misses (79.47%) and estimates a
+0.588% doubly robust miss risk, versus 2.805% for treat none.
+
+The frozen nonclairvoyant allocator realizes only part of that headroom.  Its
+global shadow price captures 989 primary misses (48.10%) and estimates 1.479%
+misses; learned congestion tertiles improve this to 1,056 captures (51.36%)
+and 1.389% misses.  The latter remains 578 captures behind the identical
+predictor's static frontier and reserves only 320.71 of the available 372
+ms/run.  Thus the current replay ceiling is sequential credit allocation, not
+the predictor's static ranking or selective full-copy action.
+
+An exact decision audit explains the loss.  In the global replay, current
+credit rejects 5,649 frames containing 813 primary misses (14.39%), whereas
+15,392 admitted actions contain 989 misses (6.43%) and the 49,977
+opportunity-price rejections contain only 146 (0.29%).  Congestion state moves
+some of those valuable frames into the action set but leaves 748 misses among
+5,442 current-credit rejections.  The high-value decisions arrive in bursts
+faster than the strict 0.6% token refill makes them spendable.
+
+Do not respond by restoring V4's unpriced chronological borrowing.  V4 already
+showed that such borrowing displaces later, better actions and regresses.  The
+next isolated mechanism should allow repayment-enforced future credit only
+after the current reward clears the fold-honest opportunity price.  It must
+retain per-run conservative reservation, close with nonnegative balance at
+measurement stop, and pass a closed-loop sender-airtime/background check before
+promotion.  Sixteen of 48 V5 runs individually exceed a 1.20 sender-airtime
+ratio and have descriptively worse miss and P99 deltas, which supports retaining
+congestion state without claiming causality.
 
 The frozen V5 JSON contains an unsupported note that unarchived
 secondary-feature and larger-model prototypes were null.  Its adjacent

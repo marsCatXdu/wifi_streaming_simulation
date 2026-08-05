@@ -40,6 +40,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `10_temporal_t2_cost_denominator_ablation_v1` | Frozen temporal-T2 value heads with and without learned cost normalization | Paired calibration grid, opened-test estimates, whole-run paired uncertainty, generated report, and summary figure |
 | `11_cost_free_t2_str_engineering_v5` | Cost-free raw-value T2 V5 versus STR MLO | Strict 48-pair all-gate pass, exact V2/V5 action comparison, raw-archive identity, and qualification plus standard figures |
 | `12_temporal_t2_ceiling_decomposition_v1` | Closed-loop V2/V5 action, score, and resource ceilings | Per-run canonical frontiers, primary-information oracle, counterfactual support audit, report, and figure |
+| `13_temporal_t2_distributional_online_ceiling_v1` | Cross-fitted distributional T2 and nonclairvoyant allocation ceiling | Four predictor variants, exact static frontier, fold-honest shadow references, online replay, reports, and figures |
 
 ## Current best STR result
 
@@ -87,6 +88,15 @@ most 130.93 ms of reservation in any run and projects to 168.03 misses. The
 often-cited 309.83-miss sensitivity pools credit across seeds: 26 of 48 runs
 individually exceed even the 372 ms proxy. See
 `12_temporal_t2_ceiling_decomposition_v1/README.md`.
+
+The distributional second stage strengthens that conclusion.  The selected
+cross-fitted `primary_secondary_hgb64` predictor captures 79.47% of observed
+primary misses in its exact static 372 ms/run frontier, with a doubly robust
+miss estimate of 0.588%.  The implementable global and congestion-aware
+shadow-price replays capture only 48.10% and 51.36%, respectively, and leave
+about 50 ms/run of reservation unused.  Prediction has enough static headroom;
+chronological access to credit is now the dominant replay limitation.  See
+`13_temporal_t2_distributional_online_ceiling_v1/README.md`.
 
 ## Principal streaming results
 

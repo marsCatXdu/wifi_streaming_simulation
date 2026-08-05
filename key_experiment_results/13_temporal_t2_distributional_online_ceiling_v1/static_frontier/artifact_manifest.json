@@ -1,0 +1,18 @@
+{
+  "analysis_id": "temporal-t2-static-distributional-frontier-v1",
+  "artifacts_sha256": {
+    "temporal_t2_static_frontier.json": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96",
+    "temporal_t2_static_frontier.md": "6f7a30c3d100909ee4e06a67a3a10b44af997dcf351a4cee4f0dfa88f52b6ab8",
+    "temporal_t2_static_frontier.png": "0182b16b5948432b607c99521c8c621df993f5bc258c408682ab6305f4c8d02c"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "source_artifacts_sha256": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "temporal_csv_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+    "temporal_manifest_sha256": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+    "temporal_metadata_sha256": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8"
+  }
+}

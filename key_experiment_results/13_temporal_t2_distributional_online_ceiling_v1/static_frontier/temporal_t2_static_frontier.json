@@ -1,0 +1,2568 @@
+{
+  "analysis_id": "temporal-t2-static-distributional-frontier-v1",
+  "analysis_schema_version": 1,
+  "bootstrap": {
+    "confidence_level": 0.95,
+    "point_estimand": "pooled action-clean frame mean",
+    "random_seed": 20260805,
+    "replications": 2000,
+    "resample_reduction": "sum sampled whole-run numerators divided by sum sampled whole-run row counts",
+    "shared_resample_matrix_for_all_policies": true,
+    "unit": "(seed, run_number)"
+  },
+  "evidence_role": "retrospective_cross_fitted_static_engineering_screen",
+  "interpretation_limits": [
+    "Static policies inspect all predicted scores in a run and are not deployable online.",
+    "The randomized temporal population excludes startup and action-dirty rows, so absolute risks cannot be compared directly with 86,400-frame closed-loop campaigns.",
+    "Doubly robust frame replay does not reproduce policy-induced queue or interference feedback.",
+    "Primary-copy capture is directly observed; counterfactual final misses and completed-frame P99 still require closed-loop measurement."
+  ],
+  "policies": [
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1619,
+      "dr_policy_completed_late18_ratio": 0.018895317405091056,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9371364708040629,
+        "18000": 0.9750989830327669,
+        "24000": 0.9862846961702093,
+        "30000": 0.9920510193783459,
+        "33333": 0.9938786353090705
+      },
+      "dr_policy_deadline_miss_probability": 0.006121364690929498,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027142765100271284,
+        "ci_upper": -0.02168598193717615,
+        "estimate": -0.024461034578007478
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025235522241336326,
+        "ci_upper": -0.018598591295770264,
+        "estimate": -0.021935220951907253
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 437,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7874513618677043,
+      "selected_primary_miss_fraction": 0.09319058308870086,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1632,
+      "dr_policy_completed_late18_ratio": 0.018460501437968745,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9384392793122593,
+        "18000": 0.9757211681485967,
+        "24000": 0.9866396992583923,
+        "30000": 0.9923038707317252,
+        "33333": 0.9940722401676565
+      },
+      "dr_policy_deadline_miss_probability": 0.005927759832343504,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027663009264930417,
+        "ci_upper": -0.02203032498026543,
+        "estimate": -0.02489585054512979
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025447506299417673,
+        "ci_upper": -0.018724990622493498,
+        "estimate": -0.022128825810493247
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 424,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7937743190661478,
+      "selected_primary_miss_fraction": 0.09095468985119545,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 16140,
+      "action_fraction": 0.21989100817438692,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1648,
+      "dr_policy_completed_late18_ratio": 0.018860400468388026,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9358461300163544,
+        "18000": 0.9755183828124604,
+        "24000": 0.9868327784387163,
+        "30000": 0.9925292045775966,
+        "33333": 0.9942707268957087
+      },
+      "dr_policy_deadline_miss_probability": 0.005729273104291277,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027159376637739877,
+        "ci_upper": -0.021663706940201248,
+        "estimate": -0.02449595151471051
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025632741533902086,
+        "ci_upper": -0.018946596712082344,
+        "estimate": -0.022327312538545474
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359964.4414519279,
+      "mean_actions_per_run": 168.125,
+      "mean_canonical_reservation_us_per_run": 359009.591034854,
+      "minimum_actions_per_run": 140,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 408,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8015564202334631,
+      "selected_primary_miss_fraction": 0.10210656753407683,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 16621,
+      "action_fraction": 0.2264441416893733,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1665,
+      "dr_policy_completed_late18_ratio": 0.01836422952338612,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9372381351420048,
+        "18000": 0.9762357498650062,
+        "24000": 0.9872312548083068,
+        "30000": 0.992803443949473,
+        "33333": 0.9944989569716007
+      },
+      "dr_policy_deadline_miss_probability": 0.005501043028399266,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027673788612927484,
+        "ci_upper": -0.022149858755669584,
+        "estimate": -0.024992122459712416
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025861020495014726,
+        "ci_upper": -0.01917304874965759,
+        "estimate": -0.022555542614437485
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371867.0054558376,
+      "mean_actions_per_run": 173.13541666666666,
+      "mean_canonical_reservation_us_per_run": 370932.93673323514,
+      "minimum_actions_per_run": 143,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 391,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8098249027237354,
+      "selected_primary_miss_fraction": 0.10017447806991156,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1622,
+      "dr_policy_completed_late18_ratio": 0.018427299219577045,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9379167987514888,
+        "18000": 0.9755909817279147,
+        "24000": 0.9865843822951197,
+        "30000": 0.9921679731054668,
+        "33333": 0.9939059847041871
+      },
+      "dr_policy_deadline_miss_probability": 0.006094015295812882,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.0277104530917843,
+        "ci_upper": -0.02210925014873964,
+        "estimate": -0.02492905276352149
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02522898287317208,
+        "ci_upper": -0.018641601957948013,
+        "estimate": -0.02196257034702387
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 434,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7889105058365758,
+      "selected_primary_miss_fraction": 0.09336326483624015,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1635,
+      "dr_policy_completed_late18_ratio": 0.017948270578884012,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9391016405803089,
+        "18000": 0.976250267451098,
+        "24000": 0.9870138977050731,
+        "30000": 0.9924305029514986,
+        "33333": 0.994092508779107
+      },
+      "dr_policy_deadline_miss_probability": 0.0059074912208929575,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02825066951890868,
+        "ci_upper": -0.02251075938597386,
+        "estimate": -0.025408081404214522
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025434708655438853,
+        "ci_upper": -0.01879346275559772,
+        "estimate": -0.022149094421943794
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 421,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7952334630350194,
+      "selected_primary_miss_fraction": 0.09112188597224545,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 15920,
+      "action_fraction": 0.21689373297002726,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1646,
+      "dr_policy_completed_late18_ratio": 0.018337350659421076,
+      "dr_policy_completion_cdf": {
+        "12000": 0.936778316846019,
+        "18000": 0.975999912526378,
+        "24000": 0.9870147627039122,
+        "30000": 0.9925391755572693,
+        "33333": 0.9942314838829767
+      },
+      "dr_policy_deadline_miss_probability": 0.005768516117023337,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027807092717270887,
+        "ci_upper": -0.022076350333747843,
+        "estimate": -0.02501900132367746
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025588842974635165,
+        "ci_upper": -0.018922395552361675,
+        "estimate": -0.022288069525813414
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359964.4414519279,
+      "mean_actions_per_run": 165.83333333333334,
+      "mean_canonical_reservation_us_per_run": 359032.4044237972,
+      "minimum_actions_per_run": 129,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 410,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8005836575875487,
+      "selected_primary_miss_fraction": 0.10339195979899497,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 16436,
+      "action_fraction": 0.22392370572207085,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1666,
+      "dr_policy_completed_late18_ratio": 0.017954177090893083,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9381071834804369,
+        "18000": 0.9766484582638174,
+        "24000": 0.9874375626865665,
+        "30000": 0.9928422248958302,
+        "33333": 0.9945039584514489
+      },
+      "dr_policy_deadline_miss_probability": 0.0054960415485511005,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028187015406100198,
+        "ci_upper": -0.02246282939145003,
+        "estimate": -0.02540217489220545
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02588715606576763,
+        "ci_upper": -0.01920439892727052,
+        "estimate": -0.02256054409428565
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371867.0054558376,
+      "mean_actions_per_run": 171.20833333333334,
+      "mean_canonical_reservation_us_per_run": 370897.4684277068,
+      "minimum_actions_per_run": 135,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 390,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8103112840466926,
+      "selected_primary_miss_fraction": 0.10136286201022146,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1619,
+      "dr_policy_completed_late18_ratio": 0.01827681401175886,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9381546598326824,
+        "18000": 0.9756974483569012,
+        "24000": 0.9865560400629003,
+        "30000": 0.9921088582808892,
+        "33333": 0.9938620807602968
+      },
+      "dr_policy_deadline_miss_probability": 0.006137919239703193,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02785537596185382,
+        "ci_upper": -0.022146182548181605,
+        "estimate": -0.025079537971339674
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025187645147934368,
+        "ci_upper": -0.01855964237869792,
+        "estimate": -0.021918666403133558
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 437,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7874513618677043,
+      "selected_primary_miss_fraction": 0.09319058308870086,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1635,
+      "dr_policy_completed_late18_ratio": 0.017709792782655668,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9396890037878795,
+        "18000": 0.976485047923159,
+        "24000": 0.9869958143878298,
+        "30000": 0.9923975212054437,
+        "33333": 0.9940901790005315
+      },
+      "dr_policy_deadline_miss_probability": 0.0059098209994684625,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028484444711714033,
+        "ci_upper": -0.02268556489591518,
+        "estimate": -0.025646559200442866
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025408411097318742,
+        "ci_upper": -0.018783293736531217,
+        "estimate": -0.02214676464336829
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 421,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7952334630350194,
+      "selected_primary_miss_fraction": 0.09112188597224545,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 16331,
+      "action_fraction": 0.22249318801089918,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1639,
+      "dr_policy_completed_late18_ratio": 0.018096486745856396,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9379191346864311,
+        "18000": 0.9761422735787239,
+        "24000": 0.9868444157872551,
+        "30000": 0.9923806489924873,
+        "33333": 0.9941325806480452
+      },
+      "dr_policy_deadline_miss_probability": 0.0058674193519547835,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028020543324807173,
+        "ci_upper": -0.022324572131367484,
+        "estimate": -0.02525986523724214
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025469502160384846,
+        "ci_upper": -0.01887636111211239,
+        "estimate": -0.022189166290881968
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 170.11458333333334,
+      "mean_canonical_reservation_us_per_run": 359108.9268612361,
+      "minimum_actions_per_run": 132,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 417,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7971789883268483,
+      "selected_primary_miss_fraction": 0.10036127610066745,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 16843,
+      "action_fraction": 0.22946866485013623,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1657,
+      "dr_policy_completed_late18_ratio": 0.01761370916689262,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9392568341470826,
+        "18000": 0.9768775938802867,
+        "24000": 0.9873041368135885,
+        "30000": 0.9926865877637134,
+        "33333": 0.9943925347857318
+      },
+      "dr_policy_deadline_miss_probability": 0.005607465214268248,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028488808293274624,
+        "ci_upper": -0.022824529988062208,
+        "estimate": -0.025742642816205915
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025714944136380233,
+        "ci_upper": -0.01911328782957676,
+        "estimate": -0.022449120428568503
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043356351983098534,
+      "dr_treat_none_deadline_miss_probability": 0.02805658564283675,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 175.44791666666666,
+      "mean_canonical_reservation_us_per_run": 371011.5692123815,
+      "minimum_actions_per_run": 138,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 399,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8059338521400778,
+      "selected_primary_miss_fraction": 0.09837914860773021,
+      "variant": "primary_hgb64"
+    },
+    {
+      "action_count": 17372,
+      "action_fraction": 0.2366757493188011,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1620,
+      "dr_policy_completed_late18_ratio": 0.018718118556671357,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9381566257417023,
+        "18000": 0.9753160125703787,
+        "24000": 0.9865495714754348,
+        "30000": 0.9921853002416947,
+        "33333": 0.9939203311650114
+      },
+      "dr_policy_deadline_miss_probability": 0.006079668834988561,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02734618699315439,
+        "ci_upper": -0.021758228808448073,
+        "estimate": -0.024635859170507358
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025248236153825467,
+        "ci_upper": -0.01861945561604447,
+        "estimate": -0.021975072415653885
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.95833333333334,
+      "mean_canonical_reservation_us_per_run": 358978.024090138,
+      "minimum_actions_per_run": 177,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 436,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7879377431906615,
+      "selected_primary_miss_fraction": 0.0932535113976514,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17942,
+      "action_fraction": 0.24444141689373297,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1630,
+      "dr_policy_completed_late18_ratio": 0.018205663496168235,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9392627718105209,
+        "18000": 0.975957348277292,
+        "24000": 0.9869078305403544,
+        "30000": 0.9923495960392338,
+        "33333": 0.994054775007844
+      },
+      "dr_policy_deadline_miss_probability": 0.005945224992155995,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027927865781467064,
+        "ci_upper": -0.022238371679957025,
+        "estimate": -0.02514831423101048
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02540535510574176,
+        "ci_upper": -0.018683502749179647,
+        "estimate": -0.02210951625848645
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.89583333333334,
+      "mean_canonical_reservation_us_per_run": 370756.60305234016,
+      "minimum_actions_per_run": 177,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 426,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7928015564202334,
+      "selected_primary_miss_fraction": 0.09084828893099989,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 15864,
+      "action_fraction": 0.2161307901907357,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1640,
+      "dr_policy_completed_late18_ratio": 0.018564905026112286,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9367813394209603,
+        "18000": 0.9757398490118062,
+        "24000": 0.9870847002435162,
+        "30000": 0.992535941327187,
+        "33333": 0.9941970223082016
+      },
+      "dr_policy_deadline_miss_probability": 0.005802977691798383,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027529198489652015,
+        "ci_upper": -0.021862451117990213,
+        "estimate": -0.02478907270106643
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02559964322739478,
+        "ci_upper": -0.01890733063351506,
+        "estimate": -0.022251763558844062
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 165.25,
+      "mean_canonical_reservation_us_per_run": 359077.5611182687,
+      "minimum_actions_per_run": 132,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 416,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7976653696498055,
+      "selected_primary_miss_fraction": 0.10337871911245587,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 16355,
+      "action_fraction": 0.22282016348773842,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1659,
+      "dr_policy_completed_late18_ratio": 0.018071363801493937,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9381322559218925,
+        "18000": 0.9764785463846849,
+        "24000": 0.987485401795026,
+        "30000": 0.9928331431016393,
+        "33333": 0.9944496070153113
+      },
+      "dr_policy_deadline_miss_probability": 0.0055503929846887345,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028067294528025134,
+        "ci_upper": -0.022370898202492745,
+        "estimate": -0.025282613925684778
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02586091492257964,
+        "ci_upper": -0.019154072320499926,
+        "estimate": -0.02250434826595371
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371867.0054558376,
+      "mean_actions_per_run": 170.36458333333334,
+      "mean_canonical_reservation_us_per_run": 370967.0784694142,
+      "minimum_actions_per_run": 135,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 397,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8069066147859922,
+      "selected_primary_miss_fraction": 0.10143686945888107,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1622,
+      "dr_policy_completed_late18_ratio": 0.018270498761824485,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9388760378528499,
+        "18000": 0.9757627690825053,
+        "24000": 0.9865836835991727,
+        "30000": 0.9921573258670716,
+        "33333": 0.9939222238425708
+      },
+      "dr_policy_deadline_miss_probability": 0.0060777761574292155,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027855064348540928,
+        "ci_upper": -0.02223446219771439,
+        "estimate": -0.02508347896535423
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.0253023491917009,
+        "ci_upper": -0.018573354673325566,
+        "estimate": -0.02197696509321323
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 434,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7889105058365758,
+      "selected_primary_miss_fraction": 0.09336326483624015,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1639,
+      "dr_policy_completed_late18_ratio": 0.017902429349592977,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9399224203437772,
+        "18000": 0.9763583113201313,
+        "24000": 0.9869456240352503,
+        "30000": 0.992419327571703,
+        "33333": 0.9941561210395065
+      },
+      "dr_policy_deadline_miss_probability": 0.005843878960493543,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028271704419556724,
+        "ci_upper": -0.02255685884477807,
+        "estimate": -0.025451548377585738
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02553167394610799,
+        "ci_upper": -0.018800546931330042,
+        "estimate": -0.022210862290148903
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 417,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7971789883268483,
+      "selected_primary_miss_fraction": 0.09134481413364544,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 15583,
+      "action_fraction": 0.2123024523160763,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1648,
+      "dr_policy_completed_late18_ratio": 0.01789065717709732,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9380054275924903,
+        "18000": 0.976512343094458,
+        "24000": 0.9873896250733631,
+        "30000": 0.992609330781617,
+        "33333": 0.9943010421707658
+      },
+      "dr_policy_deadline_miss_probability": 0.005698957829234241,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028258771189447335,
+        "ci_upper": -0.022541600924421288,
+        "estimate": -0.025463320550081395
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02571996733595514,
+        "ci_upper": -0.018956214128163954,
+        "estimate": -0.022355783421408204
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 162.32291666666666,
+      "mean_canonical_reservation_us_per_run": 358982.0928127404,
+      "minimum_actions_per_run": 123,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 408,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8015564202334631,
+      "selected_primary_miss_fraction": 0.10575627286145158,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 16047,
+      "action_fraction": 0.21862397820163487,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1669,
+      "dr_policy_completed_late18_ratio": 0.017710363633420947,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9391572361166858,
+        "18000": 0.9769728875049666,
+        "24000": 0.9876435423723543,
+        "30000": 0.9929252359089604,
+        "33333": 0.9945873918803839
+      },
+      "dr_policy_deadline_miss_probability": 0.00541260811961608,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028391818628645867,
+        "ci_upper": -0.022687667077232788,
+        "estimate": -0.025643614093757768
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.026042408228601908,
+        "ci_upper": -0.019238594308646464,
+        "estimate": -0.022642133131026365
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 167.15625,
+      "mean_canonical_reservation_us_per_run": 370914.8526847395,
+      "minimum_actions_per_run": 126,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 387,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8117704280155642,
+      "selected_primary_miss_fraction": 0.10400697949772543,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1625,
+      "dr_policy_completed_late18_ratio": 0.018310210247091733,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9391484636978866,
+        "18000": 0.9757540153539562,
+        "24000": 0.9865859978712875,
+        "30000": 0.9921733947953099,
+        "33333": 0.993953513155672
+      },
+      "dr_policy_deadline_miss_probability": 0.0060464868443279585,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027799892654890343,
+        "ci_upper": -0.02218597028676931,
+        "estimate": -0.025043767480086982
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02538120495989766,
+        "ci_upper": -0.01862937505153886,
+        "estimate": -0.022008254406314487
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 431,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7903696498054474,
+      "selected_primary_miss_fraction": 0.09353594658377942,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1640,
+      "dr_policy_completed_late18_ratio": 0.017844276325077103,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9404120893387258,
+        "18000": 0.9764306736072017,
+        "24000": 0.9869444233158807,
+        "30000": 0.9924485976377796,
+        "33333": 0.994170934476358
+      },
+      "dr_policy_deadline_miss_probability": 0.005829065523642041,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028327023828034602,
+        "ci_upper": -0.022592021700175033,
+        "estimate": -0.02550970140210161
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025643729405836126,
+        "ci_upper": -0.01876882441593778,
+        "estimate": -0.022225675727000405
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 416,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7976653696498055,
+      "selected_primary_miss_fraction": 0.09140054617399543,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 15868,
+      "action_fraction": 0.21618528610354223,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1646,
+      "dr_policy_completed_late18_ratio": 0.01810407197909323,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9387361151851938,
+        "18000": 0.9762466050637931,
+        "24000": 0.9871243899828323,
+        "30000": 0.9925121651250125,
+        "33333": 0.9942465155462042
+      },
+      "dr_policy_deadline_miss_probability": 0.005753484453795754,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027964791834140943,
+        "ci_upper": -0.022381349726699747,
+        "estimate": -0.025249905748085485
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025724727245732854,
+        "ci_upper": -0.018937782614852267,
+        "estimate": -0.02230125679684669
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 165.29166666666666,
+      "mean_canonical_reservation_us_per_run": 359039.98277103296,
+      "minimum_actions_per_run": 123,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 410,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8005836575875487,
+      "selected_primary_miss_fraction": 0.10373077892614066,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 16394,
+      "action_fraction": 0.22335149863760217,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1665,
+      "dr_policy_completed_late18_ratio": 0.017715772678181606,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9398873461745468,
+        "18000": 0.976902563926177,
+        "24000": 0.9874491688633696,
+        "30000": 0.9928598140268821,
+        "33333": 0.9945212767893928
+      },
+      "dr_policy_deadline_miss_probability": 0.0054787232106071615,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028405308336742922,
+        "ci_upper": -0.022731326070287057,
+        "estimate": -0.02563820504899711
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02598706216068672,
+        "ci_upper": -0.019138280568683906,
+        "estimate": -0.022576018040035284
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043353977727178715,
+      "dr_treat_none_deadline_miss_probability": 0.028054741250642445,
+      "feature_family": "primary_compact_physics_temporal",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 170.77083333333334,
+      "mean_canonical_reservation_us_per_run": 370931.33594856056,
+      "minimum_actions_per_run": 126,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 391,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8098249027237354,
+      "selected_primary_miss_fraction": 0.10156154690740515,
+      "variant": "primary_hgb128"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1614,
+      "dr_policy_completed_late18_ratio": 0.018924348388076724,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9373420683363924,
+        "18000": 0.975016374249844,
+        "24000": 0.9862206404258795,
+        "30000": 0.9920116972203133,
+        "33333": 0.9938238428890537
+      },
+      "dr_policy_deadline_miss_probability": 0.006176157110946323,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027113343938066883,
+        "ci_upper": -0.02158936115710891,
+        "estimate": -0.024436920667015312
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025117808421942098,
+        "ci_upper": -0.01852318375400559,
+        "estimate": -0.021878173208019658
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 442,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7850194552529183,
+      "selected_primary_miss_fraction": 0.09290278017613539,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1634,
+      "dr_policy_completed_late18_ratio": 0.01838677932867867,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9388742520613594,
+        "18000": 0.9758415517741013,
+        "24000": 0.9867078067571047,
+        "30000": 0.9923521353027396,
+        "33333": 0.9941202209020037
+      },
+      "dr_policy_deadline_miss_probability": 0.005879779097996307,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02773548964821838,
+        "ci_upper": -0.02213879137353685,
+        "estimate": -0.024974489726413366
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025480438915913565,
+        "ci_upper": -0.018809438357183062,
+        "estimate": -0.022174551220969674
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 422,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7947470817120622,
+      "selected_primary_miss_fraction": 0.09106615393189545,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 16131,
+      "action_fraction": 0.21976839237057222,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1647,
+      "dr_policy_completed_late18_ratio": 0.018929614444189634,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9360134263570679,
+        "18000": 0.9754511381393665,
+        "24000": 0.9867820749244819,
+        "30000": 0.9925309251834775,
+        "33333": 0.9942723299987692
+      },
+      "dr_policy_deadline_miss_probability": 0.005727670001230756,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027042861278195846,
+        "ci_upper": -0.021633468903547892,
+        "estimate": -0.024431654610902402
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025621194237581083,
+        "ci_upper": -0.018966464303703988,
+        "estimate": -0.022326660317735225
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359964.4414519279,
+      "mean_actions_per_run": 168.03125,
+      "mean_canonical_reservation_us_per_run": 359003.966034854,
+      "minimum_actions_per_run": 143,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 409,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8010700389105059,
+      "selected_primary_miss_fraction": 0.10210154361167938,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 16657,
+      "action_fraction": 0.22693460490463216,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1664,
+      "dr_policy_completed_late18_ratio": 0.01840092153389079,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9374526212929555,
+        "18000": 0.9762182982902847,
+        "24000": 0.9871844722415071,
+        "30000": 0.9927938726415746,
+        "33333": 0.9945183524578765
+      },
+      "dr_policy_deadline_miss_probability": 0.005481647542123547,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02765031086214277,
+        "ci_upper": -0.022110430794051162,
+        "estimate": -0.024960347521201246
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025891177326013117,
+        "ci_upper": -0.019158431231772757,
+        "estimate": -0.022572682776842434
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371867.0054558376,
+      "mean_actions_per_run": 173.51041666666666,
+      "mean_canonical_reservation_us_per_run": 370895.3192123815,
+      "minimum_actions_per_run": 146,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 392,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8093385214007782,
+      "selected_primary_miss_fraction": 0.09989794080566729,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1621,
+      "dr_policy_completed_late18_ratio": 0.01840763479065619,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9383203035254053,
+        "18000": 0.9756251262797891,
+        "24000": 0.9866599579973374,
+        "30000": 0.9921969016457088,
+        "33333": 0.9939208584530076
+      },
+      "dr_policy_deadline_miss_probability": 0.006079141546992406,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027737797616930824,
+        "ci_upper": -0.022103314934924314,
+        "estimate": -0.024953634264435847
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025246168728106037,
+        "ci_upper": -0.018637211132739858,
+        "estimate": -0.021975188771973575
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 435,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7884241245136187,
+      "selected_primary_miss_fraction": 0.09330570425372704,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1628,
+      "dr_policy_completed_late18_ratio": 0.017920741541417914,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9393129215055773,
+        "18000": 0.9761849462269152,
+        "24000": 0.9868734109956167,
+        "30000": 0.9923196410307507,
+        "33333": 0.9939981298037815
+      },
+      "dr_policy_deadline_miss_probability": 0.006001870196218451,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02823375011677345,
+        "ci_upper": -0.022502876433619305,
+        "estimate": -0.02544052751367412
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025348753833918804,
+        "ci_upper": -0.018727834346745728,
+        "estimate": -0.02205246012274753
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 428,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.791828793774319,
+      "selected_primary_miss_fraction": 0.09073176168979546,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 15921,
+      "action_fraction": 0.21690735694822888,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1647,
+      "dr_policy_completed_late18_ratio": 0.018388815580446184,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9373567454328469,
+        "18000": 0.9759896547389175,
+        "24000": 0.9870526096253781,
+        "30000": 0.9925639495934989,
+        "33333": 0.9942731605243879
+      },
+      "dr_policy_deadline_miss_probability": 0.005726839475612144,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027744852644230482,
+        "ci_upper": -0.022010417794128486,
+        "estimate": -0.024972453474645852
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025616194719479977,
+        "ci_upper": -0.018961101937152985,
+        "estimate": -0.022327490843353837
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 165.84375,
+      "mean_canonical_reservation_us_per_run": 359053.068597415,
+      "minimum_actions_per_run": 129,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 409,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8010700389105059,
+      "selected_primary_miss_fraction": 0.10344827586206896,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 16423,
+      "action_fraction": 0.22374659400544958,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1659,
+      "dr_policy_completed_late18_ratio": 0.017967317719450177,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9385977230698314,
+        "18000": 0.9765596149321403,
+        "24000": 0.9874511301362425,
+        "30000": 0.9927636264265153,
+        "33333": 0.994426797145183
+      },
+      "dr_policy_deadline_miss_probability": 0.005573202854816994,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028195796466745582,
+        "ci_upper": -0.022454492534988435,
+        "estimate": -0.02539395133564186
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02579423510307143,
+        "ci_upper": -0.019102057863900197,
+        "estimate": -0.022481127464148987
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 171.07291666666666,
+      "mean_canonical_reservation_us_per_run": 370929.4217749426,
+      "minimum_actions_per_run": 132,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 397,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8069066147859922,
+      "selected_primary_miss_fraction": 0.10101686658953907,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1619,
+      "dr_policy_completed_late18_ratio": 0.018279599493502455,
+      "dr_policy_completion_cdf": {
+        "12000": 0.938518176262262,
+        "18000": 0.9756838173904413,
+        "24000": 0.9865805398287598,
+        "30000": 0.9920978325210813,
+        "33333": 0.993851015917626
+      },
+      "dr_policy_deadline_miss_probability": 0.006148984082373965,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.0278282713071245,
+        "ci_upper": -0.022174532042636766,
+        "estimate": -0.02508166956158958
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025164506284820587,
+        "ci_upper": -0.018554134188155234,
+        "estimate": -0.021905346236592016
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 437,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7874513618677043,
+      "selected_primary_miss_fraction": 0.09319058308870086,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1634,
+      "dr_policy_completed_late18_ratio": 0.017811937063920834,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9399260241605298,
+        "18000": 0.9763667275586273,
+        "24000": 0.9870105684295403,
+        "30000": 0.9923496891327103,
+        "33333": 0.9940730949630461
+      },
+      "dr_policy_deadline_miss_probability": 0.005926905036953922,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02835434155046971,
+        "ci_upper": -0.022596728789103196,
+        "estimate": -0.025549331991171202
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025427748232518428,
+        "ci_upper": -0.018740366384265256,
+        "estimate": -0.02212742528201206
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 422,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7947470817120622,
+      "selected_primary_miss_fraction": 0.09106615393189545,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 16296,
+      "action_fraction": 0.22201634877384196,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1640,
+      "dr_policy_completed_late18_ratio": 0.018069655900037656,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9382730953304108,
+        "18000": 0.976182856975983,
+        "24000": 0.9868616190682803,
+        "30000": 0.9923793834510393,
+        "33333": 0.9941467466012087
+      },
+      "dr_policy_deadline_miss_probability": 0.0058532533987912805,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028002915820407037,
+        "ci_upper": -0.022368603382178318,
+        "estimate": -0.02529161315505438
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025493939577267716,
+        "ci_upper": -0.018851912925487945,
+        "estimate": -0.0222010769201747
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 169.75,
+      "mean_canonical_reservation_us_per_run": 359107.091034854,
+      "minimum_actions_per_run": 132,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 416,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7976653696498055,
+      "selected_primary_miss_fraction": 0.10063819342169858,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 16812,
+      "action_fraction": 0.22904632152588555,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1649,
+      "dr_policy_completed_late18_ratio": 0.017674600414787835,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9394584818748114,
+        "18000": 0.9767079142018898,
+        "24000": 0.9872229016140198,
+        "30000": 0.992559668450634,
+        "33333": 0.9942814413780868
+      },
+      "dr_policy_deadline_miss_probability": 0.005718558621913172,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02844879701069299,
+        "ci_upper": -0.022752102816120185,
+        "estimate": -0.0256866686403042
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025639325392145734,
+        "ci_upper": -0.018943479085605133,
+        "estimate": -0.02233577169705281
+      },
+      "dr_treat_none_completed_late18_ratio": 0.043361269055092036,
+      "dr_treat_none_deadline_miss_probability": 0.02805433031896598,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 175.125,
+      "mean_canonical_reservation_us_per_run": 371032.27255961736,
+      "minimum_actions_per_run": 135,
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 407,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8020428015564203,
+      "selected_primary_miss_fraction": 0.09808470140375922,
+      "variant": "primary_secondary_hgb64"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1619,
+      "dr_policy_completed_late18_ratio": 0.018684040204046078,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9382475552207943,
+        "18000": 0.9753014810012112,
+        "24000": 0.9863866756150211,
+        "30000": 0.9921477499525772,
+        "33333": 0.9938710068508482
+      },
+      "dr_policy_deadline_miss_probability": 0.006128993149151829,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027352297741493545,
+        "ci_upper": -0.02182497943297041,
+        "estimate": -0.024664018016722022
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02528731379733207,
+        "ci_upper": -0.018600981954289365,
+        "estimate": -0.02193850197158176
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 437,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7874513618677043,
+      "selected_primary_miss_fraction": 0.09319058308870086,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1630,
+      "dr_policy_completed_late18_ratio": 0.018256289465574962,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9393954874700027,
+        "18000": 0.9758698040073679,
+        "24000": 0.9866617810392155,
+        "30000": 0.9923076580104749,
+        "33333": 0.9940168636029666
+      },
+      "dr_policy_deadline_miss_probability": 0.005983136397033406,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02785141564741163,
+        "ci_upper": -0.02221924627416647,
+        "estimate": -0.025091768755193138
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02539588475074653,
+        "ci_upper": -0.01869903996638902,
+        "estimate": -0.02208435872370018
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 426,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7928015564202334,
+      "selected_primary_miss_fraction": 0.09084322577049546,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 15896,
+      "action_fraction": 0.21656675749318802,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1646,
+      "dr_policy_completed_late18_ratio": 0.018598120600900773,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9364251313616525,
+        "18000": 0.9757619535589264,
+        "24000": 0.987071115605186,
+        "30000": 0.9925738009921526,
+        "33333": 0.9942531943757575
+      },
+      "dr_policy_deadline_miss_probability": 0.005746805624242457,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02749448918352665,
+        "ci_upper": -0.02189281974217493,
+        "estimate": -0.024749937619867327
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025663067261889685,
+        "ci_upper": -0.018988073735255573,
+        "estimate": -0.02232068949649113
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359964.4414519279,
+      "mean_actions_per_run": 165.58333333333334,
+      "mean_canonical_reservation_us_per_run": 359017.4044237972,
+      "minimum_actions_per_run": 137,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 410,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8005836575875487,
+      "selected_primary_miss_fraction": 0.10354806240563663,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 16428,
+      "action_fraction": 0.22381471389645777,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1659,
+      "dr_policy_completed_late18_ratio": 0.018193612380591834,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9377536304673683,
+        "18000": 0.9763498341804036,
+        "24000": 0.9874515978589189,
+        "30000": 0.9928070572640613,
+        "33333": 0.9944423325129966
+      },
+      "dr_policy_deadline_miss_probability": 0.00555766748700337,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.027906264927725865,
+        "ci_upper": -0.02225032184454059,
+        "estimate": -0.025154445840176266
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025845523234824648,
+        "ci_upper": -0.01917273600722769,
+        "estimate": -0.022509827633730217
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 171.125,
+      "mean_canonical_reservation_us_per_run": 370912.5076013247,
+      "minimum_actions_per_run": 138,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_rescue",
+      "perfect_rescue_residual_primary_misses": 397,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8069066147859922,
+      "selected_primary_miss_fraction": 0.10098612125639153,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1613,
+      "dr_policy_completed_late18_ratio": 0.018115232127318314,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9390617528119759,
+        "18000": 0.9757972661474034,
+        "24000": 0.9866837891881901,
+        "30000": 0.9920634771237805,
+        "33333": 0.9938001872271964
+      },
+      "dr_policy_deadline_miss_probability": 0.00619981277280357,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02798616593272401,
+        "ci_upper": -0.022297662254556195,
+        "estimate": -0.025232826093449786
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025232460460932755,
+        "ci_upper": -0.01853041017448451,
+        "estimate": -0.021867682347930018
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 443,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7845330739299611,
+      "selected_primary_miss_fraction": 0.09284521959362228,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1630,
+      "dr_policy_completed_late18_ratio": 0.01786661156437243,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9403515775001238,
+        "18000": 0.9762670268293749,
+        "24000": 0.9868971453530715,
+        "30000": 0.9922901058528547,
+        "33333": 0.9940269196879695
+      },
+      "dr_policy_deadline_miss_probability": 0.0059730803120304765,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028299626629809026,
+        "ci_upper": -0.022530908215089275,
+        "estimate": -0.02548144665639567
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02542383059240192,
+        "ci_upper": -0.018740596650849345,
+        "estimate": -0.02209441480870311
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 426,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7928015564202334,
+      "selected_primary_miss_fraction": 0.09084322577049546,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 15558,
+      "action_fraction": 0.21196185286103542,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1649,
+      "dr_policy_completed_late18_ratio": 0.01790213641037561,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9376020356299586,
+        "18000": 0.9764733024447911,
+        "24000": 0.9873807779849213,
+        "30000": 0.9925660474858736,
+        "33333": 0.9942729117399002
+      },
+      "dr_policy_deadline_miss_probability": 0.005727088260099822,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02822549563477341,
+        "ci_upper": -0.022486452381788525,
+        "estimate": -0.02544592181039249
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025691275148345266,
+        "ci_upper": -0.01899155886762943,
+        "estimate": -0.022340406860633766
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 162.0625,
+      "mean_canonical_reservation_us_per_run": 359006.54615997616,
+      "minimum_actions_per_run": 123,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 407,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8020428015564203,
+      "selected_primary_miss_fraction": 0.10599048720915284,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 16033,
+      "action_fraction": 0.21843324250681198,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1663,
+      "dr_policy_completed_late18_ratio": 0.017454130034262758,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9390155215425552,
+        "18000": 0.9771331444633843,
+        "24000": 0.98781192393257,
+        "30000": 0.9928449609060349,
+        "33333": 0.994491121821578
+      },
+      "dr_policy_deadline_miss_probability": 0.00550887817842205,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02872373409480291,
+        "ci_upper": -0.022945337573655245,
+        "estimate": -0.025893928186505343
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025981279579583263,
+        "ci_upper": -0.019129442393446976,
+        "estimate": -0.022558616942311538
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 167.01041666666666,
+      "mean_canonical_reservation_us_per_run": 370926.14185835747,
+      "minimum_actions_per_run": 126,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "completion_by_18ms",
+      "perfect_rescue_residual_primary_misses": 393,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.808852140077821,
+      "selected_primary_miss_fraction": 0.10372357013659328,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 17373,
+      "action_fraction": 0.23668937329700274,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1616,
+      "dr_policy_completed_late18_ratio": 0.018108439881924863,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9394015922961539,
+        "18000": 0.975831487419848,
+        "24000": 0.9866145533378486,
+        "30000": 0.9920629682174351,
+        "33333": 0.9938281649986905
+      },
+      "dr_policy_deadline_miss_probability": 0.006171835001309467,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028016662478309272,
+        "ci_upper": -0.022310896068002295,
+        "estimate": -0.025239618338843237
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02528947518269454,
+        "ci_upper": -0.018593964340382935,
+        "estimate": -0.02189566011942412
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359060.6807846096,
+      "mean_actions_per_run": 180.96875,
+      "mean_canonical_reservation_us_per_run": 358998.68826375593,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 440,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7859922178988327,
+      "selected_primary_miss_fraction": 0.09301790134116157,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 17943,
+      "action_fraction": 0.2444550408719346,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1634,
+      "dr_policy_completed_late18_ratio": 0.01794065978465839,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9405159842700521,
+        "18000": 0.9762466759725827,
+        "24000": 0.9868377260345219,
+        "30000": 0.9923453380261792,
+        "33333": 0.9940811476407482
+      },
+      "dr_policy_deadline_miss_probability": 0.005918852359251825,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02816187690071554,
+        "ci_upper": -0.022501396958025267,
+        "estimate": -0.02540739843610971
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.02555733187895193,
+        "ci_upper": -0.0187501654726742,
+        "estimate": -0.022148642761481763
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "p_frames_only",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 370963.2447885193,
+      "mean_actions_per_run": 186.90625,
+      "mean_canonical_reservation_us_per_run": 370777.2672259581,
+      "minimum_actions_per_run": 178,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 422,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7947470817120622,
+      "selected_primary_miss_fraction": 0.09106615393189545,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 15845,
+      "action_fraction": 0.21587193460490464,
+      "budget_us_per_run": 360000,
+      "captured_primary_deadline_misses": 1635,
+      "dr_policy_completed_late18_ratio": 0.01789752915726714,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9385621253171404,
+        "18000": 0.9762723584906264,
+        "24000": 0.986984959320659,
+        "30000": 0.9923280081559251,
+        "33333": 0.9940636414985254
+      },
+      "dr_policy_deadline_miss_probability": 0.005936358501474559,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.02815655957018695,
+        "ci_upper": -0.02265166310945037,
+        "estimate": -0.02545052906350096
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.025496010499727745,
+        "ci_upper": -0.018819801332262513,
+        "estimate": -0.02213113661925903
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 181,
+      "maximum_canonical_reservation_us_per_run": 359968.2021192461,
+      "mean_actions_per_run": 165.05208333333334,
+      "mean_canonical_reservation_us_per_run": 358985.5294237972,
+      "minimum_actions_per_run": 123,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 421,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.7952334630350194,
+      "selected_primary_miss_fraction": 0.10318712527611233,
+      "variant": "primary_secondary_hgb128"
+    },
+    {
+      "action_count": 16328,
+      "action_fraction": 0.2224523160762943,
+      "budget_us_per_run": 372000,
+      "captured_primary_deadline_misses": 1655,
+      "dr_policy_completed_late18_ratio": 0.01740811506272472,
+      "dr_policy_completion_cdf": {
+        "12000": 0.9399386882855785,
+        "18000": 0.9770547820263589,
+        "24000": 0.987481126577739,
+        "30000": 0.9926890907093039,
+        "33333": 0.9943647988592234
+      },
+      "dr_policy_deadline_miss_probability": 0.005635201140776647,
+      "dr_policy_minus_none_completed_late18_ratio": {
+        "ci_lower": -0.028658280160446938,
+        "ci_upper": -0.023081880206080277,
+        "estimate": -0.02593994315804338
+      },
+      "dr_policy_minus_none_deadline_miss": {
+        "ci_lower": -0.0258601446182956,
+        "ci_upper": -0.019024097634910152,
+        "estimate": -0.02243229397995694
+      },
+      "dr_treat_none_completed_late18_ratio": 0.0433480582207681,
+      "dr_treat_none_deadline_miss_probability": 0.028067495120733588,
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "frame_gate": "all_frames_cost_aware",
+      "future_score_visibility": true,
+      "maximum_actions_per_run": 187,
+      "maximum_canonical_reservation_us_per_run": 371870.7661231559,
+      "mean_actions_per_run": 170.08333333333334,
+      "mean_canonical_reservation_us_per_run": 370890.08594856045,
+      "minimum_actions_per_run": 129,
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "objective": "deadline_capped_acceleration",
+      "perfect_rescue_residual_primary_misses": 401,
+      "primary_deadline_misses": 2056,
+      "primary_miss_capture_fraction": 0.8049610894941635,
+      "selected_primary_miss_fraction": 0.10135962763351299,
+      "variant": "primary_secondary_hgb128"
+    }
+  ],
+  "population": {
+    "primary_deadline_misses": 2056,
+    "row_count": 73400,
+    "run_group_count": 96,
+    "scope": "action-clean lag-8 temporal T2 rows; not all generated frames"
+  },
+  "predictors": {
+    "primary_hgb128": {
+      "causal_cdf_gain": {
+        "12000": {
+          "dr_average_cdf_gain": 0.11066523687143914,
+          "mean_predicted_cdf_gain": 0.11839583825084637,
+          "negative_predicted_gain_fraction": 0.0021525885558583108
+        },
+        "18000": {
+          "dr_average_cdf_gain": 0.06689311229843456,
+          "mean_predicted_cdf_gain": 0.06847325725806991,
+          "negative_predicted_gain_fraction": 0.0008583106267029973
+        },
+        "24000": {
+          "dr_average_cdf_gain": 0.044095841234534854,
+          "mean_predicted_cdf_gain": 0.0445548831059925,
+          "negative_predicted_gain_fraction": 0.0071662125340599455
+        },
+        "30000": {
+          "dr_average_cdf_gain": 0.03230252802210089,
+          "mean_predicted_cdf_gain": 0.03215023769828583,
+          "negative_predicted_gain_fraction": 0.00837874659400545
+        },
+        "33333": {
+          "dr_average_cdf_gain": 0.02775352887012155,
+          "mean_predicted_cdf_gain": 0.02783280652030227,
+          "negative_predicted_gain_fraction": 0.0018392370572207085
+        }
+      },
+      "feature_family": "primary_compact_physics_temporal",
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "observed_arm_prediction": {
+        "0": {
+          "arm": 0,
+          "deadline_miss_auc": 0.9349497332407767,
+          "multiclass_brier_score": 0.1840382832230222,
+          "multiclass_log_loss": 0.40951490698224957,
+          "outcome_bin_counts": [
+            58339,
+            3718,
+            1655,
+            851,
+            315,
+            1881
+          ],
+          "row_count": 66759,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.07407786883216025,
+              "mean_predicted_completion_probability": 0.8745254864535464,
+              "observed_completion_probability": 0.8738746835632649
+            },
+            "18000": {
+              "cdf_brier_score": 0.045092174293739934,
+              "mean_predicted_completion_probability": 0.9302530140288879,
+              "observed_completion_probability": 0.9295675489447116
+            },
+            "24000": {
+              "cdf_brier_score": 0.03157536553063313,
+              "mean_predicted_completion_probability": 0.9548104769466661,
+              "observed_completion_probability": 0.9543582138737848
+            },
+            "30000": {
+              "cdf_brier_score": 0.02414881075514115,
+              "mean_predicted_completion_probability": 0.9674810743552111,
+              "observed_completion_probability": 0.9671055588010605
+            },
+            "33333": {
+              "cdf_brier_score": 0.021275981498836662,
+              "mean_predicted_completion_probability": 0.971922418026704,
+              "observed_completion_probability": 0.9718240237271379
+            }
+          }
+        },
+        "1": {
+          "arm": 1,
+          "deadline_miss_auc": 0.939448712155445,
+          "multiclass_brier_score": 0.02787804971704955,
+          "multiclass_log_loss": 0.08145841632751609,
+          "outcome_bin_counts": [
+            6540,
+            79,
+            13,
+            6,
+            1,
+            2
+          ],
+          "row_count": 6641,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.013659449243260898,
+              "mean_predicted_completion_probability": 0.9932132042876349,
+              "observed_completion_probability": 0.9847914470712242
+            },
+            "18000": {
+              "cdf_brier_score": 0.0033324816174359973,
+              "mean_predicted_completion_probability": 0.9989640073366172,
+              "observed_completion_probability": 0.9966872458967023
+            },
+            "24000": {
+              "cdf_brier_score": 0.0013530142763790466,
+              "mean_predicted_completion_probability": 0.9995606571695901,
+              "observed_completion_probability": 0.9986447824122873
+            },
+            "30000": {
+              "cdf_brier_score": 0.00045155935997320487,
+              "mean_predicted_completion_probability": 0.999772731891411,
+              "observed_completion_probability": 0.9995482608040958
+            },
+            "33333": {
+              "cdf_brier_score": 0.0003010848448580333,
+              "mean_predicted_completion_probability": 0.9998774083184688,
+              "observed_completion_probability": 0.9996988405360638
+            }
+          }
+        }
+      },
+      "primary_deadline_information": {
+        "mean_nonnegative_predicted_deadline_rescue": 0.027832830575787258,
+        "mean_predicted_no_action_miss_probability": 0.027956300166865584,
+        "no_action_miss_probability_auc": 0.9333613206207356,
+        "nonnegative_deadline_rescue_auc": 0.9333319103125494
+      }
+    },
+    "primary_hgb64": {
+      "causal_cdf_gain": {
+        "12000": {
+          "dr_average_cdf_gain": 0.11078364372004003,
+          "mean_predicted_cdf_gain": 0.11239914182084579,
+          "negative_predicted_gain_fraction": 0.0028201634877384196
+        },
+        "18000": {
+          "dr_average_cdf_gain": 0.06691441110902001,
+          "mean_predicted_cdf_gain": 0.06822602812295145,
+          "negative_predicted_gain_fraction": 0.0008038147138964578
+        },
+        "24000": {
+          "dr_average_cdf_gain": 0.04411212562355269,
+          "mean_predicted_cdf_gain": 0.044845612666677304,
+          "negative_predicted_gain_fraction": 1.3623978201634877e-05
+        },
+        "30000": {
+          "dr_average_cdf_gain": 0.03231170643856393,
+          "mean_predicted_cdf_gain": 0.0326120627124299,
+          "negative_predicted_gain_fraction": 0.0
+        },
+        "33333": {
+          "dr_average_cdf_gain": 0.027755138879115775,
+          "mean_predicted_cdf_gain": 0.028092847811350546,
+          "negative_predicted_gain_fraction": 0.0
+        }
+      },
+      "feature_family": "primary_compact_physics_temporal",
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "observed_arm_prediction": {
+        "0": {
+          "arm": 0,
+          "deadline_miss_auc": 0.9335884164477427,
+          "multiclass_brier_score": 0.1851714173293722,
+          "multiclass_log_loss": 0.41193240666714404,
+          "outcome_bin_counts": [
+            58339,
+            3718,
+            1655,
+            851,
+            315,
+            1881
+          ],
+          "row_count": 66759,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.0752147160732344,
+              "mean_predicted_completion_probability": 0.8743545496920849,
+              "observed_completion_probability": 0.8738746835632649
+            },
+            "18000": {
+              "cdf_brier_score": 0.04568573498675336,
+              "mean_predicted_completion_probability": 0.9295690041855225,
+              "observed_completion_probability": 0.9295675489447116
+            },
+            "24000": {
+              "cdf_brier_score": 0.03180717091262252,
+              "mean_predicted_completion_probability": 0.9542416010670097,
+              "observed_completion_probability": 0.9543582138737848
+            },
+            "30000": {
+              "cdf_brier_score": 0.024261174263078063,
+              "mean_predicted_completion_probability": 0.9669635410412611,
+              "observed_completion_probability": 0.9671055588010605
+            },
+            "33333": {
+              "cdf_brier_score": 0.02129743825115913,
+              "mean_predicted_completion_probability": 0.9716225235759265,
+              "observed_completion_probability": 0.9718240237271379
+            }
+          }
+        },
+        "1": {
+          "arm": 1,
+          "deadline_miss_auc": 0.9612140382587739,
+          "multiclass_brier_score": 0.027188781881240694,
+          "multiclass_log_loss": 0.07168582484242607,
+          "outcome_bin_counts": [
+            6540,
+            79,
+            13,
+            6,
+            1,
+            2
+          ],
+          "row_count": 6641,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.013076351991993876,
+              "mean_predicted_completion_probability": 0.9868970511256852,
+              "observed_completion_probability": 0.9847914470712242
+            },
+            "18000": {
+              "cdf_brier_score": 0.003351058641358238,
+              "mean_predicted_completion_probability": 0.9980065920286648,
+              "observed_completion_probability": 0.9966872458967023
+            },
+            "24000": {
+              "cdf_brier_score": 0.001352024936882331,
+              "mean_predicted_completion_probability": 0.9992645480439845,
+              "observed_completion_probability": 0.9986447824122873
+            },
+            "30000": {
+              "cdf_brier_score": 0.0004514486440184361,
+              "mean_predicted_completion_probability": 0.9997072879291545,
+              "observed_completion_probability": 0.9995482608040958
+            },
+            "33333": {
+              "cdf_brier_score": 0.0003010334260380309,
+              "mean_predicted_completion_probability": 0.9998356037860102,
+              "observed_completion_probability": 0.9996988405360638
+            }
+          }
+        }
+      },
+      "primary_deadline_information": {
+        "mean_nonnegative_predicted_deadline_rescue": 0.028092847811350546,
+        "mean_predicted_no_action_miss_probability": 0.02825818160270305,
+        "no_action_miss_probability_auc": 0.9318926050077533,
+        "nonnegative_deadline_rescue_auc": 0.9318715323924072
+      }
+    },
+    "primary_secondary_hgb128": {
+      "causal_cdf_gain": {
+        "12000": {
+          "dr_average_cdf_gain": 0.11071283495026887,
+          "mean_predicted_cdf_gain": 0.11942602453494663,
+          "negative_predicted_gain_fraction": 0.0018664850136239782
+        },
+        "18000": {
+          "dr_average_cdf_gain": 0.0669169844538416,
+          "mean_predicted_cdf_gain": 0.06848763153571913,
+          "negative_predicted_gain_fraction": 0.00046321525885558584
+        },
+        "24000": {
+          "dr_average_cdf_gain": 0.04412059066233387,
+          "mean_predicted_cdf_gain": 0.04444945252892513,
+          "negative_predicted_gain_fraction": 0.004332425068119891
+        },
+        "30000": {
+          "dr_average_cdf_gain": 0.03231958819789275,
+          "mean_predicted_cdf_gain": 0.032044832445828064,
+          "negative_predicted_gain_fraction": 0.006634877384196185
+        },
+        "33333": {
+          "dr_average_cdf_gain": 0.02776756662646047,
+          "mean_predicted_cdf_gain": 0.027788730320441594,
+          "negative_predicted_gain_fraction": 0.0012806539509536785
+        }
+      },
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "model_spec_id": "hgb128_depth4_15leaf_multiclass_v1",
+      "observed_arm_prediction": {
+        "0": {
+          "arm": 0,
+          "deadline_miss_auc": 0.9351252722998235,
+          "multiclass_brier_score": 0.18400256894549183,
+          "multiclass_log_loss": 0.40950630617108214,
+          "outcome_bin_counts": [
+            58339,
+            3718,
+            1655,
+            851,
+            315,
+            1881
+          ],
+          "row_count": 66759,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.07416385507444756,
+              "mean_predicted_completion_probability": 0.8747167342922757,
+              "observed_completion_probability": 0.8738746835632649
+            },
+            "18000": {
+              "cdf_brier_score": 0.04516601294177787,
+              "mean_predicted_completion_probability": 0.9304048449506089,
+              "observed_completion_probability": 0.9295675489447116
+            },
+            "24000": {
+              "cdf_brier_score": 0.03154100199833164,
+              "mean_predicted_completion_probability": 0.9549673601179219,
+              "observed_completion_probability": 0.9543582138737848
+            },
+            "30000": {
+              "cdf_brier_score": 0.024078020901018172,
+              "mean_predicted_completion_probability": 0.9676111213862167,
+              "observed_completion_probability": 0.9671055588010605
+            },
+            "33333": {
+              "cdf_brier_score": 0.021180594815757105,
+              "mean_predicted_completion_probability": 0.9719868731019595,
+              "observed_completion_probability": 0.9718240237271379
+            }
+          }
+        },
+        "1": {
+          "arm": 1,
+          "deadline_miss_auc": 0.9728121705076066,
+          "multiclass_brier_score": 0.027707687577338637,
+          "multiclass_log_loss": 0.08177230811674649,
+          "outcome_bin_counts": [
+            6540,
+            79,
+            13,
+            6,
+            1,
+            2
+          ],
+          "row_count": 6641,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.013405645225473016,
+              "mean_predicted_completion_probability": 0.9943927396831691,
+              "observed_completion_probability": 0.9847914470712242
+            },
+            "18000": {
+              "cdf_brier_score": 0.003295694897950666,
+              "mean_predicted_completion_probability": 0.9991070929114355,
+              "observed_completion_probability": 0.9966872458967023
+            },
+            "24000": {
+              "cdf_brier_score": 0.0013201392110531356,
+              "mean_predicted_completion_probability": 0.9995875628606232,
+              "observed_completion_probability": 0.9986447824122873
+            },
+            "30000": {
+              "cdf_brier_score": 0.000451325345068311,
+              "mean_predicted_completion_probability": 0.9997804118449184,
+              "observed_completion_probability": 0.9995482608040958
+            },
+            "33333": {
+              "cdf_brier_score": 0.00030099749074388575,
+              "mean_predicted_completion_probability": 0.9998838105254315,
+              "observed_completion_probability": 0.9996988405360638
+            }
+          }
+        }
+      },
+      "primary_deadline_information": {
+        "mean_nonnegative_predicted_deadline_rescue": 0.027788765823224853,
+        "mean_predicted_no_action_miss_probability": 0.02790456831480602,
+        "no_action_miss_probability_auc": 0.9335374688689776,
+        "nonnegative_deadline_rescue_auc": 0.9335112354740074
+      }
+    },
+    "primary_secondary_hgb64": {
+      "causal_cdf_gain": {
+        "12000": {
+          "dr_average_cdf_gain": 0.11097820764617297,
+          "mean_predicted_cdf_gain": 0.11325852983967488,
+          "negative_predicted_gain_fraction": 0.003228882833787466
+        },
+        "18000": {
+          "dr_average_cdf_gain": 0.06690684369224748,
+          "mean_predicted_cdf_gain": 0.06854732744666708,
+          "negative_predicted_gain_fraction": 0.0004223433242506812
+        },
+        "24000": {
+          "dr_average_cdf_gain": 0.04412768260461043,
+          "mean_predicted_cdf_gain": 0.04494336255409956,
+          "negative_predicted_gain_fraction": 5.449591280653951e-05
+        },
+        "30000": {
+          "dr_average_cdf_gain": 0.03231403392562387,
+          "mean_predicted_cdf_gain": 0.032646889048217116,
+          "negative_predicted_gain_fraction": 4.087193460490463e-05
+        },
+        "33333": {
+          "dr_average_cdf_gain": 0.027755689166322227,
+          "mean_predicted_cdf_gain": 0.02813571434261158,
+          "negative_predicted_gain_fraction": 4.087193460490463e-05
+        }
+      },
+      "feature_family": "primary_compact_physics_temporal_plus_passive_secondary",
+      "model_spec_id": "hgb64_depth3_7leaf_multiclass_v1",
+      "observed_arm_prediction": {
+        "0": {
+          "arm": 0,
+          "deadline_miss_auc": 0.9334413281221948,
+          "multiclass_brier_score": 0.18518756163187539,
+          "multiclass_log_loss": 0.41221026305564457,
+          "outcome_bin_counts": [
+            58339,
+            3718,
+            1655,
+            851,
+            315,
+            1881
+          ],
+          "row_count": 66759,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.07523713511909885,
+              "mean_predicted_completion_probability": 0.8743086793602951,
+              "observed_completion_probability": 0.8738746835632649
+            },
+            "18000": {
+              "cdf_brier_score": 0.04571545806031248,
+              "mean_predicted_completion_probability": 0.9295398957853706,
+              "observed_completion_probability": 0.9295675489447116
+            },
+            "24000": {
+              "cdf_brier_score": 0.031814670704577615,
+              "mean_predicted_completion_probability": 0.9542100379517693,
+              "observed_completion_probability": 0.9543582138737848
+            },
+            "30000": {
+              "cdf_brier_score": 0.024263240514555286,
+              "mean_predicted_completion_probability": 0.9669379633322288,
+              "observed_completion_probability": 0.9671055588010605
+            },
+            "33333": {
+              "cdf_brier_score": 0.021289789585564246,
+              "mean_predicted_completion_probability": 0.9715862693130085,
+              "observed_completion_probability": 0.9718240237271379
+            }
+          }
+        },
+        "1": {
+          "arm": 1,
+          "deadline_miss_auc": 0.9738665461665914,
+          "multiclass_brier_score": 0.027091935543178992,
+          "multiclass_log_loss": 0.07084353703051922,
+          "outcome_bin_counts": [
+            6540,
+            79,
+            13,
+            6,
+            1,
+            2
+          ],
+          "row_count": 6641,
+          "thresholds": {
+            "12000": {
+              "cdf_brier_score": 0.012926654538632685,
+              "mean_predicted_completion_probability": 0.9875189400139405,
+              "observed_completion_probability": 0.9847914470712242
+            },
+            "18000": {
+              "cdf_brier_score": 0.003293346175261559,
+              "mean_predicted_completion_probability": 0.9983077685532505,
+              "observed_completion_probability": 0.9966872458967023
+            },
+            "24000": {
+              "cdf_brier_score": 0.0013239642297995912,
+              "mean_predicted_completion_probability": 0.9993154046389082,
+              "observed_completion_probability": 0.9986447824122873
+            },
+            "30000": {
+              "cdf_brier_score": 0.00045124767695406924,
+              "mean_predicted_completion_probability": 0.9997142299147749,
+              "observed_completion_probability": 0.9995482608040958
+            },
+            "33333": {
+              "cdf_brier_score": 0.00030093211929385595,
+              "mean_predicted_completion_probability": 0.9998416774077493,
+              "observed_completion_probability": 0.9996988405360638
+            }
+          }
+        }
+      },
+      "primary_deadline_information": {
+        "mean_nonnegative_predicted_deadline_rescue": 0.02813579823089428,
+        "mean_predicted_no_action_miss_probability": 0.02829219777981289,
+        "no_action_miss_probability_auc": 0.9316950364562381,
+        "nonnegative_deadline_rescue_auc": 0.9316675077533044
+      }
+    }
+  },
+  "provenance": {
+    "project_git_commit": "dd9be5f378788e5246b114508808b099e6afa2c4",
+    "project_git_status_porcelain": "",
+    "tool": "tools/analyze_temporal_t2_distributional_frontier.py",
+    "tool_sha256": "c889f8a748157cba47ff36b330297cf41667c1e5f4d51b3d542c78b193d47265"
+  },
+  "resource": {
+    "budgets_us_per_run": [
+      360000,
+      372000
+    ],
+    "canonical_costs_us_by_frame_type": {
+      "I_FRAME": [
+        "7755.0426692731398"
+      ],
+      "P_FRAME": [
+        "1983.760667318285"
+      ]
+    },
+    "static_frontier_future_score_visibility": true,
+    "unused_credit_transfer_between_runs": false
+  },
+  "source": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "temporal_csv_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+    "temporal_manifest_sha256": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+    "temporal_metadata_sha256": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8"
+  }
+}

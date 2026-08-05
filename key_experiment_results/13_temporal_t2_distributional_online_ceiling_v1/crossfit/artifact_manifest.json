@@ -1,0 +1,15 @@
+{
+  "analysis_id": "temporal-t2-distributional-frontier-v1",
+  "artifacts_sha256": {
+    "temporal_t2_distribution_metrics.json": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "temporal_t2_distribution_predictions.csv.gz": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "source_artifacts_sha256": {
+    "/home/jingweili/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_dataset/artifact_manifest.json": "87d630a66f460b46a31245f56da2a8110091c42dc5fd499416e2d82d697d0314",
+    "/home/jingweili/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_dataset/dataset_metadata.json": "03a3fc35dac1afa126653703855f243a70cb40d93f713002e7ae0b9d7cea20e8",
+    "/home/jingweili/wifi_streaming_simulation/results/randomized_full_copy_exploration_collection_v1/temporal_dataset/randomized_t2_temporal.csv": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc",
+    "experiments/model-selection/temporal-t2-distributional-frontier-v1.json": "7351064d437022b99c3e7481f44a4dba9c6b4e6435b3c8b957ca18e7c8d7d6f3"
+  }
+}

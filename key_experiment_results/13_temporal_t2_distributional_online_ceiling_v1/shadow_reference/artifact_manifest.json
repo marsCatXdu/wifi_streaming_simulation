@@ -1,0 +1,17 @@
+{
+  "artifacts_sha256": {
+    "temporal_t2_shadow_reference_metrics.json": "c710dff1873c9f00c4beae2c824f365247b2cfc92943af738f59887d916978d6",
+    "temporal_t2_shadow_reference_predictions.csv.gz": "82c48787d877e1d9a492e3234798917b614a0171f98dfe5a7eeabad0cb990cd8"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "reference_id": "temporal-t2-shadow-reference-v1",
+  "source_artifacts_sha256": {
+    "crossfit_manifest_sha256": "b086f16f2d33cf5404be142d69de32b2ff6602899ea37aa0714c68cc56053414",
+    "crossfit_metrics_sha256": "7a4e82f94734d65d7a187f557dace2790d792b51b233098785d1da96d877587f",
+    "crossfit_predictions_sha256": "32d9cfda32d2dd7d380aaaefc659c3c2ca5d6f38593426135b0bc2b338ffab3b",
+    "static_manifest_sha256": "b6d4231480d1ae5d596df16f08b36373d7559d835c41a087671497eae5d07721",
+    "static_metrics_sha256": "07ea7af714ee742e1287b4fe4185aafc5c263fc88a99bbe7bd94b86b35433d96",
+    "temporal_csv_sha256": "9376face6806929318c92e74fc2c47da740e187c7b0570910a37acdd1f3be0bc"
+  }
+}
