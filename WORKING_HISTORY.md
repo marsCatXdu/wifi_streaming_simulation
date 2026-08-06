@@ -261,9 +261,13 @@ the original formulation and independent witness replay.
   outcome was inspected or changed.  Commit `e7a8b3e` retries the identical
   formulation with presolve enabled and independently verifies any returned
   witness.  The exact failed attempt and 39 focused remote tests now pass under
-  SciPy 1.11.4.  Bind this third excluded root and repair into both frozen
-  contracts, then launch all 576 runs again from one new clean commit.  The
-  all-generated analyzer remains frozen at `101f132`, and the eleven-figure
+  SciPy 1.11.4.  Commit `3bf5bb8` binds this third excluded root and repair into
+  both frozen contracts.  Its fresh VM checkout passes the exact failed-attempt
+  replay, 52 focused Python tests, the C++ module suite, all 144 configuration
+  checks, and five full strict canaries.  The final 576-run campaign has started
+  from one empty root with 64 workers; inspect only completion and error
+  metadata until exact closure.  The all-generated analyzer remains frozen at
+  `101f132`, and the eleven-figure
   statistical/historical plot suite remains frozen at `ab9e008`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
@@ -297,10 +301,16 @@ completed attempt, and 64 interrupted attempt directories because SciPy 1.11.4
 reported a false infeasibility with presolve disabled.  Commit `e7a8b3e` adds a
 presolve retry under the unchanged formulation and still requires independent
 witness replay.  The preserved failed attempt now validates on the VM under
-SciPy 1.11.4, as do 39 focused and compatibility tests.  Amend the contracts,
-build one new clean checkout, rerun strict canaries, and then execute all 576
-arms again in nine 64-worker waves.  Inspect no headline outcome until the exact
-manifest closes and every run passes strict validation.
+SciPy 1.11.4, as do 39 focused and compatibility tests.  Commit `3bf5bb8`
+closes the third audit in both contracts.  The exact fresh checkout embeds that
+commit and passes the preserved failed attempt, 52 focused Python tests, the
+`wifi-streaming` C++ suite, all 144 frozen configurations, and five full strict
+canaries spanning STR, both selective policies, the former failing OBSS
+scenario, and the variable-frame workload.  The final service
+`wifi-qualification-3bf5bb8.service` started from an empty root at 18:25 SGT
+with 64 workers.  Analysis and plotting are queued behind it as required
+systemd dependencies.  Inspect no headline outcome until the exact manifest
+closes and every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -751,6 +761,25 @@ Do not repeat an entry unless relevant code changed after it ran.
   under SciPy 1.11.4 in 31.06 seconds, and all 39 focused remote tests pass.
   The execution and analysis contracts now record the third excluded root,
   limited inspection disclosure, and solver repair before another launch.
+- Committed and pushed that source-closed boundary as `3bf5bb8`, then created
+  `/home/jingweili/wifi_streaming_qualification_3bf5bb8` from the exact commit.
+  Its independently configured GCC 13.3.0 executable embeds the full commit
+  identity.  The preserved failed attempt, 52 focused Python tests including
+  plot generation, the C++ `wifi-streaming` suite, and all 144 unique frozen
+  scenario-arm configuration checks pass on the production VM stack.
+- Ran five full canaries in a separate preflight root: STR, V2, and
+  distributional-shadow on `obss-intensity-qualification-p17` at seed 21038,
+  plus V2 and distributional-shadow on `video-workload-qualification-p16` at
+  seed 21097.  All five completed and passed independent strict validation;
+  their run IDs are `fa39df0475ec59f1374b`, `7ea792adf5b6eaa071a2`,
+  `c2d07c3e8cfd082ed506`, `b692321be254629a58e3`, and
+  `658256b70061462b0553`.  They are preflight evidence only and are not reused.
+- Started `wifi-qualification-3bf5bb8.service` from a new empty root at
+  18:25 SGT with 64 workers.  At launch, 64 simulation workers were active,
+  the manifest contained 0 of 576 runs, and the failure count was zero.
+  `wifi-qualification-analysis-3bf5bb8.service` and
+  `wifi-qualification-plots-3bf5bb8.service` are ordered required dependencies;
+  they can run only after the campaign and analysis respectively succeed.
 
 ### 2026-08-06 - Exclude the complete second qualification audit
 
