@@ -41,6 +41,45 @@ NS_LOG_COMPONENT_DEFINE("WifiTxStatsHelperTest");
 
 /**
  * @ingroup wifi-test
+ * @brief Verify that an untracked stale acknowledgment is ignored.
+ */
+class WifiTxStatsHelperUntrackedAckTest : public TestCase
+{
+  public:
+    /** Constructor. */
+    WifiTxStatsHelperUntrackedAckTest();
+
+  private:
+    void DoRun() override;
+};
+
+WifiTxStatsHelperUntrackedAckTest::WifiTxStatsHelperUntrackedAckTest()
+    : TestCase("Ignore an acknowledgment without a tracked packet record")
+{
+}
+
+void
+WifiTxStatsHelperUntrackedAckTest::DoRun()
+{
+    WifiTxStatsHelper helper(NanoSeconds(-1), Time::Max());
+    WifiMacHeader header;
+    header.SetType(WIFI_MAC_QOSDATA);
+    auto mpdu = Create<WifiMpdu>(Create<Packet>(100), header);
+
+    NS_TEST_EXPECT_MSG_EQ(mpdu->GetInFlightLinkIds().empty(),
+                          true,
+                          "The test MPDU unexpectedly has in-flight link state");
+    helper.NotifyAcked(1, 2, mpdu);
+    NS_TEST_EXPECT_MSG_EQ(helper.GetSuccesses(),
+                          0,
+                          "An untracked acknowledgment was recorded as a success");
+    NS_TEST_EXPECT_MSG_EQ(helper.m_inflightMap.empty(),
+                          true,
+                          "An untracked acknowledgment changed helper state");
+}
+
+/**
+ * @ingroup wifi-test
  * @brief Implements a test case to evaluate the transmission process of multiple Wi-Fi
  * MAC Layer MPDUs. The testcase has two options.
  * 1) SINGLE_LINK_NON_QOS: test the handling of regular ACKs.
@@ -1154,6 +1193,8 @@ class WifiTxStatsHelperTestSuite : public TestSuite
 WifiTxStatsHelperTestSuite::WifiTxStatsHelperTestSuite()
     : TestSuite("wifi-tx-stats-helper", Type::UNIT)
 {
+    AddTestCase(new WifiTxStatsHelperUntrackedAckTest(), TestCase::Duration::QUICK);
+
     // A test case to evaluate the transmission process of multiple Wi-Fi MAC Layer MPDUs in
     // a single link device. This testcase uses .11a to test the handling of regular ACKs.
     //

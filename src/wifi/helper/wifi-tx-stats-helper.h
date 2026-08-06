@@ -26,6 +26,8 @@
 #include <tuple>
 #include <vector>
 
+class WifiTxStatsHelperUntrackedAckTest;
+
 namespace ns3
 {
 
@@ -344,6 +346,8 @@ class WifiTxStatsHelper
     const MpduRecordsPerNodeDevice_t& GetFailureRecords() const;
 
   private:
+    friend class ::WifiTxStatsHelperUntrackedAckTest;
+
     /**
      * @brief Callback for the WifiMacQueue::Enqueue trace
      * @param nodeId the Node ID triggering the trace

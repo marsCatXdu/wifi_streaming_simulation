@@ -422,7 +422,6 @@ void
 WifiTxStatsHelper::NotifyAcked(uint32_t nodeId, uint32_t deviceId, Ptr<const WifiMpdu> mpdu)
 {
     NS_LOG_FUNCTION(this << nodeId << deviceId << mpdu);
-    NS_ASSERT_MSG(!mpdu->GetInFlightLinkIds().empty(), "No LinkId set on MPDU");
     const auto now = Now();
     if (now <= m_startTime || now > m_stopTime)
     {
@@ -434,11 +433,14 @@ WifiTxStatsHelper::NotifyAcked(uint32_t nodeId, uint32_t deviceId, Ptr<const Wif
         NS_LOG_DEBUG("Ignoring acknowledgement because the time is out of range");
         return;
     }
-    // Get the set of in-flight link IDs
-    const auto linkIds = mpdu->GetInFlightLinkIds();
     if (auto pktRecord = m_inflightMap.find(mpdu->GetPacket()->GetUid());
         pktRecord != m_inflightMap.end())
     {
+        // A stale acknowledgment can be traced after an earlier acknowledgment
+        // has already completed and removed the same packet record. Only a
+        // tracked acknowledgment needs live link attribution.
+        const auto linkIds = mpdu->GetInFlightLinkIds();
+        NS_ASSERT_MSG(!linkIds.empty(), "No LinkId set on tracked MPDU");
         auto& [uid, record] = *pktRecord;
         record.m_ackTime = now;
         record.m_successLinkIdSet = linkIds;
