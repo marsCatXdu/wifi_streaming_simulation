@@ -128,6 +128,9 @@ P99.
 | Resume verified environment analysis prefix | `60c03f3` | Rehash and reuse only the completed dataset and LOFO stages after a later-stage failure |
 | Archive randomized environment replay | `c0085b0` | Checksum-closed six-family LOFO, OOD, resource-ceiling, and five-figure evidence |
 | Freeze held-out qualification analysis | `101f132`, `ab9e008` | Exact hierarchical gates, strict 576-run closure, and eleven checksum-bound statistical/historical plots |
+| Restore temporal source closure | `a6ac26e` | Historical V2 builder bytes plus exact archived/current generalization source profiles |
+| Admit held-out temporal profiles | `616caff` | Explicit workload profile in runtime output and independent validation |
+| Amend held-out qualification runtime | `147b1b2` | Failed-root exclusion, repaired matrix, and 144-configuration fail-fast preflight |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -227,28 +230,46 @@ remains the engineering champion after the distributional closed-loop test.
   single-entry remote pipeline are complete through `3dd6855`.  Fetch,
   checksum, interpret, plot, and archive the analysis only after its top-level
   manifest closes.  The held-out V2/distributional-shadow/STR execution matrix
-  is frozen at `257b194` as 576 simulations in nine full 64-worker waves.
-  The all-generated analyzer is frozen at `101f132` and the eleven-figure
-  statistical/historical plot suite at `ab9e008`.  Deploy this exact clean
-  boundary, close all nine waves without inspecting outcomes, then use the
-  actual closed-loop family results to choose the next predictor/allocation
-  intervention.
+  was initially frozen at `257b194` as 576 simulations in nine full 64-worker
+  waves.  The first `ff6d8b8` launch was stopped after execution metadata
+  exposed a canonical-frame-only runtime guard and validator; 85 canonical
+  directories, 226 retained attempts, 40 immediate aborts, and 64 in-flight
+  processes form an excluded audit root, not qualification evidence.  No
+  performance outcome was inspected.  The explicit held-out frame profile,
+  historical model-source restoration, exact source-profile amendments,
+  repaired execution contract, and 144-configuration preflight are complete
+  through `147b1b2`.  All 576 runs must now be reexecuted from one fresh clean
+  commit.  The all-generated analyzer remains frozen at `101f132` plus its
+  pre-outcome repair binding, and the eleven-figure statistical/historical
+  plot suite remains frozen at `ab9e008`.  Close all nine new waves without
+  inspecting outcomes, then use the actual closed-loop family results to
+  choose the next predictor/allocation intervention.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The active boundary is the held-out closed-loop environment qualification.
+The active boundary is the repaired held-out closed-loop environment
+qualification.
 The 384-run randomized analysis is complete, checksum-closed, fetched, and
 archived under `key_experiment_results/16_environment_generalization_randomized_v1`
 through `c0085b0`.  The qualification analyzer and plot contracts are now
-source-closed through `ab9e008`.  They report direct all-generated paired STR
+source-closed through `ab9e008` and bound to the pre-outcome runtime amendment
+through `147b1b2`.  They report direct all-generated paired STR
 miss, completed HF7 P99, sender airtime, and background gates at aggregate,
 family, and scenario levels, and mark the predeclared randomized-oracle
-fraction `not_assessable` because the two populations differ.  Deploy this
-exact clean boundary in nine complete 64-worker waves and inspect nothing
-until all 576 arms close.
+fraction `not_assessable` because the two populations differ.
+
+The abandoned `ff6d8b8` checkout is stopped and excluded in both execution and
+analysis contracts.  Its partial directory counts are audit metadata only;
+do not resume it, promote its 85 canonical directories, or combine them with a
+new build.  Commits `a6ac26e`, `616caff`, and `147b1b2` restore the exact V2
+model source bytes, preserve the archived randomized dataset under its original
+five-source profile, add the named held-out workload envelope, and check all
+144 unique scenario/arm configurations before simulation.  Push this clean
+boundary, create a new remote checkout and output root, rerun all 576 arms, and
+inspect no outcome until the exact manifest closes.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -669,6 +690,37 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Repair held-out qualification runtime before outcomes
+
+- Stopped the first `ff6d8b8` qualification service after execution metadata
+  showed two deterministic contract failures: the C++ temporal-T2 guard
+  accepted only the original 30 fps synthetic profile, and the independent
+  validator required the original neutral-environment hash.  The stopped root
+  has 85 canonical directories, 226 retained policy attempts, 40 immediate
+  abort logs, and 64 interrupted in-flight logs.  No latency, miss, airtime, or
+  throughput outcome was inspected.
+- Preserved the failed root only as an audit trail and amended both execution
+  and analysis contracts before outcomes.  They require all 576 simulations to
+  come from one new clean commit and explicitly prohibit using any `ff6d8b8`
+  directory in an estimand.
+- Restored `tools/build_randomized_temporal_dataset.py` byte-for-byte to the
+  `7ca3bfc1...` source used by the deployed V2 model.  Moved the later
+  missing-FIFO-ahead behavior into the environment-specific builder and added
+  exact archived/current five-source profiles plus a loader compatibility
+  contract, so historical artifacts retain their actual provenance and mixed
+  source histories fail closed (`a6ac26e`).
+- Added `environment_generalization_v1` as an explicit runtime/output/validator
+  profile while retaining the exact controller, telemetry, airtime, target
+  Wi-Fi, duration, and bounded workload contracts (`616caff`).
+- Added a no-output executable configuration-check mode and exercised all 144
+  unique scenario/arm configurations behind the 576-run matrix.  The amended
+  matrix and failed-root exclusion are committed in `147b1b2`.
+- Passed 89 focused Python tests, the deterministic generator check, a clean
+  executable build, all 144 configuration checks, `git diff --check`, and the
+  `wifi-streaming`, paired-value T2, and distributional-shadow T2 suites.  Next
+  push the four clean repair/history commits, deploy a fresh exact checkout,
+  repeat the 144 checks remotely, and launch nine new 64-worker waves.
 
 ### 2026-08-06 - Freeze held-out closed-loop evaluation before launch
 
