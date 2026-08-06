@@ -131,23 +131,129 @@ def _stage_manifest(path: Path) -> dict[str, Any]:
     }
 
 
+def _validate_artifact_directory(
+    directory: Path,
+    expected_files: set[str],
+) -> dict[str, Any]:
+    """Validate one atomic stage directory and every declared artifact hash."""
+
+    if not directory.is_dir() or directory.is_symlink():
+        raise PipelineError(f"reusable stage directory differs: {directory}")
+    manifest = _read_json(directory / "artifact_manifest.json")
+    if (
+        set(manifest)
+        != {"manifest_schema_version", "hash_algorithm", "artifacts_sha256"}
+        or manifest.get("manifest_schema_version") != 1
+        or manifest.get("hash_algorithm") != "sha256"
+        or set(manifest.get("artifacts_sha256", {})) != expected_files
+    ):
+        raise PipelineError(f"reusable stage manifest differs: {directory}")
+    for name, expected in manifest["artifacts_sha256"].items():
+        path = directory / name
+        if (
+            not path.is_file()
+            or path.is_symlink()
+            or not isinstance(expected, str)
+            or _sha256(path) != expected
+        ):
+            raise PipelineError(f"reusable stage artifact differs: {path}")
+    return manifest
+
+
+def _validate_reusable_prefix(
+    destination: Path,
+    config: Path,
+    experiment_manifest: Path,
+    run_directories: Sequence[Path],
+) -> None:
+    """Validate the completed dataset and LOFO prefix after a later-stage failure."""
+
+    if not destination.is_dir() or destination.is_symlink():
+        raise PipelineError("reusable output root is not a regular directory")
+    expected_children = {OUTPUT_DATASET, OUTPUT_LOFO}
+    observed_children = {path.name for path in destination.iterdir()}
+    if observed_children != expected_children:
+        raise PipelineError(
+            "reusable output root must contain exactly dataset and LOFO stages"
+        )
+    dataset_dir = destination / OUTPUT_DATASET
+    lofo_dir = destination / OUTPUT_LOFO
+    dataset_manifest = _validate_artifact_directory(
+        dataset_dir,
+        {dataset_builder.OUTPUT_CSV, dataset_builder.OUTPUT_METADATA},
+    )
+    metadata = _read_json(dataset_dir / dataset_builder.OUTPUT_METADATA)
+    identity = metadata.get("experiment_identity", {})
+    expected_builder_sources = {
+        str(path.relative_to(ROOT)): _sha256(path)
+        for path in dataset_builder.BUILDER_SOURCES
+    }
+    source_runs = metadata.get("source_runs")
+    if (
+        identity.get("config_file_sha256") != _sha256(config)
+        or identity.get("matrix_sha256")
+        != dataset_builder.runner.matrix_sha256(
+            dataset_builder.runner.load_yaml(config)
+        )
+        or identity.get("manifest_sha256") != _sha256(experiment_manifest)
+        or identity.get("phase") != "randomized_collection"
+        or metadata.get("builder_sources_sha256") != expected_builder_sources
+        or not isinstance(source_runs, list)
+        or len(source_runs) != EXPECTED_RUN_COUNT
+        or {row.get("run_id") for row in source_runs}
+        != {path.name for path in run_directories}
+    ):
+        raise PipelineError("reusable dataset provenance differs")
+
+    lofo_manifest = _validate_artifact_directory(
+        lofo_dir,
+        {lofo_analysis.OUTPUT_PREDICTIONS, lofo_analysis.OUTPUT_METRICS},
+    )
+    lofo_metrics = _read_json(lofo_dir / lofo_analysis.OUTPUT_METRICS)
+    expected_lofo_sources = {
+        str(path.relative_to(ROOT)): _sha256(path)
+        for path in lofo_analysis.ANALYSIS_SOURCES
+    }
+    dataset = lofo_metrics.get("dataset", {})
+    if (
+        lofo_metrics.get("analysis_id") != "environment-generalization-lofo-v1"
+        or lofo_metrics.get("analysis_sources_sha256") != expected_lofo_sources
+        or dataset.get("artifact_manifest_sha256")
+        != _sha256(dataset_dir / dataset_builder.OUTPUT_MANIFEST)
+        or dataset.get("dataset_metadata_sha256")
+        != dataset_manifest["artifacts_sha256"][dataset_builder.OUTPUT_METADATA]
+        or dataset.get("dataset_csv_sha256")
+        != dataset_manifest["artifacts_sha256"][dataset_builder.OUTPUT_CSV]
+        or lofo_metrics.get("software", {}).get("git_status_porcelain") != ""
+        or lofo_manifest.get("hash_algorithm") != "sha256"
+    ):
+        raise PipelineError("reusable LOFO provenance differs")
+
+
 def run_pipeline(
     run_root: Path | str,
     output_root: Path | str,
     config_path: Path | str = DEFAULT_CONFIG,
+    *,
+    resume_completed_prefix: bool = False,
 ) -> dict[str, Any]:
     """Execute all frozen stages and publish their top-level provenance."""
 
     destination = Path(output_root).resolve()
     config = Path(config_path).resolve()
-    if destination.exists():
+    if destination.exists() and not resume_completed_prefix:
         raise PipelineError(f"refusing to overwrite output root: {destination}")
     if not config.is_file():
         raise PipelineError(f"collection config is absent: {config}")
     if _git("status", "--porcelain", "--untracked-files=all"):
         raise PipelineError("analysis requires a clean worktree")
     experiment_manifest, run_directories = resolve_run_directories(run_root)
-    destination.mkdir(parents=True)
+    if resume_completed_prefix:
+        _validate_reusable_prefix(
+            destination, config, experiment_manifest, run_directories
+        )
+    else:
+        destination.mkdir(parents=True)
     dataset_dir = destination / OUTPUT_DATASET
     lofo_dir = destination / OUTPUT_LOFO
     policy_dir = destination / OUTPUT_POLICY
@@ -157,31 +263,32 @@ def run_pipeline(
     environment.setdefault(
         "MPLCONFIGDIR", "/tmp/wifi-streaming-environment-matplotlib"
     )
-    _run(
-        [
-            sys.executable,
-            str(Path(dataset_builder.__file__).resolve()),
-            "--config",
-            str(config),
-            "--experiment-manifest",
-            str(experiment_manifest),
-            "--output-dir",
-            str(dataset_dir),
-            *[str(path) for path in run_directories],
-        ],
-        environment,
-    )
-    _run(
-        [
-            sys.executable,
-            str(Path(lofo_analysis.__file__).resolve()),
-            "--dataset-dir",
-            str(dataset_dir),
-            "--output-dir",
-            str(lofo_dir),
-        ],
-        environment,
-    )
+    if not resume_completed_prefix:
+        _run(
+            [
+                sys.executable,
+                str(Path(dataset_builder.__file__).resolve()),
+                "--config",
+                str(config),
+                "--experiment-manifest",
+                str(experiment_manifest),
+                "--output-dir",
+                str(dataset_dir),
+                *[str(path) for path in run_directories],
+            ],
+            environment,
+        )
+        _run(
+            [
+                sys.executable,
+                str(Path(lofo_analysis.__file__).resolve()),
+                "--dataset-dir",
+                str(dataset_dir),
+                "--output-dir",
+                str(lofo_dir),
+            ],
+            environment,
+        )
     _run(
         [
             sys.executable,
@@ -231,6 +338,9 @@ def run_pipeline(
             str(experiment_manifest): _sha256(experiment_manifest),
         },
         "run_count": len(run_directories),
+        "reused_completed_stages": (
+            [OUTPUT_DATASET, OUTPUT_LOFO] if resume_completed_prefix else []
+        ),
         "stage_manifests": {
             OUTPUT_DATASET: _stage_manifest(
                 dataset_dir / dataset_builder.OUTPUT_MANIFEST
@@ -274,8 +384,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--run-root", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument("--resume-completed-prefix", action="store_true")
     args = parser.parse_args(argv)
-    run_pipeline(args.run_root, args.output_root, args.config)
+    run_pipeline(
+        args.run_root,
+        args.output_root,
+        args.config,
+        resume_completed_prefix=args.resume_completed_prefix,
+    )
     return 0
 
 

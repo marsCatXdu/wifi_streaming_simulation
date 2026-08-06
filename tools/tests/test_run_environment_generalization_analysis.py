@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,6 +63,83 @@ class RunEnvironmentGeneralizationAnalysisTest(unittest.TestCase):
             )
             with self.assertRaisesRegex(pipeline.PipelineError, "algorithm"):
                 pipeline._stage_manifest(path)
+
+    def test_reusable_stage_rehashes_every_declared_artifact(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            artifact = root / "value.txt"
+            artifact.write_text("original\n", encoding="utf-8")
+            manifest = {
+                "manifest_schema_version": 1,
+                "hash_algorithm": "sha256",
+                "artifacts_sha256": {
+                    artifact.name: pipeline._sha256(artifact),
+                },
+            }
+            (root / "artifact_manifest.json").write_text(
+                json.dumps(manifest) + "\n", encoding="utf-8"
+            )
+            self.assertEqual(
+                pipeline._validate_artifact_directory(root, {artifact.name}),
+                manifest,
+            )
+            artifact.write_text("tampered\n", encoding="utf-8")
+            with self.assertRaisesRegex(pipeline.PipelineError, "artifact differs"):
+                pipeline._validate_artifact_directory(root, {artifact.name})
+
+    def test_resume_skips_only_the_validated_dataset_and_lofo_prefix(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            output = root / "output"
+            output.mkdir()
+            (output / pipeline.OUTPUT_DATASET).mkdir()
+            (output / pipeline.OUTPUT_LOFO).mkdir()
+            config = root / "config.yaml"
+            config.write_text("name: fixture\n", encoding="utf-8")
+            experiment_manifest = root / "experiment_manifest.json"
+            experiment_manifest.write_text("{}\n", encoding="utf-8")
+            run_directories = tuple(
+                root / f"run-{index}" for index in range(pipeline.EXPECTED_RUN_COUNT)
+            )
+
+            def git_value(*args: str) -> str:
+                return "fixture-commit" if args == ("rev-parse", "HEAD") else ""
+
+            with mock.patch.object(
+                pipeline,
+                "resolve_run_directories",
+                return_value=(experiment_manifest, run_directories),
+            ), mock.patch.object(pipeline, "_git", side_effect=git_value), mock.patch.object(
+                pipeline, "_validate_reusable_prefix"
+            ) as validate_prefix, mock.patch.object(
+                pipeline, "_run"
+            ) as run_stage, mock.patch.object(
+                pipeline,
+                "_stage_manifest",
+                return_value={"path": "fixture", "sha256": "0" * 64},
+            ), mock.patch.object(
+                pipeline, "_sha256", return_value="1" * 64
+            ):
+                result = pipeline.run_pipeline(
+                    root / "runs",
+                    output,
+                    config,
+                    resume_completed_prefix=True,
+                )
+            validate_prefix.assert_called_once()
+            self.assertEqual(run_stage.call_count, 2)
+            commands = [call.args[0] for call in run_stage.call_args_list]
+            self.assertTrue(
+                all(
+                    str(pipeline.policy_analysis.__file__) in command
+                    or str(pipeline.plotting.__file__) in command
+                    for command in commands
+                )
+            )
+            self.assertEqual(
+                result["reused_completed_stages"],
+                [pipeline.OUTPUT_DATASET, pipeline.OUTPUT_LOFO],
+            )
 
 
 if __name__ == "__main__":
