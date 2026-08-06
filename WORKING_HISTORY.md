@@ -238,12 +238,13 @@ remains the engineering champion after the distributional closed-loop test.
   performance outcome was inspected.  The explicit held-out frame profile,
   historical model-source restoration, exact source-profile amendments,
   repaired execution contract, and 144-configuration preflight are complete
-  through `147b1b2`.  All 576 runs must now be reexecuted from one fresh clean
-  commit.  The all-generated analyzer remains frozen at `101f132` plus its
-  pre-outcome repair binding, and the eleven-figure statistical/historical
-  plot suite remains frozen at `ab9e008`.  Close all nine new waves without
-  inspecting outcomes, then use the actual closed-loop family results to
-  choose the next predictor/allocation intervention.
+  through `147b1b2`.  All 576 runs are now being reexecuted from clean commit
+  `d66313b` by `wifi-qualification-d66313b.service`; the first wave began at
+  2026-08-06 12:56 SGT.  The all-generated analyzer remains frozen at
+  `101f132` plus its pre-outcome repair binding, and the eleven-figure
+  statistical/historical plot suite remains frozen at `ab9e008`.  Close all
+  nine new waves without inspecting outcomes, then use the actual closed-loop
+  family results to choose the next predictor/allocation intervention.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -267,9 +268,10 @@ do not resume it, promote its 85 canonical directories, or combine them with a
 new build.  Commits `a6ac26e`, `616caff`, and `147b1b2` restore the exact V2
 model source bytes, preserve the archived randomized dataset under its original
 five-source profile, add the named held-out workload envelope, and check all
-144 unique scenario/arm configurations before simulation.  Push this clean
-boundary, create a new remote checkout and output root, rerun all 576 arms, and
-inspect no outcome until the exact manifest closes.
+144 unique scenario/arm configurations before simulation.  The exact remote
+checkout `/home/jingweili/wifi_streaming_qualification_d66313b` passed the same
+144 checks and is running all 576 arms in a new output root.  Inspect no outcome
+until the exact manifest closes.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -718,9 +720,18 @@ Do not repeat an entry unless relevant code changed after it ran.
   matrix and failed-root exclusion are committed in `147b1b2`.
 - Passed 89 focused Python tests, the deterministic generator check, a clean
   executable build, all 144 configuration checks, `git diff --check`, and the
-  `wifi-streaming`, paired-value T2, and distributional-shadow T2 suites.  Next
-  push the four clean repair/history commits, deploy a fresh exact checkout,
-  repeat the 144 checks remotely, and launch nine new 64-worker waves.
+  `wifi-streaming`, paired-value T2, and distributional-shadow T2 suites.
+- Pushed the four clean repair/history commits through `d66313b`, created a
+  fresh exact VM checkout, configured and built it with 64 jobs, and repeated
+  all 144 unique configuration checks successfully on the VM.  Launched the
+  new 576-run matrix at 12:56 SGT as
+  `wifi-qualification-d66313b.service`; its output root is separate from the
+  excluded `ff6d8b8` tree.
+- Armed `wifi-qualification-analysis-d66313b.service` and
+  `wifi-qualification-plots-d66313b.service` as fail-closed retries.  The first
+  currently rejects the incomplete manifest before reading observations, and
+  the second rejects the absent atomic analysis directory.  They can publish
+  only after exact 576-run closure and successful strict validation.
 
 ### 2026-08-06 - Freeze held-out closed-loop evaluation before launch
 
