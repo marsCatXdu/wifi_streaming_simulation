@@ -72,11 +72,22 @@ SECONDARY_AIRTIME_EVENT_COLUMNS = {
     "run_id", "time_ns", "path_id", "ppdu_duration_us", "tagged_mpdu_bytes",
     "frame_ids", "mixed_ppdu", "cumulative_tagged_airtime_us",
 }
-SECONDARY_AIRTIME_EVENT_V2_COLUMNS = SECONDARY_AIRTIME_EVENT_COLUMNS | {
+SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS = (
+    "run_id",
+    "time_ns",
+    "path_id",
+    "ppdu_duration_us",
     "ppdu_duration_binary64_bits",
+    "tagged_mpdu_bytes",
+    "frame_ids",
     "frame_tagged_mpdu_bytes",
     "frame_allocated_airtime_binary64_bits",
-}
+    "mixed_ppdu",
+    "cumulative_tagged_airtime_us",
+)
+SECONDARY_AIRTIME_EVENT_V2_COLUMNS = set(
+    SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS
+)
 SECONDARY_AIRTIME_SETTLEMENT_COLUMNS = {
     "run_id", "frame_id", "settlement_time_ns", "released_airtime_us",
     "measured_airtime_us", "nominal_airtime_us", "fallback",
@@ -9188,6 +9199,11 @@ def validate_run(
                 SECONDARY_AIRTIME_EVENT_V2_COLUMNS
                 if event_schema_version == 2
                 else SECONDARY_AIRTIME_EVENT_COLUMNS
+            ),
+            ordered_columns=(
+                SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS
+                if event_schema_version == 2
+                else None
             ),
         )
         settlements = _csv(settlements_path, SECONDARY_AIRTIME_SETTLEMENT_COLUMNS)

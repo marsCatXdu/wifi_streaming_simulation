@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "schema_id": "secondary-airtime-event-schema-v2",
+  "status": "required_for_new_environment_generalization_qualification",
+  "purpose": "Record the exact per-frame allocation applied by SecondaryAirtimeMeter so reservation checkpoints can be replayed directly without solving for a latent PPDU byte split.",
+  "compatibility": {
+    "historical_v1_validation_allowed": true,
+    "historical_v1_role": "excluded_audit_replay_only",
+    "new_qualification_required_schema_version": 2,
+    "mixed_v1_v2_event_evidence_allowed": false,
+    "latent_feasibility_solver_allowed_for_v2": false
+  },
+  "version_declarations": {
+    "resolved_config_path": "secondaryAirtimeMeter.event_schema_version",
+    "resolved_config_required_value": 2,
+    "summary_path": "secondary_airtime_summary.json.event_schema_version",
+    "summary_required_value": 2
+  },
+  "event_file": {
+    "path": "secondary_airtime_events.csv",
+    "ordered_columns": [
+      "run_id",
+      "time_ns",
+      "path_id",
+      "ppdu_duration_us",
+      "ppdu_duration_binary64_bits",
+      "tagged_mpdu_bytes",
+      "frame_ids",
+      "frame_tagged_mpdu_bytes",
+      "frame_allocated_airtime_binary64_bits",
+      "mixed_ppdu",
+      "cumulative_tagged_airtime_us"
+    ],
+    "frame_vector_separator": ";",
+    "frame_order": "strictly_increasing_frame_id",
+    "frame_vector_widths_must_match": true,
+    "frame_tagged_bytes_must_be_positive": true,
+    "frame_tagged_bytes_sum_must_equal_ppdu_total": true
+  },
+  "binary64_encoding": {
+    "format": "canonical_unsigned_base10_integer_bit_pattern",
+    "duration_field": "ppdu_duration_binary64_bits",
+    "allocation_field": "frame_allocated_airtime_binary64_bits",
+    "values_must_decode_to_finite_positive_binary64": true,
+    "serialized_duration_must_equal_12_significant_digit_rendering": true
+  },
+  "allocation_contract": {
+    "nonfinal_frame_formula": "ppdu_duration_us * frame_tagged_mpdu_bytes / tagged_mpdu_bytes in ascending frame_id order using binary64 operations",
+    "final_frame_formula": "ppdu_duration_us minus the ordered sum of prior frame allocations using binary64 operations",
+    "every_logged_allocation_bit_pattern_must_equal_recomputed_value": true,
+    "settlement_measured_airtime": "ordered sum of exact logged per-frame allocations",
+    "checkpoint_outstanding_reservation": "sum over active frames of max(canonical reservation minus exact allocations from events strictly before the checkpoint, 0)"
+  },
+  "qualification_rule": "Both selective-policy arms must use schema V2 in every newly executed qualification run. STR MLO has no secondary airtime meter. Any missing, reordered, malformed, numerically inconsistent, or V1 event evidence fails the qualification before outcome analysis."
+}

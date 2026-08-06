@@ -53,8 +53,11 @@ from validate_outputs import (  # noqa: E402
     PREDICTION_BASE_COLUMNS,
     PREDICTION_POLLING_BASE_COLUMNS,
     PREDICTION_ROLLING_PREFIXES,
+    SECONDARY_AIRTIME_EVENT_V2_COLUMNS,
+    SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS,
     ValidationError,
     _adaptive_nominal_airtime_us,
+    _csv,
     _csv,
     _paired_value_t2_cost_reductions_close,
     _paired_value_t2_event_maximum_debt,
@@ -1677,6 +1680,34 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                 {0: 1.0, 1: 1.0},
                 action_mpdu_profiles=profiles,
             )
+
+    def test_requires_exact_v2_event_header_order(self) -> None:
+        event = {
+            **v2_event(time_ns=1_250_000_000, duration_us=1.0, frame_bytes={0: 16}),
+            "run_id": RUN_ID,
+            "path_id": "0",
+            "mixed_ppdu": "0",
+            "cumulative_tagged_airtime_us": "1",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "secondary_airtime_events.csv"
+            write_csv(path, list(SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS), [event])
+            rows = _csv(
+                path,
+                SECONDARY_AIRTIME_EVENT_V2_COLUMNS,
+                ordered_columns=SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS,
+            )
+            self.assertEqual(len(rows), 1)
+
+            reordered = list(SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS)
+            reordered[3], reordered[4] = reordered[4], reordered[3]
+            write_csv(path, reordered, [event])
+            with self.assertRaisesRegex(ValidationError, "header differs"):
+                _csv(
+                    path,
+                    SECONDARY_AIRTIME_EVENT_V2_COLUMNS,
+                    ordered_columns=SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS,
+                )
 
     def test_checks_rounded_solver_integer_witness(self) -> None:
         decisions = [
