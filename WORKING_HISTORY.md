@@ -132,6 +132,7 @@ P99.
 | Admit held-out temporal profiles | `616caff` | Explicit workload profile in runtime output and independent validation |
 | Amend held-out qualification runtime | `147b1b2` | Failed-root exclusion, repaired matrix, and 144-configuration fail-fast preflight |
 | Repair generalized qualification execution | `a33d2c2`, `d4a55e6`, `648a56a`, `28b77ce` | Stale-ACK handling, event-time debt replay, normalized PHY histories, and generalized frame/MPDU contracts |
+| Launch repaired held-out qualification | `de49f8b` | Two strict generalized canaries followed by one clean 576-run, 64-worker campaign |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -247,10 +248,13 @@ remains the engineering champion after the distributional closed-loop test.
   debt-replay, fragmented-PHY, generalized-frame, numeric-reconciliation, and
   variable-final-MPDU failures.  Their focused suites and exact canonical and
   generalized full-run replays pass.  Bind both excluded audits and these
-  repairs into the frozen contracts, then launch all nine waves from one new
-  clean commit without inspecting outcomes.  The all-generated analyzer
-  remains frozen at `101f132`, and the eleven-figure statistical/historical
-  plot suite remains frozen at `ab9e008`.
+  repairs into the frozen contracts.  The exact `de49f8b` VM checkout passed
+  the full `wifi-streaming` suite, all 144 unique configuration checks, and two
+  strict end-to-end canaries on the 60 fps, 8,200-byte held-out workload.  A
+  fresh 576-run campaign started at 16:36 SGT with 64 workers as
+  `wifi-qualification-de49f8b.service`; do not inspect partial outcomes.  The
+  all-generated analyzer remains frozen at `101f132`, and the eleven-figure
+  statistical/historical plot suite remains frozen at `ab9e008`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -277,9 +281,11 @@ retained entries, 134 process failures, and 107 validator rejections.  Commits
 `a6ac26e`, `616caff`, and `147b1b2` restore source closure, add the named held-out
 workload envelope, and check all 144 unique configurations.  Commits `a33d2c2`,
 `d4a55e6`, `648a56a`, and `28b77ce` close the failures exposed by the complete
-second audit.  The next executable boundary is a fresh 576-run campaign from
-one clean post-amendment commit.  Inspect no outcome until its exact manifest
-closes and every run passes strict validation.
+second audit.  The exact `de49f8b` checkout passed two full strict canaries and
+is now running all 576 arms in nine 64-worker waves.  Its analysis and plotting
+services retry fail-closed and currently reject the incomplete manifest.  They
+have published no partial artifact.  Inspect no outcome until the exact
+manifest closes and every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -722,9 +728,25 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Amended the execution and analysis boundaries to exclude both audit
   checkouts, prohibit partial-run reuse and mixed builds, bind all four repair
   commits, and require all 576 runs from one new clean repaired commit.  The
-  deterministic generator and focused analyzer tests pass.  Next commit and
-  push this amendment, deploy that exact clean commit, repeat remote preflight,
-  and launch nine complete 64-worker waves.
+  deterministic generator and focused analyzer tests pass.  Committed and
+  pushed this source-closed boundary as `de49f8b`.
+- Created a separate clean `de49f8b` VM checkout without altering either audit
+  tree.  Its default-profile executable and tests build with GCC 13.3.0; the
+  complete `wifi-streaming` suite passes, and all 144 unique scenario/arm
+  configuration checks pass with 64 workers.
+- Ran V2 and distributional-shadow canaries in parallel on
+  `video-workload-qualification-p16`, seed 21097: 60 fps, 8,200-byte P-frames,
+  16.667 ms deadline, and a variable final MPDU.  Run IDs
+  `cb0077268aed320afc4c` and `7331dbb2f0c03378173b` both completed and passed
+  a second strict validation.  They remain in a separate preflight root and
+  are not reused in the final campaign.
+- Launched all 576 runs from a new empty root at 16:36 SGT as
+  `wifi-qualification-de49f8b.service`, with 64 workers and no build or partial
+  analysis.  Armed `wifi-qualification-analysis-de49f8b.service` and
+  `wifi-qualification-plots-de49f8b.service`; both reject incomplete inputs,
+  retry after 60 seconds, and have published no partial artifact.  Monitor only
+  completeness/error metadata until exact closure, then strict-validate,
+  analyze, plot, visually inspect, and archive the complete result.
 
 ### 2026-08-06 - Repair held-out qualification runtime before outcomes
 
