@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "analysis_contract_id": "environment-generalization-qualification-analysis-v1",
+  "status": "frozen_before_closed_loop_qualification_outcomes",
+  "purpose": "Analyze the predeclared 576-run held-out closed-loop comparison without changing estimands, weights, uncertainty, or gates after outcomes are observed.",
+  "execution_contract": {
+    "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
+    "sha256": "64e93a2ccaf68eb67beefc69d8c4b85a9ea5bc96f144c5f478e0b5030ac3ca7f"
+  },
+  "generated_matrix": {
+    "path": "experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml",
+    "sha256": "49f8ac24cefc6005789bf2961aa542186ed1775dff8de1433deb36e0f93e3514",
+    "artifact_manifest_path": "experiments/model-selection/environment-generalization-qualification-artifacts-v1.json",
+    "artifact_manifest_sha256": "9c6c432bcda7bcdbd4c8fbb903597d2b717b917888a55b114d86dc1b01721239",
+    "resolved_matrix_sha256": "e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922"
+  },
+  "population": {
+    "family_count": 6,
+    "scenarios_per_family": 8,
+    "replicates_per_scenario": 4,
+    "paired_unit_count": 192,
+    "arm_count": 3,
+    "simulation_run_count": 576,
+    "reserved_confirmation_seeds": {
+      "minimum": 1301,
+      "maximum": 1348,
+      "required_overlap_count": 0
+    }
+  },
+  "arms": [
+    {
+      "arm_id": "str_mlo_nmaxinflights_1",
+      "topology": "mlo_str",
+      "policy": "fixed_link_0"
+    },
+    {
+      "arm_id": "score_aware_t2_v2",
+      "topology": "dual_interface",
+      "policy": "paired_value_duplication_t2"
+    },
+    {
+      "arm_id": "distributional_shadow_t2",
+      "topology": "dual_interface",
+      "policy": "distributional_shadow_duplication_t2"
+    }
+  ],
+  "raw_evidence": {
+    "require_complete_schema_2_experiment_manifest": true,
+    "require_exact_matrix_expansion_and_derived_run_ids": true,
+    "require_exact_scenario_identity_on_every_run": true,
+    "require_all_runs_to_pass_strict_output_validation": true,
+    "require_one_build_identity": true,
+    "require_manifest_project_commit_to_equal_clean_analyzer_checkout": true
+  },
+  "per_run_metrics": {
+    "all_generated_deadline_miss_rate": {
+      "numerator": "deadline misses, including incomplete frames",
+      "denominator": "all frames generated in the measurement interval"
+    },
+    "completed_frame_hf7_p99_us": {
+      "population": "completed frames only",
+      "quantile": "Hyndman-Fan type 7 at probability 0.99",
+      "minimum_completed_frames_per_run": 100,
+      "survivor_conditioning_warning_required": true
+    },
+    "sender_phy_airtime_us": {
+      "definition": "sum of link-0 and link-1 sender PHY TX intervals"
+    },
+    "background_throughput_mbps": {
+      "definition": "received background-flow bytes over the measurement interval"
+    }
+  },
+  "estimand": {
+    "point_weighting": "equal_family_then_equal_scenario_then_equal_replicate",
+    "family_count_is_fixed": true,
+    "families_are_not_resampled": true,
+    "scenario_sampling_within_family": "sample 8 scenario clusters with replacement",
+    "replicate_sampling_within_selected_scenario": "sample 4 whole paired replicates with replacement",
+    "shared_resamples_for_all_arms_metrics_and_contrasts": true
+  },
+  "bootstrap": {
+    "method": "fixed_family_stratified_scenario_then_replicate_cluster_bootstrap_v1",
+    "replications": 10000,
+    "confidence_level": 0.95,
+    "random_seed": 8231415969872262531,
+    "interval": "two-sided percentile"
+  },
+  "contrasts": [
+    {
+      "comparison_id": "score_aware_t2_v2_minus_str_mlo_nmaxinflights_1",
+      "candidate_arm_id": "score_aware_t2_v2",
+      "baseline_arm_id": "str_mlo_nmaxinflights_1"
+    },
+    {
+      "comparison_id": "distributional_shadow_t2_minus_str_mlo_nmaxinflights_1",
+      "candidate_arm_id": "distributional_shadow_t2",
+      "baseline_arm_id": "str_mlo_nmaxinflights_1"
+    },
+    {
+      "comparison_id": "distributional_shadow_t2_minus_score_aware_t2_v2",
+      "candidate_arm_id": "distributional_shadow_t2",
+      "baseline_arm_id": "score_aware_t2_v2"
+    }
+  ],
+  "aggregate_gates_against_str": {
+    "deadline_miss_delta_95pct_upper_less_than": 0.0,
+    "completed_p99_delta_us_95pct_upper_less_than": 0.0,
+    "sender_airtime_ratio_95pct_upper_at_most": 1.2,
+    "background_throughput_loss_95pct_upper_at_most": 0.01,
+    "relative_deadline_miss_reduction_at_least": 0.5
+  },
+  "per_family_safety_gates_against_str": {
+    "deadline_miss_delta_at_most": 0.002,
+    "completed_p99_delta_us_at_most": 2000,
+    "sender_airtime_ratio_at_most": 1.25,
+    "background_throughput_loss_at_most": 0.02,
+    "families_worse_on_both_miss_and_p99_at_most": 0
+  },
+  "oracle_estimand_boundary": {
+    "fraction_of_oracle_deadline_gain_realized": {
+      "status": "not_assessable",
+      "reason": "The randomized resource ceiling is defined on action-clean eligible T2 rows, while qualification uses all generated frames; subtracting their rates would mix estimands."
+    },
+    "parent_promotion_readiness": {
+      "status": "not_assessable",
+      "reason": "The parent promotion contract requires the noncommensurate oracle-gain fraction. Direct STR victory and every assessable gate remain reportable."
+    }
+  },
+  "outputs": {
+    "report_json": "environment_generalization_qualification.json",
+    "report_markdown": "environment_generalization_qualification.md",
+    "run_metrics_csv": "run_metrics.csv",
+    "paired_metrics_csv": "paired_metrics.csv",
+    "scenario_metrics_csv": "scenario_metrics.csv",
+    "family_metrics_csv": "family_metrics.csv",
+    "analysis_artifact_manifest_json": "analysis_artifact_manifest.json"
+  },
+  "plots": [
+    "aggregate_policy_metrics",
+    "family_deadline_miss_delta",
+    "family_completed_p99_delta",
+    "family_resource_effects",
+    "scenario_miss_p99_delta",
+    "scenario_distributional_vs_v2",
+    "completion_latency_cdf",
+    "completion_latency_pdf",
+    "deadline_miss_and_completion",
+    "deadline_miss_burst_cdf",
+    "resource_summary"
+  ],
+  "interpretation_limits": [
+    "Completed-frame P99 is survivor-conditioned and must never be interpreted without all-generated deadline misses and completed-frame counts.",
+    "A campaign-level pass does not erase a failed held-out-family safety gate.",
+    "The distributional-shadow arm is a previously frozen policy, not a refit on randomized environment outcomes.",
+    "EMLSR is not an arm or gate in this STR-focused qualification.",
+    "No held-out outcome may be inspected until all 576 arms are complete and the exact manifest closes."
+  ]
+}
