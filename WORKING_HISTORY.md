@@ -779,6 +779,15 @@ Do not repeat an entry unless relevant code changed after it ran.
   lines, and the analysis and plot jobs waiting behind the campaign.  Until
   exact 576-run closure, inspect only service, process, manifest-count, failure,
   and storage metadata.
+- The manifest reached 129 strictly retained runs at 20:39 SGT with zero
+  failures, closing two complete 64-run waves and beginning the third.  This
+  crosses the 121-run boundary where both preceding audits encountered their
+  first validator failure.  All 64 worker slots refilled after that boundary.
+- Removed only the reproducible `build/` directories from the stopped
+  `ff6d8b8`, `d66313b`, and `de49f8b` checkouts, reclaiming about 1.9 GB while
+  retaining every raw audit result.  A metadata-only 15-second watchdog now
+  stops the campaign and downstream jobs immediately if any `FAILED` line
+  appears; it does not read performance outcomes.
 
 ### 2026-08-06 - Exclude the fourth audit and isolate solver timeouts
 
