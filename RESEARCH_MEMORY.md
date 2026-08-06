@@ -60,6 +60,24 @@ EMLSR misses and 10.712--14.241 ms for its mean per-run completed P99.  Re-run
 the paired analysis on the final fresh-seed, same-build campaign rather than
 treating these engineering seeds as final confirmation evidence.
 
+## Exact airtime evidence for generalized qualification
+
+Do not infer a meter's per-frame airtime allocation from only a PPDU's total
+tagged bytes and participating frame IDs in a new qualification run.  The
+fifth held-out audit (`9196eef`) showed that variable final MPDU sizes turn
+that missing split into a numerically fragile latent integer problem: HiGHS
+returned a witness that independent replay rejected by about `1e-4`, far
+outside the `1e-9 us` accounting envelope.  This was an evidence failure, not
+a policy-performance result; no headline outcome was inspected.
+
+New selective-policy runs must use secondary-airtime event schema V2.  It
+records exact per-frame tagged bytes plus the unsigned decimal binary64 bit
+patterns of the PPDU duration and every applied frame allocation.  Replay V2
+settlements and reservation checkpoints directly from those values and never
+invoke the V1 latent feasibility solver.  Keep V1 support only to reproduce
+excluded historical audits.  The frozen schema is
+`experiments/model-selection/secondary-airtime-event-schema-v2.json`.
+
 ## Temporal-T2 48-pair STR qualification
 
 The compiled primary-only temporal-T2 policy was run against STR MLO on the

@@ -96,6 +96,12 @@ class EnvironmentGeneralizationQualificationAnalysisTest(unittest.TestCase):
         )
         self.assertEqual(self.contract["bootstrap"]["replications"], 10_000)
         self.assertEqual(
+            self.contract["raw_evidence"][
+                "require_secondary_airtime_event_schema_version_on_selective_arms"
+            ],
+            2,
+        )
+        self.assertEqual(
             self.contract["oracle_estimand_boundary"]
             ["fraction_of_oracle_deadline_gain_realized"]["status"],
             "not_assessable",

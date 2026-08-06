@@ -279,6 +279,10 @@ def load_analysis_contract(
             "require_generalization_frame_profile_on_both_selective_policy_arms"
         )
         is True
+        and raw_evidence.get(
+            "require_secondary_airtime_event_schema_version_on_selective_arms"
+        )
+        == 2
         and tuple(
             raw_evidence.get(
                 "exclude_execution_checkouts_from_all_estimands", []
@@ -576,6 +580,13 @@ def validate_campaign_manifest(
                 "seed": spec["seed"],
                 "run": spec["run"],
                 "expected_config": spec["config"],
+                "required_secondary_airtime_event_schema_version": (
+                    None
+                    if spec["arm_id"] == "str_mlo_nmaxinflights_1"
+                    else contract["raw_evidence"][
+                        "require_secondary_airtime_event_schema_version_on_selective_arms"
+                    ]
+                ),
             }
         )
     families, scenarios = _family_scenario_order(specs)
@@ -657,6 +668,7 @@ def _validate_observation(job: dict[str, Any]) -> dict[str, Any]:
             f"{run_dir}: STR arm unexpectedly selects a paired temporal-T2 frame profile",
         )
     else:
+        meter = config.get("secondaryAirtimeMeter")
         _require(
             expected_frame_profile == "environment_generalization_v1"
             and config.get("pairedTemporalT2FrameProfile")
@@ -664,6 +676,12 @@ def _validate_observation(job: dict[str, Any]) -> dict[str, Any]:
             and config.get("environment")
             == "held_out_environment_generalization_v1",
             f"{run_dir}: selective arm generalization frame profile differs",
+        )
+        _require(
+            isinstance(meter, dict)
+            and meter.get("event_schema_version")
+            == job["required_secondary_airtime_event_schema_version"],
+            f"{run_dir}: selective arm secondary airtime event schema differs",
         )
     build = _read_json(run_dir / "build_info.json")
     build_identity: dict[str, str] = {}

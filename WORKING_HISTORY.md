@@ -135,15 +135,17 @@ P99.
 | Launch repaired held-out qualification | `de49f8b` | Two strict generalized canaries followed by one clean 576-run, 64-worker campaign |
 | Repair solver-version portability | `e7a8b3e` | Presolve retry with unchanged feasibility constraints and independent witness replay |
 | Isolate concurrent solver timeouts | `2e2b2c6` | Fresh bounded budget for every component and presolve representation |
+| Record exact meter allocations | `09e148f` | V2 per-frame byte/allocation evidence and direct replay without a latent solver |
+| Freeze exact meter event schema | `60c78c6` | Ordered V2 CSV contract with historical V1 compatibility |
 
-The latest validator milestone is `2e2b2c6`.  It retains the exact historical
+The latest validator milestone is `60c78c6`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
 multiclass model, completion CDFs, shadow reference, congestion regime,
 repayable permanent ledger, decision routes, and runtime summaries.  V2
 remains the engineering champion after the distributional closed-loop test.
-It also retries false mixed-integer infeasibility with presolve while preserving
-the original formulation and independent witness replay, and gives every
-component/representation an independent operational timeout budget.
+For historical V1 meter events it retains the bounded latent-allocation solver.
+New runs emit exact per-frame tagged bytes and binary64 allocation bits, so V2
+settlement and reservation checkpoints replay directly without SciPy/HiGHS.
 
 ## One authoritative TODO checklist
 
@@ -275,11 +277,16 @@ component/representation an independent operational timeout budget.
   replays pass in 66.94 seconds.  Commit `9196eef` binds this fourth excluded
   root and repair.  Its exact clean VM checkout passes the preserved attempt,
   53 focused Python tests, all 144 frozen configurations, and five full strict
-  canaries.  The one-source 576-run campaign is active at 64 workers from an
-  initially empty result root; inspect only completion and failure metadata
-  until it closes.  The all-generated analyzer remains frozen at `101f132`,
-  and the eleven-figure
-  statistical/historical plot suite remains frozen at `ab9e008`.
+  canaries.  That fifth audit stopped after 175 retained runs when run
+  `d24c6d9645e15542184f` exposed a missing-evidence defect in V1 meter events:
+  the logged PPDU total and frame IDs did not contain the actual per-frame byte
+  split, and the latent MILP returned a witness outside the independent 1e-9-us
+  envelope.  No performance outcome was inspected.  Commits `09e148f` and
+  `60c78c6` record and freeze exact V2 allocations; the sixth campaign remains
+  pending until the fifth root is excluded, all contracts regenerate, and new
+  64-way canaries pass.  The all-generated analyzer remains frozen at
+  `101f132`, and the eleven-figure statistical/historical plot suite remains
+  frozen at `ab9e008` apart from this pre-outcome evidence amendment.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -297,12 +304,13 @@ miss, completed HF7 P99, sender airtime, and background gates at aggregate,
 family, and scenario levels, and mark the predeclared randomized-oracle
 fraction `not_assessable` because the two populations differ.
 
-The `ff6d8b8`, `d66313b`, `de49f8b`, and `3bf5bb8` checkouts are stopped and
-excluded in both execution and analysis contracts.  Their directory and
-failure counts are audit metadata only; do not resume any root, promote the
-first root's 85 complete entries, promote the second root's 335 retained
-entries, promote either later root's 121 retained entries, or combine any
-population with a new build.
+The `ff6d8b8`, `d66313b`, `de49f8b`, `3bf5bb8`, and `9196eef` checkouts are
+stopped and excluded in both execution and analysis contracts.  Their
+directory and failure counts are audit metadata only; do not resume any root,
+promote the first root's 85 complete entries, promote the second root's 335
+retained entries, promote either middle root's 121 retained entries, promote
+the fifth root's 175 retained entries, or combine any population with a new
+build.
 The second audit's 576 attempts split exactly into 335
 retained entries, 134 process failures, and 107 validator rejections.  Commits
 `a6ac26e`, `616caff`, and `147b1b2` restore source closure, add the named held-out
@@ -331,9 +339,15 @@ attempt passes 64/64 concurrent stress replays in 66.94 seconds.  Commit
 `9196eef` VM checkout embeds the full commit, passes the preserved failed
 attempt, 53 focused Python tests, all 144 configurations, and five strict
 canaries.  `wifi-qualification-9196eef.service` started at 19:50 SGT from a
-fresh empty result root with 64 workers; its required analysis and plot jobs
-are waiting behind it.  Inspect no headline outcome until the exact manifest
-closes and every run passes strict validation.
+fresh empty result root with 64 workers.  The watchdog stopped it and both
+downstream jobs at 20:56 SGT after 175 retained runs, one failed completed
+attempt, and 64 interrupted attempts.  The failing variable-final-MPDU run
+produced the same invalid latent-solver witness in isolated and tightened-
+tolerance replay.  No performance aggregate was inspected.  `09e148f` records
+the meter's exact byte split and binary64 allocation bits; `60c78c6` freezes
+their ordered V2 schema and direct replay.  Launch nothing until these repairs,
+the fifth exclusion, and the regenerated matrix are committed and all new
+canaries pass.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -537,12 +551,12 @@ Reserved seeds `1301` through `1348` remain unopened.  V2 is an engineering
 pass, not final confirmation.  Freeze the generalization domain, candidate,
 fallback, exploration, and analyzer before consuming those seeds.
 
-The V1 event schema does not record its per-frame byte split or equal-time
-callback sequence, and the portable compiled cost path does not freeze FMA
-contraction.  The current campaign has no equal-time decision/event or
-decision/settlement collision, and its x86 build exactly matches the scalar
-replay.  Add explicit telemetry/FP-contract evidence before a portable-device
-qualification; this is not a reason to rerun the current campaign.
+The V1 event schema does not record its per-frame byte split and is now limited
+to historical excluded-audit replay.  V2 records the ordered frame IDs, exact
+per-frame tagged bytes, PPDU-duration binary64 bits, and exact allocation bits;
+new qualification evidence must replay these values directly without a latent
+solver.  The portable compiled cost path still does not freeze FMA contraction,
+so retain that separate portability caveat for a future device qualification.
 
 ## Verification ledger
 
@@ -752,6 +766,16 @@ Do not repeat an entry unless relevant code changed after it ran.
   P99 interval `[-0.687, -0.041]` ms.  V2 remains champion.  All five
   qualification plots, all eight historical plots, and the V2 comparison plot
   were visually inspected.
+- Exact meter evidence repair at `09e148f`: `streaming-experiment` builds and
+  the full C++ `wifi-streaming` suite passes locally.  The solver-free V2 test
+  passes without NumPy/SciPy, and 34 paired/distributional validator tests pass
+  on the VM with NumPy 1.26.4 and SciPy 1.11.4.
+- Ordered V2 schema at `60c78c6`: Python compile and `git diff --check` pass;
+  35 paired/distributional validator tests pass on the VM.  The schema contract
+  keeps V1 available only for historical audit replay.
+- Fifth-audit contract amendment: generated artifacts reproduce byte-for-byte,
+  and 56 validator, generator, configuration-check, qualification-analyzer, and
+  plotter tests pass on the VM production scientific stack.
 
 ## Work log
 
@@ -788,6 +812,33 @@ Do not repeat an entry unless relevant code changed after it ran.
   retaining every raw audit result.  A metadata-only 15-second watchdog now
   stops the campaign and downstream jobs immediately if any `FAILED` line
   appears; it does not read performance outcomes.
+
+### 2026-08-06 - Exclude the fifth audit and remove latent V2 solving
+
+- The metadata-only watchdog stopped `wifi-qualification-9196eef.service`, its
+  analysis job, and its plot job immediately after the first failure line.
+  The excluded root contains 175 retained manifest runs, one failed completed
+  attempt, and 64 interrupted attempts.  Zero simulator processes remained
+  after the stop.  None of these runs may enter a qualification estimand.
+- Inspected only service state, directory counts, the failed run ID, and the
+  exact validator error.  No miss, latency, P99, airtime, throughput, action,
+  policy-comparison, threshold, or gate outcome was inspected.
+- Run `d24c6d9645e15542184f` exposed that V1 events log PPDU total bytes and
+  frame IDs but omit the per-frame byte split actually used by the meter.  For
+  a variable-final-MPDU event, SciPy/HiGHS returned a latent integer witness
+  whose independent replay violated lower and upper rows by about `1.02e-4`,
+  far outside the `1e-9 us` evidence envelope.  Isolated replay and explicitly
+  tighter HiGHS tolerances returned the same invalid witness.
+- Commit `09e148f` adds event schema V2: exact per-frame tagged bytes and the
+  unsigned decimal bit patterns of the PPDU duration and each applied binary64
+  allocation.  V2 settlements and reservation checkpoints replay those exact
+  allocations directly in near-linear time and never import the legacy solver.
+  Historical V1 validation retains the old bounded MILP.
+- Commit `60c78c6` freezes the ordered V2 CSV and fail-closes malformed,
+  reordered, mixed-version, noncanonical, or numerically inconsistent rows.
+  The C++ module suite passes, as do 35 focused paired/distributional validator
+  tests on the production VM stack.  Bind this fifth exclusion and both repair
+  commits into the execution and analysis contracts before new canaries.
 
 ### 2026-08-06 - Exclude the fourth audit and isolate solver timeouts
 

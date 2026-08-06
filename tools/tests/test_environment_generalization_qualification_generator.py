@@ -109,7 +109,7 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         self.assertEqual(manifest["campaign_counts"]["worker_waves"], 9)
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
-            "4db729f7a801c8b911ee3cb9acd9ed996e4568a3f7274d6158e547b4db462694",
+            "3073b90eb0aed3c6bf859c8e1a53bac25b7b2a41b69ffe14c5a60acc3038cf73",
         )
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
@@ -160,6 +160,14 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         self.assertEqual(
             hashlib.sha256((ROOT / amendment["path"]).read_bytes()).hexdigest(),
             amendment["sha256"],
+        )
+
+        event_schema = self.contract["pre_outcome_runtime_amendment"][
+            "secondary_airtime_event_evidence"
+        ]["schema_contract"]
+        self.assertEqual(
+            hashlib.sha256((ROOT / event_schema["path"]).read_bytes()).hexdigest(),
+            event_schema["sha256"],
         )
 
     def test_pre_outcome_audits_forbid_partial_or_mixed_build_reuse(self) -> None:
@@ -224,6 +232,22 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
             ],
             0,
         )
+        fifth_audit = amendment["excluded_execution_audits"][4]
+        self.assertEqual(fifth_audit["counts"]["retained_manifest_runs"], 175)
+        self.assertEqual(fifth_audit["counts"]["failed_completed_attempts"], 1)
+        self.assertEqual(fifth_audit["counts"]["attempt_directories_at_stop"], 65)
+        self.assertEqual(
+            fifth_audit["counts"]["interrupted_attempt_directories"], 64
+        )
+        self.assertEqual(
+            fifth_audit["validator_environment"]["failed_run_id"],
+            "d24c6d9645e15542184f",
+        )
+        self.assertFalse(
+            amendment["secondary_airtime_event_evidence"][
+                "new_qualification_uses_latent_feasibility_solver"
+            ]
+        )
 
     def test_pre_outcome_audit_count_mutation_fails_closed(self) -> None:
         drifted_contract = copy.deepcopy(self.contract)
@@ -271,6 +295,21 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
             with self.assertRaisesRegex(
                 QualificationGenerationError,
                 "fourth excluded execution audit differs",
+            ):
+                load_contract(path)
+
+    def test_fifth_pre_outcome_audit_mutation_fails_closed(self) -> None:
+        drifted_contract = copy.deepcopy(self.contract)
+        fifth_audit = drifted_contract["pre_outcome_runtime_amendment"][
+            "excluded_execution_audits"
+        ][4]
+        fifth_audit["validator_environment"]["strict_tolerance_replay"] = "valid"
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "contract.json"
+            path.write_text(json.dumps(drifted_contract), encoding="utf-8")
+            with self.assertRaisesRegex(
+                QualificationGenerationError,
+                "fifth excluded execution audit differs",
             ):
                 load_contract(path)
 

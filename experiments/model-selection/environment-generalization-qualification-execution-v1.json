@@ -3,7 +3,7 @@
   "runtime_contract_id": "environment-generalization-qualification-execution-v1",
   "status": "amended_before_closed_loop_qualification_outcomes",
   "pre_outcome_runtime_amendment": {
-    "amendment_stage": "four_excluded_execution_audits_before_qualification_outcomes",
+    "amendment_stage": "five_excluded_execution_audits_before_qualification_outcomes",
     "outcome_inspection_disclosure": {
       "headline_deadline_or_latency_metrics_inspected": false,
       "limited_error_log_aggregate_fields_inspected": true,
@@ -132,6 +132,40 @@
           "failure_and_completion_metadata_inspected": true,
           "metadata_used_for_policy_model_threshold_or_gate_selection": false
         }
+      },
+      {
+        "checkout": "9196eef15be3ea88736c11389cd0cc6c4f9b8c22",
+        "campaign_state": "stopped_after_latent_allocation_witness_replay_failure",
+        "remote_checkout": "/home/jingweili/wifi_streaming_qualification_9196eef",
+        "output_root": "/home/jingweili/wifi_streaming_qualification_9196eef/results/environment_generalization_closed_loop_qualification_v1/runs",
+        "service": "wifi-qualification-9196eef.service",
+        "counts": {
+          "scheduled_runs": 576,
+          "retained_manifest_runs": 175,
+          "failed_completed_attempts": 1,
+          "attempt_directories_at_stop": 65,
+          "interrupted_attempt_directories": 64,
+          "active_simulator_processes_after_stop": 0
+        },
+        "failure": "The V1 event schema omitted the actual per-frame byte split used by the airtime meter. On one variable-final-MPDU run, SciPy/HiGHS returned a latent integer assignment that its own independent replay rejected outside the 1e-9 us accounting envelope; tighter solver tolerances returned the same invalid witness.",
+        "validator_environment": {
+          "scipy_version": "1.11.4",
+          "failed_run_id": "d24c6d9645e15542184f",
+          "failed_error": "paired-value meter replay: feasibility solver failed: paired-value reservation checkpoints have no feasible event allocation",
+          "isolated_replay_after_stop": "invalid_solver_witness",
+          "strict_tolerance_replay": "same_invalid_solver_witness",
+          "reported_bound_violation": 0,
+          "reported_lower_violation": 0.00010232016211375594,
+          "reported_upper_violation": 0.00010225286223430885,
+          "v1_missing_evidence": "exact_per_frame_tagged_bytes_and_binary64_airtime_allocations",
+          "watchdog_stopped_campaign_analysis_and_plot_chain": true
+        },
+        "outcome_inspection": {
+          "headline_deadline_or_latency_metrics_inspected": false,
+          "limited_performance_aggregate_fields_inspected": false,
+          "failure_and_completion_metadata_inspected": true,
+          "metadata_used_for_policy_model_threshold_or_gate_selection": false
+        }
       }
     ],
     "repair_commits": [
@@ -158,8 +192,29 @@
       {
         "commit": "2e2b2c68cf1d0ab157f72420e9a89ee31313c1e7",
         "repair": "Give every independent feasibility component and presolve representation a fresh bounded solver budget so concurrent validation load cannot consume a later representation's operational timeout."
+      },
+      {
+        "commit": "09e148f83bfe2f838ada8577a72ca60b2ebc7818",
+        "repair": "Record exact per-frame tagged bytes and binary64 airtime allocations in every V2 meter event and replay settlements and reservation checkpoints directly without a latent solver."
+      },
+      {
+        "commit": "60c78c69c77296e6fe7ca6c920edc55161ed7593",
+        "repair": "Freeze the exact ordered V2 event schema and reserve V1 latent-allocation solving for historical excluded-audit replay only."
       }
     ],
+    "secondary_airtime_event_evidence": {
+      "schema_contract": {
+        "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+        "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+      },
+      "required_selective_arm_ids": [
+        "score_aware_t2_v2",
+        "distributional_shadow_t2"
+      ],
+      "required_event_schema_version": 2,
+      "historical_v1_role": "excluded_audit_replay_only",
+      "new_qualification_uses_latent_feasibility_solver": false
+    },
     "configuration_preflight": {
       "path": "tools/check_environment_generalization_qualification_configurations.py",
       "sha256": "a98a6176dfb2e37c0c3f0bf5b5626598864b80f5439f21087843b1e7afacd755",
@@ -303,6 +358,10 @@
         "scenario_catalog": {
           "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
           "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+        },
+        "secondary_airtime_event_schema": {
+          "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+          "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
         },
         "v2_runtime_contract": {
           "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",

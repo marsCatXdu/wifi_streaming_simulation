@@ -41,6 +41,7 @@ EXCLUDED_AUDIT_CHECKOUTS = (
     "d66313bcd9542158f48d16269449656dfa9dcc2b",
     "de49f8b37746889dee10f1f31370ae6830d82c13",
     "3bf5bb830351c50761386c0fb9295137c83696da",
+    "9196eef15be3ea88736c11389cd0cc6c4f9b8c22",
 )
 REPAIR_COMMITS = (
     "a33d2c244a1c2134c8b8b4e436a6a749949f4701",
@@ -49,6 +50,8 @@ REPAIR_COMMITS = (
     "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
     "e7a8b3ed8d28f8094ce08978bf27db3ff99f4cee",
     "2e2b2c68cf1d0ab157f72420e9a89ee31313c1e7",
+    "09e148f83bfe2f838ada8577a72ca60b2ebc7818",
+    "60c78c69c77296e6fe7ca6c920edc55161ed7593",
 )
 LIMITED_INSPECTED_OUTPUT_FIELDS = (
     "sent_packets",
@@ -134,6 +137,7 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     amendment = contract["pre_outcome_runtime_amendment"]
     preflight = amendment.get("configuration_preflight")
     builder_amendment = amendment.get("dataset_builder_compatibility_amendment")
+    event_evidence = amendment.get("secondary_airtime_event_evidence")
     inspection = amendment.get("outcome_inspection_disclosure")
     _require(
         isinstance(amendment, dict)
@@ -148,11 +152,12 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "reserved_confirmation_seeds_remain_unopened",
             "excluded_execution_audits",
             "repair_commits",
+            "secondary_airtime_event_evidence",
             "configuration_preflight",
             "dataset_builder_compatibility_amendment",
         }
         and amendment.get("amendment_stage")
-        == "four_excluded_execution_audits_before_qualification_outcomes"
+        == "five_excluded_execution_audits_before_qualification_outcomes"
         and inspection
         == {
             "headline_deadline_or_latency_metrics_inspected": False,
@@ -174,13 +179,13 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     audits = amendment.get("excluded_execution_audits")
     _require(
         isinstance(audits, list)
-        and len(audits) == 4
+        and len(audits) == 5
         and all(isinstance(audit, dict) for audit in audits)
         and tuple(audit.get("checkout") for audit in audits)
         == EXCLUDED_AUDIT_CHECKOUTS,
         "excluded execution audits differ",
     )
-    first_audit, second_audit, third_audit, fourth_audit = audits
+    first_audit, second_audit, third_audit, fourth_audit, fifth_audit = audits
     _require(
         set(first_audit)
         == {
@@ -361,12 +366,111 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
         },
         "fourth excluded execution audit differs",
     )
+    fifth_counts = fifth_audit.get("counts")
+    fifth_inspection = fifth_audit.get("outcome_inspection")
+    fifth_validator = fifth_audit.get("validator_environment")
+    _require(
+        set(fifth_audit)
+        == {
+            "checkout",
+            "campaign_state",
+            "remote_checkout",
+            "output_root",
+            "service",
+            "counts",
+            "failure",
+            "validator_environment",
+            "outcome_inspection",
+        }
+        and fifth_audit["campaign_state"]
+        == "stopped_after_latent_allocation_witness_replay_failure"
+        and fifth_audit["remote_checkout"]
+        == "/home/jingweili/wifi_streaming_qualification_9196eef"
+        and fifth_audit["output_root"]
+        == (
+            "/home/jingweili/wifi_streaming_qualification_9196eef/results/"
+            "environment_generalization_closed_loop_qualification_v1/runs"
+        )
+        and fifth_audit["service"] == "wifi-qualification-9196eef.service"
+        and fifth_audit["failure"]
+        == (
+            "The V1 event schema omitted the actual per-frame byte split used by "
+            "the airtime meter. On one variable-final-MPDU run, SciPy/HiGHS "
+            "returned a latent integer assignment that its own independent "
+            "replay rejected outside the 1e-9 us accounting envelope; tighter "
+            "solver tolerances returned the same invalid witness."
+        )
+        and fifth_counts
+        == {
+            "scheduled_runs": 576,
+            "retained_manifest_runs": 175,
+            "failed_completed_attempts": 1,
+            "attempt_directories_at_stop": 65,
+            "interrupted_attempt_directories": 64,
+            "active_simulator_processes_after_stop": 0,
+        }
+        and fifth_counts["failed_completed_attempts"]
+        + fifth_counts["interrupted_attempt_directories"]
+        == fifth_counts["attempt_directories_at_stop"]
+        and fifth_validator
+        == {
+            "scipy_version": "1.11.4",
+            "failed_run_id": "d24c6d9645e15542184f",
+            "failed_error": (
+                "paired-value meter replay: feasibility solver failed: "
+                "paired-value reservation checkpoints have no feasible event allocation"
+            ),
+            "isolated_replay_after_stop": "invalid_solver_witness",
+            "strict_tolerance_replay": "same_invalid_solver_witness",
+            "reported_bound_violation": 0,
+            "reported_lower_violation": 0.00010232016211375594,
+            "reported_upper_violation": 0.00010225286223430885,
+            "v1_missing_evidence": (
+                "exact_per_frame_tagged_bytes_and_binary64_airtime_allocations"
+            ),
+            "watchdog_stopped_campaign_analysis_and_plot_chain": True,
+        }
+        and fifth_inspection
+        == {
+            "headline_deadline_or_latency_metrics_inspected": False,
+            "limited_performance_aggregate_fields_inspected": False,
+            "failure_and_completion_metadata_inspected": True,
+            "metadata_used_for_policy_model_threshold_or_gate_selection": False,
+        },
+        "fifth excluded execution audit differs",
+    )
     repairs = amendment.get("repair_commits")
     _require(
         isinstance(repairs, list)
         and tuple(repair.get("commit") for repair in repairs) == REPAIR_COMMITS
         and all(set(repair) == {"commit", "repair"} for repair in repairs),
         "runtime repair commit closure differs",
+    )
+    expected_event_schema = {
+        "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+        "sha256": (
+            "4450adc2394662d22b5ccd9c9af4e490"
+            "d880beb13192c7060b962a4489b6edf5"
+        ),
+    }
+    _require(
+        event_evidence
+        == {
+            "schema_contract": expected_event_schema,
+            "required_selective_arm_ids": [
+                "score_aware_t2_v2",
+                "distributional_shadow_t2",
+            ],
+            "required_event_schema_version": 2,
+            "historical_v1_role": "excluded_audit_replay_only",
+            "new_qualification_uses_latent_feasibility_solver": False,
+        },
+        "secondary airtime event evidence amendment differs",
+    )
+    _validate_source(
+        event_evidence["schema_contract"]["path"],
+        event_evidence["schema_contract"]["sha256"],
+        "secondary airtime event schema",
     )
     _require(
         isinstance(preflight, dict)
@@ -477,6 +581,10 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "source closure entry differs",
         )
         _validate_source(source["path"], source["sha256"], name)
+    _require(
+        sources.get("secondary_airtime_event_schema") == expected_event_schema,
+        "runtime source closure omits the secondary airtime event schema",
+    )
     parent_phase = parent["sampling"]["phases"][PHASE]
     _require(
         phase["scenario_count"] == campaign["scenario_count"]

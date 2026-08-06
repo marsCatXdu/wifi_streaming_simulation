@@ -12,7 +12,7 @@ generalization_contract:
 runtime_contract:
   id: environment-generalization-qualification-execution-v1
   path: experiments/model-selection/environment-generalization-qualification-execution-v1.json
-  sha256: aafdcc0dfced3f116bb54b4e55bc60c22f224483728be1cefe785e12c26c4885
+  sha256: 09b5e8de9033f6f0803e45b84a6b155f8ed1722710bb489a9fe19d01382554c9
   source_artifacts:
     canonical_candidates:
       path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv
@@ -47,6 +47,9 @@ runtime_contract:
     scenario_catalog:
       path: experiments/model-selection/environment-generalization-scenarios-v1.json
       sha256: ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593
+    secondary_airtime_event_schema:
+      path: experiments/model-selection/secondary-airtime-event-schema-v2.json
+      sha256: 4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5
     v2_runtime_contract:
       path: experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json
       sha256: bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda
