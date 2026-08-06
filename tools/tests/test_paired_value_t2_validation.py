@@ -1605,6 +1605,67 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                     decisions, [event], settlements, estimates, nominals
                 )
 
+    def test_retries_feasible_solver_with_presolve(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "primary_sample_time_ns": "1200000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "1",
+                "meter_reserved_after_us": "2",
+            },
+        ]
+        event = {
+            "time_ns": "1250000000",
+            "ppdu_duration_us": "1",
+            "tagged_mpdu_bytes": "3",
+            "frame_ids": "0;1",
+        }
+        settlements = [
+            {
+                "frame_id": "0",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.666666666667",
+                "measured_airtime_us": "0.333333333333",
+                "nominal_airtime_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "settlement_time_ns": "1300000000",
+                "released_airtime_us": "0.333333333333",
+                "measured_airtime_us": "0.666666666667",
+                "nominal_airtime_us": "1",
+            },
+        ]
+        estimates = {0: 1.0, 1: 1.0}
+        nominals = {0: 1.0, 1: 1.0}
+
+        from scipy import optimize
+
+        original_milp = optimize.milp
+        presolve_values: list[bool] = []
+
+        def false_infeasible_then_solve(*args, **kwargs):
+            presolve_values.append(kwargs["options"]["presolve"])
+            if len(presolve_values) == 1:
+                return mock.Mock(success=False, x=None)
+            return original_milp(*args, **kwargs)
+
+        with mock.patch(
+            "scipy.optimize.milp", side_effect=false_infeasible_then_solve
+        ):
+            _replay_paired_value_t2_meter(
+                decisions, [event], settlements, estimates, nominals
+            )
+        self.assertEqual(presolve_values[:2], [False, True])
+
     def test_rejects_solver_tolerance_and_noncanonical_event_evidence(self) -> None:
         decisions = [
             {

@@ -6130,29 +6130,40 @@ def _validate_paired_value_t2_meter_checkpoints(
                     component_lower[component_row] /= scale
                 if math.isfinite(component_upper[component_row]):
                     component_upper[component_row] /= scale
-            remaining_time = 30.0 - (time.monotonic() - solver_started)
-            _require(
-                remaining_time > 0,
-                "paired-value reservation checkpoint feasibility timed out",
-            )
-            result = milp(
-                np.zeros(len(variable_indices), dtype=np.float64),
-                integrality=integrality[variable_indices],
-                bounds=Bounds(
-                    variable_lower[variable_indices],
-                    variable_upper[variable_indices],
-                ),
-                constraints=LinearConstraint(
-                    component_matrix,
-                    component_lower,
-                    component_upper,
-                ),
-                options={
-                    "presolve": False,
-                    "time_limit": remaining_time,
-                    "mip_rel_gap": 0.0,
-                },
-            )
+            def solve_component(*, presolve: bool) -> Any:
+                """Solve one representation within the shared replay timeout."""
+                remaining_time = 30.0 - (time.monotonic() - solver_started)
+                _require(
+                    remaining_time > 0,
+                    "paired-value reservation checkpoint feasibility timed out",
+                )
+                return milp(
+                    np.zeros(len(variable_indices), dtype=np.float64),
+                    integrality=integrality[variable_indices],
+                    bounds=Bounds(
+                        variable_lower[variable_indices],
+                        variable_upper[variable_indices],
+                    ),
+                    constraints=LinearConstraint(
+                        component_matrix,
+                        component_lower,
+                        component_upper,
+                    ),
+                    options={
+                        "presolve": presolve,
+                        "time_limit": remaining_time,
+                        "mip_rel_gap": 0.0,
+                    },
+                )
+
+            result = solve_component(presolve=False)
+            if not result.success or result.x is None:
+                # HiGHS 1.2 has returned a false infeasible result for a
+                # feasible 186-variable component with presolve disabled.
+                # Other exact-lattice fixtures require presolve to remain
+                # disabled.  Try both representations and accept only a
+                # witness that passes the independent exact replay below.
+                result = solve_component(presolve=True)
             _require(
                 result.success and result.x is not None,
                 "paired-value reservation checkpoints have no feasible "
