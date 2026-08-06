@@ -272,9 +272,13 @@ component/representation an independent operational timeout budget.
   under full load.  It passes unchanged in isolation.  Commit `2e2b2c6` gives
   each component/representation a fresh 60-second operational budget without
   changing the formulation, tolerances, or witness replay; 64 concurrent exact
-  replays pass in 66.94 seconds.  Bind this fourth excluded root and repair,
-  then rerun all 576 arms from another empty clean checkout.  The all-generated
-  analyzer remains frozen at `101f132`, and the eleven-figure
+  replays pass in 66.94 seconds.  Commit `9196eef` binds this fourth excluded
+  root and repair.  Its exact clean VM checkout passes the preserved attempt,
+  53 focused Python tests, all 144 frozen configurations, and five full strict
+  canaries.  The one-source 576-run campaign is active at 64 workers from an
+  initially empty result root; inspect only completion and failure metadata
+  until it closes.  The all-generated analyzer remains frozen at `101f132`,
+  and the eleven-figure
   statistical/historical plot suite remains frozen at `ab9e008`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
@@ -322,10 +326,14 @@ run that passed preflight and isolated replay: one 30-second wall-clock budget
 was shared across all independent MILP components and both presolve choices.
 No performance aggregate was inspected.  Commit `2e2b2c6` replaces that shared
 guard with a fresh 60-second budget per component/representation; the exact
-attempt passes 64/64 concurrent stress replays in 66.94 seconds.  Bind this
-fourth excluded audit in both contracts and relaunch all 576 runs from a fresh
-empty root.  Inspect no headline outcome until the exact manifest closes and
-every run passes strict validation.
+attempt passes 64/64 concurrent stress replays in 66.94 seconds.  Commit
+`9196eef` binds this fourth excluded audit in both contracts.  The exact clean
+`9196eef` VM checkout embeds the full commit, passes the preserved failed
+attempt, 53 focused Python tests, all 144 configurations, and five strict
+canaries.  `wifi-qualification-9196eef.service` started at 19:50 SGT from a
+fresh empty result root with 64 workers; its required analysis and plot jobs
+are waiting behind it.  Inspect no headline outcome until the exact manifest
+closes and every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -746,6 +754,31 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Launch the load-stable final qualification
+
+- Built a new detached, clean VM checkout at the exact full commit
+  `9196eef15be3ea88736c11389cd0cc6c4f9b8c22`; the 7.4 MB experiment
+  executable embeds that same identity.  The preserved load-sensitive attempt
+  validates unchanged under the production SciPy 1.11.4 stack, all 53 focused
+  qualification and validator tests pass, and all 144 unique scenario/arm
+  configuration checks pass at 64 workers.
+- Ran five fresh preflight-only canaries spanning STR, V2, and distributional
+  shadow on `obss-intensity-qualification-p17`, plus both selective policies
+  on `video-workload-qualification-p16`.  All five passed independent strict
+  validation at run IDs `133e678fef5e8df8ed34`,
+  `a38f9e39d8dfe8cbbc29`, `924a5e7ce7755f9767cc`,
+  `efa3a0bdc8f96fdea83e`, and `bb547cc6336ef226806f`; none is reused as
+  qualification evidence.
+- Stopped stale analysis and plot retry loops left by the excluded `d66313b`
+  audit.  Installed a verified three-unit fail-closed service chain for
+  `9196eef`; the campaign unit refuses a pre-existing canonical result root,
+  and analysis and plotting require their upstream unit to succeed.
+- Started `wifi-qualification-9196eef.service` at 19:50 SGT from an empty root.
+  The initial state had exactly 64 matching simulator processes, zero failure
+  lines, and the analysis and plot jobs waiting behind the campaign.  Until
+  exact 576-run closure, inspect only service, process, manifest-count, failure,
+  and storage metadata.
 
 ### 2026-08-06 - Exclude the fourth audit and isolate solver timeouts
 
