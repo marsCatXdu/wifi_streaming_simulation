@@ -87,6 +87,41 @@ def f32(value: float) -> float:
     return struct.unpack(">f", struct.pack(">f", value))[0]
 
 
+def f64_bits(value: float) -> str:
+    return str(struct.unpack(">Q", struct.pack(">d", value))[0])
+
+
+def v2_event(
+    *,
+    time_ns: int,
+    duration_us: float,
+    frame_bytes: dict[int, int],
+) -> dict[str, str]:
+    tagged_bytes = sum(frame_bytes.values())
+    frame_ids = sorted(frame_bytes)
+    allocated_sum = 0.0
+    allocations: list[float] = []
+    for index, frame_id in enumerate(frame_ids):
+        allocated = duration_us * float(frame_bytes[frame_id]) / float(tagged_bytes)
+        if index + 1 == len(frame_ids):
+            allocated = duration_us - allocated_sum
+        allocated_sum += allocated
+        allocations.append(allocated)
+    return {
+        "time_ns": str(time_ns),
+        "ppdu_duration_us": format(duration_us, ".12g"),
+        "ppdu_duration_binary64_bits": f64_bits(duration_us),
+        "tagged_mpdu_bytes": str(tagged_bytes),
+        "frame_ids": ";".join(str(frame_id) for frame_id in frame_ids),
+        "frame_tagged_mpdu_bytes": ";".join(
+            str(frame_bytes[frame_id]) for frame_id in frame_ids
+        ),
+        "frame_allocated_airtime_binary64_bits": ";".join(
+            f64_bits(value) for value in allocations
+        ),
+    }
+
+
 class PairedValueT2Fixture:
     def __init__(self, root: Path, *, action: bool = False) -> None:
         self.root = root
@@ -1537,6 +1572,112 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                 action_mpdu_profiles=profiles,
             )
 
+    def test_replays_v2_exact_frame_allocations_without_solver(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            },
+            {
+                "frame_id": "1",
+                "primary_sample_time_ns": "1200000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "1",
+                "meter_reserved_after_us": "2",
+            },
+            {
+                "frame_id": "2",
+                "primary_sample_time_ns": "1300000000",
+                "secondary_launched": "0",
+                "meter_reserved_before_us": "1",
+                "meter_reserved_after_us": "1",
+            },
+        ]
+        event = v2_event(
+            time_ns=1_250_000_000,
+            duration_us=1.0,
+            frame_bytes={0: 16, 1: 12},
+        )
+        allocation_bits = event[
+            "frame_allocated_airtime_binary64_bits"
+        ].split(";")
+        allocations = [
+            struct.unpack(">d", int(bits).to_bytes(8, "big"))[0]
+            for bits in allocation_bits
+        ]
+        settlements = [
+            {
+                "frame_id": str(frame_id),
+                "settlement_time_ns": "1400000000",
+                "released_airtime_us": format(1.0 - allocations[frame_id], ".12g"),
+                "measured_airtime_us": format(allocations[frame_id], ".12g"),
+                "nominal_airtime_us": "1",
+            }
+            for frame_id in (0, 1)
+        ]
+        profiles = {0: (10, 6, 2), 1: (8, 4, 2)}
+        # V2 carries the exact allocation and must therefore validate even
+        # when the optional legacy V1 feasibility solver is unavailable.
+        with mock.patch.dict(
+            sys.modules,
+            {"scipy": None, "scipy.optimize": None},
+        ):
+            _replay_paired_value_t2_meter(
+                decisions,
+                [event],
+                settlements,
+                {0: 1.0, 1: 1.0},
+                {0: 1.0, 1: 1.0},
+                action_mpdu_profiles=profiles,
+            )
+
+        drifted_bits = copy.deepcopy(event)
+        tokens = drifted_bits[
+            "frame_allocated_airtime_binary64_bits"
+        ].split(";")
+        tokens[0] = f64_bits(math.nextafter(allocations[0], math.inf))
+        drifted_bits["frame_allocated_airtime_binary64_bits"] = ";".join(tokens)
+        with self.assertRaisesRegex(ValidationError, "allocation differs"):
+            _replay_paired_value_t2_meter(
+                decisions,
+                [drifted_bits],
+                settlements,
+                {0: 1.0, 1: 1.0},
+                {0: 1.0, 1: 1.0},
+                action_mpdu_profiles=profiles,
+            )
+
+        invalid_profile = v2_event(
+            time_ns=1_250_000_000,
+            duration_us=1.0,
+            frame_bytes={0: 15, 1: 13},
+        )
+        with self.assertRaisesRegex(ValidationError, "MPDU profile"):
+            _replay_paired_value_t2_meter(
+                decisions,
+                [invalid_profile],
+                settlements,
+                {0: 1.0, 1: 1.0},
+                {0: 1.0, 1: 1.0},
+                action_mpdu_profiles=profiles,
+            )
+
+        drifted_checkpoint = copy.deepcopy(decisions)
+        drifted_checkpoint[2]["meter_reserved_before_us"] = "1.00000001"
+        drifted_checkpoint[2]["meter_reserved_after_us"] = "1.00000001"
+        with self.assertRaisesRegex(ValidationError, "V2 checkpoint"):
+            _replay_paired_value_t2_meter(
+                drifted_checkpoint,
+                [event],
+                settlements,
+                {0: 1.0, 1: 1.0},
+                {0: 1.0, 1: 1.0},
+                action_mpdu_profiles=profiles,
+            )
+
     def test_checks_rounded_solver_integer_witness(self) -> None:
         decisions = [
             {
@@ -1834,6 +1975,9 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         })
         config.pop("randomizedIntervention", None)
         _validate_paired_value_t2_config(config)
+        v2_config = copy.deepcopy(config)
+        v2_config["secondaryAirtimeMeter"]["event_schema_version"] = 2
+        _validate_paired_value_t2_config(v2_config)
         score_aware_config = copy.deepcopy(config)
         score_aware_config["pairedValueDuplicationT2"] = copy.deepcopy(
             PAIRED_VALUE_T2_SCORE_AWARE_CONFIG

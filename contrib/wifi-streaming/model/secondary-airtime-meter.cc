@@ -16,6 +16,7 @@
 #include "ns3/wifi-psdu.h"
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <iomanip>
 #include <limits>
@@ -68,7 +69,7 @@ SecondaryAirtimeMeter::~SecondaryAirtimeMeter() = default;
 void
 SecondaryAirtimeMeter::BindPath(uint8_t pathId, Ptr<NetDevice> device)
 {
-    NS_ABORT_MSG_IF(pathId != 0, "V1 secondary airtime meter expects path 0");
+    NS_ABORT_MSG_IF(pathId != 0, "Secondary airtime meter expects path 0");
     NS_ABORT_MSG_IF(!device, "Secondary airtime meter requires a device");
     NS_ABORT_MSG_IF(m_device, "Secondary airtime meter path already bound");
     auto wifi = DynamicCast<WifiNetDevice>(device);
@@ -346,13 +347,12 @@ SecondaryAirtimeMeter::NotifyPhyTxPsduBegin(WifiConstPsduMap psduMap,
     ++m_taggedPpduCount;
     m_measuredAirtimeTotalUs += durationUs;
 
-    std::vector<uint64_t> frameIds;
+    std::map<uint64_t, double> frameAllocations;
     double allocatedSum = 0;
     std::size_t index = 0;
     const std::size_t count = frameBytes.size();
     for (const auto& [frameId, bytes] : frameBytes)
     {
-        frameIds.push_back(frameId);
         double allocated = durationUs * static_cast<double>(bytes) /
                            static_cast<double>(taggedBytes);
         ++index;
@@ -361,6 +361,7 @@ SecondaryAirtimeMeter::NotifyPhyTxPsduBegin(WifiConstPsduMap psduMap,
             allocated = durationUs - allocatedSum;
         }
         allocatedSum += allocated;
+        frameAllocations.emplace(frameId, allocated);
         auto reservation = m_reservations.find(frameId);
         if (reservation != m_reservations.end() && !reservation->second.settled)
         {
@@ -380,7 +381,8 @@ SecondaryAirtimeMeter::NotifyPhyTxPsduBegin(WifiConstPsduMap psduMap,
                m_pathId,
                durationUs,
                taggedBytes,
-               frameIds,
+               frameBytes,
+               frameAllocations,
                mixed);
 }
 
@@ -509,8 +511,10 @@ SecondaryAirtimeMeter::IsWithinMeasurementWindow(uint64_t timeNs) const
 void
 SecondaryAirtimeMeter::WriteEventHeader()
 {
-    m_events << "run_id,time_ns,path_id,ppdu_duration_us,tagged_mpdu_bytes,frame_ids,"
-                "mixed_ppdu,cumulative_tagged_airtime_us\n";
+    m_events << "run_id,time_ns,path_id,ppdu_duration_us,ppdu_duration_binary64_bits,"
+                "tagged_mpdu_bytes,frame_ids,frame_tagged_mpdu_bytes,"
+                "frame_allocated_airtime_binary64_bits,mixed_ppdu,"
+                "cumulative_tagged_airtime_us\n";
 }
 
 void
@@ -518,21 +522,40 @@ SecondaryAirtimeMeter::WriteEvent(uint64_t timeNs,
                                   uint8_t pathId,
                                   double ppduDurationUs,
                                   uint64_t taggedMpduBytes,
-                                  const std::vector<uint64_t>& frameIds,
+                                  const std::map<uint64_t, uint64_t>& frameBytes,
+                                  const std::map<uint64_t, double>& frameAllocations,
                                   bool mixedPpdu)
 {
     if (!m_events)
     {
         return;
     }
+    NS_ABORT_MSG_IF(frameBytes.empty() || frameBytes.size() != frameAllocations.size(),
+                    "Secondary airtime event frame evidence differs");
     std::ostringstream frames;
-    for (std::size_t index = 0; index < frameIds.size(); ++index)
+    std::ostringstream bytes;
+    std::ostringstream allocationBits;
+    uint64_t reconstructedBytes = 0;
+    std::size_t index = 0;
+    for (const auto& [frameId, taggedBytes] : frameBytes)
     {
-        frames << (index == 0 ? "" : ";") << frameIds[index];
+        const auto allocation = frameAllocations.find(frameId);
+        NS_ABORT_MSG_IF(taggedBytes == 0 || allocation == frameAllocations.end() ||
+                            !std::isfinite(allocation->second) || allocation->second <= 0,
+                        "Secondary airtime event contains invalid frame evidence");
+        frames << (index == 0 ? "" : ";") << frameId;
+        bytes << (index == 0 ? "" : ";") << taggedBytes;
+        allocationBits << (index == 0 ? "" : ";")
+                       << std::bit_cast<uint64_t>(allocation->second);
+        reconstructedBytes += taggedBytes;
+        ++index;
     }
+    NS_ABORT_MSG_IF(reconstructedBytes != taggedMpduBytes,
+                    "Secondary airtime event tagged bytes do not reconcile");
     m_events << m_runId << ',' << timeNs << ',' << +pathId << ',' << ppduDurationUs << ','
-             << taggedMpduBytes << ',' << frames.str() << ',' << mixedPpdu << ','
-             << m_measuredAirtimeTotalUs << '\n';
+             << std::bit_cast<uint64_t>(ppduDurationUs) << ',' << taggedMpduBytes << ','
+             << frames.str() << ',' << bytes.str() << ',' << allocationBits.str() << ','
+             << mixedPpdu << ',' << m_measuredAirtimeTotalUs << '\n';
     m_events.flush();
 }
 
@@ -565,13 +588,12 @@ SecondaryAirtimeMeter::ApplyTestPpdu(const std::map<uint64_t, uint64_t>& frameBy
     ++m_taggedPpduCount;
     m_measuredAirtimeTotalUs += ppduDurationUs;
 
-    std::vector<uint64_t> frameIds;
+    std::map<uint64_t, double> frameAllocations;
     double allocatedSum = 0;
     std::size_t index = 0;
     const std::size_t count = frameBytes.size();
     for (const auto& [frameId, bytes] : frameBytes)
     {
-        frameIds.push_back(frameId);
         double allocated = ppduDurationUs * static_cast<double>(bytes) /
                            static_cast<double>(taggedBytes);
         ++index;
@@ -580,6 +602,7 @@ SecondaryAirtimeMeter::ApplyTestPpdu(const std::map<uint64_t, uint64_t>& frameBy
             allocated = ppduDurationUs - allocatedSum;
         }
         allocatedSum += allocated;
+        frameAllocations.emplace(frameId, allocated);
         auto reservation = m_reservations.find(frameId);
         if (reservation != m_reservations.end() && !reservation->second.settled)
         {
@@ -598,7 +621,8 @@ SecondaryAirtimeMeter::ApplyTestPpdu(const std::map<uint64_t, uint64_t>& frameBy
                m_pathId,
                ppduDurationUs,
                taggedBytes,
-               frameIds,
+               frameBytes,
+               frameAllocations,
                mixed);
 }
 
@@ -643,6 +667,7 @@ SecondaryAirtimeMeter::WriteSummary()
     NS_ABORT_MSG_IF(!summary, "Cannot open secondary airtime summary " << m_summaryFile);
     summary << std::setprecision(12);
     summary << "{\n"
+            << "  \"event_schema_version\": " << EVENT_SCHEMA_VERSION << ",\n"
             << "  \"tagged_ppdu_count\": " << m_taggedPpduCount << ",\n"
             << "  \"mixed_ppdu_count\": " << m_mixedPpduCount << ",\n"
             << "  \"tagged_secondary_tx_airtime_us\": " << m_measuredAirtimeTotalUs << ",\n"

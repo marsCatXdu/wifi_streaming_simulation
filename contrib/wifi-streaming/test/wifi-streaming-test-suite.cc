@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstdio>
 #include <filesystem>
@@ -3800,7 +3801,15 @@ class SecondaryAirtimeMeterTestCase : public TestCase
   private:
     void DoRun() override
     {
+        const std::string directory = "/tmp/ns3-wifi-streaming-airtime-meter-unit-test";
+        std::filesystem::remove_all(directory);
+        std::filesystem::create_directories(directory);
         auto meter = CreateObject<SecondaryAirtimeMeter>();
+        meter->SetMeasurementWindow(0, 4'000'000);
+        meter->SetOutputFiles("airtime-meter-test",
+                              directory + "/secondary_airtime_events.csv",
+                              directory + "/secondary_airtime_settlements.csv",
+                              directory + "/secondary_airtime_summary.json");
         SecondaryAirtimeReservation first;
         first.frameId = 1;
         first.packetCount = 2;
@@ -3933,7 +3942,37 @@ class SecondaryAirtimeMeterTestCase : public TestCase
                                   20.0,
                                   1e-9,
                                   "Out-of-window airtime was measured");
+        meter->WriteSummary();
+        std::ifstream events(directory + "/secondary_airtime_events.csv");
+        std::string header;
+        std::string row;
+        std::getline(events, header);
+        std::getline(events, row);
+        const auto split = [](const std::string& value) {
+            std::vector<std::string> fields;
+            std::istringstream input(value);
+            std::string field;
+            while (std::getline(input, field, ','))
+            {
+                fields.push_back(field);
+            }
+            return fields;
+        };
+        const auto fields = split(row);
+        NS_TEST_ASSERT_MSG_EQ(fields.size(), 11, "Airtime event V2 row width differs");
+        NS_TEST_ASSERT_MSG_EQ(fields.at(4),
+                              std::to_string(std::bit_cast<uint64_t>(40.0)),
+                              "Airtime event duration bits differ");
+        NS_TEST_ASSERT_MSG_EQ(fields.at(6), "1;2", "Airtime event frame order differs");
+        NS_TEST_ASSERT_MSG_EQ(fields.at(7), "300;100", "Airtime event frame bytes differ");
+        NS_TEST_ASSERT_MSG_EQ(
+            fields.at(8),
+            std::to_string(std::bit_cast<uint64_t>(30.0)) + ";" +
+                std::to_string(std::bit_cast<uint64_t>(10.0)),
+            "Airtime event allocation bits differ");
+        meter = nullptr;
         Simulator::Destroy();
+        std::filesystem::remove_all(directory);
     }
 };
 
@@ -4063,6 +4102,24 @@ class SecondaryAirtimeMeterWifiTraceTestCase : public TestCase
                                   directory + "/secondary_airtime_summary.json"),
                               true,
                               "Airtime summary output is missing");
+        std::ifstream events(directory + "/secondary_airtime_events.csv");
+        NS_TEST_ASSERT_MSG_EQ(static_cast<bool>(events),
+                              true,
+                              "Airtime event output is missing");
+        std::string eventHeader;
+        std::string eventRow;
+        std::getline(events, eventHeader);
+        std::getline(events, eventRow);
+        NS_TEST_ASSERT_MSG_EQ(
+            eventHeader,
+            "run_id,time_ns,path_id,ppdu_duration_us,ppdu_duration_binary64_bits,"
+            "tagged_mpdu_bytes,frame_ids,frame_tagged_mpdu_bytes,"
+            "frame_allocated_airtime_binary64_bits,mixed_ppdu,"
+            "cumulative_tagged_airtime_us",
+            "Airtime event output does not use schema V2");
+        NS_TEST_ASSERT_MSG_EQ(std::count(eventRow.begin(), eventRow.end(), ','),
+                              10,
+                              "Airtime event V2 row width differs");
         Simulator::Destroy();
         std::filesystem::remove_all(directory);
     }

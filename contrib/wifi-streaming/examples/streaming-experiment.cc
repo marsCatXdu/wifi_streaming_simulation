@@ -2596,6 +2596,8 @@ main(int argc, char* argv[])
         selectiveDuplicationBurstHorizonFrames;
     resolved.selectiveDuplicationDecisionOffsetsUs = resolvedSelectiveDecisionOffsetsUs;
     resolved.secondaryAirtimeMeterEnabled = secondaryAirtimeMeterEnabled;
+    resolved.secondaryAirtimeEventSchemaVersion =
+        SecondaryAirtimeMeter::EVENT_SCHEMA_VERSION;
     resolved.adaptiveAirtimeBudgetFraction = adaptiveAirtimeBudgetFraction;
     resolved.adaptiveAirtimeBucketHorizonUs = adaptiveAirtimeBucketHorizonUs;
     resolved.adaptiveAirtimeInitialBucketHorizonUs =

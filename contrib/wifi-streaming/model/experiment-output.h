@@ -154,6 +154,7 @@ struct StreamingRunConfig
     uint32_t selectiveDuplicationBurstHorizonFrames{0};
     std::vector<uint64_t> selectiveDuplicationDecisionOffsetsUs;
     bool secondaryAirtimeMeterEnabled{false};
+    uint32_t secondaryAirtimeEventSchemaVersion{2}; ///< Per-PPDU meter schema.
     double adaptiveAirtimeBudgetFraction{0};
     uint64_t adaptiveAirtimeBucketHorizonUs{0};
     uint64_t adaptiveAirtimeInitialBucketHorizonUs{0}; ///< Startup-credit horizon.

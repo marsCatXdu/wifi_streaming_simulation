@@ -52,6 +52,8 @@ struct SecondaryAirtimeReservation
 class SecondaryAirtimeMeter : public Object
 {
   public:
+    static constexpr uint32_t EVENT_SCHEMA_VERSION = 2; ///< Per-PPDU event schema.
+
     /**
      * Return runtime type information.
      *
@@ -287,14 +289,16 @@ class SecondaryAirtimeMeter : public Object
      * @param pathId Application path identifier.
      * @param ppduDurationUs PPDU duration in microseconds.
      * @param taggedMpduBytes Tagged MPDU bytes in the PPDU.
-     * @param frameIds Distinct tagged frame identifiers.
+     * @param frameBytes Tagged MPDU bytes keyed by frame identifier.
+     * @param frameAllocations Airtime allocated to each tagged frame.
      * @param mixedPpdu Whether untagged data shared the PPDU.
      */
     void WriteEvent(uint64_t timeNs,
                     uint8_t pathId,
                     double ppduDurationUs,
                     uint64_t taggedMpduBytes,
-                    const std::vector<uint64_t>& frameIds,
+                    const std::map<uint64_t, uint64_t>& frameBytes,
+                    const std::map<uint64_t, double>& frameAllocations,
                     bool mixedPpdu);
 
     /**

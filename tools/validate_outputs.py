@@ -72,6 +72,11 @@ SECONDARY_AIRTIME_EVENT_COLUMNS = {
     "run_id", "time_ns", "path_id", "ppdu_duration_us", "tagged_mpdu_bytes",
     "frame_ids", "mixed_ppdu", "cumulative_tagged_airtime_us",
 }
+SECONDARY_AIRTIME_EVENT_V2_COLUMNS = SECONDARY_AIRTIME_EVENT_COLUMNS | {
+    "ppdu_duration_binary64_bits",
+    "frame_tagged_mpdu_bytes",
+    "frame_allocated_airtime_binary64_bits",
+}
 SECONDARY_AIRTIME_SETTLEMENT_COLUMNS = {
     "run_id", "frame_id", "settlement_time_ns", "released_airtime_us",
     "measured_airtime_us", "nominal_airtime_us", "fallback",
@@ -647,13 +652,17 @@ PAIRED_VALUE_T2_PREDICTION_CONFIG = {
     "event_schema_version": 2,
     "feature_support_mask_version": 2,
 }
-PAIRED_VALUE_T2_METER_CONFIG = {
+PAIRED_VALUE_T2_METER_CONFIG_V1 = {
     "enabled": True,
     "path_id": 0,
     "copy_id": 1,
     "definition": "secondary_sender_phy_tx_airtime",
     "measurement_start_ns": PAIRED_VALUE_T2_DECISION_START_NS,
     "measurement_stop_ns": PAIRED_VALUE_T2_MEASUREMENT_STOP_NS,
+}
+PAIRED_VALUE_T2_METER_CONFIG = {
+    **PAIRED_VALUE_T2_METER_CONFIG_V1,
+    "event_schema_version": 2,
 }
 PAIRED_VALUE_T2_ENVIRONMENT_KEYS = (
     "duration_s", "warmup_s", "measurement_start_s", "measurement_stop_s",
@@ -2937,10 +2946,14 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
                                     "frozen prediction config"),
              "resolved_config.json: paired-value predictionTelemetry differs from contract")
     meter = config.get("secondaryAirtimeMeter")
+    expected_meter = (
+        PAIRED_VALUE_T2_METER_CONFIG
+        if isinstance(meter, dict) and meter.get("event_schema_version") == 2
+        else PAIRED_VALUE_T2_METER_CONFIG_V1
+    )
     _require(isinstance(meter, dict) and
              _canonical_json_sha256(meter, "secondaryAirtimeMeter") ==
-             _canonical_json_sha256(PAIRED_VALUE_T2_METER_CONFIG,
-                                    "frozen meter config"),
+             _canonical_json_sha256(expected_meter, "frozen meter config"),
              "resolved_config.json: paired-value secondaryAirtimeMeter differs from contract")
     _require(all(key not in config for key in (
         "selectiveDuplication", "adaptiveAirtimeDuplication",
@@ -3014,6 +3027,11 @@ def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
     )
     prediction = config.get("predictionTelemetry")
     meter = config.get("secondaryAirtimeMeter")
+    expected_meter = (
+        PAIRED_VALUE_T2_METER_CONFIG
+        if isinstance(meter, dict) and meter.get("event_schema_version") == 2
+        else PAIRED_VALUE_T2_METER_CONFIG_V1
+    )
     _require(
         isinstance(prediction, dict)
         and _canonical_json_sha256(prediction, "predictionTelemetry")
@@ -3027,7 +3045,7 @@ def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
         isinstance(meter, dict)
         and _canonical_json_sha256(meter, "secondaryAirtimeMeter")
         == _canonical_json_sha256(
-            PAIRED_VALUE_T2_METER_CONFIG,
+            expected_meter,
             "frozen distributional meter config",
         ),
         "resolved_config.json: distributional secondaryAirtimeMeter differs",
@@ -5557,6 +5575,147 @@ def _paired_value_t2_event_frames(row: dict[str, str]) -> tuple[int, ...]:
     return frame_ids
 
 
+def _secondary_airtime_binary64(text: str, field: str) -> tuple[int, float]:
+    """Decode one exact binary64 bit pattern from a V2 event row."""
+    _require(
+        isinstance(text, str) and re.fullmatch(r"(?:0|[1-9][0-9]*)", text),
+        f"secondary airtime events: invalid {field}",
+    )
+    try:
+        bits = int(text)
+    except (TypeError, ValueError) as error:
+        raise ValidationError(
+            f"secondary airtime events: invalid {field}"
+        ) from error
+    _require(
+        0 <= bits < 2**64,
+        f"secondary airtime events: invalid {field}",
+    )
+    value = struct.unpack(">d", bits.to_bytes(8, "big"))[0]
+    _require(
+        math.isfinite(value) and value > 0,
+        f"secondary airtime events: nonpositive {field}",
+    )
+    return bits, value
+
+
+def _secondary_airtime_v2_event_evidence(
+    row: dict[str, str],
+    frame_ids: tuple[int, ...],
+    tagged_bytes: int,
+    serialized_duration: float,
+) -> tuple[dict[int, int], dict[int, float], float]:
+    """Validate and decode an exact per-frame V2 PPDU allocation."""
+    duration_bits, exact_duration = _secondary_airtime_binary64(
+        row.get("ppdu_duration_binary64_bits", ""),
+        "ppdu_duration_binary64_bits",
+    )
+    _require(
+        serialized_duration == float(format(exact_duration, ".12g")),
+        "secondary airtime events: duration bits differ from serialized duration",
+    )
+    byte_tokens = row.get("frame_tagged_mpdu_bytes", "").split(";")
+    allocation_tokens = row.get(
+        "frame_allocated_airtime_binary64_bits", ""
+    ).split(";")
+    _require(
+        len(byte_tokens) == len(frame_ids)
+        and len(allocation_tokens) == len(frame_ids)
+        and all(re.fullmatch(r"[0-9]+", token) for token in byte_tokens)
+        and all(re.fullmatch(r"[0-9]+", token) for token in allocation_tokens),
+        "secondary airtime events: V2 frame evidence width differs",
+    )
+    frame_bytes = {
+        frame_id: int(token)
+        for frame_id, token in zip(frame_ids, byte_tokens, strict=True)
+    }
+    _require(
+        all(value > 0 for value in frame_bytes.values())
+        and sum(frame_bytes.values()) == tagged_bytes,
+        "secondary airtime events: V2 frame bytes do not reconcile",
+    )
+    allocation_bits: dict[int, int] = {}
+    frame_allocations: dict[int, float] = {}
+    for frame_id, token in zip(frame_ids, allocation_tokens, strict=True):
+        bits, value = _secondary_airtime_binary64(
+            token,
+            "frame_allocated_airtime_binary64_bits",
+        )
+        allocation_bits[frame_id] = bits
+        frame_allocations[frame_id] = value
+
+    reconstructed_sum = 0.0
+    for index, frame_id in enumerate(frame_ids):
+        expected = (
+            exact_duration
+            * float(frame_bytes[frame_id])
+            / float(tagged_bytes)
+        )
+        if index + 1 == len(frame_ids):
+            expected = exact_duration - reconstructed_sum
+        reconstructed_sum += expected
+        expected_bits = struct.unpack(">Q", struct.pack(">d", expected))[0]
+        _require(
+            expected_bits == allocation_bits[frame_id],
+            "secondary airtime events: V2 allocation differs from byte split",
+        )
+    _require(
+        struct.unpack(">Q", struct.pack(">d", exact_duration))[0]
+        == duration_bits,
+        "secondary airtime events: V2 duration is not bit stable",
+    )
+    return frame_bytes, frame_allocations, exact_duration
+
+
+def _paired_value_t2_direct_meter_checkpoints(
+    checkpoints: list[dict[str, Any]],
+    event_records: list[dict[str, Any]],
+    settlement_records: dict[int, dict[str, Any]],
+    action_estimates: dict[int, float],
+) -> None:
+    """Replay V2 meter state directly from exact per-frame allocations."""
+    measured_by_frame = {frame_id: 0.0 for frame_id in settlement_records}
+    allocation_times: dict[int, list[int]] = {
+        frame_id: [] for frame_id in settlement_records
+    }
+    allocation_prefixes: dict[int, list[float]] = {
+        frame_id: [0.0] for frame_id in settlement_records
+    }
+    for event in event_records:
+        allocations = event["frame_allocations"]
+        for frame_id in event["frame_ids"]:
+            allocated = allocations[frame_id]
+            measured_by_frame[frame_id] += allocated
+            allocation_times[frame_id].append(int(event["time"]))
+            allocation_prefixes[frame_id].append(
+                allocation_prefixes[frame_id][-1] + allocated
+            )
+    for frame_id, measured in measured_by_frame.items():
+        record = settlement_records[frame_id]
+        observed = float(record["measured"])
+        tolerance = (
+            PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+            + _paired_meter_quantization_us(str(record["measured_text"]))
+        )
+        _require(
+            abs(observed - measured) <= tolerance,
+            "paired-value meter V2 settlement differs from exact event replay",
+        )
+
+    for checkpoint in checkpoints:
+        expected = 0.0
+        for frame_id in checkpoint["active_frames"]:
+            visible_count = bisect.bisect_left(
+                allocation_times[frame_id], int(checkpoint["time"])
+            )
+            allocated = allocation_prefixes[frame_id][visible_count]
+            expected += max(action_estimates[frame_id] - allocated, 0.0)
+        _require(
+            _paired_close(float(checkpoint["observed"]), expected),
+            "paired-value meter V2 checkpoint differs from exact event replay",
+        )
+
+
 def _validate_paired_value_t2_meter_checkpoints(
     decision_rows: list[dict[str, str]],
     event_records: list[dict[str, Any]],
@@ -5600,6 +5759,20 @@ def _validate_paired_value_t2_meter_checkpoints(
             all(_paired_close(float(record["measured"]), 0.0)
                 for record in settlement_records.values()),
             "secondary airtime settlement is positive without a PPDU event",
+        )
+        return
+
+    v2_events = ["frame_allocations" in event for event in event_records]
+    _require(
+        all(v2_events) or not any(v2_events),
+        "secondary airtime events: mixed V1 and V2 evidence",
+    )
+    if all(v2_events):
+        _paired_value_t2_direct_meter_checkpoints(
+            checkpoints,
+            event_records,
+            settlement_records,
+            action_estimates,
         )
         return
 
@@ -6236,6 +6409,25 @@ def _replay_paired_value_t2_meter(
     }
     _require(set(launches) == set(action_estimates) == set(action_nominals),
              "paired-value meter replay: action evidence differs")
+    if action_byte_quanta is not None:
+        _require(
+            set(action_byte_quanta) == set(launches)
+            and len(set(action_byte_quanta.values())) == 1
+            and all(value > 0 for value in action_byte_quanta.values()),
+            "paired-value meter replay: MPDU byte quantum differs across actions",
+        )
+    if action_mpdu_profiles is not None:
+        _require(
+            set(action_mpdu_profiles) == set(launches)
+            and all(
+                full_bytes > 0
+                and final_bytes > 0
+                and packet_count > 0
+                for full_bytes, final_bytes, packet_count
+                in action_mpdu_profiles.values()
+            ),
+            "paired-value meter replay: action MPDU profile differs",
+        )
 
     settlement_records: dict[int, dict[str, Any]] = {}
     for row in settlements:
@@ -6263,8 +6455,14 @@ def _replay_paired_value_t2_meter(
              "secondary airtime settlements do not match paired-value actions")
 
     event_records: list[dict[str, Any]] = []
+    previous_event_time = -1
     for event_index, row in enumerate(events):
         event_time = _integer(row, "time_ns", event_file)
+        _require(
+            event_time >= previous_event_time,
+            "secondary airtime events: rows are not chronological",
+        )
+        previous_event_time = event_time
         frame_ids = _paired_value_t2_event_frames(row)
         duration = _number(row, "ppdu_duration_us", event_file)
         tagged_bytes = _integer(row, "tagged_mpdu_bytes", event_file)
@@ -6278,14 +6476,67 @@ def _replay_paired_value_t2_meter(
             _require(launches[frame_id] <= event_time <=
                      settlement_records[frame_id]["time"],
                      "secondary airtime event is outside its frame's active interval")
-        event_records.append({
+        event_record = {
             "index": event_index,
             "time": event_time,
             "duration": duration,
             "duration_text": row["ppdu_duration_us"],
             "tagged_bytes": tagged_bytes,
             "frame_ids": frame_ids,
-        })
+        }
+        v2_fields = (
+            "ppdu_duration_binary64_bits",
+            "frame_tagged_mpdu_bytes",
+            "frame_allocated_airtime_binary64_bits",
+        )
+        present_v2_fields = [field in row for field in v2_fields]
+        _require(
+            all(present_v2_fields) or not any(present_v2_fields),
+            "secondary airtime events: incomplete V2 event schema",
+        )
+        if all(present_v2_fields):
+            frame_bytes, frame_allocations, exact_duration = (
+                _secondary_airtime_v2_event_evidence(
+                    row,
+                    frame_ids,
+                    tagged_bytes,
+                    duration,
+                )
+            )
+            if action_byte_quanta is not None:
+                _require(
+                    all(
+                        value % action_byte_quanta[frame_id] == 0
+                        for frame_id, value in frame_bytes.items()
+                    ),
+                    "paired-value meter replay: V2 frame bytes violate the MPDU quantum",
+                )
+            if action_mpdu_profiles is not None:
+                for frame_id, value in frame_bytes.items():
+                    full_bytes, final_bytes, packet_count = action_mpdu_profiles[
+                        frame_id
+                    ]
+                    representable = False
+                    for final_count in (0, 1):
+                        remainder = value - final_count * final_bytes
+                        if remainder < 0 or remainder % full_bytes:
+                            continue
+                        full_count = remainder // full_bytes
+                        if (
+                            full_count <= packet_count - 1
+                            and 1 <= full_count + final_count <= packet_count
+                        ):
+                            representable = True
+                    _require(
+                        representable,
+                        "paired-value meter replay: V2 frame bytes violate the MPDU profile",
+                    )
+            event_record.update({
+                "duration": exact_duration,
+                "frame_bytes": frame_bytes,
+                "frame_allocations": frame_allocations,
+            })
+        event_records.append(event_record)
 
     _validate_paired_value_t2_meter_checkpoints(
         decision_rows,
@@ -7133,6 +7384,12 @@ def _validate_secondary_airtime(
     _require(meter_config.get("definition") == "secondary_sender_phy_tx_airtime" and
              meter_config.get("path_id") == 0 and meter_config.get("copy_id") == 1,
              "resolved_config.json: invalid secondary airtime meter definition")
+    event_schema_version = meter_config.get("event_schema_version", 1)
+    _require(
+        event_schema_version in {1, 2}
+        and summary.get("event_schema_version", 1) == event_schema_version,
+        "secondary airtime meter event schema differs",
+    )
     start_ns = meter_config.get("measurement_start_ns")
     stop_ns = meter_config.get("measurement_stop_ns")
     _require(isinstance(start_ns, int) and not isinstance(start_ns, bool) and start_ns >= 0 and
@@ -7171,6 +7428,29 @@ def _validate_secondary_airtime(
         frame_ids = [int(token) for token in frame_tokens]
         _require(len(frame_ids) == len(set(frame_ids)),
                  "secondary airtime events: repeated frame ID in PPDU")
+        if event_schema_version == 2:
+            _require(
+                frame_ids == sorted(frame_ids),
+                "secondary airtime events: V2 frame IDs are not canonical",
+            )
+            _secondary_airtime_v2_event_evidence(
+                row,
+                tuple(frame_ids),
+                tagged_bytes,
+                duration,
+            )
+        else:
+            _require(
+                not any(
+                    field in row
+                    for field in (
+                        "ppdu_duration_binary64_bits",
+                        "frame_tagged_mpdu_bytes",
+                        "frame_allocated_airtime_binary64_bits",
+                    )
+                ),
+                "secondary airtime events: V2 columns use a V1 configuration",
+            )
         observed_event_frames.update(frame_ids)
         mixed = _flag(row, "mixed_ppdu", "secondary_airtime_events.csv")
         mixed_count += mixed
@@ -8897,7 +9177,19 @@ def validate_run(
                  "missing core file: secondary_airtime_settlements.csv")
         _require(summary_path.is_file(),
                  "missing core file: secondary_airtime_summary.json")
-        events = _csv(events_path, SECONDARY_AIRTIME_EVENT_COLUMNS)
+        event_schema_version = meter.get("event_schema_version", 1)
+        _require(
+            event_schema_version in {1, 2},
+            "resolved_config.json: unsupported secondary airtime event schema",
+        )
+        events = _csv(
+            events_path,
+            (
+                SECONDARY_AIRTIME_EVENT_V2_COLUMNS
+                if event_schema_version == 2
+                else SECONDARY_AIRTIME_EVENT_COLUMNS
+            ),
+        )
         settlements = _csv(settlements_path, SECONDARY_AIRTIME_SETTLEMENT_COLUMNS)
         meter_summary = _json(summary_path)
         _validate_secondary_airtime(

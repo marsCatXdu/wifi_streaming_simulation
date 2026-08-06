@@ -944,6 +944,8 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
     {
         output << "  \"secondaryAirtimeMeter\": {\n"
                << "    \"enabled\": true,\n"
+               << "    \"event_schema_version\": "
+               << config.secondaryAirtimeEventSchemaVersion << ",\n"
                << "    \"path_id\": 0,\n"
                << "    \"copy_id\": 1,\n"
                << "    \"definition\": \"secondary_sender_phy_tx_airtime\",\n"
