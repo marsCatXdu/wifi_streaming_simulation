@@ -55,6 +55,8 @@ from validate_outputs import (  # noqa: E402
     ValidationError,
     _adaptive_nominal_airtime_us,
     _csv,
+    _paired_value_t2_cost_reductions_close,
+    _paired_value_t2_event_maximum_debt,
     _paired_meter_sum_close,
     _replay_paired_value_t2_meter,
     _rolling_column,
@@ -808,7 +810,123 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                     "frame_size_bytes": 12000,
                 },
                 evidence["action_nominals"],
+                evidence["profile"]["guard_capacity_us"],
             )
+
+    def test_replays_between_decision_budget_debt_from_phy_events(self) -> None:
+        temporary, fixture = self.fixture(action=True)
+        with temporary:
+            evidence = fixture.validate_decisions()
+            launch_time_ns = int(
+                fixture.decisions[8]["primary_sample_time_ns"]
+            )
+            event_time_ns = launch_time_ns + 1_000
+            measured_us = 14_000.0
+            events = [{
+                "run_id": RUN_ID,
+                "time_ns": str(event_time_ns),
+                "path_id": "0",
+                "ppdu_duration_us": format(measured_us, ".12g"),
+                "tagged_mpdu_bytes": "13160",
+                "frame_ids": "8",
+                "mixed_ppdu": "0",
+                "cumulative_tagged_airtime_us": format(measured_us, ".12g"),
+            }]
+            estimate = evidence["action_estimates"][8]
+            nominal = evidence["action_nominals"][8]
+            settlements = [{
+                "run_id": RUN_ID,
+                "frame_id": "8",
+                "settlement_time_ns": str(event_time_ns + 1_000),
+                "released_airtime_us": "0",
+                "measured_airtime_us": format(measured_us, ".12g"),
+                "nominal_airtime_us": format(nominal, ".12g"),
+                "fallback": "0",
+            }]
+            capacity_us = float(evidence["profile"]["guard_capacity_us"])
+            peak_debt_us = _paired_value_t2_event_maximum_debt(
+                events,
+                1_000_000_000,
+                capacity_us,
+            )
+            self.assertGreater(peak_debt_us, 0)
+            meter_summary = {
+                "tagged_ppdu_count": 1,
+                "mixed_ppdu_count": 0,
+                "tagged_secondary_tx_airtime_us": measured_us,
+                "measurement_start_ns": 1_000_000_000,
+                "measurement_stop_ns": 61_000_000_000,
+                "measurement_duration_us": 60_000_000,
+                "tagged_secondary_tx_airtime_fraction": float(format(
+                    measured_us / 60_000_000,
+                    ".12g",
+                )),
+                "maximum_budget_debt_us": float(format(peak_debt_us, ".12g")),
+                "estimated_action_airtime_us": float(format(estimate, ".12g")),
+                "actual_to_estimated_airtime_ratio": float(format(
+                    measured_us / estimate,
+                    ".12g",
+                )),
+                "forced_reservation_settlements": 0,
+                "budget_fraction": 0.006,
+                "initial_bucket_capacity_us": 12_000,
+                "finite_run_budget_us": 372_000,
+                "budget_excess_us": 0,
+            }
+            arguments = (
+                events,
+                settlements,
+                meter_summary,
+                {
+                    "enabled": True,
+                    "path_id": 0,
+                    "copy_id": 1,
+                    "definition": "secondary_sender_phy_tx_airtime",
+                    "measurement_start_ns": 1_000_000_000,
+                    "measurement_stop_ns": 61_000_000_000,
+                },
+                [{"link_id": "0", "phy_tx_time_us": "14000"}],
+                "paired_value_duplication_t2",
+                RUN_ID,
+                None,
+                evidence["action_estimates"],
+                {8},
+                0.0,
+                fixture.frames,
+                {
+                    "payload_size_bytes": 1200,
+                    "frame_size_bytes": 12000,
+                },
+                evidence["action_nominals"],
+                capacity_us,
+            )
+            _validate_secondary_airtime(*arguments)
+            meter_summary["maximum_budget_debt_us"] = 0
+            with self.assertRaisesRegex(
+                ValidationError,
+                "maximum debt differs from exact replay",
+            ):
+                _validate_secondary_airtime(*arguments)
+
+    def test_cost_reduction_crosscheck_uses_forward_error_scale(self) -> None:
+        ordered = 1.0
+        vectorized = ordered + 64 * math.ulp(ordered)
+        self.assertTrue(
+            _paired_value_t2_cost_reductions_close(
+                ordered,
+                vectorized,
+                1_000.0,
+                263,
+            )
+        )
+        self.assertFalse(
+            _paired_value_t2_cost_reductions_close(
+                ordered,
+                ordered + 1e-6,
+                1_000.0,
+                263,
+            )
+        )
 
     def test_accepts_score_aware_schema_and_reconstructs_strict_tier(self) -> None:
         temporary, fixture = self.fixture(action=True)

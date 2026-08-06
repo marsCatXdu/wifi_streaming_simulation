@@ -3547,8 +3547,16 @@ def _paired_value_t2_feature_vector(
     return vector
 
 
-def _paired_value_t2_ordered_cost_log(features: Any) -> float:
-    """Replay the compiled ridge head's explicit scalar accumulation order."""
+def _paired_value_t2_ordered_cost_replay(
+    features: Any,
+) -> tuple[float, float, int]:
+    """Replay the compiled ridge head and retain its roundoff scale.
+
+    The returned absolute sum bounds the magnitude of the intercept and every
+    accumulated ridge term.  It lets the independent sklearn cross-check use
+    a forward-error bound instead of assuming that two valid reduction orders
+    differ by a fixed number of ULPs of the potentially cancelled result.
+    """
     context = _paired_value_t2_model_replay_context()
     cost_head = context["cost_head"]
     try:
@@ -3576,6 +3584,7 @@ def _paired_value_t2_ordered_cost_log(features: Any) -> float:
             "paired-value model replay: canonical cost transform differs",
         )
         predicted_log = float(regressor.intercept_)
+        absolute_sum = abs(predicted_log)
         for index, value in enumerate(transformed):
             scale = float(scales[index])
             _require(scale > 0 and math.isfinite(scale),
@@ -3583,14 +3592,51 @@ def _paired_value_t2_ordered_cost_log(features: Any) -> float:
             # Keep these operations separate and ordered.  This is the exact
             # expression evaluated by TemporalT2ValueModelEvaluator::EvaluateCost.
             standardized = (value - float(means[index])) / scale
-            predicted_log += float(coefficients[index]) * standardized
+            term = float(coefficients[index]) * standardized
+            predicted_log += term
+            absolute_sum += abs(term)
     except (AttributeError, KeyError, TypeError, ValueError, OverflowError) as error:
         raise ValidationError(
             f"paired-value model replay: canonical cost head differs: {error}"
         ) from error
-    _require(math.isfinite(predicted_log),
+    _require(math.isfinite(predicted_log) and math.isfinite(absolute_sum),
              "paired-value model replay: canonical cost result is non-finite")
-    return predicted_log
+    return predicted_log, absolute_sum, len(transformed) + 1
+
+
+def _paired_value_t2_ordered_cost_log(features: Any) -> float:
+    """Replay the compiled ridge head's explicit scalar accumulation order."""
+    return _paired_value_t2_ordered_cost_replay(features)[0]
+
+
+def _paired_value_t2_cost_reductions_close(
+    ordered: float,
+    vectorized: float,
+    absolute_sum: float,
+    term_count: int,
+) -> bool:
+    """Compare scalar and vector ridge reductions with a forward-error bound."""
+    if not (
+        math.isfinite(ordered)
+        and math.isfinite(vectorized)
+        and math.isfinite(absolute_sum)
+        and absolute_sum >= 0
+        and term_count > 0
+    ):
+        return False
+    # Both paths standardize, multiply, and reduce binary64 operands.  Eight
+    # rounding operations per term conservatively cover both evaluation paths.
+    unit_roundoff = 2.0**-53
+    operation_count = 8 * term_count
+    scaled_roundoff = operation_count * unit_roundoff
+    if scaled_roundoff >= 1.0:
+        return False
+    gamma = scaled_roundoff / (1.0 - scaled_roundoff)
+    tolerance = gamma * absolute_sum
+    return abs(ordered - vectorized) <= max(
+        tolerance,
+        16 * max(math.ulp(ordered), math.ulp(vectorized)),
+    )
 
 
 def _validate_paired_value_t2_model_replays(
@@ -3617,13 +3663,19 @@ def _validate_paired_value_t2_model_replays(
         primary_probability = float(primary_probabilities[index])
         treated_probability = float(treated_probabilities[index])
         sklearn_predicted_log = float(predicted_logs[index])
-        predicted_log = _paired_value_t2_ordered_cost_log(record["features"])
+        predicted_log, absolute_sum, term_count = (
+            _paired_value_t2_ordered_cost_replay(record["features"])
+        )
         # The pinned sklearn pipeline evaluates the same ridge expression with
         # a vector reduction.  Require semantic agreement, but compare output
         # evidence with the compiled evaluator's explicit reduction order.
         _require(
-            abs(predicted_log - sklearn_predicted_log)
-            <= 16 * max(math.ulp(predicted_log), math.ulp(sklearn_predicted_log)),
+            _paired_value_t2_cost_reductions_close(
+                predicted_log,
+                sklearn_predicted_log,
+                absolute_sum,
+                term_count,
+            ),
             "paired-value model replay: ordered and sklearn cost heads diverge",
         )
         adjusted_log = min(
@@ -6806,6 +6858,50 @@ def _validate_distributional_shadow_t2_summary(
     )
 
 
+def _paired_value_t2_event_maximum_debt(
+    events: list[dict[str, str]],
+    measurement_start_ns: int,
+    guard_capacity_us: float,
+) -> float:
+    """Replay the V2 measured-airtime guard at every PHY event."""
+    _require(
+        measurement_start_ns >= 0
+        and math.isfinite(guard_capacity_us)
+        and guard_capacity_us >= PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US,
+        "paired-value event debt replay: invalid guard configuration",
+    )
+    balance_us = PAIRED_VALUE_T2_GUARD_INITIAL_CREDIT_US
+    last_refill_ns = measurement_start_ns
+    maximum_debt_us = 0.0
+    for row in events:
+        event_time_ns = _integer(
+            row, "time_ns", "secondary_airtime_events.csv"
+        )
+        duration_us = _number(
+            row, "ppdu_duration_us", "secondary_airtime_events.csv"
+        )
+        _require(
+            event_time_ns >= last_refill_ns and duration_us > 0,
+            "paired-value event debt replay: invalid event order or duration",
+        )
+        elapsed_us = (event_time_ns - last_refill_ns) / 1000.0
+        balance_us = min(
+            guard_capacity_us,
+            balance_us + PAIRED_VALUE_T2_GUARD_FRACTION * elapsed_us,
+        )
+        # The meter splits one unmixed PPDU among its tagged frames at this
+        # timestamp.  The final callback subtracts the complete PPDU duration,
+        # which is also the deepest debt reached within the event.
+        balance_us -= duration_us
+        maximum_debt_us = max(maximum_debt_us, max(0.0, -balance_us))
+        last_refill_ns = event_time_ns
+    _require(
+        math.isfinite(balance_us) and math.isfinite(maximum_debt_us),
+        "paired-value event debt replay: non-finite balance",
+    )
+    return maximum_debt_us
+
+
 def _validate_secondary_airtime(
     events: list[dict[str, str]],
     settlements: list[dict[str, str]],
@@ -6821,6 +6917,7 @@ def _validate_secondary_airtime(
     frames: list[dict[str, str]] | None = None,
     stream_config: dict[str, Any] | None = None,
     action_nominal_airtimes: dict[int, float] | None = None,
+    paired_guard_capacity_us: float | None = None,
 ) -> None:
     """Reconcile secondary PHY events, reservations, and the run budget."""
     exact_policy = policy in {
@@ -6979,7 +7076,30 @@ def _validate_secondary_airtime(
     estimate_total = _summary_number(summary, "estimated_action_airtime_us")
     ratio = _summary_number(summary, "actual_to_estimated_airtime_ratio")
     maximum_debt = _summary_number(summary, "maximum_budget_debt_us")
-    if exact_policy:
+    if policy == PAIRED_VALUE_T2_POLICY:
+        _require(
+            paired_guard_capacity_us is not None,
+            "secondary airtime summary: paired guard capacity is absent",
+        )
+        event_maximum_debt_us = _paired_value_t2_event_maximum_debt(
+            events,
+            start_ns,
+            paired_guard_capacity_us,
+        )
+        _require(
+            _paired_meter_close(maximum_debt, event_maximum_debt_us),
+            "secondary airtime summary: maximum debt differs from exact replay",
+        )
+        serialized_debt_tolerance_us = (
+            PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US
+            + _paired_meter_quantization_us(format(maximum_debt, ".12g"))
+        )
+        _require(
+            observed_budget_debt_us
+            <= maximum_debt + serialized_debt_tolerance_us,
+            "secondary airtime summary: maximum debt misses a decision snapshot",
+        )
+    elif policy == DISTRIBUTIONAL_SHADOW_T2_POLICY:
         _require(
             _paired_meter_close(maximum_debt, observed_budget_debt_us),
             "secondary airtime summary: maximum debt differs from exact replay",
@@ -8620,6 +8740,11 @@ def validate_run(
             frames,
             config["stream"],
             action_nominal_airtimes,
+            (
+                paired_value_profile["guard_capacity_us"]
+                if paired_value_profile is not None
+                else None
+            ),
         )
         if paired_value_evidence is not None:
             _validate_paired_value_t2_summary(
