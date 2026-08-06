@@ -15,7 +15,6 @@ import math
 import pickle
 import re
 import struct
-import time
 from collections import Counter
 from fractions import Fraction
 from pathlib import Path
@@ -479,6 +478,11 @@ PAIRED_VALUE_T2_SCORE_THRESHOLD = struct.unpack(
 PAIRED_VALUE_T2_LOG_SMEARING_FACTOR = 0.087899462834571604
 PAIRED_VALUE_T2_LOG_COST_CAP = 13.815511557963774
 PAIRED_VALUE_T2_ACCOUNTING_TOLERANCE_US = 1e-9
+# This is an operational guard for one solver representation, not part of the
+# evidence tolerance.  Each independent component and presolve alternative
+# receives the full budget so concurrent validation load cannot consume the
+# budget of a later, otherwise feasible representation.
+PAIRED_VALUE_T2_MILP_ATTEMPT_TIME_LIMIT_S = 60.0
 PAIRED_VALUE_T2_DECISION_START_NS = 1_000_000_000
 PAIRED_VALUE_T2_DECISION_STOP_NS = 60_466_000_000
 PAIRED_VALUE_T2_MEASUREMENT_STOP_NS = 61_000_000_000
@@ -6096,7 +6100,6 @@ def _validate_paired_value_t2_meter_checkpoints(
         component_rows[find_root(int(indices[0]))].append(row_index)
 
     witness = np.zeros(variable_count, dtype=np.float64)
-    solver_started = time.monotonic()
     try:
         for root, variable_indices_list in component_variables.items():
             variable_indices = np.asarray(variable_indices_list, dtype=np.int64)
@@ -6131,12 +6134,7 @@ def _validate_paired_value_t2_meter_checkpoints(
                 if math.isfinite(component_upper[component_row]):
                     component_upper[component_row] /= scale
             def solve_component(*, presolve: bool) -> Any:
-                """Solve one representation within the shared replay timeout."""
-                remaining_time = 30.0 - (time.monotonic() - solver_started)
-                _require(
-                    remaining_time > 0,
-                    "paired-value reservation checkpoint feasibility timed out",
-                )
+                """Solve one representation with an independent time budget."""
                 return milp(
                     np.zeros(len(variable_indices), dtype=np.float64),
                     integrality=integrality[variable_indices],
@@ -6151,7 +6149,7 @@ def _validate_paired_value_t2_meter_checkpoints(
                     ),
                     options={
                         "presolve": presolve,
-                        "time_limit": remaining_time,
+                        "time_limit": PAIRED_VALUE_T2_MILP_ATTEMPT_TIME_LIMIT_S,
                         "mip_rel_gap": 0.0,
                     },
                 )

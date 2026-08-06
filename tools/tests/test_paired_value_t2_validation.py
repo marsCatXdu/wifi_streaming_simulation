@@ -37,6 +37,7 @@ from validate_outputs import (  # noqa: E402
     PAIRED_VALUE_T2_FULL_HORIZON_CONTRACT_SHA256,
     PAIRED_VALUE_T2_FULL_HORIZON_GUARD_CAPACITY_US,
     PAIRED_VALUE_T2_LOG_SMEARING_FACTOR,
+    PAIRED_VALUE_T2_MILP_ATTEMPT_TIME_LIMIT_S,
     PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256,
     PAIRED_VALUE_T2_MODEL_METADATA,
     PAIRED_VALUE_T2_PREDICTION_CONFIG,
@@ -1651,9 +1652,11 @@ class PairedValueT2ValidationTest(unittest.TestCase):
 
         original_milp = optimize.milp
         presolve_values: list[bool] = []
+        time_limits: list[float] = []
 
         def false_infeasible_then_solve(*args, **kwargs):
             presolve_values.append(kwargs["options"]["presolve"])
+            time_limits.append(kwargs["options"]["time_limit"])
             if len(presolve_values) == 1:
                 return mock.Mock(success=False, x=None)
             return original_milp(*args, **kwargs)
@@ -1665,6 +1668,13 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                 decisions, [event], settlements, estimates, nominals
             )
         self.assertEqual(presolve_values[:2], [False, True])
+        self.assertEqual(
+            time_limits[:2],
+            [
+                PAIRED_VALUE_T2_MILP_ATTEMPT_TIME_LIMIT_S,
+                PAIRED_VALUE_T2_MILP_ATTEMPT_TIME_LIMIT_S,
+            ],
+        )
 
     def test_rejects_solver_tolerance_and_noncanonical_event_evidence(self) -> None:
         decisions = [
