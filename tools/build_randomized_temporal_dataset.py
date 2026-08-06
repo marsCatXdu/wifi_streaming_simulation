@@ -272,18 +272,6 @@ def _finite(row: dict[str, str], field: str, source: str) -> float:
     return value
 
 
-def _optional_finite(
-    row: dict[str, str], field: str, source: str
-) -> float | None:
-    try:
-        raw = row[field]
-    except KeyError as error:
-        raise TemporalDatasetError(f"{source}: missing number {field}") from error
-    if raw == "":
-        return None
-    return _finite(row, field, source)
-
-
 def _format(value: float) -> str:
     if not math.isfinite(value):
         raise TemporalDatasetError("internal non-finite derived feature")
@@ -732,17 +720,14 @@ def _physics_features(row: dict[str, str], endpoint: Endpoint, source: str) -> d
     primary = endpoint.primary_poll
     secondary = endpoint.secondary_poll
     pending_bytes = _finite(row, "x_primary_frame_mac_service_bytes_pending_primary", source)
-    ahead_bytes = _optional_finite(
-        row, "x_primary_mac_service_bytes_ahead_of_frame", source
-    )
+    ahead_bytes = _finite(row, "x_primary_mac_service_bytes_ahead_of_frame", source)
     queue_bytes = _finite(row, "x_primary_mac_queue_service_bytes", source)
     slack_us = _finite(row, "x_f0_deadline_slack_us", source)
     packet_count = _finite(row, "x_f0_frame_packet_count", source)
     frame_bytes = _finite(row, "x_f0_frame_size_bytes", source)
     if (
-        min(pending_bytes, queue_bytes, slack_us, packet_count, frame_bytes)
+        min(pending_bytes, ahead_bytes, queue_bytes, slack_us, packet_count, frame_bytes)
         < 0
-        or (ahead_bytes is not None and ahead_bytes < 0)
         or packet_count <= 0
         or frame_bytes <= 0
     ):
@@ -809,18 +794,12 @@ def _physics_features(row: dict[str, str], endpoint: Endpoint, source: str) -> d
     is_i = float(frame_type == "I_FRAME")
     is_p = float(frame_type == "P_FRAME")
     queue_margin_5 = clearance_margin(queue_bytes, "5ms")
-    ahead_margin_1 = (
-        None if ahead_bytes is None else clearance_margin(ahead_bytes, "1ms")
-    )
-    ahead_margin_5 = (
-        None if ahead_bytes is None else clearance_margin(ahead_bytes, "5ms")
-    )
 
     raw_values = (
         work_margin_5,
         work_margin_20,
-        ahead_margin_1,
-        ahead_margin_5,
+        clearance_margin(ahead_bytes, "1ms"),
+        clearance_margin(ahead_bytes, "5ms"),
         clearance_margin(queue_bytes, "1ms"),
         queue_margin_5,
         ack_rate_trend,
@@ -846,7 +825,7 @@ def _physics_features(row: dict[str, str], endpoint: Endpoint, source: str) -> d
         is_p * joint_busy_trend,
     )
     return {
-        column: "" if value is None else _format(value)
+        column: _format(value)
         for column, value in zip(PHYSICS_COLUMNS, raw_values, strict=True)
     }
 

@@ -335,6 +335,28 @@ def _generalization_row(
     return row
 
 
+def _generalization_temporal_row(
+    v1_row: dict[str, str],
+    current: temporal.Endpoint,
+    lagged: dict[int, temporal.Endpoint],
+    source: str,
+) -> dict[str, str]:
+    """Build one temporal row while preserving unavailable FIFO-ahead state."""
+
+    ahead_column = "x_primary_mac_service_bytes_ahead_of_frame"
+    if v1_row.get(ahead_column) != "":
+        return temporal._temporal_row(v1_row, current, lagged, source)
+    patched = dict(v1_row)
+    patched[ahead_column] = "0"
+    row = temporal._temporal_row(patched, current, lagged, source)
+    row[ahead_column] = ""
+    row["x_physics_ahead_clearance_margin_1ms_us"] = ""
+    row["x_physics_ahead_clearance_margin_5ms_us"] = ""
+    if tuple(row) != temporal.DATASET_COLUMNS:
+        raise EnvironmentDatasetError("internal generalization temporal row differs")
+    return row
+
+
 def _accumulate_exclusions(total: Counter[str], current: dict[str, Any]) -> None:
     for key, value in current.items():
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
@@ -475,7 +497,7 @@ def build_dataset(
                         filters["excluded_any_secondary_action_dirty"] += 1
                         continue
                     try:
-                        temporal_row = temporal._temporal_row(
+                        temporal_row = _generalization_temporal_row(
                             v1_row,
                             current,
                             {

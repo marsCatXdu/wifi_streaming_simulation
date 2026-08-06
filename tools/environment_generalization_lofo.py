@@ -25,6 +25,15 @@ CONTRACT_PATH = Path(
     "experiments/model-selection/environment-generalization-lofo-v1.json"
 )
 CONTRACT_SHA256 = "1566fba76e39f9e677d1c133199a47ff5275f4b3981149dd5871f599a278a9d4"
+BUILDER_AMENDMENT_PATH = Path(
+    "experiments/model-selection/"
+    "environment-generalization-dataset-builder-amendment-v1.json"
+)
+BUILDER_AMENDMENT_SHA256 = (
+    "29b63e8f4c61d4561f4c81511a251fc2ea30809ba17ef0b0bda6bc7bc5e236a5"
+)
+ARCHIVED_BUILDER_PROFILE = "archived_randomized_collection_v1"
+CURRENT_BUILDER_PROFILE = "qualification_repair_v1"
 MODEL_FEATURE_FAMILY = "primary_secondary_hgb64_plus_sender_context"
 MODEL_FEATURE_COUNT = 313
 PRIOR_FEATURE_COUNT = 308
@@ -142,6 +151,91 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _load_builder_amendment(contract: dict[str, Any]) -> dict[str, Any]:
+    """Load the source-profile amendment without rewriting frozen provenance."""
+
+    path = ROOT / BUILDER_AMENDMENT_PATH
+    if _sha256(path) != BUILDER_AMENDMENT_SHA256:
+        raise LofoError("dataset-builder compatibility amendment hash differs")
+    amendment = _read_json(path)
+    profiles = amendment.get("source_profiles")
+    usage = amendment.get("usage")
+    parent = amendment.get("parent_lofo_contract")
+    if (
+        amendment.get("schema_version") != 1
+        or amendment.get("amendment_id")
+        != "environment-generalization-dataset-builder-amendment-v1"
+        or amendment.get("status")
+        != "recorded_before_closed_loop_qualification_outcomes_read"
+        or not isinstance(parent, dict)
+        or parent.get("path") != str(CONTRACT_PATH)
+        or parent.get("sha256") != CONTRACT_SHA256
+        or not isinstance(profiles, dict)
+        or set(profiles) != {ARCHIVED_BUILDER_PROFILE, CURRENT_BUILDER_PROFILE}
+        or not isinstance(usage, dict)
+        or any(
+            usage.get(name) is not True
+            for name in (
+                "archived_artifacts_must_remain_bound_to_original_profile",
+                "future_rebuilds_must_bind_current_profile",
+                "mixed_source_profiles_are_rejected",
+                "does_not_recharacterize_archived_artifacts",
+            )
+        )
+    ):
+        raise LofoError("dataset-builder compatibility amendment differs")
+
+    expected_paths = {
+        str(source.relative_to(ROOT)): source
+        for source in environment_builder.BUILDER_SOURCES
+    }
+    profile_sources: dict[str, dict[str, str]] = {}
+    for profile_id, profile in profiles.items():
+        sources = profile.get("sources_sha256") if isinstance(profile, dict) else None
+        if (
+            not isinstance(sources, dict)
+            or set(sources) != set(expected_paths)
+            or any(
+                not isinstance(digest, str) or len(digest) != 64
+                for digest in sources.values()
+            )
+        ):
+            raise LofoError(f"dataset-builder source profile differs: {profile_id}")
+        profile_sources[profile_id] = sources
+
+    builder_path = str(
+        Path(environment_builder.__file__).resolve().relative_to(ROOT)
+    )
+    if (
+        profile_sources[ARCHIVED_BUILDER_PROFILE][builder_path]
+        != contract.get("dataset_contract", {}).get("builder_sha256")
+    ):
+        raise LofoError("archived builder profile differs from LOFO contract")
+    current_sources = {
+        name: _sha256(source) for name, source in expected_paths.items()
+    }
+    if profile_sources[CURRENT_BUILDER_PROFILE] != current_sources:
+        raise LofoError("current dataset-builder source profile differs")
+    return amendment
+
+
+def _builder_source_profile(
+    builder_hashes: object, amendment: dict[str, Any]
+) -> str:
+    """Identify one exact builder profile and reject mixed source histories."""
+
+    if not isinstance(builder_hashes, dict):
+        raise LofoError("dataset builder source closure differs")
+    matches = [
+        profile_id
+        for profile_id, profile in amendment["source_profiles"].items()
+        if builder_hashes == profile["sources_sha256"]
+    ]
+    if len(matches) != 1:
+        raise LofoError("dataset builder sources do not match one exact profile")
+    return matches[0]
+
+
 def load_contract() -> dict[str, Any]:
     """Load and fully bind the frozen LOFO analysis contract."""
 
@@ -158,10 +252,6 @@ def load_contract() -> dict[str, Any]:
         raise LofoError("LOFO analysis contract identity differs")
     for source in (
         contract.get("parent_contract"),
-        {
-            "path": contract.get("dataset_contract", {}).get("builder_path"),
-            "sha256": contract.get("dataset_contract", {}).get("builder_sha256"),
-        },
         contract.get("predictor", {}).get("prior_distribution_contract"),
         contract.get("predictor", {}).get("prior_runtime_contract"),
     ):
@@ -172,6 +262,7 @@ def load_contract() -> dict[str, Any]:
             or _sha256(ROOT / source["path"]) != source["sha256"]
         ):
             raise LofoError("LOFO source artifact hash differs")
+    _load_builder_amendment(contract)
     thresholds = contract.get("completion_distribution", {}).get("thresholds_us")
     predictor = contract.get("predictor", {})
     crossfit = contract.get("cross_fitting", {})
@@ -338,22 +429,8 @@ def _validate_dataset_artifacts(
     ):
         raise LofoError("dataset metadata contract differs")
     builder_hashes = metadata.get("builder_sources_sha256")
-    expected_builder_paths = {
-        str(source.relative_to(ROOT)): source
-        for source in environment_builder.BUILDER_SOURCES
-    }
-    if not isinstance(builder_hashes, dict) or set(builder_hashes) != set(
-        expected_builder_paths
-    ):
-        raise LofoError("dataset builder source closure differs")
-    for name, source in expected_builder_paths.items():
-        if builder_hashes[name] != _sha256(source):
-            raise LofoError(f"dataset builder source hash differs: {name}")
-    if (
-        builder_hashes[str(Path(environment_builder.__file__).resolve().relative_to(ROOT))]
-        != contract["dataset_contract"]["builder_sha256"]
-    ):
-        raise LofoError("dataset builder hash differs from LOFO contract")
+    amendment = _load_builder_amendment(contract)
+    _builder_source_profile(builder_hashes, amendment)
     source_rows = metadata.get("source_runs")
     if not isinstance(source_rows, list) or not source_rows:
         raise LofoError("dataset has no source runs")

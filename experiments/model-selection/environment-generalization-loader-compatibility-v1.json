@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "compatibility_id": "environment-generalization-loader-compatibility-v1",
+  "status": "recorded_before_closed_loop_qualification_outcomes_read",
+  "purpose": "Allow the frozen policy-replay API to use the provenance-aware current LOFO loader without changing the source identity of archived randomized-collection analyses.",
+  "parent_policy_contract": {
+    "path": "experiments/model-selection/environment-generalization-policy-replay-v1.json",
+    "sha256": "4922b85afb5dd5341733dcd455584c29ab5a54f2ad2bea562fd2573efa9d5e31"
+  },
+  "builder_compatibility_amendment": {
+    "path": "experiments/model-selection/environment-generalization-dataset-builder-amendment-v1.json",
+    "sha256": "29b63e8f4c61d4561f4c81511a251fc2ea30809ba17ef0b0bda6bc7bc5e236a5"
+  },
+  "archived_dataset_loader": {
+    "path": "tools/environment_generalization_lofo.py",
+    "sha256": "8f01f0a362e6aa7e4fc7fe422076854ea64e89e7d9784bd143036423a3eb551b"
+  },
+  "current_dataset_loader": {
+    "path": "tools/environment_generalization_lofo.py",
+    "sha256": "112609ff49588490ad60e2eb6e5e92c619cbd0dfe5bfc3aa53efaeedd1e16b58"
+  },
+  "usage": {
+    "archived_prediction_artifacts_keep_archived_loader_hash": true,
+    "current_loader_must_validate_exact_builder_source_profiles": true,
+    "does_not_recharacterize_archived_policy_results": true
+  }
+}

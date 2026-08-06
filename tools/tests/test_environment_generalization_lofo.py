@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 import unittest
@@ -53,6 +54,28 @@ class EnvironmentGeneralizationLofoTest(unittest.TestCase):
             tuple(self.contract["predictor"]["sender_context_features"]),
         )
         self.assertEqual(len(set(names)), len(names))
+
+    def test_dataset_builder_profiles_reject_mixed_source_histories(self) -> None:
+        amendment = lofo._load_builder_amendment(self.contract)
+        archived = amendment["source_profiles"][lofo.ARCHIVED_BUILDER_PROFILE][
+            "sources_sha256"
+        ]
+        current = amendment["source_profiles"][lofo.CURRENT_BUILDER_PROFILE][
+            "sources_sha256"
+        ]
+        self.assertEqual(
+            lofo._builder_source_profile(archived, amendment),
+            lofo.ARCHIVED_BUILDER_PROFILE,
+        )
+        self.assertEqual(
+            lofo._builder_source_profile(current, amendment),
+            lofo.CURRENT_BUILDER_PROFILE,
+        )
+        mixed = copy.deepcopy(archived)
+        runner = "tools/run_experiments.py"
+        mixed[runner] = current[runner]
+        with self.assertRaisesRegex(lofo.LofoError, "one exact profile"):
+            lofo._builder_source_profile(mixed, amendment)
 
     def test_inner_scenario_folds_are_deterministic_and_family_balanced(self) -> None:
         families = ("family_a", "family_b", "family_c")

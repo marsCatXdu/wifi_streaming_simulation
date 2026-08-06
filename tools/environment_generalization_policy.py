@@ -28,6 +28,15 @@ POLICY_CONTRACT_PATH = Path(
 POLICY_CONTRACT_SHA256 = (
     "4922b85afb5dd5341733dcd455584c29ab5a54f2ad2bea562fd2573efa9d5e31"
 )
+LOADER_COMPATIBILITY_PATH = Path(
+    "experiments/model-selection/"
+    "environment-generalization-loader-compatibility-v1.json"
+)
+LOADER_COMPATIBILITY_SHA256 = (
+    "c6214e7f1140b9e09536e23d139910e9b9704e92eb2aacbf7e375818ad0b34cd"
+)
+
+
 class PolicyError(RuntimeError):
     """Raised when a frozen policy replay invariant differs."""
 
@@ -89,6 +98,54 @@ def _read_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _validate_dataset_loader_compatibility(
+    source: dict[str, Any], actual_sha256: str
+) -> None:
+    """Validate the current loader without changing archived source identity."""
+
+    path = lofo.ROOT / LOADER_COMPATIBILITY_PATH
+    if _sha256(path) != LOADER_COMPATIBILITY_SHA256:
+        raise PolicyError("dataset-loader compatibility contract hash differs")
+    compatibility = _read_json(path)
+    parent = compatibility.get("parent_policy_contract")
+    builder = compatibility.get("builder_compatibility_amendment")
+    archived = compatibility.get("archived_dataset_loader")
+    current = compatibility.get("current_dataset_loader")
+    usage = compatibility.get("usage")
+    if (
+        compatibility.get("schema_version") != 1
+        or compatibility.get("compatibility_id")
+        != "environment-generalization-loader-compatibility-v1"
+        or compatibility.get("status")
+        != "recorded_before_closed_loop_qualification_outcomes_read"
+        or parent
+        != {
+            "path": str(POLICY_CONTRACT_PATH),
+            "sha256": POLICY_CONTRACT_SHA256,
+        }
+        or builder
+        != {
+            "path": str(lofo.BUILDER_AMENDMENT_PATH),
+            "sha256": lofo.BUILDER_AMENDMENT_SHA256,
+        }
+        or archived != source
+        or not isinstance(current, dict)
+        or current.get("path") != source.get("path")
+        or current.get("sha256") != actual_sha256
+        or not isinstance(usage, dict)
+        or any(
+            usage.get(name) is not True
+            for name in (
+                "archived_prediction_artifacts_keep_archived_loader_hash",
+                "current_loader_must_validate_exact_builder_source_profiles",
+                "does_not_recharacterize_archived_policy_results",
+            )
+        )
+    ):
+        raise PolicyError("dataset-loader compatibility contract differs")
+    lofo._load_builder_amendment(lofo.load_contract())
+
+
 def load_policy_contract() -> dict[str, Any]:
     """Load and fully bind the policy replay contract."""
 
@@ -111,14 +168,18 @@ def load_policy_contract() -> dict[str, Any]:
         "lofo_predictor",
     }:
         raise PolicyError("policy replay source closure differs")
-    for source in sources.values():
+    for name, source in sources.items():
         if (
             not isinstance(source, dict)
             or not isinstance(source.get("path"), str)
             or not isinstance(source.get("sha256"), str)
-            or _sha256(lofo.ROOT / source["path"]) != source["sha256"]
         ):
             raise PolicyError("policy replay source hash differs")
+        actual_sha256 = _sha256(lofo.ROOT / source["path"])
+        if actual_sha256 != source["sha256"]:
+            if name != "dataset_loader":
+                raise PolicyError("policy replay source hash differs")
+            _validate_dataset_loader_compatibility(source, actual_sha256)
     policy_ids = [row.get("id") for row in contract.get("policies", [])]
     if (
         policy_ids

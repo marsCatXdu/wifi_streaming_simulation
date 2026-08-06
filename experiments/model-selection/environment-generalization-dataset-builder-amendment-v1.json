@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "amendment_id": "environment-generalization-dataset-builder-amendment-v1",
+  "status": "recorded_before_closed_loop_qualification_outcomes_read",
+  "purpose": "Preserve the archived randomized-collection source closure while restoring the historical temporal builder required by the deployed V2 model and retaining missing FIFO-ahead semantics in the environment-specific builder.",
+  "parent_lofo_contract": {
+    "path": "experiments/model-selection/environment-generalization-lofo-v1.json",
+    "sha256": "1566fba76e39f9e677d1c133199a47ff5275f4b3981149dd5871f599a278a9d4"
+  },
+  "source_profiles": {
+    "archived_randomized_collection_v1": {
+      "role": "exact sources recorded by the archived 384-run randomized-collection dataset",
+      "sources_sha256": {
+        "tools/build_environment_generalization_dataset.py": "b8a2d693e4142c17aa56ca3561035480cbff8ec75ce3c667a08bd3d83d9a98dd",
+        "tools/build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+        "tools/build_randomized_temporal_dataset.py": "aac304e8d64f5b3c1d0e903aa8ae176fb2ca7c0d2bcc81802edcb902e1370a25",
+        "tools/generate_environment_generalization_v1.py": "05342c634d95a1ac16a9693c9228fdb34cef07e2cbc77b5a4dd2d252e0fb1e54",
+        "tools/run_experiments.py": "a1f6e1bc617e1eb2aabcffa829c75adf20b9ccc18c8eedd73fc6fbebcf0333cc"
+      }
+    },
+    "qualification_repair_v1": {
+      "role": "current behavior-equivalent sources after restoring the V2 temporal-model source closure",
+      "sources_sha256": {
+        "tools/build_environment_generalization_dataset.py": "a94f6916d2a94de4a199c7ba968556e668eda5361b37f4bbfe292fd1a10cebda",
+        "tools/build_randomized_intervention_dataset.py": "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea",
+        "tools/build_randomized_temporal_dataset.py": "7ca3bfc117d318ccb311fa66869ebcd247b87e3e473f4cc6e631d3077fd798d3",
+        "tools/generate_environment_generalization_v1.py": "05342c634d95a1ac16a9693c9228fdb34cef07e2cbc77b5a4dd2d252e0fb1e54",
+        "tools/run_experiments.py": "9199d0a1f01238242925c607962c0a65d245ffff48a89716f75c2990e32bc494"
+      }
+    }
+  },
+  "semantic_equivalence": {
+    "scope": "environment_generalization_t2_temporal_action_clean_v1 rows only",
+    "unchanged_fifo_ahead_rows": "delegate unchanged to the restored historical temporal builder",
+    "missing_fifo_ahead_rows": "compute unrelated temporal features with a temporary zero FIFO-ahead value, then restore the missing raw value and clear both FIFO-ahead clearance margins",
+    "runner_change": "adds the pairedTemporalT2FrameProfile executable argument mapping without changing the frozen randomized-collection matrix or dataset joins",
+    "regression_tests": [
+      "tools.tests.test_build_environment_generalization_dataset.EnvironmentGeneralizationDatasetTest.test_generalization_wrapper_preserves_missing_ahead_state",
+      "tools.tests.test_build_environment_generalization_dataset.EnvironmentGeneralizationDatasetTest.test_generalization_wrapper_delegates_complete_ahead_state",
+      "tools.tests.test_build_randomized_temporal_dataset.TemporalDatasetBuilderTest.test_historical_builder_rejects_missing_ahead_state"
+    ]
+  },
+  "usage": {
+    "archived_artifacts_must_remain_bound_to_original_profile": true,
+    "future_rebuilds_must_bind_current_profile": true,
+    "mixed_source_profiles_are_rejected": true,
+    "does_not_recharacterize_archived_artifacts": true
+  }
+}

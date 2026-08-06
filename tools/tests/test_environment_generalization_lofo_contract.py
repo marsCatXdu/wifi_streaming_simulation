@@ -16,6 +16,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 import build_environment_generalization_dataset as dataset  # noqa: E402
+import environment_generalization_lofo as lofo  # noqa: E402
 
 
 CONTRACT_PATH = (
@@ -42,16 +43,30 @@ class EnvironmentGeneralizationLofoContractTest(unittest.TestCase):
         self.assertEqual(_sha256(CONTRACT_PATH), CONTRACT_SHA256)
         sources = [
             self.contract["parent_contract"],
-            {
-                "path": self.contract["dataset_contract"]["builder_path"],
-                "sha256": self.contract["dataset_contract"]["builder_sha256"],
-            },
             self.contract["predictor"]["prior_distribution_contract"],
             self.contract["predictor"]["prior_runtime_contract"],
         ]
         for source in sources:
             with self.subTest(path=source["path"]):
                 self.assertEqual(_sha256(ROOT / source["path"]), source["sha256"])
+
+        amendment_path = ROOT / lofo.BUILDER_AMENDMENT_PATH
+        self.assertEqual(_sha256(amendment_path), lofo.BUILDER_AMENDMENT_SHA256)
+        amendment = lofo._load_builder_amendment(self.contract)
+        archived = amendment["source_profiles"][lofo.ARCHIVED_BUILDER_PROFILE]
+        current = amendment["source_profiles"][lofo.CURRENT_BUILDER_PROFILE]
+        builder_path = self.contract["dataset_contract"]["builder_path"]
+        self.assertEqual(
+            archived["sources_sha256"][builder_path],
+            self.contract["dataset_contract"]["builder_sha256"],
+        )
+        self.assertEqual(
+            current["sources_sha256"],
+            {
+                str(path.relative_to(ROOT)): _sha256(path)
+                for path in dataset.BUILDER_SOURCES
+            },
+        )
 
     def test_deadline_grid_covers_every_frozen_frame_cadence(self) -> None:
         distribution = self.contract["completion_distribution"]

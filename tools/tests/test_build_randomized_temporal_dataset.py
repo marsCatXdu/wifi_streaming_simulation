@@ -568,26 +568,14 @@ class TemporalDatasetBuilderTest(unittest.TestCase):
             self.assertEqual(row["x_primary_lag3_mpdu_attempts_20ms"], "6")
             self.assertEqual(row["x_primary_lag8_mpdu_attempts_20ms"], "1")
 
-    def test_missing_ahead_state_propagates_to_derived_features(self) -> None:
+    def test_historical_builder_rejects_missing_ahead_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            _, output, _ = self._build(root, missing_ahead_frame=9)
-            row = next(
-                item
-                for item in _read_csv(output / OUTPUT_CSV)
-                if item["frame_id"] == "9"
-            )
-            self.assertEqual(row["x_primary_packets_ahead_of_frame"], "")
-            self.assertEqual(row["x_primary_mac_service_bytes_ahead_of_frame"], "")
-            self.assertEqual(
-                row["x_physics_ahead_clearance_margin_1ms_us"], ""
-            )
-            self.assertEqual(
-                row["x_physics_ahead_clearance_margin_5ms_us"], ""
-            )
-            self.assertNotEqual(
-                row["x_physics_queue_clearance_margin_5ms_us"], ""
-            )
+            with self.assertRaisesRegex(
+                TemporalDatasetError,
+                "invalid number x_primary_mac_service_bytes_ahead_of_frame",
+            ):
+                self._build(root, missing_ahead_frame=9)
 
     def test_timing_cadence_rolling_and_reset_fail_closed(self) -> None:
         cases = (

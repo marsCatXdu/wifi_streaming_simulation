@@ -107,6 +107,7 @@ CLI_KEYS = {
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
     "paired_value_t2_admission_profile": "pairedValueT2AdmissionProfile",
+    "paired_temporal_t2_frame_profile": "pairedTemporalT2FrameProfile",
     "randomized_assignment_salt": "randomizedAssignmentSalt",
     "randomized_t2_probability": "randomizedT2Probability",
     "randomized_t4_probability": "randomizedT4Probability",

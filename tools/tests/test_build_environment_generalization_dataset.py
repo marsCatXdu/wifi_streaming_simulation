@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -24,6 +25,7 @@ from build_environment_generalization_dataset import (  # noqa: E402
     NON_FEATURE_COLUMNS,
     EnvironmentDatasetError,
     _generalization_row,
+    _generalization_temporal_row,
     _run_paths,
     _validated_manifest,
     static_environment_features,
@@ -135,6 +137,57 @@ class EnvironmentGeneralizationDatasetTest(unittest.TestCase):
         self.assertTrue(set(ENVIRONMENT_FEATURE_COLUMNS) <= set(FEATURE_COLUMNS))
         self.assertFalse({"scenario_id", "family_id"} & set(FEATURE_COLUMNS))
         self.assertTrue({"scenario_id", "family_id"} <= set(NON_FEATURE_COLUMNS))
+
+    def test_generalization_wrapper_preserves_missing_ahead_state(self) -> None:
+        ahead = "x_primary_mac_service_bytes_ahead_of_frame"
+        margin_1 = "x_physics_ahead_clearance_margin_1ms_us"
+        margin_5 = "x_physics_ahead_clearance_margin_5ms_us"
+        source_row = {column: "1" for column in temporal.DATASET_COLUMNS}
+        source_row[ahead] = ""
+
+        def canonical_row(
+            patched: dict[str, str], _current: object, _lagged: object, _source: str
+        ) -> dict[str, str]:
+            self.assertEqual(patched[ahead], "0")
+            result = dict(patched)
+            result[margin_1] = "123"
+            result[margin_5] = "456"
+            return result
+
+        with mock.patch.object(temporal, "_temporal_row", side_effect=canonical_row):
+            row = _generalization_temporal_row(
+                source_row,
+                mock.sentinel.current,
+                {1: mock.sentinel.lagged},
+                "test source",
+            )
+        self.assertEqual(row[ahead], "")
+        self.assertEqual(row[margin_1], "")
+        self.assertEqual(row[margin_5], "")
+        self.assertEqual(tuple(row), temporal.DATASET_COLUMNS)
+        for column in temporal.DATASET_COLUMNS:
+            if column not in {ahead, margin_1, margin_5}:
+                self.assertEqual(row[column], source_row[column])
+
+    def test_generalization_wrapper_delegates_complete_ahead_state(self) -> None:
+        source_row = {column: "1" for column in temporal.DATASET_COLUMNS}
+        expected = dict(source_row)
+        with mock.patch.object(
+            temporal, "_temporal_row", return_value=expected
+        ) as temporal_row:
+            observed = _generalization_temporal_row(
+                source_row,
+                mock.sentinel.current,
+                {1: mock.sentinel.lagged},
+                "test source",
+            )
+        self.assertIs(observed, expected)
+        temporal_row.assert_called_once_with(
+            source_row,
+            mock.sentinel.current,
+            {1: mock.sentinel.lagged},
+            "test source",
+        )
 
     def test_raw_directory_set_must_match_manifest_exactly(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

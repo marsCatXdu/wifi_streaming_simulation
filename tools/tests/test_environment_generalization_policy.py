@@ -35,6 +35,16 @@ class EnvironmentGeneralizationPolicyTest(unittest.TestCase):
         cls.contract = policy.load_policy_contract()
         cls.lofo_contract = lofo.load_contract()
 
+    def test_current_loader_uses_a_hash_bound_compatibility_contract(self) -> None:
+        compatibility_path = ROOT / policy.LOADER_COMPATIBILITY_PATH
+        self.assertEqual(
+            _sha256(compatibility_path), policy.LOADER_COMPATIBILITY_SHA256
+        )
+        source = self.contract["sources"]["dataset_loader"]
+        policy._validate_dataset_loader_compatibility(
+            source, _sha256(ROOT / source["path"])
+        )
+
     def test_exact_two_cost_knapsack_obeys_lexicographic_objectives(self) -> None:
         primary = np.asarray([5.0, 4.0, 0.0, 9.0, 1.0])
         secondary = np.asarray([0.0, 100.0, 10.0, 0.0, 100.0])
