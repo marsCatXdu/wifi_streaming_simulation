@@ -115,6 +115,19 @@ class DistributionalShadowT2Controller : public Object
     void SetAirtimeMeter(Ptr<SecondaryAirtimeMeter> meter);
 
     /**
+     * Set the exact synthetic-frame contract for this run.
+     *
+     * @param deadlineUs Per-frame deadline in microseconds.
+     * @param pFrameSizeBytes P-frame size in bytes.
+     * @param iFrameSizeBytes I-frame size in bytes.
+     * @param packetPayloadBytes Streaming payload bytes per packet.
+     */
+    void SetFrameContract(uint64_t deadlineUs,
+                          uint32_t pFrameSizeBytes,
+                          uint32_t iFrameSizeBytes,
+                          uint32_t packetPayloadBytes);
+
+    /**
      * Configure the one-row-per-frame decision CSV and final summary JSON.
      *
      * @param runId Stable telemetry run identifier.
@@ -381,6 +394,10 @@ class DistributionalShadowT2Controller : public Object
     Ptr<SecondaryAirtimeMeter> m_meter; ///< Shared measured-airtime meter.
     TemporalT2DistributionPredictor m_predictor; ///< Paired distribution adapter.
     PermanentAirtimeCreditLedger m_ledger; ///< Permanent finite-horizon credit.
+    uint64_t m_frameDeadlineUs{33333}; ///< Exact deadline for this run.
+    uint32_t m_pFrameSizeBytes{12000}; ///< Exact P-frame size for this run.
+    uint32_t m_iFrameSizeBytes{48000}; ///< Exact I-frame size for this run.
+    uint32_t m_packetPayloadBytes{1200}; ///< Exact packet payload for this run.
     std::optional<PredictionSample> m_pendingPrimary; ///< Sole unmatched primary endpoint.
     std::string m_runId; ///< Exact run identity.
     std::ofstream m_decisions; ///< One-row-per-generated-frame evidence.

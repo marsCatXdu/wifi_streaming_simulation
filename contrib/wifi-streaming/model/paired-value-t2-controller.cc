@@ -32,10 +32,6 @@ namespace
 {
 
 constexpr uint64_t NANOS_PER_MICROSECOND = 1000;
-constexpr uint64_t FRAME_DEADLINE_US = 33333;
-constexpr uint32_t P_FRAME_SIZE_BYTES = 12000;
-constexpr uint32_t I_FRAME_SIZE_BYTES = 48000;
-constexpr uint32_t PACKET_PAYLOAD_BYTES = 1200;
 constexpr uint32_t QUEUE_MAX_DELAY_MS = 500;
 constexpr uint32_t POST_SOCKET_MAC_OVERHEAD_BYTES = 36;
 constexpr uint64_t DECISION_STOP_GUARD_US = 534000;
@@ -181,6 +177,12 @@ CurrentTimeNs()
     const int64_t nowNs = Simulator::Now().GetNanoSeconds();
     NS_ABORT_MSG_IF(nowNs < 0, "Paired-value controller observed negative simulation time");
     return static_cast<uint64_t>(nowNs);
+}
+
+uint32_t
+ExpectedPacketCount(uint32_t frameSizeBytes, uint32_t packetPayloadBytes)
+{
+    return 1 + (frameSizeBytes - 1) / packetPayloadBytes;
 }
 
 } // namespace
@@ -476,6 +478,27 @@ PairedValueT2Controller::SetAirtimeMeter(Ptr<SecondaryAirtimeMeter> meter)
 }
 
 void
+PairedValueT2Controller::SetFrameContract(uint64_t deadlineUs,
+                                          uint32_t pFrameSizeBytes,
+                                          uint32_t iFrameSizeBytes,
+                                          uint32_t packetPayloadBytes)
+{
+    NS_ABORT_MSG_IF(m_started || m_pendingPrimary || m_pairedFrames != 0,
+                    "Paired-value frame contract changed after control began");
+    NS_ABORT_MSG_IF(deadlineUs <= T2_OFFSET_US ||
+                        deadlineUs >
+                            std::numeric_limits<uint64_t>::max() /
+                                NANOS_PER_MICROSECOND ||
+                        pFrameSizeBytes == 0 || iFrameSizeBytes < pFrameSizeBytes ||
+                        packetPayloadBytes == 0,
+                    "Paired-value frame contract is invalid");
+    m_frameDeadlineUs = deadlineUs;
+    m_pFrameSizeBytes = pFrameSizeBytes;
+    m_iFrameSizeBytes = iFrameSizeBytes;
+    m_packetPayloadBytes = packetPayloadBytes;
+}
+
+void
 PairedValueT2Controller::SetOutputFiles(const std::string& runId,
                                         const std::string& decisionsFile,
                                         const std::string& summaryFile)
@@ -610,30 +633,32 @@ PairedValueT2Controller::FindPendingPrimaryError(const PredictionSample& sample)
     {
         return "primary endpoint is at or after the frozen measurement stop";
     }
-    if (sample.deadlineTimeNs !=
-        sample.generationTimeNs + FRAME_DEADLINE_US * NANOS_PER_MICROSECOND)
+    const uint64_t deadlineDurationNs =
+        m_frameDeadlineUs * NANOS_PER_MICROSECOND;
+    if (sample.generationTimeNs >
+            std::numeric_limits<uint64_t>::max() - deadlineDurationNs ||
+        sample.deadlineTimeNs != sample.generationTimeNs + deadlineDurationNs)
     {
-        return "primary endpoint deadline differs from the frozen deadline";
+        return "primary endpoint deadline differs from the configured frame contract";
     }
+    uint32_t expectedFrameSizeBytes = 0;
     if (sample.frameType == FrameType::P_FRAME)
     {
-        if (sample.frameSizeBytes != P_FRAME_SIZE_BYTES ||
-            sample.framePacketCount != P_FRAME_SIZE_BYTES / PACKET_PAYLOAD_BYTES)
-        {
-            return "primary P-frame metadata differs from the frozen synthetic source";
-        }
+        expectedFrameSizeBytes = m_pFrameSizeBytes;
     }
     else if (sample.frameType == FrameType::I_FRAME)
     {
-        if (sample.frameSizeBytes != I_FRAME_SIZE_BYTES ||
-            sample.framePacketCount != I_FRAME_SIZE_BYTES / PACKET_PAYLOAD_BYTES)
-        {
-            return "primary I-frame metadata differs from the frozen synthetic source";
-        }
+        expectedFrameSizeBytes = m_iFrameSizeBytes;
     }
     else
     {
         return "primary endpoint frame type is unsupported";
+    }
+    if (sample.frameSizeBytes != expectedFrameSizeBytes ||
+        sample.framePacketCount !=
+            ExpectedPacketCount(expectedFrameSizeBytes, m_packetPayloadBytes))
+    {
+        return "primary frame metadata differs from the configured frame contract";
     }
     return std::nullopt;
 }

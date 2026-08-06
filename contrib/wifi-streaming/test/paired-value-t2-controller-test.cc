@@ -2464,6 +2464,67 @@ class PairedValueT2ValidationTestCase : public TestCase
                 "Invalid descriptor " << label << " was accepted");
         }
 
+        const std::string generalizedRunId = "paired-value-generalized-frame-validation";
+        auto generalizedSetup =
+            ConfigureBareController("generalized-frame-validation", generalizedRunId);
+        generalizedSetup.controller->SetFrameContract(41667, 13700, 54786, 1200);
+        auto generalizedP =
+            MakeSimplePrimary(generalizedRunId,
+                              8,
+                              PairedValueT2Controller::DECISION_START_NS);
+        generalizedP.deadlineTimeNs =
+            generalizedP.generationTimeNs + 41667 * NANOS_PER_MICROSECOND;
+        generalizedP.deadlineSlackUs = 41667 - generalizedP.sampleOffsetUs;
+        generalizedP.frameSizeBytes = 13700;
+        generalizedP.framePacketCount = 12;
+        generalizedP.packetsSubmitted = 12;
+        generalizedP.packetsRemainingToSubmit = 0;
+        auto generalizedI = generalizedP;
+        generalizedI.frameType = FrameType::I_FRAME;
+        generalizedI.frameSizeBytes = 54786;
+        generalizedI.framePacketCount = 46;
+        generalizedI.packetsSubmitted = 46;
+        std::array<bool, 3> generalizedChecks{};
+        Simulator::Schedule(
+            NanoSeconds(generalizedP.sampleTimeNs),
+            [controller = generalizedSetup.controller,
+             generalizedP,
+             generalizedI,
+             &generalizedChecks]() mutable {
+                generalizedChecks[0] =
+                    !PairedValueT2ControllerTestAccess::FindPrimaryError(
+                         controller,
+                         generalizedP)
+                         .has_value();
+                generalizedChecks[1] =
+                    !PairedValueT2ControllerTestAccess::FindPrimaryError(
+                         controller,
+                         generalizedI)
+                         .has_value();
+                ++generalizedI.framePacketCount;
+                generalizedChecks[2] =
+                    PairedValueT2ControllerTestAccess::FindPrimaryError(
+                        controller,
+                        generalizedI)
+                        .has_value();
+            });
+        Simulator::Stop(NanoSeconds(generalizedP.sampleTimeNs + 1));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(generalizedChecks[0],
+                              true,
+                              "Configured generalized P frame was rejected");
+        NS_TEST_ASSERT_MSG_EQ(generalizedChecks[1],
+                              true,
+                              "Configured generalized I frame was rejected");
+        NS_TEST_ASSERT_MSG_EQ(generalizedChecks[2],
+                              true,
+                              "Generalized frame with wrong packet count was accepted");
+        generalizedSetup.controller->Dispose();
+        generalizedSetup.meter->Dispose();
+        generalizedSetup.sender->Dispose();
+        Simulator::Destroy();
+        RemovePaths(generalizedSetup.paths);
+
         const std::string orderRunId = "paired-value-order-validation";
         auto setup = ConfigureBareController("order-validation", orderRunId);
         auto orderedPrimary = MakeSimplePrimary(orderRunId,

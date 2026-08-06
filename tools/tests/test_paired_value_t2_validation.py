@@ -1487,6 +1487,55 @@ class PairedValueT2ValidationTest(unittest.TestCase):
                 decisions, [event], impossible, estimates, nominals
             )
 
+    def test_replays_short_final_mpdu_profile_exactly(self) -> None:
+        decisions = [
+            {
+                "frame_id": "0",
+                "primary_sample_time_ns": "1100000000",
+                "secondary_launched": "1",
+                "meter_reserved_before_us": "0",
+                "meter_reserved_after_us": "1",
+            }
+        ]
+        event = {
+            "time_ns": "1200000000",
+            "ppdu_duration_us": "1",
+            "tagged_mpdu_bytes": "16",
+            "frame_ids": "0",
+        }
+        settlement = {
+            "frame_id": "0",
+            "settlement_time_ns": "1300000000",
+            "released_airtime_us": "0",
+            "measured_airtime_us": "1",
+            "nominal_airtime_us": "1",
+        }
+        estimates = {0: 1.0}
+        nominals = {0: 1.0}
+        profiles = {0: (10, 6, 2)}
+        _replay_paired_value_t2_meter(
+            decisions,
+            [event],
+            [settlement],
+            estimates,
+            nominals,
+            action_mpdu_profiles=profiles,
+        )
+
+        impossible = copy.deepcopy(event)
+        impossible["tagged_mpdu_bytes"] = "15"
+        with self.assertRaisesRegex(
+            ValidationError, "no feasible|witness violates"
+        ):
+            _replay_paired_value_t2_meter(
+                decisions,
+                [impossible],
+                [settlement],
+                estimates,
+                nominals,
+                action_mpdu_profiles=profiles,
+            )
+
     def test_checks_rounded_solver_integer_witness(self) -> None:
         decisions = [
             {

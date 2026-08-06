@@ -41,6 +41,15 @@ namespace ns3
 class DistributionalShadowT2ControllerTestAccess
 {
   public:
+    /** Return production endpoint validation. */
+    static std::optional<std::string> FindEndpointError(
+        Ptr<DistributionalShadowT2Controller> controller,
+        const PredictionSample& sample,
+        bool primary)
+    {
+        return controller->FindEndpointError(sample, primary);
+    }
+
     /** @return Frozen ledger refill fraction. */
     static double GetRefillFraction(Ptr<DistributionalShadowT2Controller> controller)
     {
@@ -573,7 +582,48 @@ class DistributionalShadowT2MetadataTestCase : public TestCase
             12000.0,
             1e-12,
             "Initial credit changed");
+        const auto paths = MakePaths();
+        const std::string runId = "distributional-generalized-frame-validation";
+        controller->SetOutputFiles(runId, paths.decisions, paths.controllerSummary);
+        controller->SetFrameContract(41667, 13700, 54786, 1200);
+        auto generalizedI = MakePrimary(runId, 0);
+        generalizedI.deadlineTimeNs =
+            generalizedI.generationTimeNs + 41667 * NANOS_PER_MICROSECOND;
+        generalizedI.deadlineSlackUs = 41667 - generalizedI.sampleOffsetUs;
+        generalizedI.frameSizeBytes = 54786;
+        generalizedI.framePacketCount = 46;
+        generalizedI.packetsSubmitted = 46;
+        generalizedI.applicationSocketPacketBytesSubmitted =
+            generalizedI.frameSizeBytes + 50ULL * generalizedI.framePacketCount;
+        std::array<bool, 2> generalizedChecks{};
+        Simulator::Schedule(
+            NanoSeconds(generalizedI.sampleTimeNs),
+            [controller, generalizedI, &generalizedChecks]() mutable {
+                generalizedChecks[0] =
+                    !DistributionalShadowT2ControllerTestAccess::FindEndpointError(
+                         controller,
+                         generalizedI,
+                         true)
+                         .has_value();
+                --generalizedI.framePacketCount;
+                generalizedChecks[1] =
+                    DistributionalShadowT2ControllerTestAccess::FindEndpointError(
+                        controller,
+                        generalizedI,
+                        true)
+                        .has_value();
+            });
+        Simulator::Stop(NanoSeconds(generalizedI.sampleTimeNs + 1));
+        Simulator::Run();
+        NS_TEST_ASSERT_MSG_EQ(generalizedChecks[0],
+                              true,
+                              "Configured generalized I frame was rejected");
+        NS_TEST_ASSERT_MSG_EQ(generalizedChecks[1],
+                              true,
+                              "Generalized frame with wrong packet count was accepted");
         controller->Dispose();
+        Simulator::Destroy();
+        RemovePaths(paths);
     }
 };
 

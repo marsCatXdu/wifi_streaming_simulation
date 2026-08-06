@@ -24,11 +24,15 @@ from analyze_primary_tail_t4_campaign import (  # noqa: E402
     DECLARED_TOPOLOGY_WIFI,
 )
 from validate_outputs import (  # noqa: E402
+    DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US,
     DISTRIBUTIONAL_SHADOW_T2_CONFIG,
     DISTRIBUTIONAL_SHADOW_T2_POLICY,
+    PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+    PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
     PAIRED_VALUE_T2_METER_CONFIG,
     PAIRED_VALUE_T2_PREDICTION_CONFIG,
     ValidationError,
+    _distributional_shadow_t2_descriptor_cost_matches_profile,
     _distributional_shadow_t2_distribution,
     _distributional_shadow_t2_expected_unsettled,
     _distributional_shadow_t2_model_replay_context,
@@ -97,6 +101,53 @@ class DistributionalShadowT2ValidationTest(unittest.TestCase):
         bad_deadline["stream"]["deadline_us"] = 33333
         with self.assertRaisesRegex(ValidationError, "outside the frozen domain"):
             _validate_distributional_shadow_t2_config(bad_deadline)
+
+    def test_generalization_uses_dynamic_descriptor_cost(self) -> None:
+        canonical_nominal = (
+            DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US / 1.25
+        )
+        self.assertTrue(
+            _distributional_shadow_t2_descriptor_cost_matches_profile(
+                canonical_nominal,
+                DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US,
+                canonical_nominal,
+                PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+            )
+        )
+        dynamic_nominal = 1000.0
+        dynamic_reserved = 1.25 * dynamic_nominal
+        self.assertFalse(
+            _distributional_shadow_t2_descriptor_cost_matches_profile(
+                dynamic_nominal,
+                dynamic_reserved,
+                dynamic_nominal,
+                PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+            )
+        )
+        self.assertTrue(
+            _distributional_shadow_t2_descriptor_cost_matches_profile(
+                dynamic_nominal,
+                dynamic_reserved,
+                dynamic_nominal,
+                PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
+            )
+        )
+        self.assertFalse(
+            _distributional_shadow_t2_descriptor_cost_matches_profile(
+                dynamic_nominal,
+                dynamic_reserved + 1.0,
+                dynamic_nominal,
+                PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
+            )
+        )
+        self.assertFalse(
+            _distributional_shadow_t2_descriptor_cost_matches_profile(
+                dynamic_nominal,
+                dynamic_reserved,
+                dynamic_nominal,
+                "unknown_profile",
+            )
+        )
 
     def test_portable_model_has_expected_golden_results(self) -> None:
         context = _distributional_shadow_t2_model_replay_context()

@@ -2933,6 +2933,13 @@ main(int argc, char* argv[])
             *resolvedPairedValueT2AdmissionProfile);
         pairedValueController->SetSender(PeekPointer(sender));
         pairedValueController->SetAirtimeMeter(secondaryAirtimeMeter);
+        pairedValueController->SetFrameContract(
+            deadlineUs,
+            frameSize,
+            std::max<uint32_t>(
+                1,
+                static_cast<uint32_t>(std::llround(frameSize * keyframeSizeMultiplier))),
+            payloadSize);
         pairedValueController->SetOutputFiles(
             runId,
             (std::filesystem::path(outputDir) / "paired_value_t2_decisions.csv").string(),
@@ -2947,6 +2954,13 @@ main(int argc, char* argv[])
             CreateObject<DistributionalShadowT2Controller>();
         distributionalShadowController->SetSender(PeekPointer(sender));
         distributionalShadowController->SetAirtimeMeter(secondaryAirtimeMeter);
+        distributionalShadowController->SetFrameContract(
+            deadlineUs,
+            frameSize,
+            std::max<uint32_t>(
+                1,
+                static_cast<uint32_t>(std::llround(frameSize * keyframeSizeMultiplier))),
+            payloadSize);
         distributionalShadowController->SetOutputFiles(
             runId,
             (std::filesystem::path(outputDir) /

@@ -159,7 +159,7 @@ ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES = 50
 ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES = 36
 ADAPTIVE_ESTIMATOR_ADDITIONAL_BYTES_PER_PACKET = 38
 # WifiMpdu::GetSize() adds the frozen QoS data MAC header to each MAC-service
-# packet.  Paired T2 launches only equal-size full-copy P-frame packets.
+# packet.  Generalized P frames may have one shorter final packet.
 PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES = 30
 LINK_COLUMNS = {
     "timestamp_us", "link_id", "application_bytes_sent",
@@ -866,9 +866,9 @@ DISTRIBUTIONAL_SHADOW_T2_SOURCE_FILES = {
     "contrib/wifi-streaming/model/temporal-t2-distribution-predictor.h":
         "be0ee6462fd9f44ccf56cabfedbbc7d457839aeb37f2ecfc2189bf05718c1552",
     "contrib/wifi-streaming/model/distributional-shadow-t2-controller.cc":
-        "07d9cf2d8195482014fc9e38d19326e14c6edef3bf549cff844c49f41cb97086",
+        "67023428d7941d03fa4370f375bb7c3f99dfb911181a7db6b9c4c358b8c14a72",
     "contrib/wifi-streaming/model/distributional-shadow-t2-controller.h":
-        "bbc9a30df5f7c910394c81aaeef9f7a26f1ae11ab3ecaca6434700e56f356acb",
+        "c20dd68094f22519c8d03b49d4b8506baab761b8d2ce462bd74f8e621bf38b8b",
     "contrib/wifi-streaming/model/permanent-airtime-credit-ledger.cc":
         "fbbd9f5d13f5b99ab03ccfae9a685b3f70e2aea59e71ffdd36fd6a33c9a525e9",
     "contrib/wifi-streaming/model/permanent-airtime-credit-ledger.h":
@@ -1309,6 +1309,34 @@ def _canonical_full_copy_descriptor(
         frame_size, packet_count, 1.0
     )
     return packet_count, packet_indices, expected_service_bytes, nominal_airtime_us
+
+
+def _canonical_full_copy_mpdu_profile(
+    frame: dict[str, str],
+) -> tuple[int, int, int]:
+    """Return full-MPDU bytes, final-MPDU bytes, and exact packet count."""
+    frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+    packet_count = _integer(frame, "packet_count", "frames.csv")
+    payload_bytes = PRIMARY_T0_ESTIMATOR_PAYLOAD_BYTES
+    _require(
+        packet_count == 1 + (frame_size - 1) // payload_bytes,
+        "frames.csv: canonical full-copy packet count differs",
+    )
+    final_payload_bytes = frame_size - payload_bytes * (packet_count - 1)
+    _require(
+        0 < final_payload_bytes <= payload_bytes,
+        "frames.csv: canonical full-copy final payload is invalid",
+    )
+    per_packet_overhead = (
+        ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES
+        + ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
+        + PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES
+    )
+    return (
+        payload_bytes + per_packet_overhead,
+        final_payload_bytes + per_packet_overhead,
+        packet_count,
+    )
 
 
 def _adaptive_whole_copy_costs(
@@ -4184,6 +4212,7 @@ def _validate_paired_value_t2_decisions(
     action_estimates: dict[int, float] = {}
     action_nominals: dict[int, float] = {}
     action_byte_quanta: dict[int, int] = {}
+    action_mpdu_profiles: dict[int, tuple[int, int, int]] = {}
     learned_evaluated = 0.0
     learned_launched = 0.0
     nominal_launched = 0.0
@@ -4290,6 +4319,7 @@ def _validate_paired_value_t2_decisions(
         nominal: float | None = None
         reserved: float | None = None
         mpdu_bytes: int | None = None
+        mpdu_profile: tuple[int, int, int] | None = None
         descriptor_fields = (
             "descriptor_frame_packet_count", "descriptor_packet_count",
             "descriptor_packet_indices", "descriptor_expected_mac_service_bytes",
@@ -4307,14 +4337,9 @@ def _validate_paired_value_t2_decisions(
                      str(expected_service_bytes) and
                      row["descriptor_deadline_time_ns"] == str(deadline_ns),
                      f"{file_name}: canonical descriptor evidence differs")
-            _require(
-                expected_service_bytes % packet_count == 0,
-                f"{file_name}: full-copy packets do not have equal service bytes",
-            )
-            mpdu_bytes = (
-                expected_service_bytes // packet_count
-                + PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES
-            )
+            mpdu_profile = _canonical_full_copy_mpdu_profile(frame)
+            if mpdu_profile[0] == mpdu_profile[1]:
+                mpdu_bytes = mpdu_profile[0]
             nominal = _number(row, "canonical_nominal_airtime_us", file_name)
             reserved = _number(row, "canonical_reserved_airtime_us", file_name)
             _require(_paired_close(nominal, expected_nominal) and
@@ -4548,13 +4573,15 @@ def _validate_paired_value_t2_decisions(
             launch_attempted_count += 1
         if launched:
             assert (nominal is not None and reserved is not None and
-                    predicted_cost is not None and mpdu_bytes is not None)
+                    predicted_cost is not None and mpdu_profile is not None)
             _require(_paired_close(reserved_after, reserved_before + reserved),
                      f"{file_name}: action reservation does not reconcile")
             action_frames.add(frame_id)
             action_estimates[frame_id] = reserved
             action_nominals[frame_id] = nominal
-            action_byte_quanta[frame_id] = mpdu_bytes
+            action_mpdu_profiles[frame_id] = mpdu_profile
+            if mpdu_bytes is not None:
+                action_byte_quanta[frame_id] = mpdu_bytes
             learned_launched += predicted_cost
             nominal_launched += nominal
             reserved_launched += reserved
@@ -4618,6 +4645,7 @@ def _validate_paired_value_t2_decisions(
         "action_estimates": action_estimates,
         "action_nominals": action_nominals,
         "action_byte_quanta": action_byte_quanta,
+        "action_mpdu_profiles": action_mpdu_profiles,
         "learned_evaluated": learned_evaluated,
         "learned_launched": learned_launched,
         "nominal_launched": nominal_launched,
@@ -4696,14 +4724,46 @@ def _distributional_shadow_t2_expected_unsettled(
     )
 
 
+def _distributional_shadow_t2_descriptor_cost_matches_profile(
+    nominal: float,
+    reserved: float,
+    expected_nominal: float,
+    frame_profile: str,
+) -> bool:
+    """Check dynamic descriptor arithmetic and the canonical-profile anchor."""
+    return (
+        _paired_close(nominal, expected_nominal)
+        and _paired_close(reserved, 1.25 * expected_nominal)
+        and (
+            frame_profile == PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE
+            or (
+                frame_profile == PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE
+                and _paired_close(
+                    reserved,
+                    DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US,
+                )
+            )
+        )
+    )
+
+
 def _validate_distributional_shadow_t2_decisions(
     run_dir: Path,
     run_id: str,
     frames: list[dict[str, str]],
     policy_decisions: list[dict[str, str]],
     duplicated_frame_ids: set[int],
+    frame_profile: str,
 ) -> dict[str, Any]:
     """Independently replay every distributional-shadow decision and ledger debit."""
+    _require(
+        frame_profile
+        in {
+            PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+            PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
+        },
+        "distributional_shadow_t2_decisions.csv: unsupported frame profile",
+    )
     file_name = "distributional_shadow_t2_decisions.csv"
     rows = _csv(
         run_dir / file_name,
@@ -4731,6 +4791,7 @@ def _validate_distributional_shadow_t2_decisions(
     action_estimates: dict[int, float] = {}
     action_nominals: dict[int, float] = {}
     action_byte_quanta: dict[int, int] = {}
+    action_mpdu_profiles: dict[int, tuple[int, int, int]] = {}
     action_times: dict[int, int] = {}
     actions_by_time_bin = [0] * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
     reservation_by_time_bin = [0.0] * DISTRIBUTIONAL_SHADOW_T2_TIME_BIN_COUNT
@@ -5028,6 +5089,7 @@ def _validate_distributional_shadow_t2_decisions(
         nominal: float | None = None
         reserved: float | None = None
         mpdu_bytes: int | None = None
+        mpdu_profile: tuple[int, int, int] | None = None
         if descriptor_available:
             packet_count, indices, service_bytes, expected_nominal = (
                 _canonical_full_copy_descriptor(frame)
@@ -5040,17 +5102,17 @@ def _validate_distributional_shadow_t2_decisions(
                 and row["descriptor_packet_indices"] == indices
                 and row["descriptor_expected_mac_service_bytes"] == str(service_bytes)
                 and row["descriptor_deadline_time_ns"] == str(deadline_ns)
-                and service_bytes % packet_count == 0
-                and _paired_close(nominal, expected_nominal)
-                and _paired_close(reserved, 1.25 * expected_nominal)
-                and _paired_close(
-                    reserved, DISTRIBUTIONAL_SHADOW_T2_CANONICAL_RESERVATION_US
+                and _distributional_shadow_t2_descriptor_cost_matches_profile(
+                    nominal,
+                    reserved,
+                    expected_nominal,
+                    frame_profile,
                 ),
                 f"{file_name}: canonical descriptor or reservation differs",
             )
-            mpdu_bytes = (
-                service_bytes // packet_count + PAIRED_VALUE_T2_WIFI_MAC_HEADER_BYTES
-            )
+            mpdu_profile = _canonical_full_copy_mpdu_profile(frame)
+            if mpdu_profile[0] == mpdu_profile[1]:
+                mpdu_bytes = mpdu_profile[0]
         else:
             _require(
                 all(row[field] == "" for field in descriptor_fields),
@@ -5204,7 +5266,7 @@ def _validate_distributional_shadow_t2_decisions(
             assert (
                 nominal is not None
                 and reserved is not None
-                and mpdu_bytes is not None
+                and mpdu_profile is not None
                 and reward is not None
                 and tail18_gain is not None
                 and time_bin is not None
@@ -5222,7 +5284,9 @@ def _validate_distributional_shadow_t2_decisions(
             action_frames.add(frame_id)
             action_estimates[frame_id] = reserved
             action_nominals[frame_id] = nominal
-            action_byte_quanta[frame_id] = mpdu_bytes
+            action_mpdu_profiles[frame_id] = mpdu_profile
+            if mpdu_bytes is not None:
+                action_byte_quanta[frame_id] = mpdu_bytes
             action_times[frame_id] = sample_ns
             nominal_launched += nominal
             reserved_launched += reserved
@@ -5388,6 +5452,7 @@ def _validate_distributional_shadow_t2_decisions(
         "action_estimates": action_estimates,
         "action_nominals": action_nominals,
         "action_byte_quanta": action_byte_quanta,
+        "action_mpdu_profiles": action_mpdu_profiles,
         "maximum_observed_debt": max(0.0, -ledger_minimum_balance),
         "feature_evaluated": feature_evaluated_count,
         "positive_reward": positive_reward_count,
@@ -5495,6 +5560,7 @@ def _validate_paired_value_t2_meter_checkpoints(
     launches: dict[int, int],
     action_estimates: dict[int, float],
     action_byte_quanta: dict[int, int] | None = None,
+    action_mpdu_profiles: dict[int, tuple[int, int, int]] | None = None,
 ) -> None:
     """Prove one latent PPDU split can satisfy every meter checkpoint.
 
@@ -5541,6 +5607,24 @@ def _validate_paired_value_t2_meter_checkpoints(
             f"paired-value meter replay: cannot load feasibility solver: {error}"
         ) from error
 
+    variable_mpdu_mode = False
+    if action_mpdu_profiles is not None:
+        _require(
+            set(action_mpdu_profiles) == set(launches)
+            and all(
+                full_bytes > 0
+                and final_bytes > 0
+                and packet_count > 0
+                for full_bytes, final_bytes, packet_count
+                in action_mpdu_profiles.values()
+            ),
+            "paired-value meter replay: action MPDU profile differs",
+        )
+        variable_mpdu_mode = any(
+            full_bytes != final_bytes
+            for full_bytes, final_bytes, _ in action_mpdu_profiles.values()
+        )
+
     byte_quantum = 1
     if action_byte_quanta is not None:
         _require(
@@ -5559,6 +5643,10 @@ def _validate_paired_value_t2_meter_checkpoints(
             ),
             "paired-value meter replay: tagged bytes violate the MPDU quantum",
         )
+    _require(
+        not variable_mpdu_mode or action_byte_quanta is None,
+        "paired-value meter replay: variable MPDUs also declare one byte quantum",
+    )
 
     # Events with the same serialized duration, tagged-byte total, frame set,
     # and checkpoint visibility are observationally indistinguishable.  Model
@@ -5574,10 +5662,14 @@ def _validate_paired_value_t2_meter_checkpoints(
             for checkpoint in checkpoints
         )
         key = (
-            event["duration_text"],
-            event["tagged_bytes"],
-            event["frame_ids"],
-            visibility,
+            (event["index"],)
+            if variable_mpdu_mode
+            else (
+                event["duration_text"],
+                event["tagged_bytes"],
+                event["frame_ids"],
+                visibility,
+            )
         )
         group_index = event_group_index.get(key)
         if group_index is None:
@@ -5597,11 +5689,19 @@ def _validate_paired_value_t2_meter_checkpoints(
     # A single-frame group has no latent allocation.  For a shared group,
     # retain only the first n - 1 integer allocation totals and derive the
     # final total as count * tagged_units minus their sum.
-    byte_edges = [
-        (group_index, frame_id)
-        for group_index, group in enumerate(event_groups)
-        for frame_id in group["frame_ids"][:-1]
-    ]
+    if variable_mpdu_mode:
+        byte_edges = [
+            (group_index, frame_id, packet_kind)
+            for group_index, group in enumerate(event_groups)
+            for frame_id in group["frame_ids"]
+            for packet_kind in ("full", "final")
+        ]
+    else:
+        byte_edges = [
+            (group_index, frame_id)
+            for group_index, group in enumerate(event_groups)
+            for frame_id in group["frame_ids"][:-1]
+        ]
     byte_index = {
         edge: index for index, edge in enumerate(byte_edges)
     }
@@ -5628,50 +5728,91 @@ def _validate_paired_value_t2_meter_checkpoints(
 
     variable_lower = np.zeros(variable_count, dtype=np.float64)
     variable_upper = np.full(variable_count, np.inf, dtype=np.float64)
-    for edge_index, (group_index, _) in enumerate(byte_edges):
-        group = event_groups[group_index]
-        count = int(group["count"])
-        frame_count = len(group["frame_ids"])
-        tagged_units = int(group["tagged_bytes"]) // byte_quantum
-        variable_lower[edge_index] = float(count)
-        variable_upper[edge_index] = float(
-            count * (tagged_units - frame_count + 1)
-        )
+    if variable_mpdu_mode:
+        assert action_mpdu_profiles is not None
+        for edge_index, (_, frame_id, packet_kind) in enumerate(byte_edges):
+            _, _, packet_count = action_mpdu_profiles[frame_id]
+            variable_upper[edge_index] = float(
+                packet_count - 1 if packet_kind == "full" else 1
+            )
+        for group_index, group in enumerate(event_groups):
+            _require(
+                group["count"] == 1,
+                "paired-value meter replay: variable-MPDU events were grouped",
+            )
+            byte_total = np.zeros(variable_count, dtype=np.float64)
+            for frame_id in group["frame_ids"]:
+                full_bytes, final_bytes, packet_count = action_mpdu_profiles[
+                    frame_id
+                ]
+                packet_total = np.zeros(variable_count, dtype=np.float64)
+                packet_total[byte_index[(group_index, frame_id, "full")]] = 1.0
+                packet_total[byte_index[(group_index, frame_id, "final")]] = 1.0
+                add_constraint(packet_total, 1.0, float(packet_count))
+                byte_total[
+                    byte_index[(group_index, frame_id, "full")]
+                ] = float(full_bytes)
+                byte_total[
+                    byte_index[(group_index, frame_id, "final")]
+                ] = float(final_bytes)
+            tagged_bytes = float(group["tagged_bytes"])
+            add_constraint(byte_total, tagged_bytes, tagged_bytes)
+    else:
+        for edge_index, (group_index, _) in enumerate(byte_edges):
+            group = event_groups[group_index]
+            count = int(group["count"])
+            frame_count = len(group["frame_ids"])
+            tagged_units = int(group["tagged_bytes"]) // byte_quantum
+            variable_lower[edge_index] = float(count)
+            variable_upper[edge_index] = float(
+                count * (tagged_units - frame_count + 1)
+            )
 
-    for group_index, group in enumerate(event_groups):
-        if len(group["frame_ids"]) == 1:
-            continue
-        coefficients = np.zeros(variable_count, dtype=np.float64)
-        for frame_id in group["frame_ids"][:-1]:
-            coefficients[byte_index[(group_index, frame_id)]] = 1.0
-        # Each retained total leaves one allocation unit per contributing
-        # event for its frame.  This does the same for the derived final frame.
-        add_constraint(
-            coefficients,
-            -np.inf,
-            float(
-                group["count"]
-                * (int(group["tagged_bytes"]) // byte_quantum - 1)
-            ),
-        )
+        for group_index, group in enumerate(event_groups):
+            if len(group["frame_ids"]) == 1:
+                continue
+            coefficients = np.zeros(variable_count, dtype=np.float64)
+            for frame_id in group["frame_ids"][:-1]:
+                coefficients[byte_index[(group_index, frame_id)]] = 1.0
+            # Each retained total leaves one allocation unit per contributing
+            # event for its frame.  This does the same for the derived final frame.
+            add_constraint(
+                coefficients,
+                -np.inf,
+                float(
+                    group["count"]
+                    * (int(group["tagged_bytes"]) // byte_quantum - 1)
+                ),
+            )
 
     def allocation_expression(group_index: int, frame_id: int) -> tuple[Any, float, float]:
         """Return grouped C++ allocation coefficients, constant, and error."""
         group = event_groups[group_index]
         duration = float(group["duration"])
-        tagged_units = float(int(group["tagged_bytes"]) // byte_quantum)
         frames = group["frame_ids"]
         count = int(group["count"])
         coefficients = np.zeros(variable_count, dtype=np.float64)
         constant = 0.0
-        if frame_id != frames[-1]:
-            coefficients[byte_index[(group_index, frame_id)]] = \
-                duration / tagged_units
+        if variable_mpdu_mode:
+            assert action_mpdu_profiles is not None
+            full_bytes, final_bytes, _ = action_mpdu_profiles[frame_id]
+            tagged_bytes = float(group["tagged_bytes"])
+            coefficients[
+                byte_index[(group_index, frame_id, "full")]
+            ] = duration * full_bytes / tagged_bytes
+            coefficients[
+                byte_index[(group_index, frame_id, "final")]
+            ] = duration * final_bytes / tagged_bytes
         else:
-            constant = count * duration
-            for previous_frame in frames[:-1]:
-                coefficients[byte_index[(group_index, previous_frame)]] -= \
+            tagged_units = float(int(group["tagged_bytes"]) // byte_quantum)
+            if frame_id != frames[-1]:
+                coefficients[byte_index[(group_index, frame_id)]] = \
                     duration / tagged_units
+            else:
+                constant = count * duration
+                for previous_frame in frames[:-1]:
+                    coefficients[byte_index[(group_index, previous_frame)]] -= \
+                        duration / tagged_units
         # The serialized duration hides at most half a 12-digit unit.  Cover
         # that scale error plus the ordered binary64 multiply/sum residual.
         uncertainty = (
@@ -5689,14 +5830,27 @@ def _validate_paired_value_t2_meter_checkpoints(
         """Return exact center coefficients from serialized event durations."""
         group = event_groups[group_index]
         frames = group["frame_ids"]
-        tagged_units = int(group["tagged_bytes"]) // byte_quantum
-        rate = Fraction(str(group["duration_text"])) / tagged_units
         coefficients: dict[int, Fraction] = {}
-        if frame_id != frames[-1]:
-            coefficients[byte_index[(group_index, frame_id)]] = rate
+        if variable_mpdu_mode:
+            assert action_mpdu_profiles is not None
+            full_bytes, final_bytes, _ = action_mpdu_profiles[frame_id]
+            rate = Fraction(str(group["duration_text"])) / int(
+                group["tagged_bytes"]
+            )
+            coefficients[
+                byte_index[(group_index, frame_id, "full")]
+            ] = rate * full_bytes
+            coefficients[
+                byte_index[(group_index, frame_id, "final")]
+            ] = rate * final_bytes
         else:
-            for previous_frame in frames[:-1]:
-                coefficients[byte_index[(group_index, previous_frame)]] = -rate
+            tagged_units = int(group["tagged_bytes"]) // byte_quantum
+            rate = Fraction(str(group["duration_text"])) / tagged_units
+            if frame_id != frames[-1]:
+                coefficients[byte_index[(group_index, frame_id)]] = rate
+            else:
+                for previous_frame in frames[:-1]:
+                    coefficients[byte_index[(group_index, previous_frame)]] = -rate
         return coefficients
 
     for frame_id, settlement in settlement_records.items():
@@ -5735,7 +5889,11 @@ def _validate_paired_value_t2_meter_checkpoints(
             for variable_index, value in rational_coefficients.items()
             if value
         }
-        if rational_coefficients:
+        # Variable-tail profiles combine event rates with unrelated byte
+        # denominators, so their exact common lattice can exceed binary64.
+        # Keep those rows in their original scale and independently replay the
+        # rounded integer witness against the 1e-9 us envelope below.
+        if rational_coefficients and not variable_mpdu_mode:
             integer_solver_rows[row_index] = rational_coefficients
 
     pairs_by_checkpoint: dict[int, list[int]] = {}
@@ -6055,6 +6213,7 @@ def _replay_paired_value_t2_meter(
     action_estimates: dict[int, float],
     action_nominals: dict[int, float],
     action_byte_quanta: dict[int, int] | None = None,
+    action_mpdu_profiles: dict[int, tuple[int, int, int]] | None = None,
 ) -> None:
     """Reconstruct paired action causality and outstanding meter reservations."""
     decision_file = "paired_value_t2_decisions.csv"
@@ -6126,6 +6285,7 @@ def _replay_paired_value_t2_meter(
         launches,
         action_estimates,
         action_byte_quanta,
+        action_mpdu_profiles,
     )
     for frame_id, record in settlement_records.items():
         measured_text = str(record["measured_text"])
@@ -6470,7 +6630,8 @@ def _validate_paired_value_t2_summary(
         settlements,
         evidence["action_estimates"],
         evidence["action_nominals"],
-        evidence["action_byte_quanta"],
+        evidence["action_byte_quanta"] or None,
+        evidence["action_mpdu_profiles"],
     )
     _replay_paired_value_t2_guard(evidence["rows"], events, profile)
 
@@ -6854,7 +7015,8 @@ def _validate_distributional_shadow_t2_summary(
         settlements,
         evidence["action_estimates"],
         evidence["action_nominals"],
-        evidence["action_byte_quanta"],
+        evidence["action_byte_quanta"] or None,
+        evidence["action_mpdu_profiles"],
     )
 
 
@@ -8653,6 +8815,10 @@ def validate_run(
                 frames,
                 decisions,
                 duplicated_frame_ids,
+                config.get(
+                    "pairedTemporalT2FrameProfile",
+                    PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+                ),
             )
         )
         action_estimates = distributional_shadow_evidence["action_estimates"]

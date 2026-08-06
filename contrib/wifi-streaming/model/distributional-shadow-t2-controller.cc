@@ -32,10 +32,6 @@ namespace
 {
 
 constexpr uint64_t NANOS_PER_MICROSECOND = 1000;
-constexpr uint64_t FRAME_DEADLINE_US = 33333;
-constexpr uint32_t P_FRAME_SIZE_BYTES = 12000;
-constexpr uint32_t I_FRAME_SIZE_BYTES = 48000;
-constexpr uint32_t PACKET_PAYLOAD_BYTES = 1200;
 constexpr uint32_t QUEUE_MAX_DELAY_MS = 500;
 constexpr uint32_t POST_SOCKET_MAC_OVERHEAD_BYTES = 36;
 constexpr uint32_t REQUIRED_SUPPORT_MASK_VERSION = 2;
@@ -191,6 +187,39 @@ NearlyEqual(double left, double right)
                DistributionalShadowT2Controller::ACCOUNTING_TOLERANCE_US;
 }
 
+bool
+AccumulatedSumsNearlyEqual(double left,
+                           double right,
+                           std::size_t termCount,
+                           std::size_t extraAdditions)
+{
+    if (!std::isfinite(left) || !std::isfinite(right))
+    {
+        return false;
+    }
+    const double epsilon = std::numeric_limits<double>::epsilon();
+    const double additionCount =
+        2.0 * static_cast<double>(termCount) +
+        static_cast<double>(extraAdditions);
+    const double relativeError = additionCount * epsilon;
+    if (!(relativeError < 1.0))
+    {
+        return false;
+    }
+    const double scale = std::max(std::abs(left), std::abs(right));
+    const double forwardErrorBound =
+        relativeError / (1.0 - relativeError) * scale;
+    return std::abs(left - right) <=
+           DistributionalShadowT2Controller::ACCOUNTING_TOLERANCE_US +
+               forwardErrorBound;
+}
+
+uint32_t
+ExpectedPacketCount(uint32_t frameSizeBytes, uint32_t packetPayloadBytes)
+{
+    return 1 + (frameSizeBytes - 1) / packetPayloadBytes;
+}
+
 uint64_t
 CurrentTimeNs()
 {
@@ -307,6 +336,27 @@ DistributionalShadowT2Controller::SetAirtimeMeter(Ptr<SecondaryAirtimeMeter> met
         m_meter->SetSettlementCallback(
             MakeCallback(&DistributionalShadowT2Controller::NotifySettlement, this));
     }
+}
+
+void
+DistributionalShadowT2Controller::SetFrameContract(uint64_t deadlineUs,
+                                                    uint32_t pFrameSizeBytes,
+                                                    uint32_t iFrameSizeBytes,
+                                                    uint32_t packetPayloadBytes)
+{
+    NS_ABORT_MSG_IF(m_started || m_pendingPrimary || m_pairedFrames != 0,
+                    "Distributional-shadow frame contract changed after control began");
+    NS_ABORT_MSG_IF(deadlineUs <= T2_OFFSET_US ||
+                        deadlineUs >
+                            std::numeric_limits<uint64_t>::max() /
+                                NANOS_PER_MICROSECOND ||
+                        pFrameSizeBytes == 0 || iFrameSizeBytes < pFrameSizeBytes ||
+                        packetPayloadBytes == 0,
+                    "Distributional-shadow frame contract is invalid");
+    m_frameDeadlineUs = deadlineUs;
+    m_pFrameSizeBytes = pFrameSizeBytes;
+    m_iFrameSizeBytes = iFrameSizeBytes;
+    m_packetPayloadBytes = packetPayloadBytes;
 }
 
 void
@@ -430,30 +480,32 @@ DistributionalShadowT2Controller::FindEndpointError(const PredictionSample& samp
     {
         return "endpoint is outside the frozen measurement window";
     }
-    if (sample.deadlineTimeNs !=
-        sample.generationTimeNs + FRAME_DEADLINE_US * NANOS_PER_MICROSECOND)
+    const uint64_t deadlineDurationNs =
+        m_frameDeadlineUs * NANOS_PER_MICROSECOND;
+    if (sample.generationTimeNs >
+            std::numeric_limits<uint64_t>::max() - deadlineDurationNs ||
+        sample.deadlineTimeNs != sample.generationTimeNs + deadlineDurationNs)
     {
-        return "endpoint deadline differs from the frozen deadline";
+        return "endpoint deadline differs from the configured frame contract";
     }
+    uint32_t expectedFrameSizeBytes = 0;
     if (sample.frameType == FrameType::P_FRAME)
     {
-        if (sample.frameSizeBytes != P_FRAME_SIZE_BYTES ||
-            sample.framePacketCount != P_FRAME_SIZE_BYTES / PACKET_PAYLOAD_BYTES)
-        {
-            return "P-frame metadata differs from the frozen source";
-        }
+        expectedFrameSizeBytes = m_pFrameSizeBytes;
     }
     else if (sample.frameType == FrameType::I_FRAME)
     {
-        if (sample.frameSizeBytes != I_FRAME_SIZE_BYTES ||
-            sample.framePacketCount != I_FRAME_SIZE_BYTES / PACKET_PAYLOAD_BYTES)
-        {
-            return "I-frame metadata differs from the frozen source";
-        }
+        expectedFrameSizeBytes = m_iFrameSizeBytes;
     }
     else
     {
         return "endpoint frame type is unsupported";
+    }
+    if (sample.frameSizeBytes != expectedFrameSizeBytes ||
+        sample.framePacketCount !=
+            ExpectedPacketCount(expectedFrameSizeBytes, m_packetPayloadBytes))
+    {
+        return "endpoint frame metadata differs from the configured frame contract";
     }
     return std::nullopt;
 }
@@ -688,11 +740,7 @@ DistributionalShadowT2Controller::ProcessPair(const PredictionSample& primary,
                         !(evidence.canonicalReservedAirtimeUs > 0) ||
                         !NearlyEqual(evidence.canonicalReservedAirtimeUs,
                                      COST_SAFETY_FACTOR *
-                                         evidence.canonicalNominalAirtimeUs) ||
-                        !NearlyEqual(
-                            evidence.canonicalReservedAirtimeUs,
-                            TemporalT2DistributionModelEvaluator::
-                                GetCanonicalPFrameReservationUs()),
+                                         evidence.canonicalNominalAirtimeUs),
                     "Distributional-shadow canonical secondary cost is invalid");
 
                 evidence.earlierUnsettledLaunches = CountUnsettledLaunches();
@@ -1225,29 +1273,86 @@ DistributionalShadowT2Controller::WriteSummary(
         std::accumulate(m_reservationUsByRegime.begin(),
                         m_reservationUsByRegime.end(),
                         0.0);
+    NS_ABORT_MSG_IF(statusSum != m_pairedFrames,
+                    "Distributional-shadow status count differs from paired frames: status="
+                        << statusSum << " paired=" << m_pairedFrames);
+    NS_ABORT_MSG_IF(featureStatusSum != m_featureEvaluated,
+                    "Distributional-shadow feature status count differs: status="
+                        << featureStatusSum << " evaluated=" << m_featureEvaluated);
+    NS_ABORT_MSG_IF(positiveStatusSum != m_positiveRewardCount,
+                    "Distributional-shadow positive status count differs: status="
+                        << positiveStatusSum << " positive=" << m_positiveRewardCount);
+    NS_ABORT_MSG_IF(opportunityPassStatusSum != m_opportunityPassed,
+                    "Distributional-shadow opportunity-pass status count differs: status="
+                        << opportunityPassStatusSum << " passed=" << m_opportunityPassed);
+    NS_ABORT_MSG_IF(opportunityPassStatusSum != m_horizonAdmissionConsidered,
+                    "Distributional-shadow horizon-considered status count differs: status="
+                        << opportunityPassStatusSum
+                        << " considered=" << m_horizonAdmissionConsidered);
+    NS_ABORT_MSG_IF(admittedStatusSum != m_horizonAdmitted,
+                    "Distributional-shadow admitted status count differs: status="
+                        << admittedStatusSum << " admitted=" << m_horizonAdmitted);
+    NS_ABORT_MSG_IF(admittedStatusSum != m_launchAttempted,
+                    "Distributional-shadow launch-attempt status count differs: status="
+                        << admittedStatusSum << " attempted=" << m_launchAttempted);
     NS_ABORT_MSG_IF(
-        statusSum != m_pairedFrames || featureStatusSum != m_featureEvaluated ||
-            positiveStatusSum != m_positiveRewardCount ||
-            opportunityPassStatusSum != m_opportunityPassed ||
-            opportunityPassStatusSum != m_horizonAdmissionConsidered ||
-            admittedStatusSum != m_horizonAdmitted ||
-            admittedStatusSum != m_launchAttempted ||
-            m_launchedFrameIds.size() !=
-                m_statusCounts[StatusIndex(DecisionStatus::ACTION)] ||
-            m_launchedFrames.size() != m_launchedFrameIds.size() ||
-            m_settledFrameIds.size() != m_secondarySettled ||
-            m_launchedFrameIds != m_settledFrameIds ||
-            m_launchedFrameIds != duplicatedFrameIds ||
-            congestionStatusSum != m_congestionObservationCount ||
-            m_actionDirtyScored > m_featureEvaluated ||
-            m_positiveRewards.size() != m_positiveRewardCount ||
-            m_finiteOpportunityCosts.size() + m_infiniteOpportunityCosts !=
-                m_positiveRewardCount ||
-            actionBinSum != m_launchedFrameIds.size() ||
-            actionRegimeSum != m_launchedFrameIds.size() ||
-            !NearlyEqual(reservationBinSum, m_canonicalReservedLaunchedSumUs) ||
-            !NearlyEqual(reservationRegimeSum, m_canonicalReservedLaunchedSumUs),
-        "Distributional-shadow final count reconciliation failed");
+        m_launchedFrameIds.size() !=
+            m_statusCounts[StatusIndex(DecisionStatus::ACTION)],
+        "Distributional-shadow action status count differs from launched IDs: status="
+            << m_statusCounts[StatusIndex(DecisionStatus::ACTION)]
+            << " launched=" << m_launchedFrameIds.size());
+    NS_ABORT_MSG_IF(m_launchedFrames.size() != m_launchedFrameIds.size(),
+                    "Distributional-shadow launch state count differs from launched IDs: states="
+                        << m_launchedFrames.size()
+                        << " launched=" << m_launchedFrameIds.size());
+    NS_ABORT_MSG_IF(m_settledFrameIds.size() != m_secondarySettled,
+                    "Distributional-shadow settled ID count differs: ids="
+                        << m_settledFrameIds.size()
+                        << " settled=" << m_secondarySettled);
+    NS_ABORT_MSG_IF(m_launchedFrameIds != m_settledFrameIds,
+                    "Distributional-shadow launched and settled frame IDs differ");
+    NS_ABORT_MSG_IF(m_launchedFrameIds != duplicatedFrameIds,
+                    "Distributional-shadow launched and output duplicate frame IDs differ");
+    NS_ABORT_MSG_IF(congestionStatusSum != m_congestionObservationCount,
+                    "Distributional-shadow congestion status count differs: status="
+                        << congestionStatusSum
+                        << " observations=" << m_congestionObservationCount);
+    NS_ABORT_MSG_IF(m_actionDirtyScored > m_featureEvaluated,
+                    "Distributional-shadow action-dirty count exceeds evaluations: dirty="
+                        << m_actionDirtyScored << " evaluated=" << m_featureEvaluated);
+    NS_ABORT_MSG_IF(m_positiveRewards.size() != m_positiveRewardCount,
+                    "Distributional-shadow stored positive rewards differ: stored="
+                        << m_positiveRewards.size()
+                        << " positive=" << m_positiveRewardCount);
+    NS_ABORT_MSG_IF(
+        m_finiteOpportunityCosts.size() + m_infiniteOpportunityCosts !=
+            m_positiveRewardCount,
+        "Distributional-shadow opportunity-cost count differs: finite="
+            << m_finiteOpportunityCosts.size()
+            << " infinite=" << m_infiniteOpportunityCosts
+            << " positive=" << m_positiveRewardCount);
+    NS_ABORT_MSG_IF(actionBinSum != m_launchedFrameIds.size(),
+                    "Distributional-shadow time-bin action count differs: bins="
+                        << actionBinSum << " launched=" << m_launchedFrameIds.size());
+    NS_ABORT_MSG_IF(actionRegimeSum != m_launchedFrameIds.size(),
+                    "Distributional-shadow regime action count differs: regimes="
+                        << actionRegimeSum << " launched=" << m_launchedFrameIds.size());
+    NS_ABORT_MSG_IF(!AccumulatedSumsNearlyEqual(
+                        reservationBinSum,
+                        m_canonicalReservedLaunchedSumUs,
+                        m_launchedFrameIds.size(),
+                        m_reservationUsByTimeBin.size()),
+                    "Distributional-shadow time-bin reservation differs: bins="
+                        << reservationBinSum
+                        << " launched=" << m_canonicalReservedLaunchedSumUs);
+    NS_ABORT_MSG_IF(!AccumulatedSumsNearlyEqual(
+                        reservationRegimeSum,
+                        m_canonicalReservedLaunchedSumUs,
+                        m_launchedFrameIds.size(),
+                        m_reservationUsByRegime.size()),
+                    "Distributional-shadow regime reservation differs: regimes="
+                        << reservationRegimeSum
+                        << " launched=" << m_canonicalReservedLaunchedSumUs);
 
     for (const auto& [frameId, launched] : m_launchedFrames)
     {
@@ -1259,10 +1364,14 @@ DistributionalShadowT2Controller::WriteSummary(
     NS_ABORT_MSG_IF(std::abs(meterReservedRawUs) > ACCOUNTING_TOLERANCE_US,
                     "Distributional-shadow final meter reservation is nonzero");
     NS_ABORT_MSG_IF(
-        !NearlyEqual(m_canonicalReservedLaunchedSumUs,
-                     m_meter->GetEstimatedActionAirtimeUs()) ||
-            !NearlyEqual(m_canonicalReservedLaunchedSumUs,
-                         m_ledger.GetPermanentDebitedUs()) ||
+        !AccumulatedSumsNearlyEqual(m_canonicalReservedLaunchedSumUs,
+                                    m_meter->GetEstimatedActionAirtimeUs(),
+                                    m_launchedFrameIds.size(),
+                                    0) ||
+            !AccumulatedSumsNearlyEqual(m_canonicalReservedLaunchedSumUs,
+                                        m_ledger.GetPermanentDebitedUs(),
+                                        m_launchedFrameIds.size(),
+                                        0) ||
             m_ledger.GetDebitCount() != m_launchedFrameIds.size(),
         "Distributional-shadow ledger and meter launch costs differ");
 
