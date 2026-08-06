@@ -565,7 +565,7 @@ def _p23_plot(plt: Any, np: Any, historical: dict[str, dict[str, Any]], output: 
     axis.set_ylabel("Deadline misses (%)")
     axis.set_ylim(0, 100)
     axis.set_title("Exact repaired p23 scenario: all generated frames")
-    axis.legend()
+    axis.legend(loc="upper left", bbox_to_anchor=(1.01, 1.0))
     axis.grid(axis="y", alpha=0.25)
     return _finish(figure, output, "compound_p23_exact")
 
