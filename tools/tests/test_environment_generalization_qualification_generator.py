@@ -19,9 +19,11 @@ if str(TOOLS) not in sys.path:
 
 from generate_environment_generalization_qualification_v1 import (  # noqa: E402
     ARM_IDS,
+    EXCLUDED_AUDIT_CHECKOUTS,
     OUTPUT_CONFIG,
     OUTPUT_MANIFEST,
     QualificationGenerationError,
+    REPAIR_COMMITS,
     build_document,
     generate_artifacts,
     load_contract,
@@ -106,7 +108,7 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         self.assertEqual(manifest["campaign_counts"]["worker_waves"], 9)
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
-            "e6a957c84c3182e618444637633c922fe610705ab1285a8e6eb851e137b28158",
+            "b1f5506f64cb71731c04d303f4788093c3466af9af73f1d7c9ad1e0b4a897478",
         )
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
@@ -158,6 +160,48 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
             hashlib.sha256((ROOT / amendment["path"]).read_bytes()).hexdigest(),
             amendment["sha256"],
         )
+
+    def test_pre_outcome_audits_forbid_partial_or_mixed_build_reuse(self) -> None:
+        amendment = self.contract["pre_outcome_runtime_amendment"]
+        self.assertFalse(amendment["performance_outcomes_inspected"])
+        self.assertFalse(amendment["partial_run_reuse_allowed"])
+        self.assertFalse(amendment["mixed_build_evidence_allowed"])
+        self.assertEqual(
+            tuple(
+                audit["checkout"]
+                for audit in amendment["excluded_execution_audits"]
+            ),
+            EXCLUDED_AUDIT_CHECKOUTS,
+        )
+        self.assertEqual(
+            tuple(repair["commit"] for repair in amendment["repair_commits"]),
+            REPAIR_COMMITS,
+        )
+        second_counts = amendment["excluded_execution_audits"][1]["counts"]
+        self.assertEqual(second_counts["retained_manifest_runs"], 335)
+        self.assertEqual(second_counts["excluded_attempts"], 241)
+        self.assertEqual(
+            second_counts["retained_manifest_runs"]
+            + second_counts["excluded_attempts"],
+            576,
+        )
+
+    def test_pre_outcome_audit_count_mutation_fails_closed(self) -> None:
+        drifted_contract = copy.deepcopy(self.contract)
+        second_audit = drifted_contract["pre_outcome_runtime_amendment"][
+            "excluded_execution_audits"
+        ][1]
+        second_audit["validator_rejection_classes"][
+            "paired_value_reservation_checkpoint_feasibility_failed"
+        ] = 2
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "contract.json"
+            path.write_text(json.dumps(drifted_contract), encoding="utf-8")
+            with self.assertRaisesRegex(
+                QualificationGenerationError,
+                "second excluded execution audit differs",
+            ):
+                load_contract(path)
 
 
 if __name__ == "__main__":

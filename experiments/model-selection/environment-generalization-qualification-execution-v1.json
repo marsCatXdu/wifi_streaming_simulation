@@ -3,18 +3,75 @@
   "runtime_contract_id": "environment-generalization-qualification-execution-v1",
   "status": "amended_before_closed_loop_qualification_outcomes",
   "pre_outcome_runtime_amendment": {
-    "failed_attempt_checkout": "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
-    "failure_discovered_from_execution_metadata_only": true,
+    "amendment_stage": "two_excluded_execution_audits_before_qualification_outcomes",
     "performance_outcomes_inspected": false,
-    "failed_attempt_manifest_complete_runs": 85,
-    "failed_attempt_retained_policy_attempt_directories": 226,
-    "failed_attempt_immediate_abort_logs": 40,
-    "failed_attempt_in_flight_runs_stopped": 64,
-    "failure": "The paired temporal-T2 executable and independent validator admitted only the original canonical frame/environment profile, while the predeclared qualification varies workload and environment parameters.",
-    "repair": "Select only the named environment_generalization_v1 frame profile in both policy arms; retain exact controller, telemetry, airtime, and target-Wi-Fi contracts while validating the frozen workload envelope and source-bound scenario domain.",
-    "failed_attempt_root_is_not_qualification_evidence": true,
+    "failed_attempt_roots_are_not_qualification_evidence": true,
     "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit": true,
+    "partial_run_reuse_allowed": false,
+    "mixed_build_evidence_allowed": false,
     "reserved_confirmation_seeds_remain_unopened": true,
+    "excluded_execution_audits": [
+      {
+        "checkout": "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
+        "campaign_state": "stopped_after_metadata_only_contract_failure",
+        "performance_outcomes_inspected": false,
+        "counts": {
+          "manifest_complete_runs": 85,
+          "retained_policy_attempt_directories": 226,
+          "immediate_abort_logs": 40,
+          "in_flight_runs_stopped": 64
+        },
+        "failure": "The paired temporal-T2 executable and independent validator admitted only the original canonical frame/environment profile, while the predeclared qualification varies workload and environment parameters."
+      },
+      {
+        "checkout": "d66313bcd9542158f48d16269449656dfa9dcc2b",
+        "campaign_state": "all_attempts_finished_but_campaign_invalid",
+        "remote_checkout": "/home/jingweili/wifi_streaming_qualification_d66313b",
+        "output_root": "/home/jingweili/wifi_streaming_qualification_d66313b/results/environment_generalization_closed_loop_qualification_v1/runs",
+        "service": "wifi-qualification-d66313b.service",
+        "performance_outcomes_inspected": false,
+        "counts": {
+          "scheduled_runs": 576,
+          "finished_attempts": 576,
+          "retained_manifest_runs": 335,
+          "excluded_attempts": 241,
+          "process_failures": 134,
+          "validator_rejections": 107
+        },
+        "process_failure_diagnostics": {
+          "v2_deadline_contract_abort": 44,
+          "distributional_deadline_contract_abort": 44,
+          "v2_i_frame_metadata_contract_abort": 20,
+          "distributional_i_frame_metadata_contract_abort": 20,
+          "phy_polling_fraction_abort": 4,
+          "distributional_final_reconciliation_abort": 1,
+          "process_failure_without_abort_marker": 1
+        },
+        "validator_rejection_classes": {
+          "secondary_airtime_summary_maximum_debt_differs_from_exact_replay": 91,
+          "paired_value_ordered_and_sklearn_cost_heads_diverge": 13,
+          "paired_value_reservation_checkpoint_feasibility_failed": 3
+        }
+      }
+    ],
+    "repair_commits": [
+      {
+        "commit": "a33d2c244a1c2134c8b8b4e436a6a749949f4701",
+        "repair": "Ignore acknowledgments that arrive after the tracked transmission record has already reached a terminal state."
+      },
+      {
+        "commit": "d4a55e68442b3122451856c4b65ec4551cf338ba",
+        "repair": "Replay paired airtime debt at exact PHY-event boundaries instead of allocating aggregate measured airtime chronologically."
+      },
+      {
+        "commit": "648a56a4370d3662193ea7a717ed5a37d73d63c2",
+        "repair": "Normalize fragmented PHY history fractions by their reconciled accumulated state duration."
+      },
+      {
+        "commit": "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
+        "repair": "Bind controller frame contracts to generalized workloads, apply formal aggregate floating-point bounds, and replay variable final MPDUs exactly."
+      }
+    ],
     "configuration_preflight": {
       "path": "tools/check_environment_generalization_qualification_configurations.py",
       "sha256": "a98a6176dfb2e37c0c3f0bf5b5626598864b80f5439f21087843b1e7afacd755",

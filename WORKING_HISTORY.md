@@ -131,6 +131,7 @@ P99.
 | Restore temporal source closure | `a6ac26e` | Historical V2 builder bytes plus exact archived/current generalization source profiles |
 | Admit held-out temporal profiles | `616caff` | Explicit workload profile in runtime output and independent validation |
 | Amend held-out qualification runtime | `147b1b2` | Failed-root exclusion, repaired matrix, and 144-configuration fail-fast preflight |
+| Repair generalized qualification execution | `a33d2c2`, `d4a55e6`, `648a56a`, `28b77ce` | Stale-ACK handling, event-time debt replay, normalized PHY histories, and generalized frame/MPDU contracts |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -238,13 +239,18 @@ remains the engineering champion after the distributional closed-loop test.
   performance outcome was inspected.  The explicit held-out frame profile,
   historical model-source restoration, exact source-profile amendments,
   repaired execution contract, and 144-configuration preflight are complete
-  through `147b1b2`.  All 576 runs are now being reexecuted from clean commit
-  `d66313b` by `wifi-qualification-d66313b.service`; the first wave began at
-  2026-08-06 12:56 SGT.  The all-generated analyzer remains frozen at
-  `101f132` plus its pre-outcome repair binding, and the eleven-figure
-  statistical/historical plot suite remains frozen at `ab9e008`.  Close all
-  nine new waves without inspecting outcomes, then use the actual closed-loop
-  family results to choose the next predictor/allocation intervention.
+  through `147b1b2`.  The second `d66313b` audit finished all 576 attempts but
+  retained only 335: 134 process failures and 107 strict-validator rejections
+  exclude the other 241.  No performance outcome was inspected, and the 335
+  retained runs cannot be selected or combined with another build.  Commits
+  `a33d2c2`, `d4a55e6`, `648a56a`, and `28b77ce` repair the observed stale-ACK,
+  debt-replay, fragmented-PHY, generalized-frame, numeric-reconciliation, and
+  variable-final-MPDU failures.  Their focused suites and exact canonical and
+  generalized full-run replays pass.  Bind both excluded audits and these
+  repairs into the frozen contracts, then launch all nine waves from one new
+  clean commit without inspecting outcomes.  The all-generated analyzer
+  remains frozen at `101f132`, and the eleven-figure statistical/historical
+  plot suite remains frozen at `ab9e008`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -262,16 +268,18 @@ miss, completed HF7 P99, sender airtime, and background gates at aggregate,
 family, and scenario levels, and mark the predeclared randomized-oracle
 fraction `not_assessable` because the two populations differ.
 
-The abandoned `ff6d8b8` checkout is stopped and excluded in both execution and
-analysis contracts.  Its partial directory counts are audit metadata only;
-do not resume it, promote its 85 canonical directories, or combine them with a
-new build.  Commits `a6ac26e`, `616caff`, and `147b1b2` restore the exact V2
-model source bytes, preserve the archived randomized dataset under its original
-five-source profile, add the named held-out workload envelope, and check all
-144 unique scenario/arm configurations before simulation.  The exact remote
-checkout `/home/jingweili/wifi_streaming_qualification_d66313b` passed the same
-144 checks and is running all 576 arms in a new output root.  Inspect no outcome
-until the exact manifest closes.
+The `ff6d8b8` and `d66313b` checkouts are stopped and excluded in both execution
+and analysis contracts.  Their directory and failure counts are audit metadata
+only; do not resume either root, promote the first root's 85 complete entries,
+promote the second root's 335 retained entries, or combine either population
+with a new build.  The second audit's 576 attempts split exactly into 335
+retained entries, 134 process failures, and 107 validator rejections.  Commits
+`a6ac26e`, `616caff`, and `147b1b2` restore source closure, add the named held-out
+workload envelope, and check all 144 unique configurations.  Commits `a33d2c2`,
+`d4a55e6`, `648a56a`, and `28b77ce` close the failures exposed by the complete
+second audit.  The next executable boundary is a fresh 576-run campaign from
+one clean post-amendment commit.  Inspect no outcome until its exact manifest
+closes and every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -692,6 +700,31 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Exclude the complete second qualification audit
+
+- Allowed `wifi-qualification-d66313b.service` to finish every scheduled
+  attempt, then inspected only completion and error metadata.  The manifest
+  retained 335 of 576 attempts; 134 process failures and 107 validator
+  rejections exclude the remaining 241.  No latency, miss, airtime,
+  throughput, action, or policy-comparison outcome was inspected.
+- The validator rejections divide exactly into 91 maximum-debt event-replay
+  differences, 13 ordered-versus-sklearn cost-head differences, and 3
+  infeasible old reservation witnesses.  The process failures contain 44 V2
+  and 44 distributional deadline-contract aborts, 20 V2 and 20 distributional
+  I-frame-contract aborts, 4 fragmented-PHY fraction aborts, 1 distributional
+  final-reconciliation abort, and 1 exit without an abort marker.
+- Fixed stale terminal acknowledgments in `a33d2c2`, event-time debt replay in
+  `d4a55e6`, fragmented PHY-history normalization in `648a56a`, and generalized
+  controller contracts plus exact variable-final-MPDU replay in `28b77ce`.
+  The focused C++/Python suites, canonical full-run replay, and generalized V2
+  and distributional full-run replays pass.
+- Amended the execution and analysis boundaries to exclude both audit
+  checkouts, prohibit partial-run reuse and mixed builds, bind all four repair
+  commits, and require all 576 runs from one new clean repaired commit.  The
+  deterministic generator and focused analyzer tests pass.  Next commit and
+  push this amendment, deploy that exact clean commit, repeat remote preflight,
+  and launch nine complete 64-worker waves.
 
 ### 2026-08-06 - Repair held-out qualification runtime before outcomes
 

@@ -192,11 +192,14 @@ def load_analysis_contract(
     _require(
         isinstance(amendment, dict)
         and amendment.get("performance_outcomes_inspected") is False
-        and amendment.get("failed_attempt_root_is_not_qualification_evidence") is True
+        and amendment.get("failed_attempt_roots_are_not_qualification_evidence")
+        is True
         and amendment.get(
             "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit"
         )
-        is True,
+        is True
+        and amendment.get("partial_run_reuse_allowed") is False
+        and amendment.get("mixed_build_evidence_allowed") is False,
         "qualification pre-outcome runtime amendment differs",
     )
     matrix = contract["generated_matrix"]
@@ -256,15 +259,20 @@ def load_analysis_contract(
         "reserved confirmation boundary differs",
     )
     raw_evidence = contract["raw_evidence"]
+    excluded_checkouts = tuple(
+        audit["checkout"] for audit in amendment["excluded_execution_audits"]
+    )
     _require(
         raw_evidence.get(
             "require_generalization_frame_profile_on_both_selective_policy_arms"
         )
         is True
-        and raw_evidence.get(
-            "exclude_failed_attempt_checkout_ff6d8b8_from_all_estimands"
+        and tuple(
+            raw_evidence.get(
+                "exclude_execution_checkouts_from_all_estimands", []
+            )
         )
-        is True,
+        == excluded_checkouts,
         "qualification runtime-repair evidence boundary differs",
     )
     _require(

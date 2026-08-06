@@ -36,6 +36,16 @@ ARM_IDS = (
     "score_aware_t2_v2",
     "distributional_shadow_t2",
 )
+EXCLUDED_AUDIT_CHECKOUTS = (
+    "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
+    "d66313bcd9542158f48d16269449656dfa9dcc2b",
+)
+REPAIR_COMMITS = (
+    "a33d2c244a1c2134c8b8b4e436a6a749949f4701",
+    "d4a55e68442b3122451856c4b65ec4551cf338ba",
+    "648a56a4370d3662193ea7a717ed5a37d73d63c2",
+    "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
+)
 
 
 class QualificationGenerationError(RuntimeError):
@@ -112,14 +122,133 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     builder_amendment = amendment.get("dataset_builder_compatibility_amendment")
     _require(
         isinstance(amendment, dict)
+        and set(amendment)
+        == {
+            "amendment_stage",
+            "performance_outcomes_inspected",
+            "failed_attempt_roots_are_not_qualification_evidence",
+            "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit",
+            "partial_run_reuse_allowed",
+            "mixed_build_evidence_allowed",
+            "reserved_confirmation_seeds_remain_unopened",
+            "excluded_execution_audits",
+            "repair_commits",
+            "configuration_preflight",
+            "dataset_builder_compatibility_amendment",
+        }
+        and amendment.get("amendment_stage")
+        == "two_excluded_execution_audits_before_qualification_outcomes"
         and amendment.get("performance_outcomes_inspected") is False
-        and amendment.get("failed_attempt_root_is_not_qualification_evidence") is True
+        and amendment.get("failed_attempt_roots_are_not_qualification_evidence")
+        is True
         and amendment.get(
             "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit"
         )
         is True
+        and amendment.get("partial_run_reuse_allowed") is False
+        and amendment.get("mixed_build_evidence_allowed") is False
         and amendment.get("reserved_confirmation_seeds_remain_unopened") is True,
         "pre-outcome runtime amendment differs",
+    )
+    audits = amendment.get("excluded_execution_audits")
+    _require(
+        isinstance(audits, list)
+        and len(audits) == 2
+        and all(isinstance(audit, dict) for audit in audits)
+        and tuple(audit.get("checkout") for audit in audits)
+        == EXCLUDED_AUDIT_CHECKOUTS
+        and all(
+            audit.get("performance_outcomes_inspected") is False
+            for audit in audits
+        ),
+        "excluded execution audits differ",
+    )
+    first_audit, second_audit = audits
+    _require(
+        set(first_audit)
+        == {
+            "checkout",
+            "campaign_state",
+            "performance_outcomes_inspected",
+            "counts",
+            "failure",
+        }
+        and first_audit["campaign_state"]
+        == "stopped_after_metadata_only_contract_failure"
+        and first_audit["counts"]
+        == {
+            "manifest_complete_runs": 85,
+            "retained_policy_attempt_directories": 226,
+            "immediate_abort_logs": 40,
+            "in_flight_runs_stopped": 64,
+        },
+        "first excluded execution audit differs",
+    )
+    second_counts = second_audit.get("counts")
+    process_diagnostics = second_audit.get("process_failure_diagnostics")
+    validator_classes = second_audit.get("validator_rejection_classes")
+    _require(
+        set(second_audit)
+        == {
+            "checkout",
+            "campaign_state",
+            "remote_checkout",
+            "output_root",
+            "service",
+            "performance_outcomes_inspected",
+            "counts",
+            "process_failure_diagnostics",
+            "validator_rejection_classes",
+        }
+        and second_audit["campaign_state"]
+        == "all_attempts_finished_but_campaign_invalid"
+        and second_audit["remote_checkout"]
+        == "/home/jingweili/wifi_streaming_qualification_d66313b"
+        and second_audit["output_root"]
+        == (
+            "/home/jingweili/wifi_streaming_qualification_d66313b/results/"
+            "environment_generalization_closed_loop_qualification_v1/runs"
+        )
+        and second_audit["service"] == "wifi-qualification-d66313b.service"
+        and isinstance(second_counts, dict)
+        and second_counts
+        == {
+            "scheduled_runs": 576,
+            "finished_attempts": 576,
+            "retained_manifest_runs": 335,
+            "excluded_attempts": 241,
+            "process_failures": 134,
+            "validator_rejections": 107,
+        }
+        and second_counts["retained_manifest_runs"]
+        + second_counts["excluded_attempts"]
+        == second_counts["scheduled_runs"]
+        and process_diagnostics
+        == {
+            "v2_deadline_contract_abort": 44,
+            "distributional_deadline_contract_abort": 44,
+            "v2_i_frame_metadata_contract_abort": 20,
+            "distributional_i_frame_metadata_contract_abort": 20,
+            "phy_polling_fraction_abort": 4,
+            "distributional_final_reconciliation_abort": 1,
+            "process_failure_without_abort_marker": 1,
+        }
+        and sum(process_diagnostics.values()) == second_counts["process_failures"]
+        and validator_classes
+        == {
+            "secondary_airtime_summary_maximum_debt_differs_from_exact_replay": 91,
+            "paired_value_ordered_and_sklearn_cost_heads_diverge": 13,
+            "paired_value_reservation_checkpoint_feasibility_failed": 3,
+        }
+        and sum(validator_classes.values()) == second_counts["validator_rejections"],
+        "second excluded execution audit differs",
+    )
+    repairs = amendment.get("repair_commits")
+    _require(
+        isinstance(repairs, list)
+        and tuple(repair.get("commit") for repair in repairs) == REPAIR_COMMITS
+        and all(set(repair) == {"commit", "repair"} for repair in repairs),
+        "runtime repair commit closure differs",
     )
     _require(
         isinstance(preflight, dict)
