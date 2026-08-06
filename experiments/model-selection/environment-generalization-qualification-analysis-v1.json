@@ -2,17 +2,17 @@
   "schema_version": 1,
   "analysis_contract_id": "environment-generalization-qualification-analysis-v1",
   "status": "frozen_before_closed_loop_qualification_outcomes",
-  "purpose": "Analyze the predeclared 576-run held-out closed-loop comparison without changing estimands, weights, uncertainty, or gates after outcomes are observed.",
+  "purpose": "Analyze the predeclared 576-run held-out closed-loop comparison after the pre-outcome runtime-profile repair, without changing estimands, weights, uncertainty, or gates after outcomes are observed.",
   "execution_contract": {
     "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
-    "sha256": "64e93a2ccaf68eb67beefc69d8c4b85a9ea5bc96f144c5f478e0b5030ac3ca7f"
+    "sha256": "456ad308e61203d2e5fbb2b729429b9f201cf64d15947770ca35581825f0b702"
   },
   "generated_matrix": {
     "path": "experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml",
-    "sha256": "49f8ac24cefc6005789bf2961aa542186ed1775dff8de1433deb36e0f93e3514",
+    "sha256": "327c040a7b9e119738524e1fa35b793d1c7b769e6c87d32197292fd5bdc0faf6",
     "artifact_manifest_path": "experiments/model-selection/environment-generalization-qualification-artifacts-v1.json",
-    "artifact_manifest_sha256": "9c6c432bcda7bcdbd4c8fbb903597d2b717b917888a55b114d86dc1b01721239",
-    "resolved_matrix_sha256": "e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922"
+    "artifact_manifest_sha256": "e74ca0be374a01e8faa638195dbe1fb2d8a8eb6aa995185329eeeb2903402f59",
+    "resolved_matrix_sha256": "e6a957c84c3182e618444637633c922fe610705ab1285a8e6eb851e137b28158"
   },
   "population": {
     "family_count": 6,
@@ -49,6 +49,8 @@
     "require_exact_matrix_expansion_and_derived_run_ids": true,
     "require_exact_scenario_identity_on_every_run": true,
     "require_all_runs_to_pass_strict_output_validation": true,
+    "require_generalization_frame_profile_on_both_selective_policy_arms": true,
+    "exclude_failed_attempt_checkout_ff6d8b8_from_all_estimands": true,
     "require_one_build_identity": true,
     "require_manifest_project_commit_to_equal_clean_analyzer_checkout": true
   },
@@ -152,6 +154,7 @@
     "Completed-frame P99 is survivor-conditioned and must never be interpreted without all-generated deadline misses and completed-frame counts.",
     "A campaign-level pass does not erase a failed held-out-family safety gate.",
     "The distributional-shadow arm is a previously frozen policy, not a refit on randomized environment outcomes.",
+    "The ff6d8b8 execution root exposed a fixed-profile runtime/validator incompatibility before any performance outcome was inspected; it is excluded, and all 576 runs must come from one clean repaired commit.",
     "EMLSR is not an arm or gate in this STR-focused qualification.",
     "No held-out outcome may be inspected until all 576 arms are complete and the exact manifest closes."
   ]

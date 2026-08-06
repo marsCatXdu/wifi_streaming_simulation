@@ -188,6 +188,17 @@ def load_analysis_contract(
         "execution contract path differs",
     )
     execution = load_execution_contract(execution_path)
+    amendment = execution.get("pre_outcome_runtime_amendment")
+    _require(
+        isinstance(amendment, dict)
+        and amendment.get("performance_outcomes_inspected") is False
+        and amendment.get("failed_attempt_root_is_not_qualification_evidence") is True
+        and amendment.get(
+            "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit"
+        )
+        is True,
+        "qualification pre-outcome runtime amendment differs",
+    )
     matrix = contract["generated_matrix"]
     _require(
         set(matrix)
@@ -243,6 +254,18 @@ def load_analysis_contract(
         population.get("reserved_confirmation_seeds")
         == {"minimum": 1301, "maximum": 1348, "required_overlap_count": 0},
         "reserved confirmation boundary differs",
+    )
+    raw_evidence = contract["raw_evidence"]
+    _require(
+        raw_evidence.get(
+            "require_generalization_frame_profile_on_both_selective_policy_arms"
+        )
+        is True
+        and raw_evidence.get(
+            "exclude_failed_attempt_checkout_ff6d8b8_from_all_estimands"
+        )
+        is True,
+        "qualification runtime-repair evidence boundary differs",
     )
     _require(
         tuple(arm.get("arm_id") for arm in contract["arms"]) == ARM_IDS,
@@ -596,6 +619,9 @@ def _validate_observation(job: dict[str, Any]) -> dict[str, Any]:
     _require(validation.get("valid") is True, f"{run_dir}: validator did not return valid")
     config = _read_json(run_dir / "resolved_config.json")
     expected = job["expected_config"]
+    expected_frame_profile = expected.get("prediction", {}).get(
+        "paired_temporal_t2_frame_profile"
+    )
     _require(
         config.get("run_id") == job["run_id"]
         and config.get("seed") == job["seed"]
@@ -604,6 +630,21 @@ def _validate_observation(job: dict[str, Any]) -> dict[str, Any]:
         and config.get("policy") == expected.get("policy"),
         f"{run_dir}: resolved run/arm identity differs from frozen expansion",
     )
+    if job["arm_id"] == "str_mlo_nmaxinflights_1":
+        _require(
+            expected_frame_profile is None
+            and "pairedTemporalT2FrameProfile" not in config,
+            f"{run_dir}: STR arm unexpectedly selects a paired temporal-T2 frame profile",
+        )
+    else:
+        _require(
+            expected_frame_profile == "environment_generalization_v1"
+            and config.get("pairedTemporalT2FrameProfile")
+            == expected_frame_profile
+            and config.get("environment")
+            == "held_out_environment_generalization_v1",
+            f"{run_dir}: selective arm generalization frame profile differs",
+        )
     build = _read_json(run_dir / "build_info.json")
     build_identity: dict[str, str] = {}
     for field in BUILD_IDENTITY_FIELDS:

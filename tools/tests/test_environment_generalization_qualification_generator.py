@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import sys
 import tempfile
@@ -105,7 +106,7 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         self.assertEqual(manifest["campaign_counts"]["worker_waves"], 9)
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
-            "e2f89a25432b76cbe69f4a81691370c3809bde41addf4354a1ef74cddb362922",
+            "e6a957c84c3182e618444637633c922fe610705ab1285a8e6eb851e137b28158",
         )
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
@@ -148,6 +149,15 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         document_sources["scenario_catalog"]["sha256"] = "0" * 64
         with self.assertRaisesRegex(ValueError, "source_artifacts differ"):
             validate_document(drifted_document, self.contract)
+
+    def test_pre_outcome_builder_amendment_is_hash_bound(self) -> None:
+        amendment = self.contract["pre_outcome_runtime_amendment"][
+            "dataset_builder_compatibility_amendment"
+        ]
+        self.assertEqual(
+            hashlib.sha256((ROOT / amendment["path"]).read_bytes()).hexdigest(),
+            amendment["sha256"],
+        )
 
 
 if __name__ == "__main__":

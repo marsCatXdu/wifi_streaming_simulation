@@ -12,7 +12,7 @@ generalization_contract:
 runtime_contract:
   id: environment-generalization-qualification-execution-v1
   path: experiments/model-selection/environment-generalization-qualification-execution-v1.json
-  sha256: 64e93a2ccaf68eb67beefc69d8c4b85a9ea5bc96f144c5f478e0b5030ac3ca7f
+  sha256: 456ad308e61203d2e5fbb2b729429b9f201cf64d15947770ca35581825f0b702
   source_artifacts:
     canonical_candidates:
       path: results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv
@@ -970,6 +970,7 @@ policies:
   topologies:
   - dual_interface
   config:
+    prediction.paired_temporal_t2_frame_profile: environment_generalization_v1
     prediction.paired_value_t2_admission_profile: score_aware_emergency_v2
     prediction.prediction_event_log_enabled: false
     prediction.prediction_history_windows_us:
@@ -988,6 +989,7 @@ policies:
   topologies:
   - dual_interface
   config:
+    prediction.paired_temporal_t2_frame_profile: environment_generalization_v1
     prediction.prediction_event_log_enabled: false
     prediction.prediction_history_windows_us:
     - 1000

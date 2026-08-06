@@ -86,6 +86,7 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "schema_version",
             "runtime_contract_id",
             "status",
+            "pre_outcome_runtime_amendment",
             "purpose",
             "parent_generalization_contract",
             "scenario_catalog",
@@ -102,8 +103,48 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     _require(
         contract["runtime_contract_id"]
         == "environment-generalization-qualification-execution-v1"
-        and contract["status"] == "frozen_before_closed_loop_qualification_runs",
+        and contract["status"]
+        == "amended_before_closed_loop_qualification_outcomes",
         "contract identity differs",
+    )
+    amendment = contract["pre_outcome_runtime_amendment"]
+    preflight = amendment.get("configuration_preflight")
+    builder_amendment = amendment.get("dataset_builder_compatibility_amendment")
+    _require(
+        isinstance(amendment, dict)
+        and amendment.get("performance_outcomes_inspected") is False
+        and amendment.get("failed_attempt_root_is_not_qualification_evidence") is True
+        and amendment.get(
+            "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit"
+        )
+        is True
+        and amendment.get("reserved_confirmation_seeds_remain_unopened") is True,
+        "pre-outcome runtime amendment differs",
+    )
+    _require(
+        isinstance(preflight, dict)
+        and set(preflight)
+        == {
+            "path",
+            "sha256",
+            "required_unique_scenario_arm_configurations",
+            "workers",
+            "command",
+        }
+        and preflight["required_unique_scenario_arm_configurations"] == 144
+        and preflight["workers"] == 64,
+        "configuration preflight contract differs",
+    )
+    _validate_source(preflight["path"], preflight["sha256"], "configuration preflight")
+    _require(
+        isinstance(builder_amendment, dict)
+        and set(builder_amendment) == {"path", "sha256"},
+        "dataset-builder compatibility amendment declaration differs",
+    )
+    _validate_source(
+        builder_amendment["path"],
+        builder_amendment["sha256"],
+        "dataset-builder compatibility amendment",
     )
     parent_spec = contract["parent_generalization_contract"]
     parent_path = _validate_source(
@@ -168,6 +209,15 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             f"qualification arm differs from parent: {arm.get('arm_id')}",
         )
         _require(isinstance(arm.get("config"), dict), "arm config is invalid")
+    _require(
+        "prediction.paired_temporal_t2_frame_profile" not in arms[0]["config"]
+        and all(
+            arm["config"].get("prediction.paired_temporal_t2_frame_profile")
+            == "environment_generalization_v1"
+            for arm in arms[1:]
+        ),
+        "qualification policy frame-profile selection differs",
+    )
     sources = contract["runtime_outputs"]["controller_summary_json"][
         "required_source_artifacts_exact"
     ]

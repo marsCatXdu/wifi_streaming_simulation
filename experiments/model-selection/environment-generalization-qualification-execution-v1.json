@@ -1,7 +1,32 @@
 {
   "schema_version": 1,
   "runtime_contract_id": "environment-generalization-qualification-execution-v1",
-  "status": "frozen_before_closed_loop_qualification_runs",
+  "status": "amended_before_closed_loop_qualification_outcomes",
+  "pre_outcome_runtime_amendment": {
+    "failed_attempt_checkout": "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
+    "failure_discovered_from_execution_metadata_only": true,
+    "performance_outcomes_inspected": false,
+    "failed_attempt_manifest_complete_runs": 85,
+    "failed_attempt_retained_policy_attempt_directories": 226,
+    "failed_attempt_immediate_abort_logs": 40,
+    "failed_attempt_in_flight_runs_stopped": 64,
+    "failure": "The paired temporal-T2 executable and independent validator admitted only the original canonical frame/environment profile, while the predeclared qualification varies workload and environment parameters.",
+    "repair": "Select only the named environment_generalization_v1 frame profile in both policy arms; retain exact controller, telemetry, airtime, and target-Wi-Fi contracts while validating the frozen workload envelope and source-bound scenario domain.",
+    "failed_attempt_root_is_not_qualification_evidence": true,
+    "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit": true,
+    "reserved_confirmation_seeds_remain_unopened": true,
+    "configuration_preflight": {
+      "path": "tools/check_environment_generalization_qualification_configurations.py",
+      "sha256": "a98a6176dfb2e37c0c3f0bf5b5626598864b80f5439f21087843b1e7afacd755",
+      "required_unique_scenario_arm_configurations": 144,
+      "workers": 64,
+      "command": "python3 tools/check_environment_generalization_qualification_configurations.py --workers 64"
+    },
+    "dataset_builder_compatibility_amendment": {
+      "path": "experiments/model-selection/environment-generalization-dataset-builder-amendment-v1.json",
+      "sha256": "29b63e8f4c61d4561f4c81511a251fc2ea30809ba17ef0b0bda6bc7bc5e236a5"
+    }
+  },
   "purpose": "Execute the predeclared held-out environment comparison of STR MLO, score-aware T2 V2, and distributional-shadow T2 without consuming reserved neutral-confirmation seeds.",
   "parent_generalization_contract": {
     "path": "experiments/model-selection/environment-generalization-v1.json",
@@ -44,6 +69,7 @@
       "policy": "paired_value_duplication_t2",
       "admission_profile": "score_aware_emergency_v2",
       "config": {
+        "prediction.paired_temporal_t2_frame_profile": "environment_generalization_v1",
         "prediction.paired_value_t2_admission_profile": "score_aware_emergency_v2",
         "prediction.prediction_event_log_enabled": false,
         "prediction.prediction_history_windows_us": [
@@ -67,6 +93,7 @@
       "topology": "dual_interface",
       "policy": "distributional_shadow_duplication_t2",
       "config": {
+        "prediction.paired_temporal_t2_frame_profile": "environment_generalization_v1",
         "prediction.prediction_event_log_enabled": false,
         "prediction.prediction_history_windows_us": [
           1000,
