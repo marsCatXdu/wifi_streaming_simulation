@@ -3,8 +3,22 @@
   "runtime_contract_id": "environment-generalization-qualification-execution-v1",
   "status": "amended_before_closed_loop_qualification_outcomes",
   "pre_outcome_runtime_amendment": {
-    "amendment_stage": "two_excluded_execution_audits_before_qualification_outcomes",
-    "performance_outcomes_inspected": false,
+    "amendment_stage": "three_excluded_execution_audits_before_qualification_outcomes",
+    "outcome_inspection_disclosure": {
+      "headline_deadline_or_latency_metrics_inspected": false,
+      "limited_error_log_aggregate_fields_inspected": true,
+      "limited_fields": [
+        "sent_packets",
+        "sent_bytes",
+        "redundant_bytes",
+        "link_0_bytes",
+        "link_1_bytes",
+        "background_tx_bytes",
+        "background_rx_bytes",
+        "finalized_frames"
+      ],
+      "limited_fields_used_for_policy_model_threshold_or_gate_selection": false
+    },
     "failed_attempt_roots_are_not_qualification_evidence": true,
     "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit": true,
     "partial_run_reuse_allowed": false,
@@ -52,6 +66,41 @@
           "paired_value_ordered_and_sklearn_cost_heads_diverge": 13,
           "paired_value_reservation_checkpoint_feasibility_failed": 3
         }
+      },
+      {
+        "checkout": "de49f8b37746889dee10f1f31370ae6830d82c13",
+        "campaign_state": "stopped_after_solver_version_validator_failure",
+        "remote_checkout": "/home/jingweili/wifi_streaming_qualification_de49f8b",
+        "output_root": "/home/jingweili/wifi_streaming_qualification_de49f8b/results/environment_generalization_closed_loop_qualification_v1/runs",
+        "service": "wifi-qualification-de49f8b.service",
+        "counts": {
+          "scheduled_runs": 576,
+          "retained_manifest_runs": 121,
+          "failed_completed_attempts": 1,
+          "interrupted_attempt_directories": 64
+        },
+        "failure": "SciPy 1.11.4 incorrectly reported one exact mixed-integer reservation component infeasible with presolve disabled; the identical formulation produced a feasible witness with presolve enabled and passed independent replay.",
+        "validator_environment": {
+          "failing_scipy_version": "1.11.4",
+          "newer_scipy_replay_version": "1.17.1",
+          "presolve_false_result": "false_infeasible",
+          "presolve_true_result": "feasible_witness_passed_independent_replay"
+        },
+        "outcome_inspection": {
+          "headline_deadline_or_latency_metrics_inspected": false,
+          "limited_error_log_aggregate_fields_inspected": true,
+          "limited_fields": [
+            "sent_packets",
+            "sent_bytes",
+            "redundant_bytes",
+            "link_0_bytes",
+            "link_1_bytes",
+            "background_tx_bytes",
+            "background_rx_bytes",
+            "finalized_frames"
+          ],
+          "limited_fields_used_for_policy_model_threshold_or_gate_selection": false
+        }
       }
     ],
     "repair_commits": [
@@ -70,6 +119,10 @@
       {
         "commit": "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
         "repair": "Bind controller frame contracts to generalized workloads, apply formal aggregate floating-point bounds, and replay variable final MPDUs exactly."
+      },
+      {
+        "commit": "e7a8b3ed8d28f8094ce08978bf27db3ff99f4cee",
+        "repair": "Retry an unsuccessful paired reservation feasibility solve with presolve enabled while preserving the original formulation and independent witness replay."
       }
     ],
     "configuration_preflight": {

@@ -133,12 +133,15 @@ P99.
 | Amend held-out qualification runtime | `147b1b2` | Failed-root exclusion, repaired matrix, and 144-configuration fail-fast preflight |
 | Repair generalized qualification execution | `a33d2c2`, `d4a55e6`, `648a56a`, `28b77ce` | Stale-ACK handling, event-time debt replay, normalized PHY histories, and generalized frame/MPDU contracts |
 | Launch repaired held-out qualification | `de49f8b` | Two strict generalized canaries followed by one clean 576-run, 64-worker campaign |
+| Repair solver-version portability | `e7a8b3e` | Presolve retry with unchanged feasibility constraints and independent witness replay |
 
-The latest validator milestone is `34e9296`.  It retains the exact historical
+The latest validator milestone is `e7a8b3e`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
 multiclass model, completion CDFs, shadow reference, congestion regime,
 repayable permanent ledger, decision routes, and runtime summaries.  V2
 remains the engineering champion after the distributional closed-loop test.
+It also retries false mixed-integer infeasibility with presolve while preserving
+the original formulation and independent witness replay.
 
 ## One authoritative TODO checklist
 
@@ -247,12 +250,19 @@ remains the engineering champion after the distributional closed-loop test.
   `a33d2c2`, `d4a55e6`, `648a56a`, and `28b77ce` repair the observed stale-ACK,
   debt-replay, fragmented-PHY, generalized-frame, numeric-reconciliation, and
   variable-final-MPDU failures.  Their focused suites and exact canonical and
-  generalized full-run replays pass.  Bind both excluded audits and these
-  repairs into the frozen contracts.  The exact `de49f8b` VM checkout passed
+  generalized full-run replays pass.  Both excluded audits and these repairs
+  are bound into the frozen contracts.  The exact `de49f8b` VM checkout passed
   the full `wifi-streaming` suite, all 144 unique configuration checks, and two
-  strict end-to-end canaries on the 60 fps, 8,200-byte held-out workload.  A
-  fresh 576-run campaign started at 16:36 SGT with 64 workers as
-  `wifi-qualification-de49f8b.service`; do not inspect partial outcomes.  The
+  strict end-to-end canaries on the 60 fps, 8,200-byte held-out workload.  Its
+  fresh campaign was stopped after 121 retained runs when SciPy 1.11.4 falsely
+  rejected one exact mixed-integer reservation component.  One diagnostic
+  error-log read exposed only packet, byte, background-byte, and finalized-frame
+  aggregates; no deadline, latency, policy-comparison, threshold, or gate
+  outcome was inspected or changed.  Commit `e7a8b3e` retries the identical
+  formulation with presolve enabled and independently verifies any returned
+  witness.  The exact failed attempt and 39 focused remote tests now pass under
+  SciPy 1.11.4.  Bind this third excluded root and repair into both frozen
+  contracts, then launch all 576 runs again from one new clean commit.  The
   all-generated analyzer remains frozen at `101f132`, and the eleven-figure
   statistical/historical plot suite remains frozen at `ab9e008`.
 
@@ -272,19 +282,24 @@ miss, completed HF7 P99, sender airtime, and background gates at aggregate,
 family, and scenario levels, and mark the predeclared randomized-oracle
 fraction `not_assessable` because the two populations differ.
 
-The `ff6d8b8` and `d66313b` checkouts are stopped and excluded in both execution
-and analysis contracts.  Their directory and failure counts are audit metadata
-only; do not resume either root, promote the first root's 85 complete entries,
-promote the second root's 335 retained entries, or combine either population
-with a new build.  The second audit's 576 attempts split exactly into 335
+The `ff6d8b8`, `d66313b`, and `de49f8b` checkouts are stopped and excluded in
+both execution and analysis contracts.  Their directory and failure counts are
+audit metadata only; do not resume any root, promote the first root's 85
+complete entries, promote the second root's 335 retained entries, promote the
+third root's 121 retained entries, or combine any population with a new build.
+The second audit's 576 attempts split exactly into 335
 retained entries, 134 process failures, and 107 validator rejections.  Commits
 `a6ac26e`, `616caff`, and `147b1b2` restore source closure, add the named held-out
 workload envelope, and check all 144 unique configurations.  Commits `a33d2c2`,
 `d4a55e6`, `648a56a`, and `28b77ce` close the failures exposed by the complete
-second audit.  The exact `de49f8b` checkout passed two full strict canaries and
-is now running all 576 arms in nine 64-worker waves.  Its analysis and plotting
-services retry fail-closed and currently reject the incomplete manifest.  They
-have published no partial artifact.  Inspect no outcome until the exact
+second audit.  The third audit stopped after 121 retained runs, one failed
+completed attempt, and 64 interrupted attempt directories because SciPy 1.11.4
+reported a false infeasibility with presolve disabled.  Commit `e7a8b3e` adds a
+presolve retry under the unchanged formulation and still requires independent
+witness replay.  The preserved failed attempt now validates on the VM under
+SciPy 1.11.4, as do 39 focused and compatibility tests.  Amend the contracts,
+build one new clean checkout, rerun strict canaries, and then execute all 576
+arms again in nine 64-worker waves.  Inspect no headline outcome until the exact
 manifest closes and every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
@@ -706,6 +721,36 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Exclude the third audit and repair solver portability
+
+- Stopped `wifi-qualification-de49f8b.service` immediately after its first
+  strict validation failure.  The excluded root contains 121 retained manifest
+  runs, one failed completed attempt, and 64 interrupted attempt directories.
+  Neither this root nor either earlier audit may contribute to a qualification
+  estimand; all 576 runs must be generated again from one clean commit.
+- The failure was validator portability, not a policy or simulation failure.
+  SciPy 1.11.4 reported a 483-row, 186-column mixed-integer reservation
+  component infeasible with presolve disabled.  The identical formulation
+  solved with presolve enabled, and its rounded witness passed every original
+  bound, constraint, and independent event-replay check.  The unchanged failed
+  attempt also validates with SciPy 1.17.1.
+- Diagnosing the failed attempt exposed one stdout line containing only the
+  fields `sent_packets`, `sent_bytes`, `redundant_bytes`, `link_0_bytes`,
+  `link_1_bytes`, `background_tx_bytes`, `background_rx_bytes`, and
+  `finalized_frames`.  No deadline-miss, latency, P99, policy-comparison,
+  threshold, or gate result was inspected.  These fields were not used to
+  select or modify the policy, model, threshold, or analysis gates.
+- Commit `e7a8b3e` retains the original presolve-disabled solve first and
+  retries an unsuccessful component with presolve enabled under the same
+  30-second component timeout.  Any returned witness is still rounded and
+  independently checked against the original formulation and the 1e-9-us
+  replay envelope.  Twenty-five focused local solver tests, 17 compatibility
+  tests, and 32 generator/qualification tests pass.
+- A clean validator checkout on the VM revalidated the exact failed attempt
+  under SciPy 1.11.4 in 31.06 seconds, and all 39 focused remote tests pass.
+  The execution and analysis contracts now record the third excluded root,
+  limited inspection disclosure, and solver repair before another launch.
 
 ### 2026-08-06 - Exclude the complete second qualification audit
 

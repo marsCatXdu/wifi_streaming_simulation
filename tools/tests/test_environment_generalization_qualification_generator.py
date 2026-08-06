@@ -20,6 +20,7 @@ if str(TOOLS) not in sys.path:
 from generate_environment_generalization_qualification_v1 import (  # noqa: E402
     ARM_IDS,
     EXCLUDED_AUDIT_CHECKOUTS,
+    LIMITED_INSPECTED_OUTPUT_FIELDS,
     OUTPUT_CONFIG,
     OUTPUT_MANIFEST,
     QualificationGenerationError,
@@ -108,7 +109,7 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
         self.assertEqual(manifest["campaign_counts"]["worker_waves"], 9)
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
-            "b1f5506f64cb71731c04d303f4788093c3466af9af73f1d7c9ad1e0b4a897478",
+            "b1dc5fa84b94dc37f1b2cfbe10a7874f0b4902a5b15ef3b1b08c4fe32f0a7e48",
         )
         self.assertEqual(
             manifest["resolved_matrix_sha256"],
@@ -163,7 +164,17 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
 
     def test_pre_outcome_audits_forbid_partial_or_mixed_build_reuse(self) -> None:
         amendment = self.contract["pre_outcome_runtime_amendment"]
-        self.assertFalse(amendment["performance_outcomes_inspected"])
+        inspection = amendment["outcome_inspection_disclosure"]
+        self.assertFalse(inspection["headline_deadline_or_latency_metrics_inspected"])
+        self.assertTrue(inspection["limited_error_log_aggregate_fields_inspected"])
+        self.assertEqual(
+            tuple(inspection["limited_fields"]), LIMITED_INSPECTED_OUTPUT_FIELDS
+        )
+        self.assertFalse(
+            inspection[
+                "limited_fields_used_for_policy_model_threshold_or_gate_selection"
+            ]
+        )
         self.assertFalse(amendment["partial_run_reuse_allowed"])
         self.assertFalse(amendment["mixed_build_evidence_allowed"])
         self.assertEqual(
@@ -185,6 +196,13 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
             + second_counts["excluded_attempts"],
             576,
         )
+        third_audit = amendment["excluded_execution_audits"][2]
+        self.assertEqual(third_audit["counts"]["retained_manifest_runs"], 121)
+        self.assertEqual(third_audit["counts"]["failed_completed_attempts"], 1)
+        self.assertEqual(
+            third_audit["counts"]["interrupted_attempt_directories"], 64
+        )
+        self.assertEqual(third_audit["outcome_inspection"], inspection)
 
     def test_pre_outcome_audit_count_mutation_fails_closed(self) -> None:
         drifted_contract = copy.deepcopy(self.contract)
@@ -200,6 +218,21 @@ class EnvironmentGeneralizationQualificationGeneratorTest(unittest.TestCase):
             with self.assertRaisesRegex(
                 QualificationGenerationError,
                 "second excluded execution audit differs",
+            ):
+                load_contract(path)
+
+    def test_third_pre_outcome_audit_mutation_fails_closed(self) -> None:
+        drifted_contract = copy.deepcopy(self.contract)
+        third_audit = drifted_contract["pre_outcome_runtime_amendment"][
+            "excluded_execution_audits"
+        ][2]
+        third_audit["validator_environment"]["presolve_true_result"] = "unknown"
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "contract.json"
+            path.write_text(json.dumps(drifted_contract), encoding="utf-8")
+            with self.assertRaisesRegex(
+                QualificationGenerationError,
+                "third excluded execution audit differs",
             ):
                 load_contract(path)
 

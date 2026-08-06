@@ -30,6 +30,7 @@ from analyze_paired_value_t2_str_qualification import (
     _type7_quantile,
 )
 from generate_environment_generalization_qualification_v1 import (
+    LIMITED_INSPECTED_OUTPUT_FIELDS,
     load_contract as load_execution_contract,
 )
 from validate_outputs import ValidationError, validate_run
@@ -189,9 +190,20 @@ def load_analysis_contract(
     )
     execution = load_execution_contract(execution_path)
     amendment = execution.get("pre_outcome_runtime_amendment")
+    inspection = (
+        amendment.get("outcome_inspection_disclosure", {})
+        if isinstance(amendment, dict)
+        else {}
+    )
     _require(
         isinstance(amendment, dict)
-        and amendment.get("performance_outcomes_inspected") is False
+        and inspection
+        == {
+            "headline_deadline_or_latency_metrics_inspected": False,
+            "limited_error_log_aggregate_fields_inspected": True,
+            "limited_fields": list(LIMITED_INSPECTED_OUTPUT_FIELDS),
+            "limited_fields_used_for_policy_model_threshold_or_gate_selection": False,
+        }
         and amendment.get("failed_attempt_roots_are_not_qualification_evidence")
         is True
         and amendment.get(

@@ -39,12 +39,24 @@ ARM_IDS = (
 EXCLUDED_AUDIT_CHECKOUTS = (
     "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
     "d66313bcd9542158f48d16269449656dfa9dcc2b",
+    "de49f8b37746889dee10f1f31370ae6830d82c13",
 )
 REPAIR_COMMITS = (
     "a33d2c244a1c2134c8b8b4e436a6a749949f4701",
     "d4a55e68442b3122451856c4b65ec4551cf338ba",
     "648a56a4370d3662193ea7a717ed5a37d73d63c2",
     "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
+    "e7a8b3ed8d28f8094ce08978bf27db3ff99f4cee",
+)
+LIMITED_INSPECTED_OUTPUT_FIELDS = (
+    "sent_packets",
+    "sent_bytes",
+    "redundant_bytes",
+    "link_0_bytes",
+    "link_1_bytes",
+    "background_tx_bytes",
+    "background_rx_bytes",
+    "finalized_frames",
 )
 
 
@@ -120,12 +132,13 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     amendment = contract["pre_outcome_runtime_amendment"]
     preflight = amendment.get("configuration_preflight")
     builder_amendment = amendment.get("dataset_builder_compatibility_amendment")
+    inspection = amendment.get("outcome_inspection_disclosure")
     _require(
         isinstance(amendment, dict)
         and set(amendment)
         == {
             "amendment_stage",
-            "performance_outcomes_inspected",
+            "outcome_inspection_disclosure",
             "failed_attempt_roots_are_not_qualification_evidence",
             "all_576_runs_must_be_reexecuted_from_one_clean_repaired_commit",
             "partial_run_reuse_allowed",
@@ -137,8 +150,14 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "dataset_builder_compatibility_amendment",
         }
         and amendment.get("amendment_stage")
-        == "two_excluded_execution_audits_before_qualification_outcomes"
-        and amendment.get("performance_outcomes_inspected") is False
+        == "three_excluded_execution_audits_before_qualification_outcomes"
+        and inspection
+        == {
+            "headline_deadline_or_latency_metrics_inspected": False,
+            "limited_error_log_aggregate_fields_inspected": True,
+            "limited_fields": list(LIMITED_INSPECTED_OUTPUT_FIELDS),
+            "limited_fields_used_for_policy_model_threshold_or_gate_selection": False,
+        }
         and amendment.get("failed_attempt_roots_are_not_qualification_evidence")
         is True
         and amendment.get(
@@ -153,17 +172,13 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     audits = amendment.get("excluded_execution_audits")
     _require(
         isinstance(audits, list)
-        and len(audits) == 2
+        and len(audits) == 3
         and all(isinstance(audit, dict) for audit in audits)
         and tuple(audit.get("checkout") for audit in audits)
-        == EXCLUDED_AUDIT_CHECKOUTS
-        and all(
-            audit.get("performance_outcomes_inspected") is False
-            for audit in audits
-        ),
+        == EXCLUDED_AUDIT_CHECKOUTS,
         "excluded execution audits differ",
     )
-    first_audit, second_audit = audits
+    first_audit, second_audit, third_audit = audits
     _require(
         set(first_audit)
         == {
@@ -175,6 +190,7 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
         }
         and first_audit["campaign_state"]
         == "stopped_after_metadata_only_contract_failure"
+        and first_audit["performance_outcomes_inspected"] is False
         and first_audit["counts"]
         == {
             "manifest_complete_runs": 85,
@@ -210,6 +226,7 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "environment_generalization_closed_loop_qualification_v1/runs"
         )
         and second_audit["service"] == "wifi-qualification-d66313b.service"
+        and second_audit["performance_outcomes_inspected"] is False
         and isinstance(second_counts, dict)
         and second_counts
         == {
@@ -242,6 +259,49 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
         }
         and sum(validator_classes.values()) == second_counts["validator_rejections"],
         "second excluded execution audit differs",
+    )
+    third_counts = third_audit.get("counts")
+    third_inspection = third_audit.get("outcome_inspection")
+    validator_environment = third_audit.get("validator_environment")
+    _require(
+        set(third_audit)
+        == {
+            "checkout",
+            "campaign_state",
+            "remote_checkout",
+            "output_root",
+            "service",
+            "counts",
+            "failure",
+            "validator_environment",
+            "outcome_inspection",
+        }
+        and third_audit["campaign_state"]
+        == "stopped_after_solver_version_validator_failure"
+        and third_audit["remote_checkout"]
+        == "/home/jingweili/wifi_streaming_qualification_de49f8b"
+        and third_audit["output_root"]
+        == (
+            "/home/jingweili/wifi_streaming_qualification_de49f8b/results/"
+            "environment_generalization_closed_loop_qualification_v1/runs"
+        )
+        and third_audit["service"] == "wifi-qualification-de49f8b.service"
+        and third_counts
+        == {
+            "scheduled_runs": 576,
+            "retained_manifest_runs": 121,
+            "failed_completed_attempts": 1,
+            "interrupted_attempt_directories": 64,
+        }
+        and validator_environment
+        == {
+            "failing_scipy_version": "1.11.4",
+            "newer_scipy_replay_version": "1.17.1",
+            "presolve_false_result": "false_infeasible",
+            "presolve_true_result": "feasible_witness_passed_independent_replay",
+        }
+        and third_inspection == inspection,
+        "third excluded execution audit differs",
     )
     repairs = amendment.get("repair_commits")
     _require(
