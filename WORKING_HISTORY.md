@@ -123,6 +123,9 @@ P99.
 | Preserve missing queue-order telemetry | `916bb9a` | Keep valid rows with jointly unavailable FIFO-ahead fields and blank only their derived clearance features |
 | Record randomized collection closure | `1742ba1` | Exact 384-run manifest identity and corrected-analysis handoff |
 | Freeze held-out qualification execution | `257b194`, `06806cb` | Exact 576-run three-arm matrix and resolved hash in nine complete 64-worker waves |
+| Record randomized/qualification estimand boundary | `5d6565d` | Keep eligible-row oracle evidence separate from all-generated closed-loop gates |
+| Handle empty eligible-run support | `40b6be1` | Condition policy value on 383 represented runs while retaining all 384 runs for resource accounting |
+| Resume verified environment analysis prefix | `60c03f3` | Rehash and reuse only the completed dataset and LOFO stages after a later-stage failure |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -211,8 +214,10 @@ remains the engineering champion after the distributional closed-loop test.
   temporal builder is complete through `af1f29c`; `916bb9a` additionally
   preserves valid rows whose two FIFO-ahead fields are jointly unavailable.
   The corrected 307,689-row dataset and all 12 held-out-family model fits are
-  published on the VM; the exact resource-policy stage is running, and no
-  partial policy outcome has been inspected.  The frozen LOFO predictor/OOD
+  published on the VM.  The first exact resource-policy attempt stopped
+  before publishing outcomes because one source run has zero eligible rows;
+  the pre-outcome support amendment and verified-prefix resume path are
+  complete through `40b6be1` and `60c03f3`.  The frozen LOFO predictor/OOD
   path, exact policy/oracle/regret analyzer, OOD-aware exploration wrapper, and
   single-entry remote pipeline are complete through `3dd6855`.  Fetch,
   checksum, interpret, plot, and archive the analysis only after its top-level
@@ -229,10 +234,15 @@ item only when the research objective genuinely changes.
 The active boundary is environment-level generalization.  All 384 randomized
 collection runs are complete and checksum-bound.  The corrected analysis has
 published a 307,689-row action-clean T2 dataset and completed all 12 LOFO arm
-fits across the six held-out families; the exact resource-policy replay is now
-running on the VM.  Do not interpret partial policy output.  Wait for the
-plots and top-level pipeline manifest, fetch and independently validate the
-complete output, then archive the compact evidence.
+fits across the six held-out families.  The first exact resource-policy replay
+failed before publishing any policy artifact because its bootstrap assumed
+four represented eligible runs per scenario.  One source run legitimately has
+zero eligible rows.  The frozen contract now conditions policy value on the
+383 represented runs while resource accounting retains all 384 source runs,
+including zero action and reservation for the empty run (`40b6be1`).  Resume
+only from a byte-rehashed dataset/LOFO prefix using `60c03f3`; do not interpret
+results until the plots and top-level pipeline manifest close.  Then fetch,
+independently validate, and archive the compact evidence.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -640,6 +650,28 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Repair sparse eligible-run replay before outcomes
+
+- The first exact resource-policy replay ran for about 18 minutes, then failed
+  before atomically publishing its policy directory.  The 307,689-row dataset
+  and all 12 LOFO fits remain checksum-closed; no policy outcome was available
+  or inspected.
+- Diagnosed one legitimate zero-eligible-row source run in
+  `compound-shift-collection-p14` (run ID `79c0388a0d75a32f2909`, seed `20379`,
+  run `1`).  Its scenario retains 16 eligible rows across the other three runs.
+- Amended the contract before reading outcomes in `40b6be1`: policy-value and
+  bootstrap estimates condition on the 383 represented nonempty runs, with
+  three draws for that sparse scenario and four elsewhere; resource summaries
+  retain all 384 source runs and assign the empty run zero actions and
+  reservation.  The contract records the exact exception and source identity.
+- Added a fail-closed resume path in `60c03f3`.  It permits only an output root
+  containing exactly the completed dataset and LOFO directories, rehashes
+  every declared artifact, revalidates campaign/config/source provenance, and
+  reruns only policy and plotting before publishing a new top-level manifest.
+- All 68 environment-generalization and qualification regression tests pass.
+  Next deploy the clean commits, resume from the verified remote prefix, and
+  interpret nothing until the top-level manifest closes.
 
 ### 2026-08-06 - Complete LOFO fitting and freeze 64-way qualification execution
 
