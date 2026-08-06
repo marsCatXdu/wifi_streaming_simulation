@@ -1200,6 +1200,27 @@ class PairedValueT2ValidationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValidationError, "canonical model replay differs"):
                 fixture.validate_decisions()
 
+    def test_accepts_independent_probability_roundoff_in_derived_value(self) -> None:
+        temporary, fixture = self.fixture()
+        with temporary:
+            row = fixture.decisions[8]
+            primary_probability = float(row["primary_bad12_probability"]) + 1.5e-16
+            treated_probability = float(row["treated_bad12_probability"]) - 1.5e-16
+            nonnegative_value = primary_probability - treated_probability
+            row.update({
+                "primary_bad12_probability": repr(primary_probability),
+                "treated_bad12_probability": repr(treated_probability),
+                "nonnegative_bad12_value": repr(nonnegative_value),
+                "value_per_cost_score_float32": repr(
+                    f32(
+                        nonnegative_value
+                        / float(row["predicted_secondary_airtime_us"])
+                    )
+                ),
+            })
+            fixture._write_inputs()
+            fixture.validate_decisions()
+
     def test_replays_compiled_cost_accumulation_order(self) -> None:
         temporary, fixture = self.fixture(action=True)
         with temporary:

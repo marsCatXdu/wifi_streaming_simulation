@@ -3766,14 +3766,17 @@ def _validate_paired_value_t2_model_replays(
         # and Python libm paths, retain deterministic last-bit differences.
         # Use one explicit bound per diagnostic; do not reuse the validator's
         # generic relative-tolerance helper.
+        probability_tolerance = 2e-16
         evaluator_tolerances = {
             "primary_bad12_logit": 1e-15,
-            "primary_bad12_probability": 2e-16,
+            "primary_bad12_probability": probability_tolerance,
             "treated_bad12_logit": 1e-15,
-            "treated_bad12_probability": 2e-16,
+            "treated_bad12_probability": probability_tolerance,
             "predicted_log_airtime": 0.0,
             "predicted_secondary_airtime_us": max(3e-11, predicted_cost * 2e-14),
-            "nonnegative_bad12_value": 2e-16,
+            # This value subtracts the two independently rounded
+            # probabilities above, so its absolute error bound is their sum.
+            "nonnegative_bad12_value": 2 * probability_tolerance,
             "value_per_cost_score_float32": 0.0,
         }
         _require(
