@@ -40,6 +40,7 @@ EXCLUDED_AUDIT_CHECKOUTS = (
     "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
     "d66313bcd9542158f48d16269449656dfa9dcc2b",
     "de49f8b37746889dee10f1f31370ae6830d82c13",
+    "3bf5bb830351c50761386c0fb9295137c83696da",
 )
 REPAIR_COMMITS = (
     "a33d2c244a1c2134c8b8b4e436a6a749949f4701",
@@ -47,6 +48,7 @@ REPAIR_COMMITS = (
     "648a56a4370d3662193ea7a717ed5a37d73d63c2",
     "28b77ce2aa9ede45d9b79dcc658b69b2343e4049",
     "e7a8b3ed8d28f8094ce08978bf27db3ff99f4cee",
+    "2e2b2c68cf1d0ab157f72420e9a89ee31313c1e7",
 )
 LIMITED_INSPECTED_OUTPUT_FIELDS = (
     "sent_packets",
@@ -150,7 +152,7 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
             "dataset_builder_compatibility_amendment",
         }
         and amendment.get("amendment_stage")
-        == "three_excluded_execution_audits_before_qualification_outcomes"
+        == "four_excluded_execution_audits_before_qualification_outcomes"
         and inspection
         == {
             "headline_deadline_or_latency_metrics_inspected": False,
@@ -172,13 +174,13 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
     audits = amendment.get("excluded_execution_audits")
     _require(
         isinstance(audits, list)
-        and len(audits) == 3
+        and len(audits) == 4
         and all(isinstance(audit, dict) for audit in audits)
         and tuple(audit.get("checkout") for audit in audits)
         == EXCLUDED_AUDIT_CHECKOUTS,
         "excluded execution audits differ",
     )
-    first_audit, second_audit, third_audit = audits
+    first_audit, second_audit, third_audit, fourth_audit = audits
     _require(
         set(first_audit)
         == {
@@ -302,6 +304,62 @@ def load_contract(path: Path = CONTRACT_PATH) -> dict[str, Any]:
         }
         and third_inspection == inspection,
         "third excluded execution audit differs",
+    )
+    fourth_counts = fourth_audit.get("counts")
+    fourth_inspection = fourth_audit.get("outcome_inspection")
+    fourth_validator = fourth_audit.get("validator_environment")
+    _require(
+        set(fourth_audit)
+        == {
+            "checkout",
+            "campaign_state",
+            "remote_checkout",
+            "output_root",
+            "service",
+            "counts",
+            "failure",
+            "validator_environment",
+            "outcome_inspection",
+        }
+        and fourth_audit["campaign_state"]
+        == "stopped_after_load_dependent_validator_timeout"
+        and fourth_audit["remote_checkout"]
+        == "/home/jingweili/wifi_streaming_qualification_3bf5bb8"
+        and fourth_audit["output_root"]
+        == (
+            "/home/jingweili/wifi_streaming_qualification_3bf5bb8/results/"
+            "environment_generalization_closed_loop_qualification_v1/runs"
+        )
+        and fourth_audit["service"] == "wifi-qualification-3bf5bb8.service"
+        and fourth_counts
+        == {
+            "scheduled_runs": 576,
+            "retained_manifest_runs": 121,
+            "failed_completed_attempts": 1,
+            "interrupted_or_unretained_attempt_directories": 64,
+        }
+        and fourth_validator
+        == {
+            "scipy_version": "1.11.4",
+            "failed_run_id": "7ea792adf5b6eaa071a2",
+            "same_run_passed_preflight": True,
+            "isolated_replay_after_stop": "valid_1800_frames",
+            "failed_budget": (
+                "shared_30_seconds_across_all_components_and_representations"
+            ),
+            "repaired_budget": "60_seconds_per_component_representation",
+            "repaired_concurrent_stress_replays": 64,
+            "repaired_concurrent_stress_failures": 0,
+            "repaired_stress_elapsed_s": 66.936,
+        }
+        and fourth_inspection
+        == {
+            "headline_deadline_or_latency_metrics_inspected": False,
+            "limited_performance_aggregate_fields_inspected": False,
+            "failure_and_completion_metadata_inspected": True,
+            "metadata_used_for_policy_model_threshold_or_gate_selection": False,
+        },
+        "fourth excluded execution audit differs",
     )
     repairs = amendment.get("repair_commits")
     _require(

@@ -8,18 +8,18 @@
   },
   "contract": {
     "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
-    "sha256": "1bbdda82daa432862bd5be47ecd340b7600d7caf41059d86beb612680a663f11"
+    "sha256": "aafdcc0dfced3f116bb54b4e55bc60c22f224483728be1cefe785e12c26c4885"
   },
   "generated_artifacts": {
     "qualification_config": {
       "bytes": 27318,
       "path": "experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml",
-      "sha256": "4e51bd4bc45d504890398abbc47da844be988cf91f827938bad8eafcd7b7dfae"
+      "sha256": "0460d262fdbdde29b246f108b705777bb86b7ef42406afc48cadba5ddf5674ed"
     }
   },
   "generator": {
     "path": "tools/generate_environment_generalization_qualification_v1.py",
-    "sha256": "6bf1ce4cd122b08ea423f9bf149e9ee768a88f669da75f3a8e371ed2c3e6a653"
+    "sha256": "00aa640acbe36505f4e7ce0f092362b95d895809dbb316d4d0e024698dedaf6e"
   },
   "invariants": {
     "every_paired_unit_has_all_three_arms": true,
@@ -31,6 +31,6 @@
   "reproduction": [
     "python3 tools/generate_environment_generalization_qualification_v1.py --check"
   ],
-  "resolved_matrix_sha256": "b1dc5fa84b94dc37f1b2cfbe10a7874f0b4902a5b15ef3b1b08c4fe32f0a7e48",
+  "resolved_matrix_sha256": "4db729f7a801c8b911ee3cb9acd9ed996e4568a3f7274d6158e547b4db462694",
   "schema_version": 1
 }

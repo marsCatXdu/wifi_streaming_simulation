@@ -134,14 +134,16 @@ P99.
 | Repair generalized qualification execution | `a33d2c2`, `d4a55e6`, `648a56a`, `28b77ce` | Stale-ACK handling, event-time debt replay, normalized PHY histories, and generalized frame/MPDU contracts |
 | Launch repaired held-out qualification | `de49f8b` | Two strict generalized canaries followed by one clean 576-run, 64-worker campaign |
 | Repair solver-version portability | `e7a8b3e` | Presolve retry with unchanged feasibility constraints and independent witness replay |
+| Isolate concurrent solver timeouts | `2e2b2c6` | Fresh bounded budget for every component and presolve representation |
 
-The latest validator milestone is `e7a8b3e`.  It retains the exact historical
+The latest validator milestone is `2e2b2c6`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
 multiclass model, completion CDFs, shadow reference, congestion regime,
 repayable permanent ledger, decision routes, and runtime summaries.  V2
 remains the engineering champion after the distributional closed-loop test.
 It also retries false mixed-integer infeasibility with presolve while preserving
-the original formulation and independent witness replay.
+the original formulation and independent witness replay, and gives every
+component/representation an independent operational timeout budget.
 
 ## One authoritative TODO checklist
 
@@ -264,10 +266,15 @@ the original formulation and independent witness replay.
   SciPy 1.11.4.  Commit `3bf5bb8` binds this third excluded root and repair into
   both frozen contracts.  Its fresh VM checkout passes the exact failed-attempt
   replay, 52 focused Python tests, the C++ module suite, all 144 configuration
-  checks, and five full strict canaries.  The final 576-run campaign has started
-  from one empty root with 64 workers; inspect only completion and error
-  metadata until exact closure.  The all-generated analyzer remains frozen at
-  `101f132`, and the eleven-figure
+  checks, and five full strict canaries.  Its campaign was stopped after 121
+  retained runs when that same preflight run exhausted a single 30-second
+  validator budget shared across all components and solver representations
+  under full load.  It passes unchanged in isolation.  Commit `2e2b2c6` gives
+  each component/representation a fresh 60-second operational budget without
+  changing the formulation, tolerances, or witness replay; 64 concurrent exact
+  replays pass in 66.94 seconds.  Bind this fourth excluded root and repair,
+  then rerun all 576 arms from another empty clean checkout.  The all-generated
+  analyzer remains frozen at `101f132`, and the eleven-figure
   statistical/historical plot suite remains frozen at `ab9e008`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
@@ -286,11 +293,12 @@ miss, completed HF7 P99, sender airtime, and background gates at aggregate,
 family, and scenario levels, and mark the predeclared randomized-oracle
 fraction `not_assessable` because the two populations differ.
 
-The `ff6d8b8`, `d66313b`, and `de49f8b` checkouts are stopped and excluded in
-both execution and analysis contracts.  Their directory and failure counts are
-audit metadata only; do not resume any root, promote the first root's 85
-complete entries, promote the second root's 335 retained entries, promote the
-third root's 121 retained entries, or combine any population with a new build.
+The `ff6d8b8`, `d66313b`, `de49f8b`, and `3bf5bb8` checkouts are stopped and
+excluded in both execution and analysis contracts.  Their directory and
+failure counts are audit metadata only; do not resume any root, promote the
+first root's 85 complete entries, promote the second root's 335 retained
+entries, promote either later root's 121 retained entries, or combine any
+population with a new build.
 The second audit's 576 attempts split exactly into 335
 retained entries, 134 process failures, and 107 validator rejections.  Commits
 `a6ac26e`, `616caff`, and `147b1b2` restore source closure, add the named held-out
@@ -308,9 +316,16 @@ commit and passes the preserved failed attempt, 52 focused Python tests, the
 canaries spanning STR, both selective policies, the former failing OBSS
 scenario, and the variable-frame workload.  The final service
 `wifi-qualification-3bf5bb8.service` started from an empty root at 18:25 SGT
-with 64 workers.  Analysis and plotting are queued behind it as required
-systemd dependencies.  Inspect no headline outcome until the exact manifest
-closes and every run passes strict validation.
+with 64 workers, then stopped after 121 retained runs, one failed completed
+attempt, and 64 interrupted or unretained attempts.  The failure was the same
+run that passed preflight and isolated replay: one 30-second wall-clock budget
+was shared across all independent MILP components and both presolve choices.
+No performance aggregate was inspected.  Commit `2e2b2c6` replaces that shared
+guard with a fresh 60-second budget per component/representation; the exact
+attempt passes 64/64 concurrent stress replays in 66.94 seconds.  Bind this
+fourth excluded audit in both contracts and relaunch all 576 runs from a fresh
+empty root.  Inspect no headline outcome until the exact manifest closes and
+every run passes strict validation.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -731,6 +746,34 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Exclude the fourth audit and isolate solver timeouts
+
+- Stopped `wifi-qualification-3bf5bb8.service` and both downstream jobs as soon
+  as the first failure line appeared.  The manifest reached 121 retained runs
+  during shutdown; one completed attempt failed validation and 64 attempt
+  directories were interrupted or not retained.  This entire root is excluded
+  and none of its 121 retained runs may be combined with a later campaign.
+- Inspected only service state, manifest and attempt counts, the failed run ID,
+  and its validator error text.  No deadline, latency, P99, throughput, airtime,
+  action, policy-comparison, threshold, or gate outcome was inspected.  The
+  failing run `7ea792adf5b6eaa071a2` is one of the five successful preflight
+  canaries and validates unchanged after campaign load is removed.
+- The validator incorrectly shared one 30-second wall-clock allowance across
+  every independent feasibility component and both presolve representations.
+  Thus a slow earlier component could exhaust the budget of a later feasible
+  representation.  This is an operational-load dependency, not an evidence
+  constraint or solver-formulation difference.
+- Commit `2e2b2c6` gives every component and representation a fresh 60-second
+  solver allowance.  It leaves the matrices, integer lattices, bounds,
+  tolerances, rounding, and independent exact replay unchanged.  Fifty-one
+  focused local validator, distributional, generator, configuration, and
+  analyzer tests pass.
+- A separate clean VM checkout at `2e2b2c6` ran 64 concurrent strict replays
+  of the exact failed attempt under SciPy 1.11.4.  All 64 passed in 66.936
+  seconds.  Amend both frozen contracts to exclude `3bf5bb8`, bind `2e2b2c6`,
+  regenerate the matrix provenance, and start all 576 runs again from a new
+  clean checkout and empty root.
 
 ### 2026-08-06 - Exclude the third audit and repair solver portability
 

@@ -5,14 +5,14 @@
   "purpose": "Analyze the predeclared 576-run held-out closed-loop comparison after the pre-outcome runtime repairs, without changing estimands, weights, uncertainty, or gates after outcomes are observed.",
   "execution_contract": {
     "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
-    "sha256": "1bbdda82daa432862bd5be47ecd340b7600d7caf41059d86beb612680a663f11"
+    "sha256": "aafdcc0dfced3f116bb54b4e55bc60c22f224483728be1cefe785e12c26c4885"
   },
   "generated_matrix": {
     "path": "experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml",
-    "sha256": "4e51bd4bc45d504890398abbc47da844be988cf91f827938bad8eafcd7b7dfae",
+    "sha256": "0460d262fdbdde29b246f108b705777bb86b7ef42406afc48cadba5ddf5674ed",
     "artifact_manifest_path": "experiments/model-selection/environment-generalization-qualification-artifacts-v1.json",
-    "artifact_manifest_sha256": "1276bf82b56a29c532a40a122d457b3ea61c081dc2a9475fa3d35173298141a5",
-    "resolved_matrix_sha256": "b1dc5fa84b94dc37f1b2cfbe10a7874f0b4902a5b15ef3b1b08c4fe32f0a7e48"
+    "artifact_manifest_sha256": "d1e07e216f0ca4b94628c5b1d8b666126e41bd70596679b8c3ecb8cd58aef6d6",
+    "resolved_matrix_sha256": "4db729f7a801c8b911ee3cb9acd9ed996e4568a3f7274d6158e547b4db462694"
   },
   "population": {
     "family_count": 6,
@@ -53,7 +53,8 @@
     "exclude_execution_checkouts_from_all_estimands": [
       "ff6d8b8fcb5882c04ba53b84f12c0e23e3686d62",
       "d66313bcd9542158f48d16269449656dfa9dcc2b",
-      "de49f8b37746889dee10f1f31370ae6830d82c13"
+      "de49f8b37746889dee10f1f31370ae6830d82c13",
+      "3bf5bb830351c50761386c0fb9295137c83696da"
     ],
     "require_one_build_identity": true,
     "require_manifest_project_commit_to_equal_clean_analyzer_checkout": true
@@ -158,8 +159,9 @@
     "Completed-frame P99 is survivor-conditioned and must never be interpreted without all-generated deadline misses and completed-frame counts.",
     "A campaign-level pass does not erase a failed held-out-family safety gate.",
     "The distributional-shadow arm is a previously frozen policy, not a refit on randomized environment outcomes.",
-    "The ff6d8b8, d66313b, and de49f8b execution roots exposed runtime or validator incompatibilities and are excluded; all 576 runs must come from one clean repaired commit.",
+    "The ff6d8b8, d66313b, de49f8b, and 3bf5bb8 execution roots exposed runtime or validator incompatibilities and are excluded; all 576 runs must come from one clean repaired commit.",
     "During de49f8b solver diagnosis, one error log exposed only sent-packet, byte-count, background-byte, and finalized-frame aggregates. No deadline, latency, policy-comparison, threshold, or gate outcome was inspected, and those fields were not used to select or change the policy, model, threshold, or gates.",
+    "The 3bf5bb8 audit exposed only service, completion, attempt-count, run-identity, and timeout-error metadata. The failed deterministic run passed preflight and isolated replay; no deadline, latency, performance aggregate, policy comparison, threshold, or gate outcome was inspected or changed.",
     "EMLSR is not an arm or gate in this STR-focused qualification.",
     "No held-out outcome may be inspected until all 576 arms are complete and the exact manifest closes."
   ]
