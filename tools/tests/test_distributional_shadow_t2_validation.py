@@ -68,7 +68,7 @@ class DistributionalShadowT2ValidationTest(unittest.TestCase):
 
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
-        with self.assertRaisesRegex(ValidationError, "neutral environment differs"):
+        with self.assertRaisesRegex(ValidationError, "shared target Wi-Fi differs"):
             _validate_distributional_shadow_t2_config(changed_environment)
 
         changed_policy = copy.deepcopy(config)
@@ -77,6 +77,26 @@ class DistributionalShadowT2ValidationTest(unittest.TestCase):
         ] = 1.250001
         with self.assertRaisesRegex(ValidationError, "controller object exists|differs"):
             _validate_distributional_shadow_t2_config(changed_policy)
+
+    def test_accepts_bounded_generalization_profile_and_rejects_bad_cadence(self) -> None:
+        config = self.resolved_config()
+        config["pairedTemporalT2FrameProfile"] = "environment_generalization_v1"
+        config["environment"] = "held_out_environment_generalization_v1"
+        config["stream"].update({
+            "fps": 60,
+            "frame_size_bytes": 8200,
+            "gop_length": 90,
+            "keyframe_size_multiplier": 3.613,
+            "deadline_us": 16667,
+        })
+        config["propagation"]["station_distance_m"] = 12.425
+        config["background"]["obss"]["dl_max_rate_mbps"] = 13.1084
+        _validate_distributional_shadow_t2_config(config)
+
+        bad_deadline = copy.deepcopy(config)
+        bad_deadline["stream"]["deadline_us"] = 33333
+        with self.assertRaisesRegex(ValidationError, "outside the frozen domain"):
+            _validate_distributional_shadow_t2_config(bad_deadline)
 
     def test_portable_model_has_expected_golden_results(self) -> None:
         context = _distributional_shadow_t2_model_replay_context()

@@ -433,6 +433,7 @@ main(int argc, char* argv[])
     std::string decisionsFile;
     std::string projectGitCommit;
     std::string runId = "single-link";
+    bool configurationCheckOnly = false;
     bool predictionTelemetryEnabled = false;
     std::string predictionSampleOffsetsUs = "0,1000,2000,4000";
     std::string predictionHistoryWindowsUs = "1000,5000,20000";
@@ -441,6 +442,7 @@ main(int argc, char* argv[])
     bool predictionEventLogEnabled = false;
     bool predictionOracleFeaturesEnabled = false;
     std::string pairedValueT2AdmissionProfile = "baseline_v1";
+    std::string pairedTemporalT2FrameProfile = "canonical_v1";
     double selectiveDuplicationThreshold = 0.2;
     double selectiveDuplicationFrameBudget = 0.3;
     uint32_t selectiveDuplicationBurstHorizonFrames = 30;
@@ -584,6 +586,9 @@ main(int argc, char* argv[])
                      "Project commit (defaults to build-time repository commit)",
                      projectGitCommit);
     command.AddValue("runId", "Run identifier stored in CSV output", runId);
+    command.AddValue("configurationCheckOnly",
+                     "Validate the complete configuration and exit before creating output",
+                     configurationCheckOnly);
     command.AddValue("predictionTelemetryEnabled",
                      "Enable passive frame-aligned prediction telemetry",
                      predictionTelemetryEnabled);
@@ -609,6 +614,10 @@ main(int argc, char* argv[])
                      "Paired-value admission profile: baseline_v1 or "
                      "score_aware_emergency_v2 or score_aware_full_horizon_v3",
                      pairedValueT2AdmissionProfile);
+    command.AddValue("pairedTemporalT2FrameProfile",
+                     "Paired temporal-T2 frame profile: canonical_v1 or "
+                     "environment_generalization_v1",
+                     pairedTemporalT2FrameProfile);
     command.AddValue("selectiveDuplicationThreshold",
                      "Calibrated miss-probability action threshold",
                      selectiveDuplicationThreshold);
@@ -834,6 +843,16 @@ main(int argc, char* argv[])
         policyName == "distributional_shadow_duplication_t2";
     const bool pairedTemporalT2Control =
         pairedValueT2Control || distributionalShadowT2Control;
+    const bool environmentGeneralizationT2FrameProfile =
+        pairedTemporalT2FrameProfile == "environment_generalization_v1";
+    NS_ABORT_MSG_IF(pairedTemporalT2FrameProfile != "canonical_v1" &&
+                        !environmentGeneralizationT2FrameProfile,
+                    "Unknown pairedTemporalT2FrameProfile "
+                        << pairedTemporalT2FrameProfile);
+    NS_ABORT_MSG_IF(!pairedTemporalT2Control &&
+                        pairedTemporalT2FrameProfile != "canonical_v1",
+                    "A noncanonical paired temporal-T2 frame profile requires a paired "
+                    "temporal-T2 policy");
     const uint64_t resolvedAdaptiveAirtimeInitialBucketHorizonUs =
         adaptiveAirtimeInitialBucketHorizonUs == 0
             ? adaptiveAirtimeBucketHorizonUs
@@ -1079,10 +1098,49 @@ main(int argc, char* argv[])
                         "Paired-value T2 control requires genuine delayed 1 ms polling");
         NS_ABORT_MSG_IF(durationSeconds != 60.0,
                         "Paired-value T2 control requires the frozen 60 s duration");
-        NS_ABORT_MSG_IF(sourceName != "synthetic" || fps != 30.0 || frameSize != 12000 ||
-                            keyframeSizeMultiplier != 4.0 || gopLength != 60 ||
-                            payloadSize != 1200 || deadlineUs != 33333,
-                        "Paired-value T2 control requires the frozen synthetic frame profile");
+        if (!environmentGeneralizationT2FrameProfile)
+        {
+            NS_ABORT_MSG_IF(sourceName != "synthetic" || fps != 30.0 ||
+                                frameSize != 12000 || keyframeSizeMultiplier != 4.0 ||
+                                gopLength != 60 || payloadSize != 1200 ||
+                                deadlineUs != 33333,
+                            "Paired temporal-T2 canonical_v1 requires the frozen synthetic "
+                            "frame profile");
+        }
+        else
+        {
+            const bool cadenceAndDeadlineSupported =
+                (fps == 24.0 && deadlineUs == 41667) ||
+                (fps == 30.0 && deadlineUs == 33333) ||
+                (fps == 45.0 && deadlineUs == 22222) ||
+                (fps == 60.0 && deadlineUs == 16667);
+            const bool gopSupported =
+                gopLength == 30 || gopLength == 60 || gopLength == 90 ||
+                gopLength == 120;
+            NS_ABORT_MSG_IF(sourceName != "synthetic" || !cadenceAndDeadlineSupported ||
+                                frameSize < 6000 || frameSize > 14000 ||
+                                frameSize % 100 != 0 || !gopSupported ||
+                                !std::isfinite(keyframeSizeMultiplier) ||
+                                keyframeSizeMultiplier < 2.0 ||
+                                keyframeSizeMultiplier > 4.0 || payloadSize != 1200,
+                            "Paired temporal-T2 environment_generalization_v1 frame profile "
+                            "is outside the frozen workload domain");
+            const double largestFrameSize = frameSize * keyframeSizeMultiplier;
+            NS_ABORT_MSG_IF(!std::isfinite(largestFrameSize) || largestFrameSize < 1 ||
+                                largestFrameSize > std::numeric_limits<uint32_t>::max(),
+                            "Paired temporal-T2 environment_generalization_v1 frame size is "
+                            "not bounded");
+            const uint64_t largestFrameBytes = std::llround(largestFrameSize);
+            const uint64_t largestFramePackets =
+                1 + (largestFrameBytes - 1) / payloadSize;
+            const uint64_t largestEstimatedAggregateBytes =
+                largestFrameBytes +
+                largestFramePackets *
+                    (StreamingHeader::SERIALIZED_SIZE + expectedMacServiceOverheadBytes + 38);
+            NS_ABORT_MSG_IF(largestEstimatedAggregateBytes > maxAmpduSize,
+                            "Paired temporal-T2 environment_generalization_v1 requires every "
+                            "synthetic frame to fit the configured A-MPDU limit");
+        }
         NS_ABORT_MSG_IF(queueMaxDelayMs != 500 || maxAmpduSize != 65535 ||
                             maxAmsduSize != 0 || txopLimitUs != 0 ||
                             rtsCtsThreshold != 4692480 || fragmentationThreshold != 65535 ||
@@ -1309,6 +1367,10 @@ main(int argc, char* argv[])
                     "Correlation modes apply only to udp_bursty background traffic");
     NS_ABORT_MSG_IF(correlationMode == "trace_replay" && correlationTrace.empty(),
                     "trace_replay requires correlationTrace");
+    if (configurationCheckOnly)
+    {
+        return 0;
+    }
     ExperimentOutput::PrepareRunDirectory(outputDir);
 
     NodeContainer station;
@@ -2527,6 +2589,7 @@ main(int argc, char* argv[])
     resolved.predictionEventLogEnabled = predictionEventLogEnabled;
     resolved.predictionOracleFeaturesEnabled = predictionOracleFeaturesEnabled;
     resolved.pairedValueT2AdmissionProfile = pairedValueT2AdmissionProfile;
+    resolved.pairedTemporalT2FrameProfile = pairedTemporalT2FrameProfile;
     resolved.selectiveDuplicationThreshold = selectiveDuplicationThreshold;
     resolved.selectiveDuplicationFrameBudget = selectiveDuplicationFrameBudget;
     resolved.selectiveDuplicationBurstHorizonFrames =

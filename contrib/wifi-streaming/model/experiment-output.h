@@ -147,6 +147,8 @@ struct StreamingRunConfig
     bool predictionOracleFeaturesEnabled{false};
     std::string pairedValueT2AdmissionProfile{
         "baseline_v1"}; ///< Frozen paired-value admission semantics.
+    std::string pairedTemporalT2FrameProfile{
+        "canonical_v1"}; ///< Accepted temporal-T2 workload envelope.
     double selectiveDuplicationThreshold{0};
     double selectiveDuplicationFrameBudget{0};
     uint32_t selectiveDuplicationBurstHorizonFrames{0};

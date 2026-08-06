@@ -2302,6 +2302,11 @@ class OutputStatisticsTestCase : public TestCase
                 "\"environment\": \"unchanged_neutral_mixed4x4\""),
             std::string::npos,
             "Paired-value neutral environment label is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            pairedText.str().find(
+                "\"pairedTemporalT2FrameProfile\": \"canonical_v1\""),
+            std::string::npos,
+            "Paired-value canonical frame profile is missing");
         NS_TEST_ASSERT_MSG_NE(pairedText.str().find(
                                   "\"pairedValueDuplicationT2\": {"),
                               std::string::npos,
@@ -2334,6 +2339,29 @@ class OutputStatisticsTestCase : public TestCase
                                   "\"budget_fraction\": 0.006"),
                               std::string::npos,
                               "Paired-value budget fraction is missing");
+
+        const std::string generalizationDirectory =
+            directory + "/paired-value-t2-generalization";
+        ExperimentOutput::PrepareRunDirectory(generalizationDirectory);
+        pairedConfig.runId = "paired-value-t2-generalization";
+        pairedConfig.pairedTemporalT2FrameProfile =
+            "environment_generalization_v1";
+        ExperimentOutput::WriteResolvedConfig(generalizationDirectory, pairedConfig);
+        std::ifstream generalizationResolved(generalizationDirectory +
+                                             "/resolved_config.json");
+        std::ostringstream generalizationText;
+        generalizationText << generalizationResolved.rdbuf();
+        NS_TEST_ASSERT_MSG_NE(
+            generalizationText.str().find(
+                "\"environment\": \"held_out_environment_generalization_v1\""),
+            std::string::npos,
+            "Paired-value generalization environment label is missing");
+        NS_TEST_ASSERT_MSG_NE(
+            generalizationText.str().find(
+                "\"pairedTemporalT2FrameProfile\": "
+                "\"environment_generalization_v1\""),
+            std::string::npos,
+            "Paired-value generalization frame profile is missing");
 
         const std::string selectiveDirectory = directory + "/selective";
         ExperimentOutput::PrepareRunDirectory(selectiveDirectory);

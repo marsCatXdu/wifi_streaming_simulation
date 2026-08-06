@@ -257,7 +257,14 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
     if (config.policy == "paired_value_duplication_t2" ||
         config.policy == "distributional_shadow_duplication_t2")
     {
-        output << "  \"environment\": \"unchanged_neutral_mixed4x4\",\n";
+        const bool generalizationProfile =
+            config.pairedTemporalT2FrameProfile == "environment_generalization_v1";
+        output << "  \"environment\": \""
+               << (generalizationProfile ? "held_out_environment_generalization_v1"
+                                         : "unchanged_neutral_mixed4x4")
+               << "\",\n"
+               << "  \"pairedTemporalT2FrameProfile\": \""
+               << JsonEscape(config.pairedTemporalT2FrameProfile) << "\",\n";
     }
     output << "  \"duration_s\": " << config.durationSeconds << ",\n"
            << "  \"warmup_s\": " << config.warmupSeconds << ",\n"

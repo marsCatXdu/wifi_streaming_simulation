@@ -1629,12 +1629,36 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         self.assertEqual(profile["decision_schema_version"], 4)
         changed_environment = copy.deepcopy(config)
         changed_environment["wifi"]["queue_max_packets"] = 501
-        with self.assertRaisesRegex(ValidationError, "neutral environment projection"):
+        with self.assertRaisesRegex(ValidationError, "shared target Wi-Fi differs"):
             _validate_paired_value_t2_config(changed_environment)
         conflicting_controller = copy.deepcopy(config)
         conflicting_controller["selectiveDuplication"] = {}
         with self.assertRaisesRegex(ValidationError, "another controller"):
             _validate_paired_value_t2_config(conflicting_controller)
+
+        generalization_config = copy.deepcopy(score_aware_config)
+        generalization_config["pairedTemporalT2FrameProfile"] = (
+            "environment_generalization_v1"
+        )
+        generalization_config["environment"] = (
+            "held_out_environment_generalization_v1"
+        )
+        generalization_config["stream"].update({
+            "fps": 24,
+            "frame_size_bytes": 13700,
+            "gop_length": 120,
+            "keyframe_size_multiplier": 3.999,
+            "deadline_us": 41667,
+        })
+        generalization_config["background"]["profile"] = "legacy_mixed8"
+        generalization_config["propagation"]["path_loss_exponent"] = 3.1893
+        _validate_paired_value_t2_config(generalization_config)
+
+        invalid_generalization = copy.deepcopy(generalization_config)
+        invalid_generalization["stream"]["frame_size_bytes"] = 14001
+        with self.assertRaisesRegex(ValidationError, "outside the frozen domain"):
+            _validate_paired_value_t2_config(invalid_generalization)
+
         config["pairedValueDuplicationT2"]["budget_fraction"] = 0.0060001
         with self.assertRaisesRegex(ValidationError, "differs from contract"):
             _validate_paired_value_t2_config(config)

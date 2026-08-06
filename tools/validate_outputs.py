@@ -442,6 +442,30 @@ PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256 = (
 PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256 = (
     "26698328ca7dde07a6ad283e05f84ad8406de4b1f50d0d8863da500f14140c90"
 )
+PAIRED_VALUE_T2_SHARED_WIFI_SHA256 = (
+    "7e98f6f5877a44565191ac23aa8118f732d36218b1511f6333438b0ee59e8864"
+)
+PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE = "canonical_v1"
+PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE = (
+    "environment_generalization_v1"
+)
+PAIRED_TEMPORAL_T2_GENERALIZATION_ENVIRONMENT = (
+    "held_out_environment_generalization_v1"
+)
+PAIRED_TEMPORAL_T2_GENERALIZATION_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/environment-generalization-v1.json"
+)
+PAIRED_TEMPORAL_T2_GENERALIZATION_CONTRACT_SHA256 = (
+    "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+)
+PAIRED_TEMPORAL_T2_GENERALIZATION_SCENARIOS_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/environment-generalization-scenarios-v1.json"
+)
+PAIRED_TEMPORAL_T2_GENERALIZATION_SCENARIOS_SHA256 = (
+    "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+)
 PAIRED_VALUE_T2_MODEL_ARTIFACT_SHA256 = (
     "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
 )
@@ -2573,6 +2597,136 @@ def _validate_paired_value_t2_source_files() -> None:
                  f"paired-value runtime contract: source drifted {relative_path}")
 
 
+def _validate_paired_temporal_t2_environment(
+    config: dict[str, Any], label: str
+) -> None:
+    """Validate the canonical or held-out temporal-T2 environment envelope."""
+
+    frame_profile = config.get(
+        "pairedTemporalT2FrameProfile",
+        PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+    )
+    _require(
+        frame_profile
+        in {
+            PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE,
+            PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
+        },
+        f"resolved_config.json: {label} frame profile is unsupported",
+    )
+    missing = [key for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS if key not in config]
+    _require(
+        not missing,
+        f"resolved_config.json: {label} environment fields are missing",
+    )
+    wifi = config.get("wifi")
+    _require(
+        isinstance(wifi, dict),
+        f"resolved_config.json: {label} Wi-Fi config is missing",
+    )
+    shared_wifi = {
+        key: wifi.get(key, "__MISSING__") for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
+    }
+    _require(
+        _canonical_json_sha256(shared_wifi, f"{label} shared target Wi-Fi")
+        == PAIRED_VALUE_T2_SHARED_WIFI_SHA256,
+        f"resolved_config.json: {label} shared target Wi-Fi differs",
+    )
+
+    if frame_profile == PAIRED_TEMPORAL_T2_CANONICAL_FRAME_PROFILE:
+        _require(
+            config.get("environment") == "unchanged_neutral_mixed4x4",
+            f"resolved_config.json: {label} environment identity mismatch",
+        )
+        _require(
+            _sha256_file(PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH, "neutral environment source")
+            == PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256,
+            f"{label} runtime: neutral environment source drifted",
+        )
+        environment = {
+            **{key: config[key] for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS},
+            "shared_target_wifi": shared_wifi,
+        }
+        environment = copy.deepcopy(environment)
+        obss = environment.get("background", {}).get("obss")
+        if isinstance(obss, dict):
+            obss.pop("bsses", None)
+        _require(
+            _canonical_json_sha256(environment, f"{label} neutral environment")
+            == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
+            f"resolved_config.json: {label} neutral environment projection differs",
+        )
+        return
+
+    _require(
+        config.get("environment") == PAIRED_TEMPORAL_T2_GENERALIZATION_ENVIRONMENT,
+        f"resolved_config.json: {label} generalization environment identity mismatch",
+    )
+    for path, expected, source_label in (
+        (
+            PAIRED_TEMPORAL_T2_GENERALIZATION_CONTRACT_PATH,
+            PAIRED_TEMPORAL_T2_GENERALIZATION_CONTRACT_SHA256,
+            "environment-generalization contract",
+        ),
+        (
+            PAIRED_TEMPORAL_T2_GENERALIZATION_SCENARIOS_PATH,
+            PAIRED_TEMPORAL_T2_GENERALIZATION_SCENARIOS_SHA256,
+            "environment-generalization scenario catalog",
+        ),
+    ):
+        _require(
+            _sha256_file(path, source_label) == expected,
+            f"{label} runtime: {source_label} drifted",
+        )
+    _require(
+        config.get("duration_s") == 60
+        and config.get("warmup_s") == 1
+        and config.get("measurement_start_s") == 1
+        and config.get("measurement_stop_s") == 61,
+        f"resolved_config.json: {label} generalization measurement window differs",
+    )
+    stream = config.get("stream")
+    _require(
+        isinstance(stream, dict),
+        f"resolved_config.json: {label} generalization stream is missing",
+    )
+    fps = stream.get("fps") if isinstance(stream, dict) else None
+    deadline_by_fps = {24: 41667, 30: 33333, 45: 22222, 60: 16667}
+    frame_size = stream.get("frame_size_bytes") if isinstance(stream, dict) else None
+    gop_length = stream.get("gop_length") if isinstance(stream, dict) else None
+    keyframe_multiplier = (
+        stream.get("keyframe_size_multiplier") if isinstance(stream, dict) else None
+    )
+    _require(
+        stream.get("source") == "synthetic"
+        and stream.get("trace_file") == ""
+        and stream.get("payload_size_bytes") == 1200
+        and stream.get("emission_mode") == "burst"
+        and isinstance(fps, (int, float))
+        and not isinstance(fps, bool)
+        and float(fps).is_integer()
+        and int(fps) in deadline_by_fps
+        and stream.get("deadline_us") == deadline_by_fps[int(fps)]
+        and isinstance(frame_size, int)
+        and not isinstance(frame_size, bool)
+        and 6000 <= frame_size <= 14000
+        and frame_size % 100 == 0
+        and isinstance(gop_length, int)
+        and not isinstance(gop_length, bool)
+        and gop_length in {30, 60, 90, 120}
+        and isinstance(keyframe_multiplier, (int, float))
+        and not isinstance(keyframe_multiplier, bool)
+        and math.isfinite(float(keyframe_multiplier))
+        and 2.0 <= float(keyframe_multiplier) <= 4.0,
+        f"resolved_config.json: {label} generalization stream is outside the frozen domain",
+    )
+    _require(
+        isinstance(config.get("propagation"), dict)
+        and isinstance(config.get("background"), dict),
+        f"resolved_config.json: {label} generalization environment is incomplete",
+    )
+
+
 def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     """Validate the frozen resolved configuration and source closure."""
     paired = config.get("pairedValueDuplicationT2")
@@ -2717,17 +2871,11 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
         == profile["runtime_contract_sha256"],
         "paired-value runtime contract: committed bytes differ from frozen SHA-256",
     )
-    _require(
-        _sha256_file(PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH, "neutral environment source")
-        == PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256,
-        "paired-value runtime contract: neutral environment source drifted",
-    )
     _validate_paired_value_t2_source_files()
     _require(config.get("topology") == "dual_interface" and
              config.get("policy") == PAIRED_VALUE_T2_POLICY,
              "resolved_config.json: paired-value policy/topology mismatch")
-    _require(config.get("environment") == "unchanged_neutral_mixed4x4",
-             "resolved_config.json: paired-value environment identity mismatch")
+    _validate_paired_temporal_t2_environment(config, "paired-value")
 
     _require(isinstance(paired, dict) and
              _canonical_json_sha256(paired, "pairedValueDuplicationT2") ==
@@ -2767,27 +2915,8 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
         "adaptiveDeficitDuplication", "randomizedIntervention",
     )), "resolved_config.json: another controller object exists for paired-value policy")
 
-    missing = [key for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS if key not in config]
-    _require(not missing,
-             "resolved_config.json: paired-value neutral environment fields are missing")
     wifi = config.get("wifi")
     _require(isinstance(wifi, dict), "resolved_config.json: paired-value wifi is missing")
-    environment = {
-        **{key: config[key] for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS},
-        "shared_target_wifi": {
-            key: wifi.get(key, "__MISSING__")
-            for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
-        },
-    }
-    environment = copy.deepcopy(environment)
-    obss = environment.get("background", {}).get("obss")
-    if isinstance(obss, dict):
-        obss.pop("bsses", None)
-    _require(
-        _canonical_json_sha256(environment, "paired-value neutral environment")
-        == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
-        "resolved_config.json: paired-value neutral environment projection differs",
-    )
     topology_wifi = {
         key: wifi.get(key, "__MISSING__")
         for key in PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS
@@ -2829,19 +2958,19 @@ def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
         == DISTRIBUTIONAL_SHADOW_T2_CONTRACT_SHA256,
         "distributional-shadow runtime contract: committed bytes differ",
     )
-    _require(
-        _sha256_file(PAIRED_VALUE_T2_NEUTRAL_SOURCE_PATH, "neutral environment source")
-        == PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256,
-        "distributional-shadow runtime: neutral environment source drifted",
-    )
     _validate_distributional_shadow_t2_source_files()
     controller = config.get("distributionalShadowDuplicationT2")
     _require(
         config.get("topology") == "dual_interface"
         and config.get("policy") == DISTRIBUTIONAL_SHADOW_T2_POLICY
-        and config.get("environment") == "unchanged_neutral_mixed4x4",
+        and config.get("environment")
+        in {
+            "unchanged_neutral_mixed4x4",
+            PAIRED_TEMPORAL_T2_GENERALIZATION_ENVIRONMENT,
+        },
         "resolved_config.json: distributional-shadow identity differs",
     )
+    _validate_paired_temporal_t2_environment(config, "distributional-shadow")
     _require(
         isinstance(controller, dict)
         and _canonical_json_sha256(controller, "distributionalShadowDuplicationT2")
@@ -2886,31 +3015,10 @@ def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
         "distributional-shadow policy",
     )
 
-    missing = [key for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS if key not in config]
-    _require(
-        not missing,
-        "resolved_config.json: distributional neutral environment fields are missing",
-    )
     wifi = config.get("wifi")
     _require(
         isinstance(wifi, dict),
         "resolved_config.json: distributional neutral Wi-Fi config is missing",
-    )
-    environment = {
-        **{key: config[key] for key in PAIRED_VALUE_T2_ENVIRONMENT_KEYS},
-        "shared_target_wifi": {
-            key: wifi.get(key, "__MISSING__")
-            for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
-        },
-    }
-    environment = copy.deepcopy(environment)
-    obss = environment.get("background", {}).get("obss")
-    if isinstance(obss, dict):
-        obss.pop("bsses", None)
-    _require(
-        _canonical_json_sha256(environment, "distributional neutral environment")
-        == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
-        "resolved_config.json: distributional neutral environment differs",
     )
     topology_wifi = {
         key: wifi.get(key, "__MISSING__")
