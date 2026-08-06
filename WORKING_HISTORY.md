@@ -137,15 +137,20 @@ P99.
 | Isolate concurrent solver timeouts | `2e2b2c6` | Fresh bounded budget for every component and presolve representation |
 | Record exact meter allocations | `09e148f` | V2 per-frame byte/allocation evidence and direct replay without a latent solver |
 | Freeze exact meter event schema | `60c78c6` | Ordered V2 CSV contract with historical V1 compatibility |
+| Launch exact-meter held-out qualification | `47e1996` | Fresh 576-run V2/distributional/STR campaign with V2 event replay |
+| Bound derived replay roundoff | `5ca913a` | Accept only the summed source-probability tolerance while preserving exact decisions |
+| Preserve the 568-run evidence prefix | `441e4e2` | Balanced exploratory analysis and plots captured before retry |
+| Analyze complete reliability | `565d9a2` | All-generated outcomes retained despite unsupported completed-P99 runs |
+| Plot complete reliability evidence | `694ce9a` | Ten visually reviewed statistical and historical figures |
+| Archive held-out qualification | `b0c7aad` | Complete result, exact recovery, checksums, partial evidence, and excluded supplement |
 
-The latest validator milestone is `60c78c6`.  It retains the exact historical
-paired-T2 checks and adds independent reconstruction of the distributional
-multiclass model, completion CDFs, shadow reference, congestion regime,
-repayable permanent ledger, decision routes, and runtime summaries.  V2
-remains the engineering champion after the distributional closed-loop test.
-For historical V1 meter events it retains the bounded latent-allocation solver.
-New runs emit exact per-frame tagged bytes and binary64 allocation bits, so V2
-settlement and reservation checkpoints replay directly without SciPy/HiGHS.
+The latest post-outcome validator correction is `5ca913a`.  Event schema V2
+still replays exact per-frame tagged bytes and binary64 allocations without a
+latent solver.  The correction only bounds subtraction roundoff by the sum of
+the independently allowed source-probability errors; the affected run had
+identical float32 score, gate, and action.  All 576 final runs pass strict
+validation.  The neutral-environment V2 engineering win does not generalize
+to this held-out population, so no policy is promoted.
 
 ## One authoritative TODO checklist
 
@@ -212,7 +217,7 @@ settlement and reservation checkpoints replay directly without SciPy/HiGHS.
   reaches only a 34.15% miss reduction and is action-inefficient versus V2.
   The exact qualification and V2 comparison are complete through `544008c`;
   V2 remains champion and confirmation seeds remain unopened.
-- [ ] Build environment-level generalization qualification before final
+- [x] Build environment-level generalization qualification before final
   confirmation.  Freeze a broad randomized scenario-parameter domain and
   explicit scenario-family identities; expose only causally observable
   environment variables to the model; perform leave-one-family-out fitting;
@@ -282,18 +287,54 @@ settlement and reservation checkpoints replay directly without SciPy/HiGHS.
   the logged PPDU total and frame IDs did not contain the actual per-frame byte
   split, and the latent MILP returned a witness outside the independent 1e-9-us
   envelope.  No performance outcome was inspected.  Commits `09e148f` and
-  `60c78c6` record and freeze exact V2 allocations; the sixth campaign remains
-  pending until the fifth root is excluded, all contracts regenerate, and new
-  64-way canaries pass.  The all-generated analyzer remains frozen at
-  `101f132`, and the eleven-figure statistical/historical plot suite remains
-  frozen at `ab9e008` apart from this pre-outcome evidence amendment.
+  `60c78c6` record and freeze exact V2 allocations.  Commit `47e1996` binds
+  the fifth exclusion and launches the sixth campaign.  Before any repair,
+  its 568 strictly retained runs were fetched, hashed, analyzed, and plotted.
+  Commit `5ca913a` fixes the one false replay rejection; the already complete
+  attempt was promoted and only seven interrupted original run IDs were rerun.
+  All 576 frozen runs then passed strict validation.  Complete reliability
+  analysis and figures are frozen through `565d9a2` and `694ce9a`, and the
+  checksum-closed result is archived at `b0c7aad`.  V2 and distributional both
+  lose decisively to STR on all-generated misses; completed-frame P99 is
+  `not_assessable` because 28 valid runs have fewer than 100 completions.
+  This pipeline is complete and paused before a new scientific iteration.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The active boundary is the repaired held-out closed-loop environment
+The requested six-step qualification pipeline is complete.  All 576 frozen
+runs were recovered without seed substitution, strictly validated, analyzed,
+plotted, fetched, checksum-closed, archived, documented, committed, and
+pushed.  Scientific work is now **PAUSED FOR USER REVIEW**.  Do not launch a
+new candidate, generate a larger dataset, consume reserved confirmation
+seeds, or begin another iteration until the user reviews this result and the
+next direction is discussed.
+
+The authoritative result is
+`key_experiment_results/17_environment_generalization_qualification_v1`.
+STR records 16.0443% all-generated misses, versus 19.1308% for V2 and 18.7582%
+for distributional-shadow.  The candidate-minus-STR 95% intervals are
+strictly positive: `[+1.5367, +4.6140]` percentage points for V2 and
+`[+1.1790, +4.2135]` for distributional.  Distributional improves V2 by
+0.3726 points with interval `[-0.5596, -0.1960]`, but does not qualify.  The
+formal completed-frame P99 estimand is `not_assessable` because 28 valid
+collapse runs have fewer than 100 completions.  All misses in all arms are
+incomplete frames, so completion CDF/PDF figures are survivor-conditioned.
+
+The separately launched compound-p23 seed `21193` trio is archived as an
+excluded sensitivity check and never entered the frozen manifest or any
+headline estimate.  It also favors STR.  All four exact original p23 seed
+pairs were recovered, so no substitute is needed.
+
+### Historical pre-closure boundary
+
+The following material is retained as an execution audit.  Its present-tense
+instructions describe the state before the completed `47e1996` campaign and
+must not override the pause above.
+
+The active boundary was the repaired held-out closed-loop environment
 qualification.
 The 384-run randomized analysis is complete, checksum-closed, fetched, and
 archived under `key_experiment_results/16_environment_generalization_randomized_v1`
@@ -776,8 +817,58 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Fifth-audit contract amendment: generated artifacts reproduce byte-for-byte,
   and 56 validator, generator, configuration-check, qualification-analyzer, and
   plotter tests pass on the VM production scientific stack.
+- Exact `47e1996` campaign closure: all 576 manifest runs pass corrected strict
+  validation.  The campaign manifest SHA-256 is
+  `4c847ccc7d2e7d0ac9c154b0c4efc778ddcb403d0d12dabfd4a971c976269ef4`;
+  the independently matched local and VM 9,025-file raw-tree identity is
+  `2a1c5d5767647fb37aaabca507ea46bf3cb8307f71c8b5c7dc22bf538bc913f2`.
+- Roundoff correction at `5ca913a`: 28 paired-validator tests pass on the VM,
+  including the preserved false rejection.  Exact float32 score, gate, action,
+  and controller output remain unchanged.
+- Complete reliability analysis and plots through `694ce9a`: four focused
+  analyzer/plot test groups pass; all internal manifests and the 451-file key
+  result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Close and archive held-out qualification
+
+- Preserved the first 568 strictly retained runs before diagnosing or retrying
+  anything.  Fetched and hashed that raw prefix, built a balanced 360-run
+  exploratory panel, and archived its analysis and eleven plots.  This keeps
+  early evidence independent of the subsequent repair.
+- Isolated the sole completed-attempt rejection to
+  `2.220446049250313e-16` of derived probability-subtraction roundoff.  The
+  float32 score, threshold gate, action, and runtime result were identical.
+  Commit `5ca913a` bounds that derived comparison by the sum of its two
+  independently permitted source-probability errors.
+- Promoted the already complete exact attempt and reran only the seven
+  interrupted original run IDs.  No seed or scenario substitution entered the
+  frozen campaign.  All 576 runs now pass strict validation.
+- Ran one separate compound-p23 seed `21193` three-arm sensitivity requested
+  for rapid evidence.  It also favors STR, but remains outside the canonical
+  manifest and every headline estimate.  The four exact frozen p23 seed pairs
+  were recovered, so the supplement is not needed for completion.
+- The formal analyzer failed closed as designed: 28 valid runs have fewer than
+  100 completed frames, so completed-frame P99 and promotion are
+  `not_assessable`.  The complete post-outcome analyzer retains all runs for
+  reliability and resources instead of deleting collapse outcomes or lowering
+  the support rule.
+- Across 367,200 generated frames per arm, STR records 57,181 misses (16.0443%),
+  V2 records 68,133 (19.1308%), and distributional-shadow records 66,819
+  (18.7582%).  V2 minus STR is +3.0865 percentage points with 95% interval
+  `[+1.5367, +4.6140]`; distributional minus STR is +2.7139 points with
+  `[+1.1790, +4.2135]`.  Distributional improves V2 by 0.3726 points but still
+  fails qualification, and its airtime upper interval exceeds 1.20.
+- All observed misses are incomplete frames.  Completion CDF/PDF figures are
+  therefore survivor-conditioned; they do not offset the reliability loss.
+  Legacy coexistence and compound shift dominate the reversal, while radio
+  propagation also loses reliability and exceeds the desired airtime ratio.
+- Archived the complete report, ten reviewed figures, partial evidence,
+  recovery tooling, exact manifests, checksums, and excluded supplement under
+  `key_experiment_results/17_environment_generalization_qualification_v1` in
+  commit `b0c7aad`.  The requested six-step pipeline is complete.  Stop here
+  for user review before any new model, action, dataset, or simulation campaign.
 
 ### 2026-08-06 - Launch the load-stable final qualification
 

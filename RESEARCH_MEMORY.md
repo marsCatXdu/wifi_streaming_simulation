@@ -78,6 +78,75 @@ invoke the V1 latent feasibility solver.  Keep V1 support only to reproduce
 excluded historical audits.  The frozen schema is
 `experiments/model-selection/secondary-airtime-event-schema-v2.json`.
 
+## Held-out environment qualification failure
+
+The complete environment-generalization closed-loop campaign is the strongest
+current evidence and overrides the apparent breadth of the earlier neutral
+engineering wins.  It contains 48 frozen scenarios in six families, four
+replicates per scenario, and three arms: STR MLO, score-aware T2 V2, and
+distributional-shadow T2.  All 576 runs from simulation commit `47e1996`
+passed corrected strict validation.  The authoritative archive is
+`key_experiment_results/17_environment_generalization_qualification_v1`.
+
+| Arm | Misses / generated | Miss rate | Mean sender airtime |
+| --- | ---: | ---: | ---: |
+| STR MLO | 57,181 / 367,200 | 16.0443% | 5157.587 ms/run |
+| Score-aware T2 V2 | 68,133 / 367,200 | 19.1308% | 5792.251 ms/run |
+| Distributional-shadow T2 | 66,819 / 367,200 | 18.7582% | 5946.699 ms/run |
+
+The frozen equal-family, equal-scenario, equal-replicate hierarchical
+bootstrap establishes that both candidates are worse than STR:
+
+- V2 minus STR is +3.0865 percentage points with 95% interval
+  `[+1.5367, +4.6140]`; its airtime ratio is 1.1231 with interval
+  `[1.0584, 1.1859]`.
+- Distributional minus STR is +2.7139 points with interval
+  `[+1.1790, +4.2135]`; its airtime ratio is 1.1530 with interval
+  `[1.0887, 1.2146]`, whose upper endpoint also fails the 1.20 target.
+- Distributional minus V2 is -0.3726 points with interval
+  `[-0.5596, -0.1960]`.  The newer predictor/allocator has real value relative
+  to V2, but this does not make it an STR competitor.
+
+V2 beats STR in only 15 of 48 scenarios, ties one, and loses 32.
+Distributional beats STR in 17, ties one, and loses 30.  Legacy coexistence
+and compound shift dominate the reversal.  Radio-propagation scenarios also
+lose reliability while exceeding the desired airtime ratio.  Sub-1.0 airtime
+ratios in collapsed compound runs indicate less completed transmission work,
+not efficient duplication.
+
+Do not use completed-frame P99 as a gate for this campaign.  Twenty-eight
+valid runs have fewer than the preregistered 100 completions, so the unchanged
+formal analyzer correctly reports P99 and promotion as `not_assessable`.
+Every miss in every arm is an incomplete frame; there are zero completed-late
+misses.  Completion CDF/PDF and survivor P99 values therefore describe only
+the frames that survived collapse and cannot offset the worse all-generated
+reliability.  STR also has fewer multi-frame miss bursts and fewer misses
+inside those bursts.
+
+The exact repaired compound-p23 four-seed panel is particularly severe: STR
+has 74.4028% misses, versus 84.8750% for V2 and 85.2500% for distributional.
+A separately requested seed `21193` sensitivity trio also favors STR, but it
+is excluded from the frozen manifest and every headline estimate.  Never use
+it as a replacement; all four original frozen seed pairs were recovered.
+
+The campaign originally paused at 568 retained runs after a false validation
+failure of `2.220446049250313e-16` in a derived probability subtraction.  The
+float32 score, gate, and action were identical.  Commit `5ca913a` bounds that
+derived quantity by the sum of its independently allowed source-probability
+roundoff bounds.  The complete attempt was promoted and only seven interrupted
+original run IDs were rerun.  The local and VM raw trees independently match
+at 9,025 files with SHA-256
+`2a1c5d5767647fb37aaabca507ea46bf3cb8307f71c8b5c7dc22bf538bc913f2`.
+
+Research consequence: freeze both policies as negative held-out results.  Do
+not claim general superiority from neutral seeds, do not promote either to
+reserved confirmation seeds, and do not start another model/action/dataset
+iteration until the user reviews this failure and agrees on the next
+scientific question.  If work resumes, preserve the all-generated-frame
+estimand, treat collapse as an outcome rather than missing data, and diagnose
+why selective duplication worsens incomplete-frame cascades under legacy and
+compound contention before expanding model complexity.
+
 ## Temporal-T2 48-pair STR qualification
 
 The compiled primary-only temporal-T2 policy was run against STR MLO on the
