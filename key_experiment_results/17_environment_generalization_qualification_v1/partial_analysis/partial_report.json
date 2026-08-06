@@ -1,0 +1,2593 @@
+{
+  "analysis": "environment-generalization-qualification-partial-balanced-v1",
+  "bootstrap": {
+    "confidence_level": 0.95,
+    "draw_encoding": "for each replication and fixed family: uint8 scenario index then uint8 replicate index for every replicate draw",
+    "method": "fixed_family_stratified_scenario_then_replicate_cluster_bootstrap_v1",
+    "replications": 10000,
+    "seed": 8231415969872262531,
+    "shared_draw_sha256": "90f73ce51f37fc09a9dbfc305c2d87463cf28e27501277df95247ae0a1023b43"
+  },
+  "comparisons": {
+    "distributional_shadow_t2_minus_score_aware_t2_v2": {
+      "aggregate": {
+        "background_throughput_loss": {
+          "ci95_high": 0.000398901051163436,
+          "ci95_low": -0.000537057881051528,
+          "estimate": -2.5480612882322617e-05,
+          "statistic": "one minus ratio of candidate and baseline weighted mean throughput",
+          "status": "assessable"
+        },
+        "completed_p99_delta_us": {
+          "ci95_high": -17.816683333331945,
+          "ci95_low": -521.9747708333219,
+          "estimate": -266.9775833333297,
+          "statistic": "candidate minus baseline weighted mean run P99",
+          "status": "assessable"
+        },
+        "deadline_miss_delta": {
+          "ci95_high": -0.0026962384259259127,
+          "ci95_low": -0.00670797646604939,
+          "estimate": -0.004597608024691363,
+          "statistic": "candidate minus baseline weighted mean run miss rate",
+          "status": "assessable"
+        },
+        "relative_deadline_miss_reduction": {
+          "ci95_high": 0.05495708514319149,
+          "ci95_low": 0.022898932062151496,
+          "estimate": 0.036443425076452596,
+          "statistic": "one minus ratio of candidate and baseline weighted mean miss rate",
+          "status": "assessable"
+        },
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0327065581000536,
+          "ci95_low": 1.017835320650824,
+          "estimate": 1.0249389565635918,
+          "statistic": "ratio of candidate and baseline weighted mean airtime",
+          "status": "assessable"
+        }
+      },
+      "baseline_arm_id": "score_aware_t2_v2",
+      "candidate_arm_id": "distributional_shadow_t2",
+      "families": {
+        "compound_shift": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00023640783342976645,
+            "ci95_low": 1.9860316700359703e-05,
+            "estimate": 0.00010933930287559956,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 246.33558750001868,
+            "ci95_low": -565.0833999999819,
+            "estimate": -93.27249999999185,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": -0.006645775462963009,
+            "ci95_low": -0.01797690972222228,
+            "estimate": -0.012138888888888894,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.08757793620947614,
+            "ci95_low": 0.030674270909336873,
+            "estimate": 0.04922464611572108,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.041781584966019,
+            "ci95_low": 1.0033392609057954,
+            "estimate": 1.0220943802950648,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "legacy_coexistence": {
+          "background_throughput_loss": {
+            "ci95_high": 2.7659121123033136e-05,
+            "ci95_low": -4.350428436405429e-05,
+            "estimate": -3.329174891320008e-06,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 92.17824999996829,
+            "ci95_low": -653.765099999986,
+            "estimate": -271.9235000000008,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": -0.0014444444444444565,
+            "ci95_low": -0.009722222222222077,
+            "estimate": -0.0049166666666666525,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.05407163642457755,
+            "ci95_low": 0.009898135867568587,
+            "estimate": 0.024675867837724685,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.0309544466061797,
+            "ci95_low": 1.0029721417126602,
+            "estimate": 1.016382487931227,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_geometry_mac": {
+          "background_throughput_loss": {
+            "ci95_high": 4.227249287236388e-06,
+            "ci95_low": -2.2069476965058674e-05,
+            "estimate": -4.807003323170633e-06,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 556.7362499999829,
+            "ci95_low": -1535.6647750000193,
+            "estimate": -502.4510000000082,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.004027777777777776,
+            "ci95_low": -0.0009722222222222215,
+            "estimate": 0.0011944444444444442,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.13698843511287495,
+            "ci95_low": -0.6123606393171328,
+            "estimate": -0.15248226950354615,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.0569421042883365,
+            "ci95_low": 1.0130125207776959,
+            "estimate": 1.0345428920379458,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_intensity": {
+          "background_throughput_loss": {
+            "ci95_high": 0.0014340707281376346,
+            "ci95_low": -0.002291960992047176,
+            "estimate": -0.00016624881817839388,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 433.27357499999505,
+            "ci95_low": -385.7076374999875,
+            "estimate": 47.08200000000579,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": -0.0004722222222222072,
+            "ci95_low": -0.007361111111111097,
+            "estimate": -0.00347222222222221,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.05778192581268501,
+            "ci95_low": 0.002475379599747352,
+            "estimate": 0.016040035929680396,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.0405429090083966,
+            "ci95_low": 1.0083304502699346,
+            "estimate": 1.0243563048684583,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "radio_propagation": {
+          "background_throughput_loss": {
+            "ci95_high": 3.0895020231447304e-05,
+            "ci95_low": -1.5388702327334693e-05,
+            "estimate": 5.987335587764875e-06,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 434.43538750000243,
+            "ci95_low": -639.2693874999973,
+            "estimate": -118.3399999999856,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": -0.0006111111111111113,
+            "ci95_low": -0.017750000000000016,
+            "estimate": -0.007972222222222228,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.23913043478260865,
+            "ci95_low": 0.07117763821043671,
+            "estimate": 0.11521477318346052,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.0489943745036128,
+            "ci95_low": 1.0174126845355977,
+            "estimate": 1.0304311103940682,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "video_workload": {
+          "background_throughput_loss": {
+            "ci95_high": 5.092988609831095e-06,
+            "ci95_low": -2.339596841913205e-05,
+            "estimate": -7.841069956215918e-06,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": -65.37638749999532,
+            "ci95_low": -1348.2279000000244,
+            "estimate": -662.9604999999992,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.0020717592592592593,
+            "ci95_low": -0.0023055555555555572,
+            "estimate": -0.0002800925925925922,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.1365000906741624,
+            "ci95_low": -0.22781048410283253,
+            "estimate": 0.015921052631578947,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.0562018430117581,
+            "ci95_low": 1.0048587955078971,
+            "estimate": 1.0230458316294742,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        }
+      },
+      "scenarios": {
+        "compound_shift": {
+          "compound-shift-qualification-p16": {
+            "background_throughput_loss": 0.0002258671576998994,
+            "completed_p99_delta_us": -138.89250000000175,
+            "deadline_miss_delta": -0.01961805555555557,
+            "relative_deadline_miss_reduction": 0.03794492948287442,
+            "sender_airtime_ratio": 1.0563697051029173
+          },
+          "compound-shift-qualification-p17": {
+            "background_throughput_loss": 5.506079276251796e-05,
+            "completed_p99_delta_us": 403.3600000000042,
+            "deadline_miss_delta": -0.013333333333333336,
+            "relative_deadline_miss_reduction": 0.060377358490566024,
+            "sender_airtime_ratio": 1.010143673080549
+          },
+          "compound-shift-qualification-p18": {
+            "background_throughput_loss": 0.00011537616109680293,
+            "completed_p99_delta_us": -748.027499999982,
+            "deadline_miss_delta": -0.004687500000000004,
+            "relative_deadline_miss_reduction": 0.09310344827586214,
+            "sender_airtime_ratio": 0.9960420133867925
+          },
+          "compound-shift-qualification-p19": {
+            "background_throughput_loss": 4.2200918573320756e-05,
+            "completed_p99_delta_us": 46.922500000011496,
+            "deadline_miss_delta": -0.007222222222222241,
+            "relative_deadline_miss_reduction": 0.026612077789150534,
+            "sender_airtime_ratio": 1.0064084963065874
+          },
+          "compound-shift-qualification-p21": {
+            "background_throughput_loss": 2.8920906742779806e-05,
+            "completed_p99_delta_us": -29.724999999998545,
+            "deadline_miss_delta": -0.015833333333333338,
+            "relative_deadline_miss_reduction": 0.09129738387613462,
+            "sender_airtime_ratio": 1.0368781813494736
+          }
+        },
+        "legacy_coexistence": {
+          "legacy-coexistence-qualification-p16": {
+            "background_throughput_loss": 4.517249115765232e-06,
+            "completed_p99_delta_us": -532.3125000000073,
+            "deadline_miss_delta": -0.00541666666666667,
+            "relative_deadline_miss_reduction": 0.17105263157894746,
+            "sender_airtime_ratio": 1.0263141358204384
+          },
+          "legacy-coexistence-qualification-p17": {
+            "background_throughput_loss": -7.446204892680441e-06,
+            "completed_p99_delta_us": -97.20750000000044,
+            "deadline_miss_delta": -0.013194444444444398,
+            "relative_deadline_miss_reduction": 0.02784290738569739,
+            "sender_airtime_ratio": 1.0351374857188582
+          },
+          "legacy-coexistence-qualification-p18": {
+            "background_throughput_loss": -4.371360653832035e-05,
+            "completed_p99_delta_us": -42.97499999999491,
+            "deadline_miss_delta": -0.003194444444444444,
+            "relative_deadline_miss_reduction": 0.011420059582919584,
+            "sender_airtime_ratio": 1.0108017025967015
+          },
+          "legacy-coexistence-qualification-p19": {
+            "background_throughput_loss": 9.407617975409899e-06,
+            "completed_p99_delta_us": -544.3574999999946,
+            "deadline_miss_delta": -0.001388888888888884,
+            "relative_deadline_miss_reduction": 0.011160714285714302,
+            "sender_airtime_ratio": 1.009512525688829
+          },
+          "legacy-coexistence-qualification-p20": {
+            "background_throughput_loss": 2.097918864485404e-05,
+            "completed_p99_delta_us": -142.76500000001033,
+            "deadline_miss_delta": -0.001388888888888884,
+            "relative_deadline_miss_reduction": 0.0160513643659711,
+            "sender_airtime_ratio": 0.9987598680047892
+          }
+        },
+        "obss_geometry_mac": {
+          "obss-geometry-mac-qualification-p16": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -1678.4474999999984,
+            "deadline_miss_delta": -0.0011111111111111113,
+            "relative_deadline_miss_reduction": 0.19512195121951226,
+            "sender_airtime_ratio": 1.0420366348818513
+          },
+          "obss-geometry-mac-qualification-p17": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -85.98000000000502,
+            "deadline_miss_delta": 0.0002777777777777776,
+            "relative_deadline_miss_reduction": -0.15384615384615374,
+            "sender_airtime_ratio": 1.0265716764208834
+          },
+          "obss-geometry-mac-qualification-p18": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": 643.1599999999926,
+            "deadline_miss_delta": 0.005555555555555555,
+            "relative_deadline_miss_reduction": -0.6349206349206349,
+            "sender_airtime_ratio": 1.0065362856874245
+          },
+          "obss-geometry-mac-qualification-p19": {
+            "background_throughput_loss": -2.3821469993023925e-05,
+            "completed_p99_delta_us": -575.1000000000313,
+            "deadline_miss_delta": 0.0009722222222222215,
+            "relative_deadline_miss_reduction": -0.09210526315789469,
+            "sender_airtime_ratio": 1.0375087853975729
+          },
+          "obss-geometry-mac-qualification-p20": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -815.8875000000007,
+            "deadline_miss_delta": 0.00027777777777777783,
+            "relative_deadline_miss_reduction": -0.022471910112359605,
+            "sender_airtime_ratio": 1.0599625444935943
+          }
+        },
+        "obss_intensity": {
+          "obss-intensity-qualification-p16": {
+            "background_throughput_loss": 5.274505020747e-06,
+            "completed_p99_delta_us": 44.522500000020955,
+            "deadline_miss_delta": -0.003055555555555558,
+            "relative_deadline_miss_reduction": 0.10891089108910901,
+            "sender_airtime_ratio": 1.023354429004776
+          },
+          "obss-intensity-qualification-p17": {
+            "background_throughput_loss": 0.0010600950188524028,
+            "completed_p99_delta_us": -36.94999999999709,
+            "deadline_miss_delta": -0.0031944444444443887,
+            "relative_deadline_miss_reduction": 0.005700123915737154,
+            "sender_airtime_ratio": 1.0127597584035066
+          },
+          "obss-intensity-qualification-p18": {
+            "background_throughput_loss": -0.00312006198876702,
+            "completed_p99_delta_us": 6.937500000007276,
+            "deadline_miss_delta": -0.0012500000000000011,
+            "relative_deadline_miss_reduction": 0.01581722319859402,
+            "sender_airtime_ratio": 1.0235589154269051
+          },
+          "obss-intensity-qualification-p19": {
+            "background_throughput_loss": 0.00025499463552636215,
+            "completed_p99_delta_us": -18.12250000000131,
+            "deadline_miss_delta": -0.008194444444444449,
+            "relative_deadline_miss_reduction": 0.02169117647058827,
+            "sender_airtime_ratio": 1.0373801858785403
+          },
+          "obss-intensity-qualification-p21": {
+            "background_throughput_loss": -6.250445344413436e-06,
+            "completed_p99_delta_us": 239.02249999999913,
+            "deadline_miss_delta": -0.0016666666666666635,
+            "relative_deadline_miss_reduction": 0.04494382022471899,
+            "sender_airtime_ratio": 1.0237269168970315
+          }
+        },
+        "radio_propagation": {
+          "radio-propagation-qualification-p16": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -165.85749999999825,
+            "deadline_miss_delta": -0.00013888888888888892,
+            "relative_deadline_miss_reduction": 0.11111111111111116,
+            "sender_airtime_ratio": 1.0193883665882961
+          },
+          "radio-propagation-qualification-p17": {
+            "background_throughput_loss": 1.5043045675788846e-06,
+            "completed_p99_delta_us": -99.58999999999651,
+            "deadline_miss_delta": -0.019722222222222224,
+            "relative_deadline_miss_reduction": 0.08009024252679076,
+            "sender_airtime_ratio": 1.0196418112306598
+          },
+          "radio-propagation-qualification-p18": {
+            "background_throughput_loss": -1.50891694468136e-05,
+            "completed_p99_delta_us": -290.17749999999614,
+            "deadline_miss_delta": -0.0012499999999999998,
+            "relative_deadline_miss_reduction": 0.28125,
+            "sender_airtime_ratio": 1.057141408510758
+          },
+          "radio-propagation-qualification-p19": {
+            "background_throughput_loss": 1.4770874199321327e-06,
+            "completed_p99_delta_us": 653.7825000000339,
+            "deadline_miss_delta": -0.0011111111111111122,
+            "relative_deadline_miss_reduction": 0.1311475409836067,
+            "sender_airtime_ratio": 1.0230317209527577
+          },
+          "radio-propagation-qualification-p20": {
+            "background_throughput_loss": 4.203661389068358e-05,
+            "completed_p99_delta_us": -689.8574999999873,
+            "deadline_miss_delta": -0.0176388888888889,
+            "relative_deadline_miss_reduction": 0.20616883116883122,
+            "sender_airtime_ratio": 1.044616530022679
+          }
+        },
+        "video_workload": {
+          "video-workload-qualification-p16": {
+            "background_throughput_loss": -1.524692393295446e-05,
+            "completed_p99_delta_us": -124.82499999999163,
+            "deadline_miss_delta": 0.0007638888888888869,
+            "relative_deadline_miss_reduction": -0.027499999999999858,
+            "sender_airtime_ratio": 1.0057557707771212
+          },
+          "video-workload-qualification-p17": {
+            "background_throughput_loss": 8.97576095759689e-06,
+            "completed_p99_delta_us": -173.1649999999936,
+            "deadline_miss_delta": -0.002986111111111113,
+            "relative_deadline_miss_reduction": 0.06495468277945626,
+            "sender_airtime_ratio": 1.0013156758570005
+          },
+          "video-workload-qualification-p18": {
+            "background_throughput_loss": -1.4892165827173898e-06,
+            "completed_p99_delta_us": -1061.8549999999814,
+            "deadline_miss_delta": -0.0012152777777777778,
+            "relative_deadline_miss_reduction": 0.25,
+            "sender_airtime_ratio": 1.0521311182643998
+          },
+          "video-workload-qualification-p19": {
+            "background_throughput_loss": -1.3665558238118436e-05,
+            "completed_p99_delta_us": -1621.9950000000226,
+            "deadline_miss_delta": -0.00027777777777777783,
+            "relative_deadline_miss_reduction": 0.0625,
+            "sender_airtime_ratio": 1.065539366080775
+          },
+          "video-workload-qualification-p20": {
+            "background_throughput_loss": -1.8141878561195313e-05,
+            "completed_p99_delta_us": -332.9625000000051,
+            "deadline_miss_delta": 0.0023148148148148147,
+            "relative_deadline_miss_reduction": -0.47169811320754707,
+            "sender_airtime_ratio": 1.0299236269804208
+          }
+        }
+      }
+    },
+    "distributional_shadow_t2_minus_str_mlo_nmaxinflights_1": {
+      "aggregate": {
+        "background_throughput_loss": {
+          "ci95_high": 0.01150715554174388,
+          "ci95_low": -0.0022085232156673403,
+          "estimate": 0.003683648948733409,
+          "statistic": "one minus ratio of candidate and baseline weighted mean throughput",
+          "status": "assessable"
+        },
+        "completed_p99_delta_us": {
+          "ci95_high": 645.1015395833267,
+          "ci95_low": -1054.4390145833331,
+          "estimate": -182.19458333333023,
+          "statistic": "candidate minus baseline weighted mean run P99",
+          "status": "assessable"
+        },
+        "deadline_miss_delta": {
+          "ci95_high": 0.04937645640432098,
+          "ci95_low": 0.008253105709876581,
+          "estimate": 0.029910879629629628,
+          "statistic": "candidate minus baseline weighted mean run miss rate",
+          "status": "assessable"
+        },
+        "relative_deadline_miss_reduction": {
+          "ci95_high": -0.07068654412968846,
+          "ci95_low": -0.7300857546345741,
+          "estimate": -0.32636368993997156,
+          "statistic": "one minus ratio of candidate and baseline weighted mean miss rate",
+          "status": "assessable"
+        },
+        "sender_airtime_ratio": {
+          "ci95_high": 1.2597084146674546,
+          "ci95_low": 1.183757794304765,
+          "estimate": 1.2217389883652898,
+          "statistic": "ratio of candidate and baseline weighted mean airtime",
+          "status": "assessable"
+        }
+      },
+      "baseline_arm_id": "str_mlo_nmaxinflights_1",
+      "candidate_arm_id": "distributional_shadow_t2",
+      "families": {
+        "compound_shift": {
+          "background_throughput_loss": {
+            "ci95_high": 0.029148150578076605,
+            "ci95_low": -0.021517663745938793,
+            "estimate": 0.00245905040413974,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 3942.5017250000074,
+            "ci95_low": 815.4447875000074,
+            "estimate": 2288.7310000000107,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.1520863425925926,
+            "ci95_low": 0.0389883680555556,
+            "estimate": 0.09480555555555556,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": -0.2588615376329987,
+            "ci95_low": -1.8545068587499292,
+            "estimate": -0.6788437313531792,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.3841108003161253,
+            "ci95_low": 1.1946179703344302,
+            "estimate": 1.2924631560840119,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "legacy_coexistence": {
+          "background_throughput_loss": {
+            "ci95_high": 0.0297374071041084,
+            "ci95_low": 9.836504316630968e-05,
+            "estimate": 0.0077726353266770465,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 2759.0411374999812,
+            "ci95_low": -1296.4392375000084,
+            "estimate": 807.6239999999998,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.151445138888889,
+            "ci95_low": 0.02480486111111112,
+            "estimate": 0.08411111111111111,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": -0.36118519851306374,
+            "ci95_low": -1.4278770520951591,
+            "estimate": -0.7631048387096775,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.3603642840577508,
+            "ci95_low": 1.1304962970280774,
+            "estimate": 1.2428296122538718,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_geometry_mac": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00017302521745573554,
+            "ci95_low": -1.8022616360025e-06,
+            "estimate": 5.3474795196017944e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 1325.4256500000042,
+            "ci95_low": -3968.828625000009,
+            "estimate": -1099.2204999999994,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.004499999999999999,
+            "ci95_low": -0.0022777777777777783,
+            "estimate": 0.0007777777777777765,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.2572872828034498,
+            "ci95_low": -0.6562559637404585,
+            "estimate": -0.09427609427609407,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.228874456054093,
+            "ci95_low": 1.1378893465057194,
+            "estimate": 1.1824722001801307,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_intensity": {
+          "background_throughput_loss": {
+            "ci95_high": 0.031088717065254956,
+            "ci95_low": -0.003769951423503531,
+            "estimate": 0.0083077215418762,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 1682.0485624999783,
+            "ci95_low": -1303.7901625000104,
+            "estimate": 145.75249999999505,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.06388888888888884,
+            "ci95_low": -0.11028750000000002,
+            "estimate": -0.00899999999999998,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.3166570558691238,
+            "ci95_low": -0.6459776762180536,
+            "estimate": 0.04054054054054046,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.2749789276484702,
+            "ci95_low": 1.1193594426332298,
+            "estimate": 1.2016809888492448,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "radio_propagation": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00016154127625025438,
+            "ci95_low": 2.9329901364294476e-05,
+            "estimate": 9.219701904283895e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 844.7472249999955,
+            "ci95_low": -2445.35063750001,
+            "estimate": -697.7864999999983,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.022999999999999993,
+            "ci95_low": -0.0042499999999999994,
+            "estimate": 0.00605555555555555,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.41418732116618967,
+            "ci95_low": -0.21926745781853643,
+            "estimate": -0.10976837865055367,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.3527634452507178,
+            "ci95_low": 1.1458982656994958,
+            "estimate": 1.2618553218189508,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "video_workload": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00012008597927094518,
+            "ci95_low": -1.2632001511275746e-05,
+            "estimate": 5.217014221337024e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": -274.94328750000057,
+            "ci95_low": -5318.855025000009,
+            "estimate": -2538.2680000000037,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.012134374999999996,
+            "ci95_low": -0.004506944444444444,
+            "estimate": 0.00271527777777778,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.5191858885720928,
+            "ci95_low": -0.5557351103291187,
+            "estimate": -0.18601332064700293,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.1856233878933786,
+            "ci95_low": 1.1035282807692777,
+            "estimate": 1.1452797338881653,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        }
+      },
+      "scenarios": {
+        "compound_shift": {
+          "compound-shift-qualification-p16": {
+            "background_throughput_loss": 0.0006934826801434646,
+            "completed_p99_delta_us": 1257.5550000000003,
+            "deadline_miss_delta": 0.09965277777777776,
+            "relative_deadline_miss_reduction": -0.2505456132693147,
+            "sender_airtime_ratio": 1.1764823814100893
+          },
+          "compound-shift-qualification-p17": {
+            "background_throughput_loss": 0.03980581076446088,
+            "completed_p99_delta_us": 1561.80750000001,
+            "deadline_miss_delta": 0.13069444444444445,
+            "relative_deadline_miss_reduction": -1.7016274864376126,
+            "sender_airtime_ratio": 1.4027195068321634
+          },
+          "compound-shift-qualification-p18": {
+            "background_throughput_loss": 0.00038680295919180097,
+            "completed_p99_delta_us": 5218.060000000009,
+            "deadline_miss_delta": 0.018402777777777775,
+            "relative_deadline_miss_reduction": -0.6751592356687897,
+            "sender_airtime_ratio": 1.2535007627797279
+          },
+          "compound-shift-qualification-p19": {
+            "background_throughput_loss": 0.0003726515918550666,
+            "completed_p99_delta_us": 3154.462500000016,
+            "deadline_miss_delta": 0.17472222222222222,
+            "relative_deadline_miss_reduction": -1.9534161490683233,
+            "sender_airtime_ratio": 1.3869347943501624
+          },
+          "compound-shift-qualification-p21": {
+            "background_throughput_loss": -0.03989721649949618,
+            "completed_p99_delta_us": 251.77000000000407,
+            "deadline_miss_delta": 0.05055555555555555,
+            "relative_deadline_miss_reduction": -0.47231833910034604,
+            "sender_airtime_ratio": 1.2435465823504377
+          }
+        },
+        "legacy_coexistence": {
+          "legacy-coexistence-qualification-p16": {
+            "background_throughput_loss": 7.678768506202971e-05,
+            "completed_p99_delta_us": -2056.3650000000052,
+            "deadline_miss_delta": -0.0022222222222222227,
+            "relative_deadline_miss_reduction": 0.07804878048780495,
+            "sender_airtime_ratio": 1.0732266866122497
+          },
+          "legacy-coexistence-qualification-p17": {
+            "background_throughput_loss": 0.0015835183249498508,
+            "completed_p99_delta_us": 1042.6974999999948,
+            "deadline_miss_delta": 0.15833333333333338,
+            "relative_deadline_miss_reduction": -0.523656407900781,
+            "sender_airtime_ratio": 1.16176806105201
+          },
+          "legacy-coexistence-qualification-p18": {
+            "background_throughput_loss": 0.0002878114127020659,
+            "completed_p99_delta_us": 1299.410000000018,
+            "deadline_miss_delta": 0.14569444444444443,
+            "relative_deadline_miss_reduction": -1.1135881104033971,
+            "sender_airtime_ratio": 1.342509987618727
+          },
+          "legacy-coexistence-qualification-p19": {
+            "background_throughput_loss": 0.03698351724679427,
+            "completed_p99_delta_us": -377.5974999999926,
+            "deadline_miss_delta": 0.06138888888888889,
+            "relative_deadline_miss_reduction": -0.9954954954954955,
+            "sender_airtime_ratio": 1.2866049046436931
+          },
+          "legacy-coexistence-qualification-p20": {
+            "background_throughput_loss": 0.00012436375950142242,
+            "completed_p99_delta_us": 4129.97499999998,
+            "deadline_miss_delta": 0.05736111111111111,
+            "relative_deadline_miss_reduction": -2.0650000000000004,
+            "sender_airtime_ratio": 1.3883004863601933
+          }
+        },
+        "obss_geometry_mac": {
+          "obss-geometry-mac-qualification-p16": {
+            "background_throughput_loss": 0.000196811946935882,
+            "completed_p99_delta_us": -1131.117499999993,
+            "deadline_miss_delta": -0.0005555555555555557,
+            "relative_deadline_miss_reduction": 0.10810810810810811,
+            "sender_airtime_ratio": 1.1671104181178118
+          },
+          "obss-geometry-mac-qualification-p17": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": 163.00249999999505,
+            "deadline_miss_delta": -0.00027777777777777783,
+            "relative_deadline_miss_reduction": 0.11764705882352944,
+            "sender_airtime_ratio": 1.1844804207598503
+          },
+          "obss-geometry-mac-qualification-p18": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": 2287.2325000000055,
+            "deadline_miss_delta": 0.0061111111111111106,
+            "relative_deadline_miss_reduction": -0.7457627118644066,
+            "sender_airtime_ratio": 1.2534140570412444
+          },
+          "obss-geometry-mac-qualification-p19": {
+            "background_throughput_loss": 6.996900521938354e-05,
+            "completed_p99_delta_us": -1723.7550000000156,
+            "deadline_miss_delta": 0.00013888888888888978,
+            "relative_deadline_miss_reduction": -0.012195121951219523,
+            "sender_airtime_ratio": 1.1763595247399317
+          },
+          "obss-geometry-mac-qualification-p20": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -5091.465000000004,
+            "deadline_miss_delta": -0.0015277777777777772,
+            "relative_deadline_miss_reduction": 0.10784313725490191,
+            "sender_airtime_ratio": 1.13855018812865
+          }
+        },
+        "obss_intensity": {
+          "obss-intensity-qualification-p16": {
+            "background_throughput_loss": 1.3186158225986233e-05,
+            "completed_p99_delta_us": -1872.2225000000108,
+            "deadline_miss_delta": -0.0033333333333333375,
+            "relative_deadline_miss_reduction": 0.11764705882352955,
+            "sender_airtime_ratio": 1.2324445608724937
+          },
+          "obss-intensity-qualification-p17": {
+            "background_throughput_loss": 0.025832483761754288,
+            "completed_p99_delta_us": -270.21999999999025,
+            "deadline_miss_delta": -0.16374999999999995,
+            "relative_deadline_miss_reduction": 0.22712386823348096,
+            "sender_airtime_ratio": 1.0839805306719863
+          },
+          "obss-intensity-qualification-p18": {
+            "background_throughput_loss": -2.9370789573768263e-06,
+            "completed_p99_delta_us": 468.38249999996697,
+            "deadline_miss_delta": 0.03361111111111111,
+            "relative_deadline_miss_reduction": -0.7610062893081762,
+            "sender_airtime_ratio": 1.2756395439588004
+          },
+          "obss-intensity-qualification-p19": {
+            "background_throughput_loss": 0.001497810921190168,
+            "completed_p99_delta_us": 1039.0000000000073,
+            "deadline_miss_delta": 0.08305555555555555,
+            "relative_deadline_miss_reduction": -0.28986912263693654,
+            "sender_airtime_ratio": 1.2178391421666086
+          },
+          "obss-intensity-qualification-p21": {
+            "background_throughput_loss": 3.750229701449115e-06,
+            "completed_p99_delta_us": 1363.822500000002,
+            "deadline_miss_delta": 0.005416666666666667,
+            "relative_deadline_miss_reduction": -0.18055555555555558,
+            "sender_airtime_ratio": 1.2284830572379
+          }
+        },
+        "radio_propagation": {
+          "radio-propagation-qualification-p16": {
+            "background_throughput_loss": -2.985957044066012e-06,
+            "completed_p99_delta_us": 672.6850000000013,
+            "deadline_miss_delta": -0.0009722222222222222,
+            "relative_deadline_miss_reduction": 0.4666666666666667,
+            "sender_airtime_ratio": 1.151056434378717
+          },
+          "radio-propagation-qualification-p17": {
+            "background_throughput_loss": 0.00010980234074531303,
+            "completed_p99_delta_us": 284.23499999999694,
+            "deadline_miss_delta": 0.03805555555555554,
+            "relative_deadline_miss_reduction": -0.20191599115696368,
+            "sender_airtime_ratio": 1.391806095207092
+          },
+          "radio-propagation-qualification-p18": {
+            "background_throughput_loss": 0.00010561143741694146,
+            "completed_p99_delta_us": -2695.9374999999836,
+            "deadline_miss_delta": -0.0033333333333333335,
+            "relative_deadline_miss_reduction": 0.5106382978723405,
+            "sender_airtime_ratio": 1.1222166378323555
+          },
+          "radio-propagation-qualification-p19": {
+            "background_throughput_loss": 7.384902600515719e-05,
+            "completed_p99_delta_us": -177.05249999999796,
+            "deadline_miss_delta": -0.001805555555555556,
+            "relative_deadline_miss_reduction": 0.19696969696969702,
+            "sender_airtime_ratio": 1.218680881938587
+          },
+          "radio-propagation-qualification-p20": {
+            "background_throughput_loss": 0.00017562952677585564,
+            "completed_p99_delta_us": -1572.862500000021,
+            "deadline_miss_delta": -0.0016666666666666635,
+            "relative_deadline_miss_reduction": 0.0239520958083832,
+            "sender_airtime_ratio": 1.2423951628224796
+          }
+        },
+        "video_workload": {
+          "video-workload-qualification-p16": {
+            "background_throughput_loss": 7.927651036998551e-05,
+            "completed_p99_delta_us": 21.795000000009168,
+            "deadline_miss_delta": 0.010277777777777778,
+            "relative_deadline_miss_reduction": -0.5627376425855513,
+            "sender_airtime_ratio": 1.1672973682101238
+          },
+          "video-workload-qualification-p17": {
+            "background_throughput_loss": 0.00015555705129643993,
+            "completed_p99_delta_us": 9.175000000001091,
+            "deadline_miss_delta": 0.014027777777777781,
+            "relative_deadline_miss_reduction": -0.4844124700239809,
+            "sender_airtime_ratio": 1.1284006338047514
+          },
+          "video-workload-qualification-p18": {
+            "background_throughput_loss": -3.276378945993308e-05,
+            "completed_p99_delta_us": -5916.575000000023,
+            "deadline_miss_delta": -0.005729166666666666,
+            "relative_deadline_miss_reduction": 0.6111111111111112,
+            "sender_airtime_ratio": 1.1240599097666217
+          },
+          "video-workload-qualification-p19": {
+            "background_throughput_loss": 3.340312562161163e-05,
+            "completed_p99_delta_us": -4622.862499999994,
+            "deadline_miss_delta": -0.0044444444444444444,
+            "relative_deadline_miss_reduction": 0.5161290322580645,
+            "sender_airtime_ratio": 1.1534356581142802
+          },
+          "video-workload-qualification-p20": {
+            "background_throughput_loss": 2.5699867872375215e-05,
+            "completed_p99_delta_us": -2182.872500000012,
+            "deadline_miss_delta": -0.0005555555555555557,
+            "relative_deadline_miss_reduction": 0.0714285714285714,
+            "sender_airtime_ratio": 1.16377849046655
+          }
+        }
+      },
+      "str_gates": {
+        "aggregate": {
+          "criteria": {
+            "background_throughput_loss": {
+              "observed": 0.01150715554174388,
+              "rule": "95% upper endpoint <= 0.01",
+              "status": "fail",
+              "threshold": 0.01
+            },
+            "completed_p99_delta_us": {
+              "observed": 645.1015395833267,
+              "rule": "95% upper endpoint < 0 us",
+              "status": "fail",
+              "threshold": 0.0
+            },
+            "deadline_miss_delta": {
+              "observed": 0.04937645640432098,
+              "rule": "95% upper endpoint < 0",
+              "status": "fail",
+              "threshold": 0.0
+            },
+            "relative_deadline_miss_reduction": {
+              "observed": -0.32636368993997156,
+              "rule": "point estimate >= 0.50",
+              "status": "fail",
+              "threshold": 0.5
+            },
+            "sender_airtime_ratio": {
+              "observed": 1.2597084146674546,
+              "rule": "95% upper endpoint <= 1.20",
+              "status": "fail",
+              "threshold": 1.2
+            }
+          },
+          "status": "fail"
+        },
+        "direct_str_victory": {
+          "definition": "all assessable aggregate and per-family STR gates pass",
+          "status": "fail"
+        },
+        "per_family": {
+          "families": {
+            "compound_shift": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.00245905040413974,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 2288.7310000000107,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "fail",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.09480555555555556,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2924631560840119,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "fail",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "legacy_coexistence": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.0077726353266770465,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 807.6239999999998,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.08411111111111111,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2428296122538718,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "obss_geometry_mac": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 5.3474795196017944e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -1099.2204999999994,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.0007777777777777765,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "pass",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.1824722001801307,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "pass"
+            },
+            "obss_intensity": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.0083077215418762,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 145.75249999999505,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": -0.00899999999999998,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "pass",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2016809888492448,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "pass"
+            },
+            "radio_propagation": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 9.219701904283895e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -697.7864999999983,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.00605555555555555,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2618553218189508,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "fail",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "video_workload": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 5.217014221337024e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -2538.2680000000037,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.00271527777777778,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.1452797338881653,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            }
+          },
+          "families_worse_on_both_miss_and_p99": {
+            "observed": 2,
+            "rule": "families worse on both miss and P99 <= 0",
+            "status": "fail",
+            "threshold": 0
+          },
+          "status": "fail"
+        }
+      }
+    },
+    "score_aware_t2_v2_minus_str_mlo_nmaxinflights_1": {
+      "aggregate": {
+        "background_throughput_loss": {
+          "ci95_high": 0.011308570787519068,
+          "ci95_low": -0.002056537213458676,
+          "estimate": 0.0037090350531294725,
+          "statistic": "one minus ratio of candidate and baseline weighted mean throughput",
+          "status": "assessable"
+        },
+        "completed_p99_delta_us": {
+          "ci95_high": 847.5534020833311,
+          "ci95_low": -728.2293937500009,
+          "estimate": 84.78299999999945,
+          "statistic": "candidate minus baseline weighted mean run P99",
+          "status": "assessable"
+        },
+        "deadline_miss_delta": {
+          "ci95_high": 0.054510754243827175,
+          "ci95_low": 0.012244193672839507,
+          "estimate": 0.03450848765432099,
+          "statistic": "candidate minus baseline weighted mean run miss rate",
+          "status": "assessable"
+        },
+        "relative_deadline_miss_reduction": {
+          "ci95_high": -0.10862014974224635,
+          "ci95_low": -0.8025926924430004,
+          "estimate": -0.37652912600924426,
+          "statistic": "one minus ratio of candidate and baseline weighted mean miss rate",
+          "status": "assessable"
+        },
+        "sender_airtime_ratio": {
+          "ci95_high": 1.2335410046319204,
+          "ci95_low": 1.150442853670375,
+          "estimate": 1.192011466186755,
+          "statistic": "ratio of candidate and baseline weighted mean airtime",
+          "status": "assessable"
+        }
+      },
+      "baseline_arm_id": "str_mlo_nmaxinflights_1",
+      "candidate_arm_id": "score_aware_t2_v2",
+      "families": {
+        "compound_shift": {
+          "background_throughput_loss": {
+            "ci95_high": 0.029042941226717064,
+            "ci95_low": -0.02155383378744341,
+            "estimate": 0.0023499680451319893,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 4334.040149999992,
+            "ci95_low": 761.2649875000037,
+            "estimate": 2382.0035000000025,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.16379259259259263,
+            "ci95_low": 0.05033315972222223,
+            "estimate": 0.10694444444444445,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": -0.32645845214582614,
+            "ci95_low": -1.98267745435976,
+            "estimate": -0.7657627792879402,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.372589445080715,
+            "ci95_low": 1.1499719199871512,
+            "estimate": 1.2645242758412343,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "legacy_coexistence": {
+          "background_throughput_loss": {
+            "ci95_high": 0.02973815853609454,
+            "ci95_low": 0.000105171362368639,
+            "estimate": 0.007775938614108746,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 2949.9800999999998,
+            "ci95_low": -861.082037500009,
+            "estimate": 1079.5475000000006,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.1581701388888888,
+            "ci95_low": 0.028249305555555583,
+            "estimate": 0.08902777777777776,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": -0.4179385370809344,
+            "ci95_low": -1.4710436164681424,
+            "estimate": -0.807711693548387,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.3541243145401838,
+            "ci95_low": 1.1002572764286944,
+            "estimate": 1.2227971526581114,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_geometry_mac": {
+          "background_throughput_loss": {
+            "ci95_high": 0.0001795797774170854,
+            "ci95_low": -1.8072239623245779e-06,
+            "estimate": 5.828151835973738e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 1347.420712500003,
+            "ci95_low": -3217.683600000001,
+            "estimate": -596.7694999999912,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.0009444444444444474,
+            "ci95_low": -0.002027777777777774,
+            "estimate": -0.0004166666666666676,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.24615942028985488,
+            "ci95_low": -0.1333333333333333,
+            "estimate": 0.05050505050505061,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.2126770671210334,
+            "ci95_low": 1.0772839377388117,
+            "estimate": 1.1429900193415654,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "obss_intensity": {
+          "background_throughput_loss": {
+            "ci95_high": 0.029989180010729113,
+            "ci95_low": -0.0034578590407634943,
+            "estimate": 0.008472561806667334,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 1500.1387250000093,
+            "ci95_low": -1304.1931250000212,
+            "estimate": 98.67049999998926,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.06802916666666667,
+            "ci95_low": -0.10683333333333322,
+            "estimate": -0.00552777777777777,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.30900217632637833,
+            "ci95_low": -0.6750474172608318,
+            "estimate": 0.024899899899899824,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.2535435194449656,
+            "ci95_low": 1.0941486709055772,
+            "estimate": 1.1731084029434051,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "radio_propagation": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00014782556547462966,
+            "ci95_low": 2.935366793526406e-05,
+            "estimate": 8.62101996245146e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 734.1603374999917,
+            "ci95_low": -2130.429887500048,
+            "estimate": -579.4465000000127,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.038111111111111096,
+            "ci95_low": -0.0016944444444444446,
+            "estimate": 0.014027777777777778,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.2661899827963722,
+            "ci95_low": -0.33175334234515136,
+            "estimate": -0.2542799597180261,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.3248770810919428,
+            "ci95_low": 1.0972766952123756,
+            "estimate": 1.2245896975455048,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        },
+        "video_workload": {
+          "background_throughput_loss": {
+            "ci95_high": 0.00012509742302077296,
+            "ci95_low": -5.448068098551362e-06,
+            "estimate": 6.00107416210971e-05,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "completed_p99_delta_us": {
+            "ci95_high": 83.61487499998151,
+            "ci95_low": -4554.748975000007,
+            "estimate": -1875.3075000000044,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "deadline_miss_delta": {
+            "ci95_high": 0.013236458333333338,
+            "ci95_low": -0.004314930555555555,
+            "estimate": 0.002995370370370372,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "relative_deadline_miss_reduction": {
+            "ci95_high": 0.5028860294117646,
+            "ci95_low": -0.5818732762703976,
+            "estimate": -0.20520139549635275,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          },
+          "sender_airtime_ratio": {
+            "ci95_high": 1.1692481552311433,
+            "ci95_low": 1.0598421674626322,
+            "estimate": 1.1194803775936422,
+            "statistic": "within-family equal-scenario paired contrast",
+            "status": "assessable"
+          }
+        }
+      },
+      "scenarios": {
+        "compound_shift": {
+          "compound-shift-qualification-p16": {
+            "background_throughput_loss": 0.0004677211652938107,
+            "completed_p99_delta_us": 1396.447500000002,
+            "deadline_miss_delta": 0.11927083333333333,
+            "relative_deadline_miss_reduction": -0.29986905281536447,
+            "sender_airtime_ratio": 1.113703257227989
+          },
+          "compound-shift-qualification-p17": {
+            "background_throughput_loss": 0.039752938800023396,
+            "completed_p99_delta_us": 1158.4475000000057,
+            "deadline_miss_delta": 0.14402777777777775,
+            "relative_deadline_miss_reduction": -1.8752260397830018,
+            "sender_airtime_ratio": 1.3886336609468724
+          },
+          "compound-shift-qualification-p18": {
+            "background_throughput_loss": 0.00027145811789053287,
+            "completed_p99_delta_us": 5966.0874999999905,
+            "deadline_miss_delta": 0.02309027777777778,
+            "relative_deadline_miss_reduction": -0.8471337579617835,
+            "sender_airtime_ratio": 1.2584818169642373
+          },
+          "compound-shift-qualification-p19": {
+            "background_throughput_loss": 0.0003304646191922833,
+            "completed_p99_delta_us": 3107.5400000000045,
+            "deadline_miss_delta": 0.18194444444444446,
+            "relative_deadline_miss_reduction": -2.03416149068323,
+            "sender_airtime_ratio": 1.3781032249231464
+          },
+          "compound-shift-qualification-p21": {
+            "background_throughput_loss": -0.03992729213973156,
+            "completed_p99_delta_us": 281.4950000000026,
+            "deadline_miss_delta": 0.06638888888888889,
+            "relative_deadline_miss_reduction": -0.6202422145328719,
+            "sender_airtime_ratio": 1.1993179186507616
+          }
+        },
+        "legacy_coexistence": {
+          "legacy-coexistence-qualification-p16": {
+            "background_throughput_loss": 7.227076241134167e-05,
+            "completed_p99_delta_us": -1524.052499999998,
+            "deadline_miss_delta": 0.0031944444444444477,
+            "relative_deadline_miss_reduction": -0.11219512195121961,
+            "sender_airtime_ratio": 1.0457097385239746
+          },
+          "legacy-coexistence-qualification-p17": {
+            "background_throughput_loss": 0.001590952683282909,
+            "completed_p99_delta_us": 1139.9049999999952,
+            "deadline_miss_delta": 0.17152777777777778,
+            "relative_deadline_miss_reduction": -0.5672944418925128,
+            "sender_airtime_ratio": 1.1223321317991033
+          },
+          "legacy-coexistence-qualification-p18": {
+            "background_throughput_loss": 0.0003315105277196251,
+            "completed_p99_delta_us": 1342.385000000013,
+            "deadline_miss_delta": 0.14888888888888888,
+            "relative_deadline_miss_reduction": -1.1380042462845008,
+            "sender_airtime_ratio": 1.3281635598454997
+          },
+          "legacy-coexistence-qualification-p19": {
+            "background_throughput_loss": 0.03697445747038963,
+            "completed_p99_delta_us": 166.76000000000204,
+            "deadline_miss_delta": 0.06277777777777777,
+            "relative_deadline_miss_reduction": -1.0180180180180178,
+            "sender_airtime_ratio": 1.2744813678916893
+          },
+          "legacy-coexistence-qualification-p20": {
+            "background_throughput_loss": 0.00010338673982646096,
+            "completed_p99_delta_us": 4272.739999999991,
+            "deadline_miss_delta": 0.05875,
+            "relative_deadline_miss_reduction": -2.115,
+            "sender_airtime_ratio": 1.390024299968705
+          }
+        },
+        "obss_geometry_mac": {
+          "obss-geometry-mac-qualification-p16": {
+            "background_throughput_loss": 0.000196811946935882,
+            "completed_p99_delta_us": 547.3300000000054,
+            "deadline_miss_delta": 0.0005555555555555557,
+            "relative_deadline_miss_reduction": -0.10810810810810811,
+            "sender_airtime_ratio": 1.1200282015518022
+          },
+          "obss-geometry-mac-qualification-p17": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": 248.98250000000007,
+            "deadline_miss_delta": -0.0005555555555555554,
+            "relative_deadline_miss_reduction": 0.23529411764705876,
+            "sender_airtime_ratio": 1.1538214505289215
+          },
+          "obss-geometry-mac-qualification-p18": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": 1644.072500000013,
+            "deadline_miss_delta": 0.0005555555555555557,
+            "relative_deadline_miss_reduction": -0.06779661016949157,
+            "sender_airtime_ratio": 1.2452745865840416
+          },
+          "obss-geometry-mac-qualification-p19": {
+            "background_throughput_loss": 9.378824103867256e-05,
+            "completed_p99_delta_us": -1148.6549999999843,
+            "deadline_miss_delta": -0.0008333333333333318,
+            "relative_deadline_miss_reduction": 0.07317073170731692,
+            "sender_airtime_ratio": 1.1338309046599073
+          },
+          "obss-geometry-mac-qualification-p20": {
+            "background_throughput_loss": 0.0,
+            "completed_p99_delta_us": -4275.577500000003,
+            "deadline_miss_delta": -0.001805555555555555,
+            "relative_deadline_miss_reduction": 0.12745098039215685,
+            "sender_airtime_ratio": 1.0741419062808504
+          }
+        },
+        "obss_intensity": {
+          "obss-intensity-qualification-p16": {
+            "background_throughput_loss": 7.911694935525126e-06,
+            "completed_p99_delta_us": -1916.7450000000317,
+            "deadline_miss_delta": -0.00027777777777777957,
+            "relative_deadline_miss_reduction": 0.009803921568627527,
+            "sender_airtime_ratio": 1.2043183924762608
+          },
+          "obss-intensity-qualification-p17": {
+            "background_throughput_loss": 0.024798677697603244,
+            "completed_p99_delta_us": -233.26999999999316,
+            "deadline_miss_delta": -0.16055555555555556,
+            "relative_deadline_miss_reduction": 0.22269312271238684,
+            "sender_airtime_ratio": 1.0703234618847322
+          },
+          "obss-intensity-qualification-p18": {
+            "background_throughput_loss": 0.003107429537028361,
+            "completed_p99_delta_us": 461.4449999999597,
+            "deadline_miss_delta": 0.034861111111111114,
+            "relative_deadline_miss_reduction": -0.7893081761006291,
+            "sender_airtime_ratio": 1.2462785724715784
+          },
+          "obss-intensity-qualification-p19": {
+            "background_throughput_loss": 0.001243133277980868,
+            "completed_p99_delta_us": 1057.1225000000086,
+            "deadline_miss_delta": 0.09125,
+            "relative_deadline_miss_reduction": -0.31846825012118285,
+            "sender_airtime_ratio": 1.1739564325062182
+          },
+          "obss-intensity-qualification-p21": {
+            "background_throughput_loss": 1.0000612537530706e-05,
+            "completed_p99_delta_us": 1124.800000000003,
+            "deadline_miss_delta": 0.00708333333333333,
+            "relative_deadline_miss_reduction": -0.23611111111111094,
+            "sender_airtime_ratio": 1.200010507647386
+          }
+        },
+        "radio_propagation": {
+          "radio-propagation-qualification-p16": {
+            "background_throughput_loss": -2.985957044066012e-06,
+            "completed_p99_delta_us": 838.5424999999996,
+            "deadline_miss_delta": -0.0008333333333333333,
+            "relative_deadline_miss_reduction": 0.4,
+            "sender_airtime_ratio": 1.1291637928251914
+          },
+          "radio-propagation-qualification-p17": {
+            "background_throughput_loss": 0.00010829819909119465,
+            "completed_p99_delta_us": 383.82499999999345,
+            "deadline_miss_delta": 0.05777777777777776,
+            "relative_deadline_miss_reduction": -0.3065585851142225,
+            "sender_airtime_ratio": 1.3649951187537586
+          },
+          "radio-propagation-qualification-p18": {
+            "background_throughput_loss": 0.00012069878561937752,
+            "completed_p99_delta_us": -2405.7599999999875,
+            "deadline_miss_delta": -0.0020833333333333337,
+            "relative_deadline_miss_reduction": 0.3191489361702128,
+            "sender_airtime_ratio": 1.061557733712533
+          },
+          "radio-propagation-qualification-p19": {
+            "background_throughput_loss": 7.237204548515841e-05,
+            "completed_p99_delta_us": -830.8350000000319,
+            "deadline_miss_delta": -0.0006944444444444437,
+            "relative_deadline_miss_reduction": 0.07575757575757569,
+            "sender_airtime_ratio": 1.19124447168033
+          },
+          "radio-propagation-qualification-p20": {
+            "background_throughput_loss": 0.0001335985289149244,
+            "completed_p99_delta_us": -883.0050000000338,
+            "deadline_miss_delta": 0.015972222222222235,
+            "relative_deadline_miss_reduction": -0.22954091816367295,
+            "sender_airtime_ratio": 1.1893313260086997
+          }
+        },
+        "video_workload": {
+          "video-workload-qualification-p16": {
+            "background_throughput_loss": 9.452199313342291e-05,
+            "completed_p99_delta_us": 146.6200000000008,
+            "deadline_miss_delta": 0.009513888888888891,
+            "relative_deadline_miss_reduction": -0.5209125475285172,
+            "sender_airtime_ratio": 1.1606171220953407
+          },
+          "video-workload-qualification-p17": {
+            "background_throughput_loss": 0.0001465826060291775,
+            "completed_p99_delta_us": 182.3399999999947,
+            "deadline_miss_delta": 0.017013888888888894,
+            "relative_deadline_miss_reduction": -0.5875299760191848,
+            "sender_airtime_ratio": 1.1269179750321818
+          },
+          "video-workload-qualification-p18": {
+            "background_throughput_loss": -3.127452630269367e-05,
+            "completed_p99_delta_us": -4854.720000000041,
+            "deadline_miss_delta": -0.0045138888888888885,
+            "relative_deadline_miss_reduction": 0.4814814814814814,
+            "sender_airtime_ratio": 1.0683648551531066
+          },
+          "video-workload-qualification-p19": {
+            "background_throughput_loss": 4.706804064869008e-05,
+            "completed_p99_delta_us": -3000.867499999971,
+            "deadline_miss_delta": -0.004166666666666667,
+            "relative_deadline_miss_reduction": 0.4838709677419355,
+            "sender_airtime_ratio": 1.0824899528177938
+          },
+          "video-workload-qualification-p20": {
+            "background_throughput_loss": 4.3840951076457024e-05,
+            "completed_p99_delta_us": -1849.9100000000071,
+            "deadline_miss_delta": -0.0028703703703703703,
+            "relative_deadline_miss_reduction": 0.36904761904761907,
+            "sender_airtime_ratio": 1.1299658149202492
+          }
+        }
+      },
+      "str_gates": {
+        "aggregate": {
+          "criteria": {
+            "background_throughput_loss": {
+              "observed": 0.011308570787519068,
+              "rule": "95% upper endpoint <= 0.01",
+              "status": "fail",
+              "threshold": 0.01
+            },
+            "completed_p99_delta_us": {
+              "observed": 847.5534020833311,
+              "rule": "95% upper endpoint < 0 us",
+              "status": "fail",
+              "threshold": 0.0
+            },
+            "deadline_miss_delta": {
+              "observed": 0.054510754243827175,
+              "rule": "95% upper endpoint < 0",
+              "status": "fail",
+              "threshold": 0.0
+            },
+            "relative_deadline_miss_reduction": {
+              "observed": -0.37652912600924426,
+              "rule": "point estimate >= 0.50",
+              "status": "fail",
+              "threshold": 0.5
+            },
+            "sender_airtime_ratio": {
+              "observed": 1.2335410046319204,
+              "rule": "95% upper endpoint <= 1.20",
+              "status": "fail",
+              "threshold": 1.2
+            }
+          },
+          "status": "fail"
+        },
+        "direct_str_victory": {
+          "definition": "all assessable aggregate and per-family STR gates pass",
+          "status": "fail"
+        },
+        "per_family": {
+          "families": {
+            "compound_shift": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.0023499680451319893,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 2382.0035000000025,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "fail",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.10694444444444445,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2645242758412343,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "fail",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "legacy_coexistence": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.007775938614108746,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 1079.5475000000006,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.08902777777777776,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2227971526581114,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "obss_geometry_mac": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 5.828151835973738e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -596.7694999999912,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": -0.0004166666666666676,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "pass",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.1429900193415654,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "pass"
+            },
+            "obss_intensity": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 0.008472561806667334,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": 98.67049999998926,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": -0.00552777777777777,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "pass",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.1731084029434051,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "pass"
+            },
+            "radio_propagation": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 8.62101996245146e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -579.4465000000127,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.014027777777777778,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.2245896975455048,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            },
+            "video_workload": {
+              "criteria": {
+                "background_throughput_loss": {
+                  "observed": 6.00107416210971e-05,
+                  "rule": "family point estimate <= 0.02",
+                  "status": "pass",
+                  "threshold": 0.02
+                },
+                "completed_p99_delta_us": {
+                  "observed": -1875.3075000000044,
+                  "rule": "family point estimate <= 2000 us",
+                  "status": "pass",
+                  "threshold": 2000
+                },
+                "deadline_miss_delta": {
+                  "observed": 0.002995370370370372,
+                  "rule": "family point estimate <= 0.002",
+                  "status": "fail",
+                  "threshold": 0.002
+                },
+                "sender_airtime_ratio": {
+                  "observed": 1.1194803775936422,
+                  "rule": "family point estimate <= 1.25",
+                  "status": "pass",
+                  "threshold": 1.25
+                }
+              },
+              "status": "fail"
+            }
+          },
+          "families_worse_on_both_miss_and_p99": {
+            "observed": 2,
+            "rule": "families worse on both miss and P99 <= 0",
+            "status": "fail",
+            "threshold": 0
+          },
+          "status": "fail"
+        }
+      }
+    }
+  },
+  "completed_p99_interpretation": {
+    "minimum_completed_frames_per_run": 100,
+    "population": "completed frames only",
+    "warning": "Completed-frame P99 is survivor-conditioned and must never be interpreted without all-generated deadline misses and completed-frame counts."
+  },
+  "direct_str_victory": {
+    "distributional_shadow_t2": {
+      "reason": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion.",
+      "status": "not_assessable"
+    },
+    "score_aware_t2_v2": {
+      "reason": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion.",
+      "status": "not_assessable"
+    }
+  },
+  "estimand": {
+    "families_are_not_resampled": true,
+    "family_count_is_fixed": true,
+    "point_weighting": "equal_family_then_equal_scenario_then_equal_replicate",
+    "replicate_sampling_within_selected_scenario": "sample 4 whole paired replicates with replacement",
+    "scenario_sampling_within_family": "sample 8 scenario clusters with replacement",
+    "shared_resamples_for_all_arms_metrics_and_contrasts": true
+  },
+  "evidence_role": "exploratory partial balanced failure snapshot",
+  "exploratory_direct_str_gate_snapshot": {
+    "distributional_shadow_t2": {
+      "definition": "all assessable aggregate and per-family STR gates pass",
+      "status": "fail"
+    },
+    "score_aware_t2_v2": {
+      "definition": "all assessable aggregate and per-family STR gates pass",
+      "status": "fail"
+    }
+  },
+  "formal_qualification_status": {
+    "reason": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion.",
+    "status": "not_assessable"
+  },
+  "interpretation_limits": [
+    "Completed-frame P99 is survivor-conditioned and must never be interpreted without all-generated deadline misses and completed-frame counts.",
+    "A campaign-level pass does not erase a failed held-out-family safety gate.",
+    "The distributional-shadow arm is a previously frozen policy, not a refit on randomized environment outcomes.",
+    "The ff6d8b8, d66313b, de49f8b, and 3bf5bb8 execution roots exposed runtime or validator incompatibilities and are excluded; all 576 runs must come from one clean repaired commit.",
+    "During de49f8b solver diagnosis, one error log exposed only sent-packet, byte-count, background-byte, and finalized-frame aggregates. No deadline, latency, policy-comparison, threshold, or gate outcome was inspected, and those fields were not used to select or change the policy, model, threshold, or gates.",
+    "The 3bf5bb8 audit exposed only service, completion, attempt-count, run-identity, and timeout-error metadata. The failed deterministic run passed preflight and isolated replay; no deadline, latency, performance aggregate, policy comparison, threshold, or gate outcome was inspected or changed.",
+    "EMLSR is not an arm or gate in this STR-focused qualification.",
+    "No held-out outcome may be inspected until all 576 arms are complete and the exact manifest closes."
+  ],
+  "oracle_estimand_boundary": {
+    "fraction_of_oracle_deadline_gain_realized": {
+      "reason": "The randomized resource ceiling is defined on action-clean eligible T2 rows, while qualification uses all generated frames; subtracting their rates would mix estimands.",
+      "status": "not_assessable"
+    },
+    "parent_promotion_readiness": {
+      "reason": "The parent promotion contract requires the noncommensurate oracle-gain fraction. Direct STR victory and every assessable gate remain reportable.",
+      "status": "not_assessable"
+    }
+  },
+  "parent_promotion_readiness": {
+    "reason": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion.",
+    "status": "not_assessable"
+  },
+  "partial_snapshot": {
+    "all_missing_run_ids": [
+      "475d547fb22c4f5f560d",
+      "496b758bc693619e8105",
+      "65d1ce87c6a341742545",
+      "74f06c3d90823411be02",
+      "88b7da31f843daf76e77",
+      "e99686e4fff2028e0d68",
+      "ecde3c40d1f8cf58fc83",
+      "edeeb26b753ca8b5c4fd"
+    ],
+    "balanced_selected_paired_unit_count": 120,
+    "balanced_selected_run_count": 360,
+    "balanced_selected_scenario_count_by_family": {
+      "compound_shift": 5,
+      "legacy_coexistence": 5,
+      "obss_geometry_mac": 5,
+      "obss_intensity": 5,
+      "radio_propagation": 5,
+      "video_workload": 5
+    },
+    "campaign_missing_run_count": 8,
+    "campaign_valid_run_count": 568,
+    "complete_but_balance_excluded_scenario_ids_by_family": {
+      "compound_shift": [],
+      "legacy_coexistence": [
+        "legacy-coexistence-qualification-p21",
+        "legacy-coexistence-qualification-p22",
+        "legacy-coexistence-qualification-p23"
+      ],
+      "obss_geometry_mac": [
+        "obss-geometry-mac-qualification-p21",
+        "obss-geometry-mac-qualification-p22",
+        "obss-geometry-mac-qualification-p23"
+      ],
+      "obss_intensity": [
+        "obss-intensity-qualification-p22",
+        "obss-intensity-qualification-p23"
+      ],
+      "radio_propagation": [
+        "radio-propagation-qualification-p21",
+        "radio-propagation-qualification-p22",
+        "radio-propagation-qualification-p23"
+      ],
+      "video_workload": [
+        "video-workload-qualification-p21",
+        "video-workload-qualification-p22",
+        "video-workload-qualification-p23"
+      ]
+    },
+    "complete_scenario_count_by_family": {
+      "compound_shift": 5,
+      "legacy_coexistence": 8,
+      "obss_geometry_mac": 8,
+      "obss_intensity": 7,
+      "radio_propagation": 8,
+      "video_workload": 8
+    },
+    "incomplete_scenarios": [
+      {
+        "canonical_run_count": 12,
+        "family_id": "obss_intensity",
+        "missing_run_count": 0,
+        "missing_run_ids": [],
+        "p99_eligible_run_count": 3,
+        "p99_ineligible_run_ids": [
+          "6b8135f9c708f7f19f42",
+          "75d62ae0eec88396a112",
+          "9893eb6f2fe9e4ed4f1a",
+          "b7b08745cf903c88af98",
+          "be1cc0e4644edff76958",
+          "c146c6c2776be572f63b",
+          "dc588d9dee139b3fce08",
+          "e1202f24a4669108df66",
+          "fb315d018e84a58211f7"
+        ],
+        "scenario_id": "obss-intensity-qualification-p20"
+      },
+      {
+        "canonical_run_count": 12,
+        "family_id": "compound_shift",
+        "missing_run_count": 0,
+        "missing_run_ids": [],
+        "p99_eligible_run_count": 9,
+        "p99_ineligible_run_ids": [
+          "078d4ffae9969289f3ad",
+          "67a887ddcfc97e8e0a8a",
+          "e29837e869e571c4f802"
+        ],
+        "scenario_id": "compound-shift-qualification-p20"
+      },
+      {
+        "canonical_run_count": 12,
+        "family_id": "compound_shift",
+        "missing_run_count": 0,
+        "missing_run_ids": [],
+        "p99_eligible_run_count": 0,
+        "p99_ineligible_run_ids": [
+          "0c2436e19f6c6397d95e",
+          "17782e65858a6b6ae1f0",
+          "1b39a2c4b21150ff2569",
+          "1bc47ac2c2ad45aaf3b2",
+          "2b5a7e9af8636010564a",
+          "36801bbf38cd71b7c6e8",
+          "422bfb596bec4e8f422b",
+          "74c0ae153397d72345b2",
+          "839387f4aa07dbffe6a8",
+          "9bcb1154f5ae21f5efdb",
+          "a7bded56d02cdd9ea2eb",
+          "bd321bea874b90be9c96"
+        ],
+        "scenario_id": "compound-shift-qualification-p22"
+      },
+      {
+        "canonical_run_count": 4,
+        "family_id": "compound_shift",
+        "missing_run_count": 8,
+        "missing_run_ids": [
+          "475d547fb22c4f5f560d",
+          "496b758bc693619e8105",
+          "65d1ce87c6a341742545",
+          "74f06c3d90823411be02",
+          "88b7da31f843daf76e77",
+          "e99686e4fff2028e0d68",
+          "ecde3c40d1f8cf58fc83",
+          "edeeb26b753ca8b5c4fd"
+        ],
+        "p99_eligible_run_count": 2,
+        "p99_ineligible_run_ids": [
+          "c0b8a1d381eefe0d42b9",
+          "ca9c83794f6b2e49db55"
+        ],
+        "scenario_id": "compound-shift-qualification-p23"
+      }
+    ],
+    "manifest_path": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs/experiment_manifest.json",
+    "manifest_sha256": "464a3ff8535cff8afc46ff16b76397c4168900eeb193204ef3c438a5db08a8b3",
+    "minimum_completed_frames_per_run": 100,
+    "p99_ineligible_canonical_runs": [
+      {
+        "completed_frame_count": 53,
+        "run_id": "078d4ffae9969289f3ad"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "0c2436e19f6c6397d95e"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "17782e65858a6b6ae1f0"
+      },
+      {
+        "completed_frame_count": 4,
+        "run_id": "1b39a2c4b21150ff2569"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "1bc47ac2c2ad45aaf3b2"
+      },
+      {
+        "completed_frame_count": 2,
+        "run_id": "2b5a7e9af8636010564a"
+      },
+      {
+        "completed_frame_count": 2,
+        "run_id": "36801bbf38cd71b7c6e8"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "422bfb596bec4e8f422b"
+      },
+      {
+        "completed_frame_count": 97,
+        "run_id": "67a887ddcfc97e8e0a8a"
+      },
+      {
+        "completed_frame_count": 5,
+        "run_id": "6b8135f9c708f7f19f42"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "74c0ae153397d72345b2"
+      },
+      {
+        "completed_frame_count": 90,
+        "run_id": "75d62ae0eec88396a112"
+      },
+      {
+        "completed_frame_count": 3,
+        "run_id": "839387f4aa07dbffe6a8"
+      },
+      {
+        "completed_frame_count": 1,
+        "run_id": "9893eb6f2fe9e4ed4f1a"
+      },
+      {
+        "completed_frame_count": 4,
+        "run_id": "9bcb1154f5ae21f5efdb"
+      },
+      {
+        "completed_frame_count": 2,
+        "run_id": "a7bded56d02cdd9ea2eb"
+      },
+      {
+        "completed_frame_count": 12,
+        "run_id": "b7b08745cf903c88af98"
+      },
+      {
+        "completed_frame_count": 2,
+        "run_id": "bd321bea874b90be9c96"
+      },
+      {
+        "completed_frame_count": 91,
+        "run_id": "be1cc0e4644edff76958"
+      },
+      {
+        "completed_frame_count": 93,
+        "run_id": "c0b8a1d381eefe0d42b9"
+      },
+      {
+        "completed_frame_count": 5,
+        "run_id": "c146c6c2776be572f63b"
+      },
+      {
+        "completed_frame_count": 36,
+        "run_id": "ca9c83794f6b2e49db55"
+      },
+      {
+        "completed_frame_count": 2,
+        "run_id": "dc588d9dee139b3fce08"
+      },
+      {
+        "completed_frame_count": 23,
+        "run_id": "e1202f24a4669108df66"
+      },
+      {
+        "completed_frame_count": 35,
+        "run_id": "e29837e869e571c4f802"
+      },
+      {
+        "completed_frame_count": 83,
+        "run_id": "fb315d018e84a58211f7"
+      }
+    ],
+    "role": "exploratory_partial_failure_snapshot",
+    "selected_scenario_ids_by_family": {
+      "compound_shift": [
+        "compound-shift-qualification-p16",
+        "compound-shift-qualification-p17",
+        "compound-shift-qualification-p18",
+        "compound-shift-qualification-p19",
+        "compound-shift-qualification-p21"
+      ],
+      "legacy_coexistence": [
+        "legacy-coexistence-qualification-p16",
+        "legacy-coexistence-qualification-p17",
+        "legacy-coexistence-qualification-p18",
+        "legacy-coexistence-qualification-p19",
+        "legacy-coexistence-qualification-p20"
+      ],
+      "obss_geometry_mac": [
+        "obss-geometry-mac-qualification-p16",
+        "obss-geometry-mac-qualification-p17",
+        "obss-geometry-mac-qualification-p18",
+        "obss-geometry-mac-qualification-p19",
+        "obss-geometry-mac-qualification-p20"
+      ],
+      "obss_intensity": [
+        "obss-intensity-qualification-p16",
+        "obss-intensity-qualification-p17",
+        "obss-intensity-qualification-p18",
+        "obss-intensity-qualification-p19",
+        "obss-intensity-qualification-p21"
+      ],
+      "radio_propagation": [
+        "radio-propagation-qualification-p16",
+        "radio-propagation-qualification-p17",
+        "radio-propagation-qualification-p18",
+        "radio-propagation-qualification-p19",
+        "radio-propagation-qualification-p20"
+      ],
+      "video_workload": [
+        "video-workload-qualification-p16",
+        "video-workload-qualification-p17",
+        "video-workload-qualification-p18",
+        "video-workload-qualification-p19",
+        "video-workload-qualification-p20"
+      ]
+    },
+    "selection_rule": "within each frozen family, retain the first N scenarios in frozen order for which all 12 runs are canonical and each run has at least the frozen minimum completed-frame count; N is the minimum eligible scenario count over the six families",
+    "warning": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion."
+  },
+  "population": {
+    "arm_count": 3,
+    "family_count": 6,
+    "family_ids": [
+      "radio_propagation",
+      "obss_intensity",
+      "obss_geometry_mac",
+      "video_workload",
+      "legacy_coexistence",
+      "compound_shift"
+    ],
+    "paired_unit_count": 120,
+    "replicates_per_scenario": 4,
+    "reserved_confirmation_seeds": {
+      "maximum": 1348,
+      "minimum": 1301,
+      "required_overlap_count": 0
+    },
+    "scenario_ids_by_family": {
+      "compound_shift": [
+        "compound-shift-qualification-p16",
+        "compound-shift-qualification-p17",
+        "compound-shift-qualification-p18",
+        "compound-shift-qualification-p19",
+        "compound-shift-qualification-p21"
+      ],
+      "legacy_coexistence": [
+        "legacy-coexistence-qualification-p16",
+        "legacy-coexistence-qualification-p17",
+        "legacy-coexistence-qualification-p18",
+        "legacy-coexistence-qualification-p19",
+        "legacy-coexistence-qualification-p20"
+      ],
+      "obss_geometry_mac": [
+        "obss-geometry-mac-qualification-p16",
+        "obss-geometry-mac-qualification-p17",
+        "obss-geometry-mac-qualification-p18",
+        "obss-geometry-mac-qualification-p19",
+        "obss-geometry-mac-qualification-p20"
+      ],
+      "obss_intensity": [
+        "obss-intensity-qualification-p16",
+        "obss-intensity-qualification-p17",
+        "obss-intensity-qualification-p18",
+        "obss-intensity-qualification-p19",
+        "obss-intensity-qualification-p21"
+      ],
+      "radio_propagation": [
+        "radio-propagation-qualification-p16",
+        "radio-propagation-qualification-p17",
+        "radio-propagation-qualification-p18",
+        "radio-propagation-qualification-p19",
+        "radio-propagation-qualification-p20"
+      ],
+      "video_workload": [
+        "video-workload-qualification-p16",
+        "video-workload-qualification-p17",
+        "video-workload-qualification-p18",
+        "video-workload-qualification-p19",
+        "video-workload-qualification-p20"
+      ]
+    },
+    "scenarios_per_family": 5,
+    "simulation_run_count": 360,
+    "strictly_validated_run_count": 360
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "analysis_contract": {
+      "path": "experiments/model-selection/environment-generalization-qualification-analysis-v1.json",
+      "sha256": "82413698492988caedb3d3723d199bd04df0d1f47f65d46dbce905b9224bdc44"
+    },
+    "analyzer": {
+      "path": "/home/jingweili/environment_partial_47e1996.py",
+      "sha256": "39851999b9a119c27ca535532f0002a3d560810c1333e2c83421ba60ae9a619c"
+    },
+    "analyzer_git": {
+      "analysis_checkout_head": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+      "formal_clean_checkout_claim": false,
+      "project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35"
+    },
+    "build_identity": {
+      "build_profile": "debug",
+      "compiler": "13.3.0",
+      "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+      "ns3_version": "ns-3.48",
+      "project_git_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35"
+    },
+    "campaign_manifest": {
+      "complete_run_count": 568,
+      "derived_run_ids_verified": true,
+      "expanded_matrix_identity_verified": true,
+      "experiment": "environment-generalization-closed-loop-qualification-v1",
+      "formal_matrix_closure": false,
+      "matrix_sha256": "3073b90eb0aed3c6bf859c8e1a53bac25b7b2a41b69ffe14c5a60acc3038cf73",
+      "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+      "path": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs/experiment_manifest.json",
+      "project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+      "run_root": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs",
+      "runtime_contract_id": "environment-generalization-qualification-execution-v1",
+      "runtime_contract_sha256": "09b5e8de9033f6f0803e45b84a6b155f8ed1722710bb489a9fe19d01382554c9",
+      "scenario_identities_verified": true,
+      "schema_version": 2,
+      "selected_balanced_run_count": 360,
+      "sha256": "464a3ff8535cff8afc46ff16b76397c4168900eeb193204ef3c438a5db08a8b3",
+      "source_artifacts": {
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "distributional_portable_model": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+          "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+        },
+        "distributional_runtime_contract": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+          "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+        },
+        "distributional_shadow_reference": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+          "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+        },
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "parent_generalization_contract": {
+          "path": "experiments/model-selection/environment-generalization-v1.json",
+          "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+        },
+        "qualification_base_config": {
+          "path": "experiments/configs/paired_value_t2_str_qualification_v1.yaml",
+          "sha256": "67612a496b9c60cc8d3efb017e42af307e87e608762aa006d72a676fde5330c5"
+        },
+        "scenario_catalog": {
+          "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+          "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+        },
+        "secondary_airtime_event_schema": {
+          "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+          "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+        },
+        "v2_runtime_contract": {
+          "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+          "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+        }
+      }
+    },
+    "execution_contract": {
+      "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
+      "sha256": "09b5e8de9033f6f0803e45b84a6b155f8ed1722710bb489a9fe19d01382554c9"
+    },
+    "formal_analyzer": {
+      "path": "tools/analyze_environment_generalization_qualification.py",
+      "sha256": "331e0634b6b2909ffff39d0b9a157e6697b5ffcb77cc264d1057747074a6ba54"
+    },
+    "generated_matrix": {
+      "artifact_manifest_path": "experiments/model-selection/environment-generalization-qualification-artifacts-v1.json",
+      "artifact_manifest_sha256": "1e92ca6a421bec981f23e91de854708fc0915f5113ac71cc4539cba0722330c4",
+      "path": "experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml",
+      "resolved_matrix_sha256": "3073b90eb0aed3c6bf859c8e1a53bac25b7b2a41b69ffe14c5a60acc3038cf73",
+      "sha256": "6bfbb9b52803ec818a7862b78e42307f57f655ad7df099e6798164f190bc4b56"
+    }
+  },
+  "treatments": {
+    "distributional_shadow_t2": {
+      "completed_frame_count": {
+        "per_run_maximum": 3600,
+        "per_run_minimum": 393,
+        "total": 206702
+      },
+      "deadline_miss_count": {
+        "total": 26578
+      },
+      "generated_frame_count": {
+        "per_run_maximum": 3600,
+        "per_run_minimum": 1440,
+        "total": 233280
+      },
+      "label": "Distributional-shadow T2",
+      "metrics": {
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.1722032793209876,
+          "ci95_low": 0.07684499421296297,
+          "estimate": 0.12155979938271605,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 33.01979599355555,
+          "ci95_low": 28.39884463288889,
+          "estimate": 30.593101395555557,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "completed_frame_hf7_p99_us": {
+          "ci95_high": 25145.214570833334,
+          "ci95_low": 21441.21699583333,
+          "estimate": 23274.579583333332,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "sender_airtime_us": {
+          "ci95_high": 6924388.538541666,
+          "ci95_low": 5522496.997916667,
+          "estimate": 6168022.75,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        }
+      },
+      "run_count": 120
+    },
+    "score_aware_t2_v2": {
+      "completed_frame_count": {
+        "per_run_maximum": 3600,
+        "per_run_minimum": 364,
+        "total": 205681
+      },
+      "deadline_miss_count": {
+        "total": 27599
+      },
+      "generated_frame_count": {
+        "per_run_maximum": 3600,
+        "per_run_minimum": 1440,
+        "total": 233280
+      },
+      "label": "Score-aware T2 V2",
+      "metrics": {
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.17767393904320988,
+          "ci95_low": 0.08048577353395062,
+          "estimate": 0.1261574074074074,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 33.02503149999999,
+          "ci95_low": 28.393959143111108,
+          "estimate": 30.592321884444445,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "completed_frame_hf7_p99_us": {
+          "ci95_high": 25410.759910416662,
+          "ci95_low": 21737.014354166662,
+          "estimate": 23541.557166666662,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "sender_airtime_us": {
+          "ci95_high": 6769073.243749999,
+          "ci95_low": 5376112.738541667,
+          "estimate": 6017941.566666666,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        }
+      },
+      "run_count": 120
+    },
+    "str_mlo_nmaxinflights_1": {
+      "completed_frame_count": {
+        "per_run_maximum": 3598,
+        "per_run_minimum": 262,
+        "total": 213356
+      },
+      "deadline_miss_count": {
+        "total": 19924
+      },
+      "generated_frame_count": {
+        "per_run_maximum": 3600,
+        "per_run_minimum": 1440,
+        "total": 233280
+      },
+      "label": "STR MLO",
+      "metrics": {
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.14302608024691352,
+          "ci95_low": 0.04866453510802469,
+          "estimate": 0.09164891975308642,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 33.210542388,
+          "ci95_low": 28.442675843999996,
+          "estimate": 30.706212302222223,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "completed_frame_hf7_p99_us": {
+          "ci95_high": 25316.31158333333,
+          "ci95_low": 21651.75586041666,
+          "estimate": 23456.774166666662,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        },
+        "sender_airtime_us": {
+          "ci95_high": 5597743.9279166665,
+          "ci95_low": 4566460.590625,
+          "estimate": 5048560.133333334,
+          "statistic": "equal-family mean of equal-scenario means of replicate-run metric"
+        }
+      },
+      "run_count": 120
+    }
+  }
+}

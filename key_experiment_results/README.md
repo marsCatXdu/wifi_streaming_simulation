@@ -44,8 +44,9 @@ frame-independent 1 ms polling evidence is preserved under
 | `14_temporal_t2_shadow_borrow_repay_v1` | Opportunity-priced deterministic future-credit replay | Exact strict baseline, repayment-bounded allocation, decision-route and action-substitution diagnostics, shared-bootstrap outcomes, and figure |
 | `15_distributional_shadow_t2_str_engineering_v1` | Closed-loop distributional shadow T2 versus same-build STR and score-aware V2 | Strict 48-pair qualification, action and ledger diagnostics, exact V2 comparison, raw-archive identities, and qualification plus standard figures |
 | `16_environment_generalization_randomized_v1` | Six-family randomized T2 leave-one-family-out replay | Checksum-closed dataset/LOFO provenance, cross-fitted policy values, OOD and resource diagnostics, family values, and five reviewed figures |
+| `17_environment_generalization_qualification_v1` | Frozen six-family closed-loop V2/distributional/STR qualification | Complete 576-run strict reliability result, explicit unsupported-P99 boundary, exact recovery and supplementary audit, and ten reviewed figures |
 
-## Current best STR result
+## Current best neutral-environment STR result
 
 Score-aware temporal-T2 V2 is the first selective-duplication candidate in
 this repository to pass all frozen engineering gates against STR MLO.  Across
@@ -70,6 +71,16 @@ guard-isolation tests. Cost-free V5 also passes all STR gates at 0.5741%
 misses and 17.081 ms P99, but it has one more miss, 203 more actions, and no
 statistically resolved P99 gain over V2. V2 therefore remains the current best
 implementation; see `11_cost_free_t2_str_engineering_v5/README.md`.
+
+That neutral-environment victory does not generalize.  In the complete
+six-family held-out campaign, STR records 16.0443% misses, versus 19.1308% for
+V2 and 18.7582% for distributional-shadow.  Both candidate-minus-STR paired
+intervals are strictly positive.  Distributional-shadow decisively improves
+V2 but still loses to STR, and its airtime upper interval exceeds 1.20.  The
+frozen P99 gate is not assessable because 28 valid collapse runs have fewer
+than 100 completions.  See
+`17_environment_generalization_qualification_v1/README.md`; do not promote
+either policy from the neutral result alone.
 
 The next frozen-head offline ablation shows that the learned per-frame cost
 divisor degrades ranking. At the same 15% requested action fraction, the raw
@@ -374,3 +385,7 @@ For online prediction:
 11. The environment-generalization randomized replay covers only action-clean
     eligible T2 rows.  It is neither an all-generated-frame nor closed-loop STR
     result, and its cross-fitted resource ceiling is not perfect information.
+12. The complete held-out closed-loop result decisively favors STR on
+    all-generated reliability.  Its completed-frame P99 gate is not
+    assessable; completion CDF/PDF figures are survivor-conditioned and all
+    observed misses are incomplete frames.

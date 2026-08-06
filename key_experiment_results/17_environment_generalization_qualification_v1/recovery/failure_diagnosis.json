@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "simulation_project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+  "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+  "failed_attempt": {
+    "run_id": "88b7da31f843daf76e77",
+    "attempt_pid": 182816,
+    "frame_count": 1800,
+    "evaluated_frame_count": 1747,
+    "mismatch_count": 1,
+    "mismatch_frame_ids": [
+      685
+    ]
+  },
+  "validator_failure": {
+    "field": "nonnegative_bad12_value",
+    "observed": 0.45703000635676894,
+    "expected": 0.4570300063567687,
+    "difference": 2.220446049250313e-16,
+    "difference_ulps": 4.0,
+    "old_absolute_tolerance": 2e-16,
+    "primary_probability_difference": 1.6653345369377348e-16,
+    "treated_probability_difference": 0.0,
+    "predicted_log_airtime_difference": 0.0,
+    "predicted_secondary_airtime_difference_us": 0.0,
+    "value_per_cost_score_float32_difference": 0.0
+  },
+  "diagnosis": "The old derived-value bound did not include the sum of the two independently allowed probability roundoff bounds. The controller's float32 score, threshold result, and action decision were unchanged.",
+  "resolution": {
+    "validator_commit": "5ca913ab40f8d6fa06188d80a86b7489f221eb05",
+    "new_derived_absolute_tolerance": 4e-16,
+    "focused_test_count": 3,
+    "full_test_module_count": 28,
+    "full_test_module_status": "passed",
+    "failed_attempt_end_to_end_status": "valid"
+  },
+  "evidence": {
+    "failure_archive": "wifi-qualification-47e1996-failure-evidence-attempt-182816.tar.zst",
+    "failure_archive_sha256": "bb4c067ada47afc3ee2067f1a2fc70179ebfb7cd1231d8720e3aed5300ba9c00",
+    "failure_archive_compressed_bytes": 5840581,
+    "failure_archive_uncompressed_tar_bytes": 29726720,
+    "diagnostic_script_sha256": "2fde71d7cbeb05f07531f0a2ca7afe0df23ac899955ab22a965181adc70df8c8",
+    "recovery_script_sha256": "a1bb5ea5aa0780b853effe91b60c0d10aa96a9986ba0f7c7497dc91df01b6ae4",
+    "repair_service_sha256": "40dd0d969f29d027117401d49ef722372cf988040751b66d9fdc627b1015851c"
+  }
+}

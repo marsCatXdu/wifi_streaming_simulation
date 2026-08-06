@@ -1,0 +1,16 @@
+[Unit]
+Description=Run supplementary p23 seed-21193 qualification trio
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jingweili/wifi_streaming_qualification_47e1996
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+Environment=NUMEXPR_NUM_THREADS=1
+Environment=VECLIB_MAXIMUM_THREADS=1
+ExecStart=/usr/bin/python3 /home/jingweili/run_supplementary_p23_seed21193.py --recovery-driver /home/jingweili/resume-exact-qualification-runs-5ca913a.py --frozen-checkout /home/jingweili/wifi_streaming_qualification_47e1996 --validator-checkout /home/jingweili/wifi_validation_5ca913a_clean --config /home/jingweili/supplementary_p23_seed21193.yaml
+StandardOutput=append:/home/jingweili/wifi-qualification-supplementary-p23-21193.log
+StandardError=append:/home/jingweili/wifi-qualification-supplementary-p23-21193.log
+TimeoutStartSec=0

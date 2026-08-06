@@ -1,0 +1,101 @@
+{
+  "analysis_artifact_manifest": {
+    "bytes": 5794,
+    "path": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/analysis_complete_reliability_565d9a2/analysis_artifact_manifest.json",
+    "sha256": "dba7188133c161a8b822580b7f806801e02c9078f3867815d742347ea111a0c3"
+  },
+  "artifacts": {
+    "aggregate_reliability_resources.pdf": {
+      "bytes": 28888,
+      "sha256": "725d0dbdc465b270beb368232215ae5fbacb5d3e6aa5167896e5d9d0d3992ce6"
+    },
+    "aggregate_reliability_resources.png": {
+      "bytes": 157584,
+      "sha256": "686cc536d81cd793b06612e06553ac6a1894e509d988c908dcf5bbd91b4e3208"
+    },
+    "completion_latency_cdf.pdf": {
+      "bytes": 60172,
+      "sha256": "539acb2fcbcf0bd92e52f8b77e09f4b1de99fe922410ebdf089909cdbfd4f605"
+    },
+    "completion_latency_cdf.png": {
+      "bytes": 102931,
+      "sha256": "79aa9668605caa8629923d9649b1aa94add9d2ed482bf25a8cd081419a8a75de"
+    },
+    "completion_latency_pdf.pdf": {
+      "bytes": 26136,
+      "sha256": "1fae650f1d9063389df713d5b5374a9798c31c858cccb00fe9898e5abd08d750"
+    },
+    "completion_latency_pdf.png": {
+      "bytes": 68496,
+      "sha256": "d362ff2b64808e01bb849d6045b96e3cf9109cd405017479e9d5cf1df114634a"
+    },
+    "compound_p23_exact.pdf": {
+      "bytes": 24673,
+      "sha256": "df16c200e30b7a282018b7b3c36a69cde781a6f04d8c5777d3fd97602a649f4e"
+    },
+    "compound_p23_exact.png": {
+      "bytes": 62204,
+      "sha256": "6ff4189ef3a534a6288a4f278d78ccdb7a791e9a03a66a80b656533fc8082a69"
+    },
+    "deadline_miss_burst_cdf.pdf": {
+      "bytes": 26796,
+      "sha256": "9d4473cec4c4d6cff2a031de11817dc201576e8391b644a4bce3400d1b7deb95"
+    },
+    "deadline_miss_burst_cdf.png": {
+      "bytes": 66940,
+      "sha256": "6214591bacde90324fd82a0fa25c81d9c66144e50895b4ff3a7bffd534318048"
+    },
+    "deadline_outcome_composition.pdf": {
+      "bytes": 23131,
+      "sha256": "cc18526899f4e06c02f4cef96d5e8ffe85b6f563833ee6103759babc7629f196"
+    },
+    "deadline_outcome_composition.png": {
+      "bytes": 62241,
+      "sha256": "31a4a173640b848096b7c701fd8d81db8350b8e2d9a02d9b9bdc7f20eb52fcc1"
+    },
+    "family_deadline_miss_rate.pdf": {
+      "bytes": 24738,
+      "sha256": "cb4dac8f063a01c260fce75f711ff5efd0846aa07721b3908794f7a046668dff"
+    },
+    "family_deadline_miss_rate.png": {
+      "bytes": 103206,
+      "sha256": "8f03f7050e1c40d151f6deff92fc669130461d51a7b6c39f0d24c36a3ace8011"
+    },
+    "family_resource_effects.pdf": {
+      "bytes": 27171,
+      "sha256": "68d128e0ec03ff44104a770432305ddc00808a9fe0a976cedc328bf1e7249f73"
+    },
+    "family_resource_effects.png": {
+      "bytes": 176631,
+      "sha256": "3bdce3b85d4f550f37d9968f559ea198f670581cd0d5e41a008539f25472ff6f"
+    },
+    "scenario_deadline_miss_delta.pdf": {
+      "bytes": 26441,
+      "sha256": "b6e9b3effa0d08d89c4b0ac51138b8ba58aa4963fc456a661d639988bb623523"
+    },
+    "scenario_deadline_miss_delta.png": {
+      "bytes": 74957,
+      "sha256": "505fbfa55f3407ee0c362e1c08e0e5a3ec82a0811226ade40a482f90ab587847"
+    },
+    "scenario_deadline_miss_rate.pdf": {
+      "bytes": 28168,
+      "sha256": "7f9f69ceef3fdfc2bcfc62adef36422da77fce9a71dac8d57a7f24231ce207cf"
+    },
+    "scenario_deadline_miss_rate.png": {
+      "bytes": 240848,
+      "sha256": "9ec0cd5effc2c2dacefd70723ef943bee5db0e50339f1e2cc674ff2fa2af1805"
+    }
+  },
+  "historical_raw_reduction": {
+    "all_runs_match_analyzed_counts": true,
+    "completed_latency_population_is_survivor_conditioned": true,
+    "run_count": 576
+  },
+  "manifest_id": "environment-generalization-complete-reliability-plots-v1",
+  "plotter": {
+    "path": "tools/plot_environment_generalization_complete_reliability.py",
+    "sha256": "30f883c47bc572966f1e6a999cab008977ff08aabab39228da216670145e3732"
+  },
+  "schema_version": 1,
+  "warning": "COMPLETE 576-RUN RELIABILITY ANALYSIS - FROZEN P99 NOT ASSESSABLE"
+}

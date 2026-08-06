@@ -1,0 +1,43 @@
+{
+  "excluded_from_parent_population": true,
+  "role": "supplementary_not_parent_qualification",
+  "scenario_id": "compound-shift-qualification-p23",
+  "seed": 21193,
+  "simulation_project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+  "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+  "service_started_utc": "2026-08-06T19:10:38Z",
+  "service_finished_utc": "2026-08-06T19:24:45Z",
+  "service_status": "success",
+  "arms": {
+    "str_mlo_nmaxinflights_1": {
+      "run_id": "8da41d38c68ddb10f2df",
+      "generated_frame_count": 1800,
+      "deadline_miss_count": 1416,
+      "deadline_miss_rate": 0.7866666666666666,
+      "completed_frame_count": 384,
+      "sender_airtime_us": 4873288.0
+    },
+    "score_aware_t2_v2": {
+      "run_id": "0adaf65ecfab60c13229",
+      "generated_frame_count": 1800,
+      "deadline_miss_count": 1632,
+      "deadline_miss_rate": 0.9066666666666666,
+      "completed_frame_count": 168,
+      "sender_airtime_us": 3633940.0
+    },
+    "distributional_shadow_t2": {
+      "run_id": "2090d3510ec3b9793ca7",
+      "generated_frame_count": 1800,
+      "deadline_miss_count": 1766,
+      "deadline_miss_rate": 0.9811111111111112,
+      "completed_frame_count": 34,
+      "sender_airtime_us": 3557063.0
+    }
+  },
+  "provenance_sha256": {
+    "experiment_manifest.json": "d5b3783204da26cf19ac58a7ddd4bb9f787a32226dbc5f32933aaefab5edd878",
+    "supplementary_p23_seed21193.yaml": "82d8af548fa38bbabcc7e2f0547bdf731d4bfbf3a582d36cac5cbe463d7504e1",
+    "run_supplementary_p23_seed21193.py": "e00bfa0b5bb9abe93c1e7205a8e68ae79867c628d9edc94c40ea15db720dd8aa",
+    "wifi-qualification-supplementary-p23-21193.service": "525cb6ca27c360576a8dc040fbd166279113c9dccaa84e411a606f557746c7d6"
+  }
+}

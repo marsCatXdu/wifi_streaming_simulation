@@ -1,0 +1,16 @@
+[Unit]
+Description=Recover and close the exact 47e1996 qualification matrix
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/jingweili/wifi_streaming_qualification_47e1996
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+Environment=NUMEXPR_NUM_THREADS=1
+Environment=VECLIB_MAXIMUM_THREADS=1
+ExecStart=/usr/bin/python3 /home/jingweili/resume-exact-qualification-runs-5ca913a.py --frozen-checkout /home/jingweili/wifi_streaming_qualification_47e1996 --validator-checkout /home/jingweili/wifi_validation_5ca913a_clean --config /home/jingweili/wifi_streaming_qualification_47e1996/experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml --run-root /home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs --promoted-attempt /home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs/.88b7da31f843daf76e77.attempt-182816 --workers 7
+StandardOutput=append:/home/jingweili/wifi-qualification-repair-5ca913a.log
+StandardError=append:/home/jingweili/wifi-qualification-repair-5ca913a.log
+TimeoutStartSec=0

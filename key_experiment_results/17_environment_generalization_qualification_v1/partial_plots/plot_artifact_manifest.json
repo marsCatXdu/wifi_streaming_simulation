@@ -1,0 +1,111 @@
+{
+  "analysis": "environment-generalization-qualification-partial-balanced-v1",
+  "analysis_artifact_manifest": {
+    "bytes": 5848,
+    "path": "results/environment_generalization_closed_loop_qualification_partial_568_balanced_v1/analysis/analysis_artifact_manifest.json",
+    "sha256": "abc71c56d27432b26717225dc2d987da9f5a8da4a6c06a6dffeb0b62f8451a74"
+  },
+  "artifacts": {
+    "aggregate_policy_metrics.pdf": {
+      "bytes": 26529,
+      "sha256": "6158c9b9f1dcbc0ac605d8f7e395738cbce9c6807a2e439b48c7379c8c0467c2"
+    },
+    "aggregate_policy_metrics.png": {
+      "bytes": 102956,
+      "sha256": "1ba41a32af24c082f6b967dc6162a22ed0cce43047053fc229a9239b74612dc3"
+    },
+    "completion_latency_cdf.pdf": {
+      "bytes": 58682,
+      "sha256": "57964529b6672d63e97674d0ee21860019131f82c54e73a6687fd5eb12b5166a"
+    },
+    "completion_latency_cdf.png": {
+      "bytes": 98394,
+      "sha256": "67e0f37e0e01eea2a0c50e54d774c23ac93616b3f039c7472019a2ac63a9f124"
+    },
+    "completion_latency_pdf.pdf": {
+      "bytes": 28915,
+      "sha256": "3c6c916da2e51df79cc72a9b92a856b88ba395053cf40f5b2938046f591095f1"
+    },
+    "completion_latency_pdf.png": {
+      "bytes": 70273,
+      "sha256": "0533973c41199315ae0cf36e7bf33d284b9e74a6f8dfcb8ddf8c31c0cdf3e29e"
+    },
+    "deadline_miss_and_completion.pdf": {
+      "bytes": 25149,
+      "sha256": "bd5c0e75d36224e06e4042798ed9450f41f5179300c8faa2511b5c3dff2bac33"
+    },
+    "deadline_miss_and_completion.png": {
+      "bytes": 76535,
+      "sha256": "dc5c38719503d774ea69ac87fdc765da8cd239b7c15b0c801d1c7ac2c1984da3"
+    },
+    "deadline_miss_burst_cdf.pdf": {
+      "bytes": 28362,
+      "sha256": "b128cce4b62cbfe23ca1a2ca4892c7377b6fd180479a3c43fd03a46a9c19e867"
+    },
+    "deadline_miss_burst_cdf.png": {
+      "bytes": 76778,
+      "sha256": "2ad35944cf78d48047cc2907e4d89de0b4eb595f21db203ee827fb3347d706df"
+    },
+    "family_completed_p99_delta.pdf": {
+      "bytes": 25953,
+      "sha256": "a4f12c852cfb548b05cfc505f9ecbfd120163e4b9718ac63793b3565f779b976"
+    },
+    "family_completed_p99_delta.png": {
+      "bytes": 104394,
+      "sha256": "0120be71fe8cf6e6a5ec1fa11fc85ab15c45ca074d0a7fa281eb6b49a2c011d0"
+    },
+    "family_deadline_miss_delta.pdf": {
+      "bytes": 25697,
+      "sha256": "3953518d4583e48c6576bc50d48fdb929a2c22dfba7d5186c628206e5ef26557"
+    },
+    "family_deadline_miss_delta.png": {
+      "bytes": 109642,
+      "sha256": "dbb348ad4ecd7627f71066f4b62967e43cc7fcb959f71e8eefc40c9c485769e6"
+    },
+    "family_resource_effects.pdf": {
+      "bytes": 27945,
+      "sha256": "be7ede3e3510a542f5fa1e3e4328502dda406e68f181a8ed3377b8e78944296c"
+    },
+    "family_resource_effects.png": {
+      "bytes": 189185,
+      "sha256": "65ada58bd6b8bb9c38e9af5ecd707dd066ba9cba4e8a5bf23813e8069d1314c4"
+    },
+    "resource_summary.pdf": {
+      "bytes": 26657,
+      "sha256": "7ff79a3fde4ff79f3ea4bd52a3bf387e70714bc7ffc0aafb0d5d32193b99b041"
+    },
+    "resource_summary.png": {
+      "bytes": 94448,
+      "sha256": "81d0c1988c52e79bd70577810202223d765f8fd2dd60f2708831affe5d7d9b7f"
+    },
+    "scenario_distributional_vs_v2.pdf": {
+      "bytes": 26989,
+      "sha256": "52c998fb8eaeea1d163399a609564ce188dca519ce82ff4af796e3e2ff170005"
+    },
+    "scenario_distributional_vs_v2.png": {
+      "bytes": 104901,
+      "sha256": "57c293d668e677b09142a8345be7f95578f01a5394e791d1e924ff7d8bb6d5d8"
+    },
+    "scenario_miss_p99_delta.pdf": {
+      "bytes": 30517,
+      "sha256": "252d9f113e70b73e0bfb6beba43d6e604210f8d9178c2de49af353643cf19b37"
+    },
+    "scenario_miss_p99_delta.png": {
+      "bytes": 118632,
+      "sha256": "711cdef4572ff26c6abd00751b5d5b1e50b20554b335e1f42daac2222b65be32"
+    }
+  },
+  "historical_raw_revalidation": {
+    "all_selected_runs_passed": true,
+    "completed_frame_population_is_survivor_conditioned": true,
+    "run_count": 360
+  },
+  "manifest_id": "environment-generalization-partial-plots-v1",
+  "plotter": {
+    "formal_plotter_sha256": "4949bd003728dc5cb2773f4f3d592e8487b79efdb03b79d91da8086cd3024cd2",
+    "path": "/home/jingweili/environment_partial_47e1996.py",
+    "sha256": "fc6cc0f562738332ca3bfbcd7c44582acadc53ce6397c6772e76107f0650deb8"
+  },
+  "schema_version": 1,
+  "warning": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion."
+}

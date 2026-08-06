@@ -1,0 +1,34 @@
+extends: /home/jingweili/wifi_streaming_qualification_47e1996/experiments/configs/environment_generalization_closed_loop_qualification_v1.yaml
+name: environment-generalization-qualification-supplementary-p23-seed21193
+output_root: /home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_qualification_supplementary_p23_seed21193/runs
+workers: 3
+supplementary_evidence:
+  role: exploratory_runtime_repair_sensitivity
+  parent_experiment: environment-generalization-closed-loop-qualification-v1
+  excluded_from_parent_population: true
+  selection_rule: first_integer_seed_after_frozen_p23_replicates
+  reason: avoid_conditioning_early_p23_result_on_one_pathologically_slow_exact_run
+scenario_instances:
+- config:
+    background.background_profile: legacy_mixed8
+    background.background_rate_mbps: 1.2414
+    background.random_off_mean_ms: 177.42
+    background.random_on_mean_ms: 54.98
+    obss.obss_dl_max_rate_mbps: 9.322
+    obss.obss_off_mean_ms: 88.78
+    obss.obss_on_mean_ms: 104.49
+    obss.obss_ul_max_rate_mbps: 4.0026
+    propagation.path_loss_exponent: 3.1893
+    propagation.station_distance_m: 10.665
+    stream.deadline_us: 33333
+    stream.fps: 30
+    stream.frame_size: 9400
+    stream.gop_length: 60
+    stream.keyframe_size_multiplier: 2.187
+  family_id: compound_shift
+  parameter_sample: 23
+  runs:
+  - 1
+  scenario_id: compound-shift-qualification-p23
+  seeds:
+  - 21193

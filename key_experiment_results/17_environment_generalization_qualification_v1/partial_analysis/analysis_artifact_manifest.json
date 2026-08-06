@@ -1,0 +1,114 @@
+{
+  "analysis": "environment-generalization-qualification-partial-balanced-v1",
+  "analyzer": {
+    "path": "/home/jingweili/environment_partial_47e1996.py",
+    "sha256": "39851999b9a119c27ca535532f0002a3d560810c1333e2c83421ba60ae9a619c"
+  },
+  "artifacts": {
+    "family_metrics.csv": {
+      "bytes": 10448,
+      "sha256": "9c025a2ca3ade4fd2a07a629bd784026976b1e722f672522a6378c8a57f5bbc5"
+    },
+    "paired_metrics.csv": {
+      "bytes": 61791,
+      "sha256": "3de089761b12228ce1909bcd2ca118070a69f48b8654521308dc3191660e9d7f"
+    },
+    "partial_report.json": {
+      "bytes": 109630,
+      "sha256": "76e2eaf039e8fffda6896416af201d177f7ec1dfb9f22ea27f63f745aba7c731"
+    },
+    "partial_report.md": {
+      "bytes": 1793,
+      "sha256": "8f63f05ce2f0613954d64dd3bc2be32c9fb99a5316e9135c5b7999db409679e0"
+    },
+    "run_metrics.csv": {
+      "bytes": 117785,
+      "sha256": "7f1abf4bb976c12aa3849fac32b4073c08dfeedd36ea9a49655137fb4695326e"
+    },
+    "scenario_metrics.csv": {
+      "bytes": 32998,
+      "sha256": "8530059b29c0330c1581025e4ccc9cfb85dbd7a6b0125c01f8407e0469a260e5"
+    }
+  },
+  "counts": {
+    "family_comparison_rows": 18,
+    "paired_units": 120,
+    "scenario_comparison_rows": 90,
+    "strictly_validated_runs": 360
+  },
+  "manifest_id": "environment-generalization-partial-analysis-artifacts-v1",
+  "schema_version": 1,
+  "source_campaign_manifest": {
+    "complete_run_count": 568,
+    "derived_run_ids_verified": true,
+    "expanded_matrix_identity_verified": true,
+    "experiment": "environment-generalization-closed-loop-qualification-v1",
+    "formal_matrix_closure": false,
+    "matrix_sha256": "3073b90eb0aed3c6bf859c8e1a53bac25b7b2a41b69ffe14c5a60acc3038cf73",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "path": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs/experiment_manifest.json",
+    "project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+    "run_root": "/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs",
+    "runtime_contract_id": "environment-generalization-qualification-execution-v1",
+    "runtime_contract_sha256": "09b5e8de9033f6f0803e45b84a6b155f8ed1722710bb489a9fe19d01382554c9",
+    "scenario_identities_verified": true,
+    "schema_version": 2,
+    "selected_balanced_run_count": 360,
+    "sha256": "464a3ff8535cff8afc46ff16b76397c4168900eeb193204ef3c438a5db08a8b3",
+    "source_artifacts": {
+      "canonical_candidates": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+        "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+      },
+      "canonical_fit_manifest": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+        "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+      },
+      "canonical_metrics": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+        "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+      },
+      "canonical_model_pickle": {
+        "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+        "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+      },
+      "distributional_portable_model": {
+        "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+        "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+      },
+      "distributional_runtime_contract": {
+        "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+        "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+      },
+      "distributional_shadow_reference": {
+        "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+        "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+      },
+      "frozen_selection": {
+        "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+        "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+      },
+      "parent_generalization_contract": {
+        "path": "experiments/model-selection/environment-generalization-v1.json",
+        "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+      },
+      "qualification_base_config": {
+        "path": "experiments/configs/paired_value_t2_str_qualification_v1.yaml",
+        "sha256": "67612a496b9c60cc8d3efb017e42af307e87e608762aa006d72a676fde5330c5"
+      },
+      "scenario_catalog": {
+        "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+        "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+      },
+      "secondary_airtime_event_schema": {
+        "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+        "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+      },
+      "v2_runtime_contract": {
+        "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+        "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+      }
+    }
+  },
+  "warning": "EXPLORATORY PARTIAL RESULT: the preregistered 576-run campaign did not close. This balanced complete-scenario panel cannot establish formal qualification or promotion."
+}

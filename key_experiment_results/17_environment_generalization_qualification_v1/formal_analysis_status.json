@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "status": "not_assessable",
+  "campaign_run_count": 576,
+  "campaign_manifest_sha256": "4c847ccc7d2e7d0ac9c154b0c4efc778ddcb403d0d12dabfd4a971c976269ef4",
+  "frozen_analyzer_project_commit": "47e19962420bb7623784bc91b0c0d40fbf462b35",
+  "frozen_analyzer_sha256": "331e0634b6b2909ffff39d0b9a157e6697b5ffcb77cc264d1057747074a6ba54",
+  "frozen_analysis_contract_sha256": "82413698492988caedb3d3723d199bd04df0d1f47f65d46dbce905b9224bdc44",
+  "exit_code": 2,
+  "first_unsupported_run": {
+    "run_id": "9893eb6f2fe9e4ed4f1a",
+    "completed_frame_count": 1,
+    "minimum_completed_frame_count": 100,
+    "error": "only 1 completed frames; minimum is 100"
+  },
+  "total_unsupported_run_count": 28,
+  "interpretation": "The frozen completed-frame P99 estimand and formal promotion decision are not assessable. All 576 valid runs remain usable for all-generated-frame reliability and resource estimands."
+}
