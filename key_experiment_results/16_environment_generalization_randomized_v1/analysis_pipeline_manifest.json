@@ -1,0 +1,47 @@
+{
+  "hash_algorithm": "sha256",
+  "inputs_sha256": {
+    "/home/jingweili/environment_generalization_collection_8c38753/runs/experiment_manifest.json": "b306ea8384f99413834760978a2ef76fb9969f35df2cd8ef0930aed3565652c9",
+    "/home/jingweili/wifi_streaming_analysis_3edf1ad/experiments/configs/environment_generalization_randomized_collection_v1.yaml": "0b95ad7c7d9c7b8c3c8706963c8996434c79a28bf23df274003e3ee01a4b1a2d"
+  },
+  "pipeline_id": "environment-generalization-analysis-v1",
+  "pipeline_schema_version": 1,
+  "project_git_commit": "3edf1ad7d99469766e2918a28e3ac13c66629b4d",
+  "project_git_status_porcelain": "",
+  "reused_completed_stages": [
+    "dataset",
+    "lofo"
+  ],
+  "run_count": 384,
+  "software": {
+    "matplotlib": "3.6.3",
+    "numpy": "1.26.4",
+    "python": "3.12.3",
+    "scikit_learn": "1.4.1.post1"
+  },
+  "sources_sha256": {
+    "tools/analyze_environment_generalization_lofo.py": "c6b73552fdd27b33e98d51a860cefd1c98172afe6affec19aa341fcddf640ca1",
+    "tools/analyze_environment_generalization_policy.py": "8c9dd3512d624d30dc7835b80896048729de04b676704b46bee209cd2d292f61",
+    "tools/build_environment_generalization_dataset.py": "b8a2d693e4142c17aa56ca3561035480cbff8ec75ce3c667a08bd3d83d9a98dd",
+    "tools/plot_environment_generalization_analysis.py": "93ebc5c0097f848851d886c2d2bed3c059088b3afa1cffd0ef1158e98e959216",
+    "tools/run_environment_generalization_analysis.py": "0fbc9ae6ef59dcea2331da035384f50c376161989ca95049dfc9a599c70ecc47"
+  },
+  "stage_manifests": {
+    "dataset": {
+      "path": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/dataset/artifact_manifest.json",
+      "sha256": "dcb9a2815232db62e0709ed65385c413f6c5a4234cd5fd99ea0ca1c136f0f642"
+    },
+    "lofo": {
+      "path": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/lofo/artifact_manifest.json",
+      "sha256": "4bc6030458146bd0fe1b18066221f6fad5b22a7e7dd58860dbfaa83e37bb27d2"
+    },
+    "plots": {
+      "path": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/plots/artifact_manifest.json",
+      "sha256": "9f67a901df4b5b735ba94cceb74f1426788967be9af61f3c05d747b2a7448257"
+    },
+    "policy": {
+      "path": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/policy/artifact_manifest.json",
+      "sha256": "8a40e72fd126286a729c95cf1090745668339b43b0c212c4d516a88951553812"
+    }
+  }
+}

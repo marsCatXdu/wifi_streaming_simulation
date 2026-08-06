@@ -32,16 +32,17 @@ following ignored result roots:
 | `13_temporal_t2_distributional_online_ceiling_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_distributional_frontier_v1`, `temporal_t2_static_distributional_frontier_v1`, `temporal_t2_shadow_reference_v1`, and `temporal_t2_online_shadow_price_v1` |
 | `14_temporal_t2_shadow_borrow_repay_v1` | `results/randomized_full_copy_exploration_collection_v1/temporal_t2_shadow_borrow_repay_v1` |
 | `15_distributional_shadow_t2_str_engineering_v1` | `/home/jingweili/distributional_shadow_preliminary_e2c770b_run2` and `/home/jingweili/str_same_commit_e2c770b`, with exact raw-archive identities recorded in the snapshot README |
+| `16_environment_generalization_randomized_v1` | `results/environment_generalization_analysis_8c38753_916bb9a`, fetched from the VM as the complete checksum-bound archive recorded in the snapshot README |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%
 without modifying the original replay directory.
 
-The complete V2, V3, V4, V5, distributional-shadow, and same-build STR raw
-archives are intentionally not committed. Their paths, compressed sizes, and
-SHA-256 identities are recorded in the corresponding snapshot READMEs;
-publishing those exact archives as release assets remains a reproducibility
-task.
+The complete V2, V3, V4, V5, distributional-shadow, same-build STR, and
+environment-generalization analysis archives are intentionally not committed.
+Their paths, compressed sizes, and SHA-256 identities are recorded in the
+corresponding snapshot READMEs; publishing those exact archives as release
+assets remains a reproducibility task.
 
 `SHA256SUMS` covers every curated artifact except itself. It can be checked
 from the repository root with:

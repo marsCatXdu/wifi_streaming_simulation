@@ -1,0 +1,18 @@
+{
+  "artifacts_sha256": {
+    "environment_fraction_of_oracle_gain.png": "72dd50975ce5585722e6479289af008609cdc6ea780a818543bf1f983c580071",
+    "environment_held_out_family_deadline_miss.png": "83c386619e6b0bb60b7aa435c0168695fc8b9e39bfb77f6450bab9dce5c50e1e",
+    "environment_lofo_ood_diagnostics.png": "e081ae88266945e5b4d4c6bd9a97673f6ce283756ad4f98466acd711686cdc60",
+    "environment_oracle_allocation_scores.png": "70b7bfdda95ada61573c250b078d0b521d8944cf7722ff580f44bc3077798e58",
+    "environment_policy_value_resource_frontier.png": "97334ccd6e403d443edc72786b7b2c62c55c908283dfa2c67058879645f3352b"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1,
+  "plot_schema_version": 1,
+  "sources_sha256": {
+    "lofo_manifest_sha256": "4bc6030458146bd0fe1b18066221f6fad5b22a7e7dd58860dbfaa83e37bb27d2",
+    "lofo_metrics_sha256": "0152b082210766af69d7feb81c3cb0d3548e2f074ef0f2fde0462243aaa215c1",
+    "policy_manifest_sha256": "8a40e72fd126286a729c95cf1090745668339b43b0c212c4d516a88951553812",
+    "policy_metrics_sha256": "52bc9bbca85c966beec7c1b831d137fce778cf3fd7ac364d3831659f5eb13448"
+  }
+}

@@ -1,0 +1,1203 @@
+{
+  "analysis_id": "environment-generalization-lofo-v1",
+  "analysis_schema_version": 1,
+  "analysis_sources_sha256": {
+    "tools/analyze_environment_generalization_lofo.py": "c6b73552fdd27b33e98d51a860cefd1c98172afe6affec19aa341fcddf640ca1",
+    "tools/environment_generalization_lofo.py": "8f01f0a362e6aa7e4fc7fe422076854ea64e89e7d9784bd143036423a3eb551b"
+  },
+  "dataset": {
+    "artifact_manifest_sha256": "dcb9a2815232db62e0709ed65385c413f6c5a4234cd5fd99ea0ca1c136f0f642",
+    "dataset_csv_sha256": "d5ccd631de883708a98e5ef56dbf8066a561e09d0ef9cf96c6193db2e230ee3c",
+    "dataset_metadata_sha256": "501bb88d5dbe70340d29d38ff9be6275f3ec236bdf25c8408e6fe3fd8dca7ec7",
+    "family_count": 6,
+    "path": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/dataset",
+    "row_count": 307689,
+    "run_count": 383,
+    "scenario_count": 96
+  },
+  "design_contract": {
+    "path": "experiments/model-selection/environment-generalization-lofo-v1.json",
+    "sha256": "1566fba76e39f9e677d1c133199a47ff5275f4b3981149dd5871f599a278a9d4"
+  },
+  "diagnostics": {
+    "equal_family_dr_average_deadline_cdf_gain": 0.15704075511853224,
+    "equal_family_dr_average_tail18_cdf_gain": 0.1728655789905301,
+    "family_metrics": {
+      "compound_shift": {
+        "control_deadline_miss_auc": 0.9644308864735425,
+        "dr_average_deadline_cdf_gain": 0.29622335243975245,
+        "dr_average_tail18_cdf_gain": 0.30102713995793423,
+        "mean_predicted_deadline_rescue": 0.3713006411833801,
+        "mean_predicted_tail18_acceleration": 0.3935401777976995,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.262383718779246,
+            "multiclass_log_loss": 0.6130475187001052,
+            "outcome_bin_counts": [
+              13164,
+              1694,
+              395,
+              993,
+              242,
+              700,
+              341,
+              268,
+              16653
+            ],
+            "row_count": 34450,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.08488002681593104,
+                "mean_predicted_completion_probability": 0.3404407141111053,
+                "observed_completion_probability": 0.315557994748384
+              },
+              "16667": {
+                "cdf_brier_score": 0.08193140823957183,
+                "mean_predicted_completion_probability": 0.38336270581763376,
+                "observed_completion_probability": 0.3541839709555983
+              },
+              "18000": {
+                "cdf_brier_score": 0.0813037934107662,
+                "mean_predicted_completion_probability": 0.3931678541432554,
+                "observed_completion_probability": 0.36331369958040766
+              },
+              "22222": {
+                "cdf_brier_score": 0.07990703552478516,
+                "mean_predicted_completion_probability": 0.4184772645671902,
+                "observed_completion_probability": 0.3859393773569417
+              },
+              "24000": {
+                "cdf_brier_score": 0.07931065014641416,
+                "mean_predicted_completion_probability": 0.4247561918009196,
+                "observed_completion_probability": 0.3914771424108469
+              },
+              "30000": {
+                "cdf_brier_score": 0.07831140726348415,
+                "mean_predicted_completion_probability": 0.4431079574298812,
+                "observed_completion_probability": 0.40741176480478253
+              },
+              "33333": {
+                "cdf_brier_score": 0.07803894437962906,
+                "mean_predicted_completion_probability": 0.4515959147790229,
+                "observed_completion_probability": 0.41527788578264463
+              },
+              "41667": {
+                "cdf_brier_score": 0.0763191991052363,
+                "mean_predicted_completion_probability": 0.4549603228407786,
+                "observed_completion_probability": 0.42152919909373826
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.3845601674974358,
+            "multiclass_log_loss": 0.8526777866640203,
+            "outcome_bin_counts": [
+              5013,
+              352,
+              70,
+              124,
+              42,
+              87,
+              43,
+              12,
+              821
+            ],
+            "row_count": 6564,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.14745545679354888,
+                "mean_predicted_completion_probability": 0.7272722578364841,
+                "observed_completion_probability": 0.6136327309793523
+              },
+              "16667": {
+                "cdf_brier_score": 0.13659865645550512,
+                "mean_predicted_completion_probability": 0.7704833554172303,
+                "observed_completion_probability": 0.6641204240758879
+              },
+              "18000": {
+                "cdf_brier_score": 0.13548265834275333,
+                "mean_predicted_completion_probability": 0.7814437794631164,
+                "observed_completion_probability": 0.6748145618466389
+              },
+              "22222": {
+                "cdf_brier_score": 0.13414683939913571,
+                "mean_predicted_completion_probability": 0.8026976092396433,
+                "observed_completion_probability": 0.6957551801372278
+              },
+              "24000": {
+                "cdf_brier_score": 0.13385061997896208,
+                "mean_predicted_completion_probability": 0.8115487724748498,
+                "observed_completion_probability": 0.7019922682538385
+              },
+              "30000": {
+                "cdf_brier_score": 0.12815545411927032,
+                "mean_predicted_completion_probability": 0.8233177706212713,
+                "observed_completion_probability": 0.7172606781623035
+              },
+              "33333": {
+                "cdf_brier_score": 0.1285108227887511,
+                "mean_predicted_completion_probability": 0.8340980599841887,
+                "observed_completion_probability": 0.7246761576956962
+              },
+              "41667": {
+                "cdf_brier_score": 0.12719385507819853,
+                "mean_predicted_completion_probability": 0.8341100025447884,
+                "observed_completion_probability": 0.7273103845008285
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.0799952773481076,
+          "hard_failure_fraction": 0.062499999999999986,
+          "score_median": 48.70625575024519,
+          "score_p99": 243.96279273357842,
+          "soft_ood_fraction": 0.01749527734810762,
+          "threshold": 204.6430760457001
+        },
+        "row_count": 41014,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.8338828903144992
+      },
+      "legacy_coexistence": {
+        "control_deadline_miss_auc": 0.9353150276391222,
+        "dr_average_deadline_cdf_gain": 0.30222343093966625,
+        "dr_average_tail18_cdf_gain": 0.3164571405127774,
+        "mean_predicted_deadline_rescue": 0.29553569196992013,
+        "mean_predicted_tail18_acceleration": 0.3091613710622665,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.3469177670311547,
+            "multiclass_log_loss": 0.7999309235610482,
+            "outcome_bin_counts": [
+              21230,
+              2766,
+              637,
+              1494,
+              528,
+              1580,
+              707,
+              0,
+              18428
+            ],
+            "row_count": 47370,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.10437683212023828,
+                "mean_predicted_completion_probability": 0.42666902614392166,
+                "observed_completion_probability": 0.4140006857466123
+              },
+              "16667": {
+                "cdf_brier_score": 0.10269203925735675,
+                "mean_predicted_completion_probability": 0.47546340298593515,
+                "observed_completion_probability": 0.4670678256119279
+              },
+              "18000": {
+                "cdf_brier_score": 0.10267001948078734,
+                "mean_predicted_completion_probability": 0.48624686445681964,
+                "observed_completion_probability": 0.4791444519674877
+              },
+              "22222": {
+                "cdf_brier_score": 0.10195031923011151,
+                "mean_predicted_completion_probability": 0.514598583825133,
+                "observed_completion_probability": 0.5075806577580914
+              },
+              "24000": {
+                "cdf_brier_score": 0.10166425586602777,
+                "mean_predicted_completion_probability": 0.5239856104103073,
+                "observed_completion_probability": 0.5177599675161685
+              },
+              "30000": {
+                "cdf_brier_score": 0.10138658268854997,
+                "mean_predicted_completion_probability": 0.5501220033941236,
+                "observed_completion_probability": 0.5484452320937407
+              },
+              "33333": {
+                "cdf_brier_score": 0.10185746946330591,
+                "mean_predicted_completion_probability": 0.5624672752863104,
+                "observed_completion_probability": 0.5626629606565335
+              },
+              "41667": {
+                "cdf_brier_score": 0.10185764436871074,
+                "mean_predicted_completion_probability": 0.5625202747028863,
+                "observed_completion_probability": 0.5626629606565335
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.3298344673586248,
+            "multiclass_log_loss": 0.7473799494796867,
+            "outcome_bin_counts": [
+              6944,
+              436,
+              91,
+              200,
+              76,
+              171,
+              72,
+              0,
+              794
+            ],
+            "row_count": 8784,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.11723117658733627,
+                "mean_predicted_completion_probability": 0.7287543163134861,
+                "observed_completion_probability": 0.726332482634172
+              },
+              "16667": {
+                "cdf_brier_score": 0.10578764706251849,
+                "mean_predicted_completion_probability": 0.7836203276670561,
+                "observed_completion_probability": 0.7796041438133576
+              },
+              "18000": {
+                "cdf_brier_score": 0.1031578155124899,
+                "mean_predicted_completion_probability": 0.793325028100453,
+                "observed_completion_probability": 0.7902274738856893
+              },
+              "22222": {
+                "cdf_brier_score": 0.09792912644307651,
+                "mean_predicted_completion_probability": 0.814144220388565,
+                "observed_completion_probability": 0.8164850459341986
+              },
+              "24000": {
+                "cdf_brier_score": 0.09489745315966511,
+                "mean_predicted_completion_probability": 0.8212549230640099,
+                "observed_completion_probability": 0.8268267604134406
+              },
+              "30000": {
+                "cdf_brier_score": 0.08868973107895364,
+                "mean_predicted_completion_probability": 0.845668151825093,
+                "observed_completion_probability": 0.850565178318255
+              },
+              "33333": {
+                "cdf_brier_score": 0.08547107705556835,
+                "mean_predicted_completion_probability": 0.8558542621158729,
+                "observed_completion_probability": 0.8605163712442309
+              },
+              "41667": {
+                "cdf_brier_score": 0.08547023935226628,
+                "mean_predicted_completion_probability": 0.8559433065091538,
+                "observed_completion_probability": 0.8605163712442309
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.00637392746360358,
+          "hard_failure_fraction": 0.0,
+          "score_median": 14.45911253570117,
+          "score_p99": 181.94336140096465,
+          "soft_ood_fraction": 0.00637392746360358,
+          "threshold": 199.00178537568482
+        },
+        "row_count": 56154,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.8536370674221383
+      },
+      "obss_geometry_mac": {
+        "control_deadline_miss_auc": 0.9191186566294773,
+        "dr_average_deadline_cdf_gain": 0.026358401033525238,
+        "dr_average_tail18_cdf_gain": 0.06298341911594114,
+        "mean_predicted_deadline_rescue": 0.04496343328704101,
+        "mean_predicted_tail18_acceleration": 0.08748289173804538,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.1889807227461906,
+            "multiclass_log_loss": 0.4621543883124139,
+            "outcome_bin_counts": [
+              43347,
+              2505,
+              453,
+              1041,
+              299,
+              770,
+              274,
+              0,
+              1631
+            ],
+            "row_count": 50320,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.07742506426609311,
+                "mean_predicted_completion_probability": 0.8453194315551779,
+                "observed_completion_probability": 0.8775366224084155
+              },
+              "16667": {
+                "cdf_brier_score": 0.05298050086201175,
+                "mean_predicted_completion_probability": 0.8949517946913733,
+                "observed_completion_probability": 0.9228789596702449
+              },
+              "18000": {
+                "cdf_brier_score": 0.04808020491207104,
+                "mean_predicted_completion_probability": 0.9040736725219924,
+                "observed_completion_probability": 0.9309740093450717
+              },
+              "22222": {
+                "cdf_brier_score": 0.03715417922122821,
+                "mean_predicted_completion_probability": 0.924189425912995,
+                "observed_completion_probability": 0.9492706413360336
+              },
+              "24000": {
+                "cdf_brier_score": 0.034001196173857155,
+                "mean_predicted_completion_probability": 0.9304713451459407,
+                "observed_completion_probability": 0.9545703386353375
+              },
+              "30000": {
+                "cdf_brier_score": 0.025627443284659268,
+                "mean_predicted_completion_probability": 0.9458399680960871,
+                "observed_completion_probability": 0.9679269844068604
+              },
+              "33333": {
+                "cdf_brier_score": 0.022604048158880414,
+                "mean_predicted_completion_probability": 0.9517383256720496,
+                "observed_completion_probability": 0.9725428914482059
+              },
+              "41667": {
+                "cdf_brier_score": 0.022601467935400903,
+                "mean_predicted_completion_probability": 0.9517806674700936,
+                "observed_completion_probability": 0.9725428914482059
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.03501389102411147,
+            "multiclass_log_loss": 0.09627936576770534,
+            "outcome_bin_counts": [
+              9174,
+              130,
+              11,
+              27,
+              7,
+              11,
+              3,
+              0,
+              13
+            ],
+            "row_count": 9376,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.016376800588987238,
+                "mean_predicted_completion_probability": 0.9770349815334871,
+                "observed_completion_probability": 0.9800844744174297
+              },
+              "16667": {
+                "cdf_brier_score": 0.006293659232688733,
+                "mean_predicted_completion_probability": 0.9896565381962737,
+                "observed_completion_probability": 0.9929249262895782
+              },
+              "18000": {
+                "cdf_brier_score": 0.005397177506770791,
+                "mean_predicted_completion_probability": 0.9913050955809257,
+                "observed_completion_probability": 0.9939414240170301
+              },
+              "22222": {
+                "cdf_brier_score": 0.0028179627025720325,
+                "mean_predicted_completion_probability": 0.9933978989484435,
+                "observed_completion_probability": 0.9967635086108587
+              },
+              "24000": {
+                "cdf_brier_score": 0.0022545244345716425,
+                "mean_predicted_completion_probability": 0.994403181424063,
+                "observed_completion_probability": 0.9973986272402203
+              },
+              "30000": {
+                "cdf_brier_score": 0.0012318658059421313,
+                "mean_predicted_completion_probability": 0.9959458004467527,
+                "observed_completion_probability": 0.9985207836631997
+              },
+              "33333": {
+                "cdf_brier_score": 0.000987825388790253,
+                "mean_predicted_completion_probability": 0.9964719974044841,
+                "observed_completion_probability": 0.9987769980205979
+              },
+              "41667": {
+                "cdf_brier_score": 0.0009877079952369373,
+                "mean_predicted_completion_probability": 0.9964947252644168,
+                "observed_completion_probability": 0.9987769980205979
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.0,
+          "hard_failure_fraction": 0.0,
+          "score_median": 2.0765414826565394,
+          "score_p99": 34.155992750807236,
+          "soft_ood_fraction": 0.0,
+          "threshold": 157.75407173633994
+        },
+        "row_count": 59696,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.9118155028536509
+      },
+      "obss_intensity": {
+        "control_deadline_miss_auc": 0.9740571001903774,
+        "dr_average_deadline_cdf_gain": 0.21544558529091012,
+        "dr_average_tail18_cdf_gain": 0.2190266643633079,
+        "mean_predicted_deadline_rescue": 0.28031020581422017,
+        "mean_predicted_tail18_acceleration": 0.280439246927563,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.2264692277215694,
+            "multiclass_log_loss": 0.5388339557296303,
+            "outcome_bin_counts": [
+              19175,
+              1580,
+              338,
+              854,
+              304,
+              800,
+              374,
+              0,
+              13729
+            ],
+            "row_count": 37154,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.07549798288148094,
+                "mean_predicted_completion_probability": 0.5080092441760119,
+                "observed_completion_probability": 0.5020410204133363
+              },
+              "16667": {
+                "cdf_brier_score": 0.067191711112257,
+                "mean_predicted_completion_probability": 0.5480815834621868,
+                "observed_completion_probability": 0.5382437231477989
+              },
+              "18000": {
+                "cdf_brier_score": 0.06551364403309731,
+                "mean_predicted_completion_probability": 0.5566351400360832,
+                "observed_completion_probability": 0.545608993741735
+              },
+              "22222": {
+                "cdf_brier_score": 0.0635968437110758,
+                "mean_predicted_completion_probability": 0.5772541899854662,
+                "observed_completion_probability": 0.5657089200651572
+              },
+              "24000": {
+                "cdf_brier_score": 0.06258022598446078,
+                "mean_predicted_completion_probability": 0.5840297040716964,
+                "observed_completion_probability": 0.5721598198404324
+              },
+              "30000": {
+                "cdf_brier_score": 0.059916399010917554,
+                "mean_predicted_completion_probability": 0.6034104626368499,
+                "observed_completion_probability": 0.5896246637458602
+              },
+              "33333": {
+                "cdf_brier_score": 0.05952904972160453,
+                "mean_predicted_completion_probability": 0.6121068021881344,
+                "observed_completion_probability": 0.5981489407017931
+              },
+              "41667": {
+                "cdf_brier_score": 0.05953089215063581,
+                "mean_predicted_completion_probability": 0.6121476406403384,
+                "observed_completion_probability": 0.5981489407017931
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.2984485940919198,
+            "multiclass_log_loss": 0.6515663037350418,
+            "outcome_bin_counts": [
+              5452,
+              273,
+              51,
+              111,
+              34,
+              119,
+              52,
+              0,
+              660
+            ],
+            "row_count": 6752,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.10737614795397353,
+                "mean_predicted_completion_probability": 0.783946140147677,
+                "observed_completion_probability": 0.7239723453847111
+              },
+              "16667": {
+                "cdf_brier_score": 0.10390410538620994,
+                "mean_predicted_completion_probability": 0.8279569804424314,
+                "observed_completion_probability": 0.7632270341970315
+              },
+              "18000": {
+                "cdf_brier_score": 0.10399670344077017,
+                "mean_predicted_completion_probability": 0.8365975433933857,
+                "observed_completion_probability": 0.7709313302403198
+              },
+              "22222": {
+                "cdf_brier_score": 0.10201909148229191,
+                "mean_predicted_completion_probability": 0.8569941501039353,
+                "observed_completion_probability": 0.7877770498423721
+              },
+              "24000": {
+                "cdf_brier_score": 0.10286080209628416,
+                "mean_predicted_completion_probability": 0.8653104690948338,
+                "observed_completion_probability": 0.7928101712092163
+              },
+              "30000": {
+                "cdf_brier_score": 0.09989568493906908,
+                "mean_predicted_completion_probability": 0.8832821073921722,
+                "observed_completion_probability": 0.811990844869112
+              },
+              "33333": {
+                "cdf_brier_score": 0.09826341004275516,
+                "mean_predicted_completion_probability": 0.8915480094075787,
+                "observed_completion_probability": 0.8206735328282202
+              },
+              "41667": {
+                "cdf_brier_score": 0.09828263542739218,
+                "mean_predicted_completion_probability": 0.8916124546978721,
+                "observed_completion_probability": 0.8206735328282202
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.00789492070928685,
+          "hard_failure_fraction": 0.0,
+          "score_median": 10.5499774265115,
+          "score_p99": 182.0229707024949,
+          "soft_ood_fraction": 0.00789492070928685,
+          "threshold": 191.2734651900408
+        },
+        "row_count": 43906,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.8757481389600847
+      },
+      "radio_propagation": {
+        "control_deadline_miss_auc": 0.9732978610290404,
+        "dr_average_deadline_cdf_gain": 0.07399991836498325,
+        "dr_average_tail18_cdf_gain": 0.0933353765582116,
+        "mean_predicted_deadline_rescue": 0.08466691174047411,
+        "mean_predicted_tail18_acceleration": 0.11795686868901542,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.17289236812719264,
+            "multiclass_log_loss": 0.42477545363147473,
+            "outcome_bin_counts": [
+              39068,
+              2364,
+              416,
+              921,
+              290,
+              653,
+              257,
+              0,
+              4869
+            ],
+            "row_count": 48838,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.07065673197029006,
+                "mean_predicted_completion_probability": 0.8296755549801156,
+                "observed_completion_probability": 0.8262908323119006
+              },
+              "16667": {
+                "cdf_brier_score": 0.04699161372997189,
+                "mean_predicted_completion_probability": 0.8680584909732475,
+                "observed_completion_probability": 0.8684769996560155
+              },
+              "18000": {
+                "cdf_brier_score": 0.04280722252307455,
+                "mean_predicted_completion_probability": 0.87511444906233,
+                "observed_completion_probability": 0.8756647583894431
+              },
+              "22222": {
+                "cdf_brier_score": 0.034366906957938204,
+                "mean_predicted_completion_probability": 0.8908628642152359,
+                "observed_completion_probability": 0.8912722589390007
+              },
+              "24000": {
+                "cdf_brier_score": 0.031626757544187686,
+                "mean_predicted_completion_probability": 0.8959243075713009,
+                "observed_completion_probability": 0.8960454303173947
+              },
+              "30000": {
+                "cdf_brier_score": 0.025266023196656676,
+                "mean_predicted_completion_probability": 0.9079778219969543,
+                "observed_completion_probability": 0.9067629238783135
+              },
+              "33333": {
+                "cdf_brier_score": 0.02289635197751592,
+                "mean_predicted_completion_probability": 0.9128647918476996,
+                "observed_completion_probability": 0.9109329371007913
+              },
+              "41667": {
+                "cdf_brier_score": 0.022897076822100813,
+                "mean_predicted_completion_probability": 0.912903768550055,
+                "observed_completion_probability": 0.9109329371007913
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.0929815075954882,
+            "multiclass_log_loss": 0.24883257148556395,
+            "outcome_bin_counts": [
+              8694,
+              189,
+              26,
+              61,
+              26,
+              51,
+              15,
+              0,
+              139
+            ],
+            "row_count": 9201,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.04423328851246116,
+                "mean_predicted_completion_probability": 0.9811794879991722,
+                "observed_completion_probability": 0.9491534202266434
+              },
+              "16667": {
+                "cdf_brier_score": 0.03035836023497434,
+                "mean_predicted_completion_probability": 0.9917542532936985,
+                "observed_completion_probability": 0.96736140434268
+              },
+              "18000": {
+                "cdf_brier_score": 0.028381230668125795,
+                "mean_predicted_completion_probability": 0.9931336481944452,
+                "observed_completion_probability": 0.9697864650469319
+              },
+              "22222": {
+                "cdf_brier_score": 0.02307584770311441,
+                "mean_predicted_completion_probability": 0.9951143673129105,
+                "observed_completion_probability": 0.9756566228340615
+              },
+              "24000": {
+                "cdf_brier_score": 0.020734841204075503,
+                "mean_predicted_completion_probability": 0.9958521030649692,
+                "observed_completion_probability": 0.9782009151217436
+              },
+              "30000": {
+                "cdf_brier_score": 0.015818542419077465,
+                "mean_predicted_completion_probability": 0.9970513987166378,
+                "observed_completion_probability": 0.9835088668600434
+              },
+              "33333": {
+                "cdf_brier_score": 0.014441751402779115,
+                "mean_predicted_completion_probability": 0.9974138827358461,
+                "observed_completion_probability": 0.9850913654234156
+              },
+              "41667": {
+                "cdf_brier_score": 0.01444282932392517,
+                "mean_predicted_completion_probability": 0.9974362252948593,
+                "observed_completion_probability": 0.9850913654234156
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.005187523688259511,
+          "hard_failure_fraction": 0.0,
+          "score_median": 2.1711059491227007,
+          "score_p99": 45.06524225576923,
+          "soft_ood_fraction": 0.005187523688259511,
+          "threshold": 160.5180181652536
+        },
+        "row_count": 58039,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.9588851124725251
+      },
+      "video_workload": {
+        "control_deadline_miss_auc": 0.9306354732156269,
+        "dr_average_deadline_cdf_gain": 0.02799384264235634,
+        "dr_average_tail18_cdf_gain": 0.044363733435008296,
+        "mean_predicted_deadline_rescue": 0.05623405020635119,
+        "mean_predicted_tail18_acceleration": 0.07140592388182765,
+        "observed_arm_prediction": {
+          "0": {
+            "multiclass_brier_score": 0.13612420476206494,
+            "multiclass_log_loss": 0.33778319710529553,
+            "outcome_bin_counts": [
+              36901,
+              1648,
+              179,
+              431,
+              78,
+              188,
+              62,
+              45,
+              1601
+            ],
+            "row_count": 41133,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.061480058934566505,
+                "mean_predicted_completion_probability": 0.8558218313003401,
+                "observed_completion_probability": 0.915770849675909
+              },
+              "16667": {
+                "cdf_brier_score": 0.03818006947659647,
+                "mean_predicted_completion_probability": 0.9061248839778091,
+                "observed_completion_probability": 0.9495390672872711
+              },
+              "18000": {
+                "cdf_brier_score": 0.03473229652532728,
+                "mean_predicted_completion_probability": 0.9154344671963374,
+                "observed_completion_probability": 0.9536127803265372
+              },
+              "22222": {
+                "cdf_brier_score": 0.027339087622745947,
+                "mean_predicted_completion_probability": 0.9353619962578583,
+                "observed_completion_probability": 0.9632498894232506
+              },
+              "24000": {
+                "cdf_brier_score": 0.026168656280404375,
+                "mean_predicted_completion_probability": 0.9381288286227205,
+                "observed_completion_probability": 0.9648205382889382
+              },
+              "30000": {
+                "cdf_brier_score": 0.02300969190413833,
+                "mean_predicted_completion_probability": 0.9445851421429567,
+                "observed_completion_probability": 0.96898092922635
+              },
+              "33333": {
+                "cdf_brier_score": 0.022053574711096938,
+                "mean_predicted_completion_probability": 0.94736832111989,
+                "observed_completion_probability": 0.9703184174022161
+              },
+              "41667": {
+                "cdf_brier_score": 0.0212235901809825,
+                "mean_predicted_completion_probability": 0.9484147176405304,
+                "observed_completion_probability": 0.9713976828259148
+              }
+            }
+          },
+          "1": {
+            "multiclass_brier_score": 0.01823638529171517,
+            "multiclass_log_loss": 0.06459031410361507,
+            "outcome_bin_counts": [
+              7665,
+              54,
+              4,
+              5,
+              5,
+              0,
+              2,
+              0,
+              12
+            ],
+            "row_count": 7747,
+            "thresholds": {
+              "12000": {
+                "cdf_brier_score": 0.009276033854321844,
+                "mean_predicted_completion_probability": 0.9662051002733166,
+                "observed_completion_probability": 0.9912315408008439
+              },
+              "16667": {
+                "cdf_brier_score": 0.003299165573062754,
+                "mean_predicted_completion_probability": 0.9836728814777165,
+                "observed_completion_probability": 0.9970315506998111
+              },
+              "18000": {
+                "cdf_brier_score": 0.002740817502965197,
+                "mean_predicted_completion_probability": 0.9861370981278301,
+                "observed_completion_probability": 0.9974560693378831
+              },
+              "22222": {
+                "cdf_brier_score": 0.0021724496310800033,
+                "mean_predicted_completion_probability": 0.9893786698704342,
+                "observed_completion_probability": 0.9981204303468503
+              },
+              "24000": {
+                "cdf_brier_score": 0.0016268646764547845,
+                "mean_predicted_completion_probability": 0.9905741078989939,
+                "observed_completion_probability": 0.9986354695505886
+              },
+              "30000": {
+                "cdf_brier_score": 0.0015591610987291543,
+                "mean_predicted_completion_probability": 0.9922010534757613,
+                "observed_completion_probability": 0.9986354695505886
+              },
+              "33333": {
+                "cdf_brier_score": 0.0012604439391506739,
+                "mean_predicted_completion_probability": 0.9933266666916549,
+                "observed_completion_probability": 0.9989024472375356
+              },
+              "41667": {
+                "cdf_brier_score": 0.0012591000721048637,
+                "mean_predicted_completion_probability": 0.9933655255183831,
+                "observed_completion_probability": 0.9989024472375356
+              }
+            }
+          }
+        },
+        "ood": {
+          "fallback_fraction": 0.6250255728314239,
+          "hard_failure_fraction": 0.625,
+          "score_median": 73.97675056277872,
+          "score_p99": 674.1910848963872,
+          "soft_ood_fraction": 2.5572831423895255e-05,
+          "threshold": 158.46088454920846
+        },
+        "row_count": 48880,
+        "scenario_count": 16,
+        "treated_deadline_rescue_auc": 0.9271633162021883
+      }
+    },
+    "fit_records": [
+      {
+        "arm": 0,
+        "held_out_family": "radio_propagation",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 0,
+        "prediction_rows": 58039,
+        "random_seed": 20260805,
+        "record_type": "predictor",
+        "training_rows": 210427
+      },
+      {
+        "arm": 1,
+        "held_out_family": "radio_propagation",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 0,
+        "prediction_rows": 58039,
+        "random_seed": 20260806,
+        "record_type": "predictor",
+        "training_rows": 39223
+      },
+      {
+        "calibration_rows": 249650,
+        "held_out_family": "radio_propagation",
+        "held_out_hard_failure_rows": 0,
+        "held_out_soft_ood_rows": 317,
+        "inner_fold_count": 4,
+        "outer_fold": 0,
+        "record_type": "ood",
+        "threshold": 160.5180181652536
+      },
+      {
+        "arm": 0,
+        "held_out_family": "obss_intensity",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 1,
+        "prediction_rows": 43906,
+        "random_seed": 20260815,
+        "record_type": "predictor",
+        "training_rows": 222111
+      },
+      {
+        "arm": 1,
+        "held_out_family": "obss_intensity",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 1,
+        "prediction_rows": 43906,
+        "random_seed": 20260816,
+        "record_type": "predictor",
+        "training_rows": 41672
+      },
+      {
+        "calibration_rows": 263783,
+        "held_out_family": "obss_intensity",
+        "held_out_hard_failure_rows": 0,
+        "held_out_soft_ood_rows": 206,
+        "inner_fold_count": 4,
+        "outer_fold": 1,
+        "record_type": "ood",
+        "threshold": 191.2734651900408
+      },
+      {
+        "arm": 0,
+        "held_out_family": "obss_geometry_mac",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 2,
+        "prediction_rows": 59696,
+        "random_seed": 20260825,
+        "record_type": "predictor",
+        "training_rows": 208945
+      },
+      {
+        "arm": 1,
+        "held_out_family": "obss_geometry_mac",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 2,
+        "prediction_rows": 59696,
+        "random_seed": 20260826,
+        "record_type": "predictor",
+        "training_rows": 39048
+      },
+      {
+        "calibration_rows": 247993,
+        "held_out_family": "obss_geometry_mac",
+        "held_out_hard_failure_rows": 0,
+        "held_out_soft_ood_rows": 0,
+        "inner_fold_count": 4,
+        "outer_fold": 2,
+        "record_type": "ood",
+        "threshold": 157.75407173633994
+      },
+      {
+        "arm": 0,
+        "held_out_family": "video_workload",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 3,
+        "prediction_rows": 48880,
+        "random_seed": 20260835,
+        "record_type": "predictor",
+        "training_rows": 218132
+      },
+      {
+        "arm": 1,
+        "held_out_family": "video_workload",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 3,
+        "prediction_rows": 48880,
+        "random_seed": 20260836,
+        "record_type": "predictor",
+        "training_rows": 40677
+      },
+      {
+        "calibration_rows": 258809,
+        "held_out_family": "video_workload",
+        "held_out_hard_failure_rows": 30743,
+        "held_out_soft_ood_rows": 1,
+        "inner_fold_count": 4,
+        "outer_fold": 3,
+        "record_type": "ood",
+        "threshold": 158.46088454920846
+      },
+      {
+        "arm": 0,
+        "held_out_family": "legacy_coexistence",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 4,
+        "prediction_rows": 56154,
+        "random_seed": 20260845,
+        "record_type": "predictor",
+        "training_rows": 211895
+      },
+      {
+        "arm": 1,
+        "held_out_family": "legacy_coexistence",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 4,
+        "prediction_rows": 56154,
+        "random_seed": 20260846,
+        "record_type": "predictor",
+        "training_rows": 39640
+      },
+      {
+        "calibration_rows": 251535,
+        "held_out_family": "legacy_coexistence",
+        "held_out_hard_failure_rows": 0,
+        "held_out_soft_ood_rows": 270,
+        "inner_fold_count": 4,
+        "outer_fold": 4,
+        "record_type": "ood",
+        "threshold": 199.00178537568482
+      },
+      {
+        "arm": 0,
+        "held_out_family": "compound_shift",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "outer_fold": 5,
+        "prediction_rows": 41014,
+        "random_seed": 20260855,
+        "record_type": "predictor",
+        "training_rows": 224815
+      },
+      {
+        "arm": 1,
+        "held_out_family": "compound_shift",
+        "observed_training_classes": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "outer_fold": 5,
+        "prediction_rows": 41014,
+        "random_seed": 20260856,
+        "record_type": "predictor",
+        "training_rows": 41860
+      },
+      {
+        "calibration_rows": 266675,
+        "held_out_family": "compound_shift",
+        "held_out_hard_failure_rows": 2146,
+        "held_out_soft_ood_rows": 589,
+        "inner_fold_count": 4,
+        "outer_fold": 5,
+        "record_type": "ood",
+        "threshold": 204.6430760457001
+      }
+    ],
+    "overall_control_deadline_miss_auc": 0.9746136654360179,
+    "overall_treated_deadline_rescue_auc": 0.9165199153038954,
+    "weighting": "equal_family_then_equal_scenario_then_equal_replicate"
+  },
+  "evidence_role": "predeclared_randomized_collection_lofo_diagnostic",
+  "predictor": {
+    "completion_distribution": {
+      "class_count": 9,
+      "deadline_values_must_be_in_thresholds": [
+        16667,
+        22222,
+        33333,
+        41667
+      ],
+      "dirichlet_alpha_per_class": 0.5,
+      "incomplete_maps_to_last_class": true,
+      "prediction_outputs": [
+        "control_completion_cdf",
+        "t2_completion_cdf",
+        "deadline_rescue_probability",
+        "tail_acceleration_18ms_probability"
+      ],
+      "separate_arm_models": true,
+      "tail_threshold_us": 18000,
+      "thresholds_us": [
+        12000,
+        16667,
+        18000,
+        22222,
+        24000,
+        30000,
+        33333,
+        41667
+      ]
+    },
+    "encoded_feature_count": 313,
+    "feature_family": "primary_secondary_hgb64_plus_sender_context",
+    "model_spec": {
+      "class": "sklearn.ensemble.HistGradientBoostingClassifier",
+      "early_stopping": false,
+      "id": "hgb64_depth3_7leaf_multiclass_generalization_v1",
+      "l2_regularization": 1.0,
+      "learning_rate": 0.05,
+      "loss": "log_loss",
+      "max_bins": 63,
+      "max_depth": 3,
+      "max_iter": 64,
+      "max_leaf_nodes": 7,
+      "min_samples_leaf": 20,
+      "random_seed_base": 20260805
+    }
+  },
+  "software": {
+    "git_commit": "916bb9aa5ce022429bcaf2d218d36168e4eaa833",
+    "git_status_porcelain": "",
+    "numpy": "1.26.4",
+    "python": "3.12.3",
+    "scikit_learn": "1.4.1.post1"
+  }
+}

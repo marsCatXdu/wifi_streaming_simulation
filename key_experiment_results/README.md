@@ -1,7 +1,7 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-08-05. It intentionally excludes
+experimental evidence generated through 2026-08-06. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
@@ -43,6 +43,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `13_temporal_t2_distributional_online_ceiling_v1` | Cross-fitted distributional T2 and nonclairvoyant allocation ceiling | Four predictor variants, exact static frontier, fold-honest shadow references, online replay, reports, and figures |
 | `14_temporal_t2_shadow_borrow_repay_v1` | Opportunity-priced deterministic future-credit replay | Exact strict baseline, repayment-bounded allocation, decision-route and action-substitution diagnostics, shared-bootstrap outcomes, and figure |
 | `15_distributional_shadow_t2_str_engineering_v1` | Closed-loop distributional shadow T2 versus same-build STR and score-aware V2 | Strict 48-pair qualification, action and ledger diagnostics, exact V2 comparison, raw-archive identities, and qualification plus standard figures |
+| `16_environment_generalization_randomized_v1` | Six-family randomized T2 leave-one-family-out replay | Checksum-closed dataset/LOFO provenance, cross-fitted policy values, OOD and resource diagnostics, family values, and five reviewed figures |
 
 ## Current best STR result
 
@@ -306,6 +307,26 @@ an exact secondary-outcome or P99 oracle because 232 candidate actions are
 unobserved and 18 observed outcomes change across interfering closed-loop
 policies.
 
+## Environment-level randomized generalization
+
+The six-family randomized campaign contains 384 runs across 96 scenarios.
+Every prediction for one family was fitted without that family.  Cross-family
+ranking remains strong (0.9746 control-miss AUC and 0.9165 treated-rescue AUC),
+but the cross-fitted predicted-benefit resource ceiling fails its predeclared
+targets: eligible-row misses fall from 26.0618% to 18.7993%, only a 27.87%
+relative reduction at about 360 ms/run of canonical reservation.
+
+Myopic primary-risk ranking reaches 19.3400% and realizes 92.55% of the
+ceiling's gain.  The remaining model-ranking increment is therefore small
+relative to the broad severe-case burden.  The all-action doubly robust
+sensitivity still shows about a 60.26% relative reduction, confirming that
+link diversity is useful while exposing the need for a finer-cost action if
+the actual held-out closed-loop campaign reproduces this ceiling.  Video
+workload also has 62.5% hard OOD fallback, motivating denser compound coverage
+of workload categories and interactions.  See
+`16_environment_generalization_randomized_v1/README.md` for the estimand
+boundary, sparse-run handling, family results, checksums, and next decision.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -350,3 +371,6 @@ For online prediction:
 10. The distributional-shadow result is opened-seed engineering evidence.
     Reserved seeds `1301` through `1348` remain unopened, and the raw archives
     are checksum-bound but not yet published as durable release assets.
+11. The environment-generalization randomized replay covers only action-clean
+    eligible T2 rows.  It is neither an all-generated-frame nor closed-loop STR
+    result, and its cross-fitted resource ceiling is not perfect information.

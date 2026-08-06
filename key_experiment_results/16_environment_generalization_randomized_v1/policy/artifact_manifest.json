@@ -1,0 +1,10 @@
+{
+  "artifacts_sha256": {
+    "environment_policy_actions.csv.gz": "0cbef270c3e98aa26b4715a029ff07d7bbe78e6b0c7803f15dce764031defd20",
+    "environment_policy_family_values.csv": "3608ce513fb1d538ed2b75d8bb4b84f067f70572b61ca2a0573079d101139a82",
+    "environment_policy_replay.json": "52bc9bbca85c966beec7c1b831d137fce778cf3fd7ac364d3831659f5eb13448",
+    "environment_policy_replay.md": "67ba5ec4c0f80fbf34e5989acce645daa0eb0243decbaa47a3512e468dc4c60e"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1
+}

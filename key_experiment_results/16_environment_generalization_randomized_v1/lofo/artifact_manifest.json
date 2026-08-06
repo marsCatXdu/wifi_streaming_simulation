@@ -1,0 +1,8 @@
+{
+  "artifacts_sha256": {
+    "environment_lofo_metrics.json": "0152b082210766af69d7feb81c3cb0d3548e2f074ef0f2fde0462243aaa215c1",
+    "environment_lofo_predictions.csv.gz": "f66006babc6c9cb392ab984729be2bfca71aaef29adcde9b50b3eccd170108be"
+  },
+  "hash_algorithm": "sha256",
+  "manifest_schema_version": 1
+}

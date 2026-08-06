@@ -1,0 +1,500 @@
+{
+  "analysis_id": "environment-generalization-policy-replay-v1",
+  "analysis_schema_version": 1,
+  "contrasts_against_resource_oracle": {
+    "cross_fitted_scenario_resource_oracle_v1": {
+      "fraction_of_oracle_deadline_gain_realized": {
+        "bootstrap_valid_fraction": 1.0,
+        "ci_lower": 1.0,
+        "ci_upper": 1.0,
+        "estimate": 1.0,
+        "validity_rule": "oracle deadline gain strictly positive"
+      },
+      "policy_minus_oracle_bounded_on_time_late18": {
+        "ci_lower": 0.0,
+        "ci_upper": 0.0,
+        "estimate": 0.0
+      },
+      "policy_minus_oracle_completed_late18": {
+        "ci_lower": 0.0,
+        "ci_upper": 0.0,
+        "estimate": 0.0
+      },
+      "policy_minus_oracle_deadline_miss": {
+        "ci_lower": 0.0,
+        "ci_upper": 0.0,
+        "estimate": 0.0
+      }
+    },
+    "myopic_deadline_risk_same_canonical_budget": {
+      "fraction_of_oracle_deadline_gain_realized": {
+        "bootstrap_valid_fraction": 1.0,
+        "ci_lower": 0.8946500598909319,
+        "ci_upper": 0.9570723590920757,
+        "estimate": 0.9255491273977027,
+        "validity_rule": "oracle deadline gain strictly positive"
+      },
+      "policy_minus_oracle_bounded_on_time_late18": {
+        "ci_lower": 0.0009219640417658714,
+        "ci_upper": 0.003183991202099693,
+        "estimate": 0.0020114419973499345
+      },
+      "policy_minus_oracle_completed_late18": {
+        "ci_lower": 0.0007581799236238766,
+        "ci_upper": 0.0032338780489713564,
+        "estimate": 0.0019723870177096314
+      },
+      "policy_minus_oracle_deadline_miss": {
+        "ci_lower": 0.0028415949651383284,
+        "ci_upper": 0.008175276322608513,
+        "estimate": 0.005406969916545823
+      }
+    },
+    "no_secondary_copy": {
+      "fraction_of_oracle_deadline_gain_realized": {
+        "bootstrap_valid_fraction": 1.0,
+        "ci_lower": 0.0,
+        "ci_upper": 0.0,
+        "estimate": 0.0,
+        "validity_rule": "oracle deadline gain strictly positive"
+      },
+      "policy_minus_oracle_bounded_on_time_late18": {
+        "ci_lower": 0.001635688298602551,
+        "ci_upper": 0.011928439495701243,
+        "estimate": 0.007040296578203313
+      },
+      "policy_minus_oracle_completed_late18": {
+        "ci_lower": 0.0009155855223978527,
+        "ci_upper": 0.011512233698024012,
+        "estimate": 0.00652565175312278
+      },
+      "policy_minus_oracle_deadline_miss": {
+        "ci_lower": 0.05884497118615636,
+        "ci_upper": 0.08610056208388293,
+        "estimate": 0.07262466815437946
+      }
+    },
+    "uniform_random_t2_same_canonical_budget": {
+      "fraction_of_oracle_deadline_gain_realized": {
+        "bootstrap_valid_fraction": 1.0,
+        "ci_lower": 0.5175174978331,
+        "ci_upper": 0.6433393723145711,
+        "estimate": 0.5874445754536648,
+        "validity_rule": "oracle deadline gain strictly positive"
+      },
+      "policy_minus_oracle_bounded_on_time_late18": {
+        "ci_lower": 0.005172958923045929,
+        "ci_upper": 0.009013821215799305,
+        "estimate": 0.00712052961960518
+      },
+      "policy_minus_oracle_completed_late18": {
+        "ci_lower": 0.005126253115253091,
+        "ci_upper": 0.00907714595645315,
+        "estimate": 0.007150131564195722
+      },
+      "policy_minus_oracle_deadline_miss": {
+        "ci_lower": 0.0257149841747206,
+        "ci_upper": 0.03419112995939194,
+        "estimate": 0.02996170080296673
+      }
+    }
+  },
+  "evidence_role": "predeclared_randomized_lofo_resource_ceiling",
+  "interpretation_limits": [
+    "Every learned score for a held-out family comes from models trained without that entire family.",
+    "The resource oracle sees the complete sequence of cross-fitted predicted scores in a run and is not an implementable controller.",
+    "Randomized replay does not reproduce queue, collision, or interference feedback induced by a closed-loop policy.",
+    "The dataset excludes startup and action-dirty temporal rows, so its absolute rate is not an all-generated-frame qualification result.",
+    "One source run has zero retained eligible rows; policy values condition on the three represented runs in that scenario, while resource summaries retain the empty source run at zero action and reservation.",
+    "Actual held-out-family simulation is required before promoting any controller.",
+    "Completed-frame P99 remains a closed-loop metric and is not inferred from the finite CDF grid."
+  ],
+  "oracle_diagnostics": {
+    "go_no_go": {
+      "deadline_target": {
+        "actual": 0.18799293091349617,
+        "ci_upper": 0.2343044338694586,
+        "pass": false,
+        "threshold": 0.004
+      },
+      "relative_improvement_target": {
+        "actual": 0.2786637142469607,
+        "ci_lower": 0.23444531248629302,
+        "pass": false,
+        "threshold": 0.5
+      }
+    },
+    "relative_deadline_miss_improvement_over_no_copy": {
+      "bootstrap_valid_fraction": 1.0,
+      "ci_lower": 0.23444531248629302,
+      "ci_upper": 0.32270949591832215,
+      "estimate": 0.2786637142469607
+    },
+    "selected_ood_fallback_fraction": 0.14501129544163097,
+    "selected_rows": 72153,
+    "selected_rows_marked_ood_fallback": 10463
+  },
+  "policies": {
+    "cross_fitted_scenario_resource_oracle_v1": {
+      "family_value": {
+        "compound_shift": {
+          "bounded_on_time_late18": 0.06360140033892203,
+          "completed_late18": 0.06569068703816235,
+          "deadline_miss": 0.4348118125071555
+        },
+        "legacy_coexistence": {
+          "bounded_on_time_late18": 0.08310806257096079,
+          "completed_late18": 0.08182910105746716,
+          "deadline_miss": 0.3061159014402509
+        },
+        "obss_geometry_mac": {
+          "bounded_on_time_late18": 0.020098824640681422,
+          "completed_late18": 0.020315434833391596,
+          "deadline_miss": 0.00809733132542134
+        },
+        "obss_intensity": {
+          "bounded_on_time_late18": 0.053256499775143934,
+          "completed_late18": 0.05576067788923942,
+          "deadline_miss": 0.3112032151806096
+        },
+        "radio_propagation": {
+          "bounded_on_time_late18": 0.0207293481973498,
+          "completed_late18": 0.020636011283185953,
+          "deadline_miss": 0.061037973995937495
+        },
+        "video_workload": {
+          "bounded_on_time_late18": 0.0054208209777430495,
+          "completed_late18": 0.005485271578801671,
+          "deadline_miss": 0.006691351031602125
+        }
+      },
+      "policy_value": {
+        "bounded_on_time_late18": {
+          "ci_lower": 0.03510842233310427,
+          "ci_upper": 0.046962730903360145,
+          "estimate": 0.04103582608346684
+        },
+        "completed_late18": {
+          "ci_lower": 0.03571281812941249,
+          "ci_upper": 0.04758833303095388,
+          "estimate": 0.041619530613374686
+        },
+        "deadline_miss": {
+          "ci_lower": 0.1432036270343057,
+          "ci_upper": 0.2343044338694586,
+          "estimate": 0.18799293091349617
+        }
+      },
+      "resource": {
+        "expected_action_count": 72153.0,
+        "hierarchical_action_fraction": 0.3241708225625661,
+        "hierarchical_mean_actions_per_run": 187.8984375,
+        "hierarchical_mean_canonical_reservation_us_per_run": 360435.0654585585,
+        "maximum_canonical_reservation_us_per_run": 371976.4072258427,
+        "minimum_canonical_reservation_us_per_run": 0.0,
+        "source_run_count": 384,
+        "zero_eligible_source_run_count": 1
+      }
+    },
+    "myopic_deadline_risk_same_canonical_budget": {
+      "family_value": {
+        "compound_shift": {
+          "bounded_on_time_late18": 0.06579856085775729,
+          "completed_late18": 0.06776707957099427,
+          "deadline_miss": 0.4481690526632682
+        },
+        "legacy_coexistence": {
+          "bounded_on_time_late18": 0.09223521795183452,
+          "completed_late18": 0.09086312655896808,
+          "deadline_miss": 0.31783731457166275
+        },
+        "obss_geometry_mac": {
+          "bounded_on_time_late18": 0.020181045302668392,
+          "completed_late18": 0.020357009889890844,
+          "deadline_miss": 0.00806495510005536
+        },
+        "obss_intensity": {
+          "bounded_on_time_late18": 0.05435490387951558,
+          "completed_late18": 0.056879059608717836,
+          "deadline_miss": 0.3187443446698118
+        },
+        "radio_propagation": {
+          "bounded_on_time_late18": 0.020480034358569644,
+          "completed_late18": 0.020406824170155616,
+          "deadline_miss": 0.06130603840366564
+        },
+        "video_workload": {
+          "bounded_on_time_late18": 0.00523384613455527,
+          "completed_late18": 0.005278405987779258,
+          "deadline_miss": 0.006277699571788531
+        }
+      },
+      "policy_value": {
+        "bounded_on_time_late18": {
+          "ci_lower": 0.03676933429899588,
+          "ci_upper": 0.04932383590558826,
+          "estimate": 0.043047268080816777
+        },
+        "completed_late18": {
+          "ci_lower": 0.0373254169300822,
+          "ci_upper": 0.04988849003513268,
+          "estimate": 0.04359191763108432
+        },
+        "deadline_miss": {
+          "ci_lower": 0.14717542790537794,
+          "ci_upper": 0.24072303396895706,
+          "estimate": 0.193399900830042
+        }
+      },
+      "resource": {
+        "expected_action_count": 72264.0,
+        "hierarchical_action_fraction": 0.3254873577433411,
+        "hierarchical_mean_actions_per_run": 188.1875,
+        "hierarchical_mean_canonical_reservation_us_per_run": 360591.663681193,
+        "maximum_canonical_reservation_us_per_run": 371997.12520412717,
+        "minimum_canonical_reservation_us_per_run": 0.0,
+        "source_run_count": 384,
+        "zero_eligible_source_run_count": 1
+      }
+    },
+    "no_secondary_copy": {
+      "family_value": {
+        "compound_shift": {
+          "bounded_on_time_late18": 0.05812179754054616,
+          "completed_late18": 0.05795849039746181,
+          "deadline_miss": 0.5789002566286897
+        },
+        "legacy_coexistence": {
+          "bounded_on_time_late18": 0.08352729821115099,
+          "completed_late18": 0.08369960686714632,
+          "deadline_miss": 0.4376866084468195
+        },
+        "obss_geometry_mac": {
+          "bounded_on_time_late18": 0.04150951384241112,
+          "completed_late18": 0.04158922813843077,
+          "deadline_miss": 0.02751883731407367
+        },
+        "obss_intensity": {
+          "bounded_on_time_late18": 0.05237046360850553,
+          "completed_late18": 0.05258013500191616,
+          "deadline_miss": 0.40188678613591416
+        },
+        "radio_propagation": {
+          "bounded_on_time_late18": 0.035180650519241,
+          "completed_late18": 0.03524029121385486,
+          "deadline_miss": 0.08907589652032838
+        },
+        "video_workload": {
+          "bounded_on_time_late18": 0.017747012248166133,
+          "completed_late18": 0.01780334258017481,
+          "deadline_miss": 0.028637209361428467
+        }
+      },
+      "policy_value": {
+        "bounded_on_time_late18": {
+          "ci_lower": 0.04243033128416598,
+          "ci_upper": 0.05395772228763234,
+          "estimate": 0.048076122661670155
+        },
+        "completed_late18": {
+          "ci_lower": 0.042506701171049016,
+          "ci_upper": 0.054080113734413654,
+          "estimate": 0.048145182366497466
+        },
+        "deadline_miss": {
+          "ci_lower": 0.20692864178388826,
+          "ci_upper": 0.31518243766917625,
+          "estimate": 0.2606175990678756
+        }
+      },
+      "resource": {
+        "expected_action_count": 0.0,
+        "hierarchical_action_fraction": 0.0,
+        "hierarchical_mean_actions_per_run": 0.0,
+        "hierarchical_mean_canonical_reservation_us_per_run": 0.0,
+        "maximum_canonical_reservation_us_per_run": 0.0,
+        "minimum_canonical_reservation_us_per_run": 0.0,
+        "source_run_count": 384,
+        "zero_eligible_source_run_count": 1
+      }
+    },
+    "uniform_random_t2_same_canonical_budget": {
+      "family_value": {
+        "compound_shift": {
+          "bounded_on_time_late18": 0.06809921549178109,
+          "completed_late18": 0.06981621959521936,
+          "deadline_miss": 0.48199996286211094
+        },
+        "legacy_coexistence": {
+          "bounded_on_time_late18": 0.08639660707807223,
+          "completed_late18": 0.08564234502403129,
+          "deadline_miss": 0.3604851002365033
+        },
+        "obss_geometry_mac": {
+          "bounded_on_time_late18": 0.03538076161413429,
+          "completed_late18": 0.03546373052605396,
+          "deadline_miss": 0.02324253361422797
+        },
+        "obss_intensity": {
+          "bounded_on_time_late18": 0.053900566184153564,
+          "completed_late18": 0.05642507561136568,
+          "deadline_miss": 0.3440092677794553
+        },
+        "radio_propagation": {
+          "bounded_on_time_late18": 0.032425349947617366,
+          "completed_late18": 0.032425532443436496,
+          "deadline_miss": 0.07604380394634747
+        },
+        "video_workload": {
+          "bounded_on_time_late18": 0.012735633902673588,
+          "completed_late18": 0.012845069865315618,
+          "deadline_miss": 0.021947121860132757
+        }
+      },
+      "monte_carlo": {
+        "point_value_spread": {
+          "bounded_on_time_late18": {
+            "maximum": 0.0491847107534935,
+            "median": 0.048055222549043354,
+            "minimum": 0.047371478182462415,
+            "p05": 0.04761754943553072,
+            "p95": 0.04876751367018237
+          },
+          "completed_late18": {
+            "maximum": 0.04997869714661893,
+            "median": 0.04871512994218492,
+            "minimum": 0.04776308000847679,
+            "p05": 0.048132142813007185,
+            "p95": 0.049515170892426935
+          },
+          "deadline_miss": {
+            "maximum": 0.21911710645107432,
+            "median": 0.21800986625503505,
+            "minimum": 0.21640864690255873,
+            "p05": 0.2171058281219794,
+            "p95": 0.21881398620986767
+          }
+        },
+        "replications": 64,
+        "resource_spread": {
+          "action_count": {
+            "maximum": 68706.0,
+            "median": 68498.0,
+            "minimum": 68336.0
+          },
+          "maximum_reservation_us_per_run": {
+            "maximum": 371999.12517128955,
+            "median": 371987.0909861787,
+            "minimum": 371942.75763245503
+          },
+          "mean_actions_per_run": {
+            "maximum": 178.921875,
+            "median": 178.38020833333331,
+            "minimum": 177.95833333333334
+          },
+          "mean_reservation_us_per_run": {
+            "maximum": 360505.0693925328,
+            "median": 360418.48005050246,
+            "minimum": 360369.3243351647
+          }
+        },
+        "salt_base": 15726070495360670683
+      },
+      "policy_value": {
+        "bounded_on_time_late18": {
+          "ci_lower": 0.042673791845068636,
+          "ci_upper": 0.053608155752803026,
+          "estimate": 0.04815635570307202
+        },
+        "completed_late18": {
+          "ci_lower": 0.04333004325870559,
+          "ci_upper": 0.05420252983861761,
+          "estimate": 0.04876966217757041
+        },
+        "deadline_miss": {
+          "ci_lower": 0.17233368168160698,
+          "ci_upper": 0.2646422272211209,
+          "estimate": 0.2179546317164629
+        }
+      },
+      "resource": {
+        "expected_action_count": 68499.625,
+        "hierarchical_action_fraction": 0.30979180319166677,
+        "hierarchical_mean_actions_per_run": 178.38444010416666,
+        "hierarchical_mean_canonical_reservation_us_per_run": 360420.1090297789,
+        "maximum_canonical_reservation_us_per_run": 371822.352205207,
+        "minimum_canonical_reservation_us_per_run": 0.0,
+        "source_run_count": 384,
+        "zero_eligible_source_run_count": 1
+      }
+    }
+  },
+  "population": {
+    "all_generated_frame_claim_permitted": false,
+    "eligible_support": {
+      "policy_value_handling": "condition within each scenario on represented nonempty runs",
+      "represented_nonempty_run_count": 383,
+      "resource_handling": "retain empty source runs at zero action and reservation",
+      "source_run_count": 384,
+      "zero_eligible_source_run_count": 1,
+      "zero_eligible_source_runs": [
+        {
+          "family_id": "compound_shift",
+          "parameter_sample": 14,
+          "run_id": "79c0388a0d75a32f2909",
+          "run_number": 1,
+          "scenario_id": "compound-shift-collection-p14",
+          "seed": 20379
+        }
+      ]
+    },
+    "family_count": 6,
+    "represented_nonempty_run_count": 383,
+    "row_count": 307689,
+    "run_count": 384,
+    "scenario_count": 96,
+    "scope": "common-T2-eligible action-clean temporal rows"
+  },
+  "provenance": {
+    "analysis_sources_sha256": {
+      "tools/analyze_environment_generalization_policy.py": "8c9dd3512d624d30dc7835b80896048729de04b676704b46bee209cd2d292f61",
+      "tools/environment_generalization_policy.py": "2cda5da2cd16972eacb1e2b6c3e02fb3d54a457bac845790748b85711c656218"
+    },
+    "contract_source_count": 3,
+    "dataset_dir": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/dataset",
+    "dataset_manifest_sha256": "dcb9a2815232db62e0709ed65385c413f6c5a4234cd5fd99ea0ca1c136f0f642",
+    "policy_contract": {
+      "path": "experiments/model-selection/environment-generalization-policy-replay-v1.json",
+      "sha256": "4922b85afb5dd5341733dcd455584c29ab5a54f2ad2bea562fd2573efa9d5e31"
+    },
+    "prediction_dir": "/home/jingweili/environment_generalization_analysis_8c38753_916bb9a/lofo",
+    "prediction_manifest_sha256": "4bc6030458146bd0fe1b18066221f6fad5b22a7e7dd58860dbfaa83e37bb27d2",
+    "software": {
+      "git_commit": "3edf1ad7d99469766e2918a28e3ac13c66629b4d",
+      "git_status_porcelain": "",
+      "numpy": "1.26.4",
+      "python": "3.12.3"
+    }
+  },
+  "resource": {
+    "action": "canonical_full_secondary_copy_at_T2",
+    "budget_derivation": "12000 us initial credit plus 0.006 times 60000000 us refill",
+    "budget_us_per_60s_run": 372000,
+    "cost_arithmetic": "exact decimal text from the source dataset",
+    "cost_field": "action_estimated_airtime_us",
+    "frame_gate": "all_frames_cost_aware",
+    "per_run_cost_invariant": "at most one positive constant cost for each of I_FRAME and P_FRAME",
+    "unused_credit_transfer_between_runs": false
+  },
+  "uncertainty": {
+    "confidence_level": 0.95,
+    "family_strata": "keep all six families fixed and equally weighted",
+    "frame_resampling_within_run": false,
+    "method": "hierarchical_stratified_cluster_bootstrap_v2_nonempty_run_support",
+    "random_seed": 11562461410679940143,
+    "replications": 10000,
+    "shared_resamples_for_all_policy_contrasts": true,
+    "within_family": "sample the family's 16 scenarios with replacement",
+    "within_scenario": "for each sampled scenario, sample its represented nonempty whole-run replicates with replacement using a sample size equal to its represented replicate count"
+  }
+}
