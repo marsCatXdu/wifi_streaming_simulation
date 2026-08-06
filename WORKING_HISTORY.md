@@ -126,6 +126,7 @@ P99.
 | Record randomized/qualification estimand boundary | `5d6565d` | Keep eligible-row oracle evidence separate from all-generated closed-loop gates |
 | Handle empty eligible-run support | `40b6be1` | Condition policy value on 383 represented runs while retaining all 384 runs for resource accounting |
 | Resume verified environment analysis prefix | `60c03f3` | Rehash and reuse only the completed dataset and LOFO stages after a later-stage failure |
+| Archive randomized environment replay | `c0085b0` | Checksum-closed six-family LOFO, OOD, resource-ceiling, and five-figure evidence |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -217,7 +218,10 @@ remains the engineering champion after the distributional closed-loop test.
   published on the VM.  The first exact resource-policy attempt stopped
   before publishing outcomes because one source run has zero eligible rows;
   the pre-outcome support amendment and verified-prefix resume path are
-  complete through `40b6be1` and `60c03f3`.  The frozen LOFO predictor/OOD
+  complete through `40b6be1` and `60c03f3`.  The resumed analysis closed,
+  was independently rehashed, visually reviewed, and archived in `c0085b0`.
+  The resource ceiling fails both targets, while myopic risk realizes 92.55%
+  of its gain.  The frozen LOFO predictor/OOD
   path, exact policy/oracle/regret analyzer, OOD-aware exploration wrapper, and
   single-entry remote pipeline are complete through `3dd6855`.  Fetch,
   checksum, interpret, plot, and archive the analysis only after its top-level
@@ -231,18 +235,17 @@ item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The active boundary is environment-level generalization.  All 384 randomized
-collection runs are complete and checksum-bound.  The corrected analysis has
-published a 307,689-row action-clean T2 dataset and completed all 12 LOFO arm
-fits across the six held-out families.  The first exact resource-policy replay
-failed before publishing any policy artifact because its bootstrap assumed
-four represented eligible runs per scenario.  One source run legitimately has
-zero eligible rows.  The frozen contract now conditions policy value on the
-383 represented runs while resource accounting retains all 384 source runs,
-including zero action and reservation for the empty run (`40b6be1`).  Resume
-only from a byte-rehashed dataset/LOFO prefix using `60c03f3`; do not interpret
-results until the plots and top-level pipeline manifest close.  Then fetch,
-independently validate, and archive the compact evidence.
+The active boundary is the held-out closed-loop environment qualification.
+The 384-run randomized analysis is complete, checksum-closed, fetched, and
+archived under `key_experiment_results/16_environment_generalization_randomized_v1`
+through `c0085b0`.  Freeze the qualification analyzer before launching any of
+the 576 simulations.  It must report direct all-generated paired STR miss,
+completed-P99, sender-airtime, and background gates at aggregate, family, and
+scenario levels.  It must mark the predeclared fraction-of-randomized-oracle
+gate `not_assessable` because the eligible-row replay and all-generated
+closed-loop outcomes are different estimands.  After the analyzer and plot
+contracts are source-closed, deploy the frozen matrix in nine complete
+64-worker waves and inspect nothing until all arms close.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -259,6 +262,19 @@ reporting direct all-generated STR gates and eligible-population oracle/regret
 evidence separately.  A future all-generated oracle needs a sequentially
 identified policy-value design that covers startup, ineligible, and
 action-history-contaminated frames; do not silently bridge the estimands.
+
+The randomized result estimates 26.0618% no-copy eligible-row misses and
+18.7993% [14.3204%, 23.4304%] under the cross-fitted predicted-benefit
+resource ceiling, only a 27.87% relative reduction.  Both the 0.4% absolute
+and 50% relative gates fail.  Myopic primary risk reaches 19.3400% and
+realizes 92.55% [89.47%, 95.71%] of the ceiling's gain, so a modest scalar
+ranker improvement has little headroom at the same 372 ms/run budget.  Ranking
+itself remains strong: control-miss AUC is 0.9746 and treated-rescue AUC is
+0.9165.  The broad domain contains severe OBSS-intensity, legacy, and compound
+scenarios; video workload also has 62.5% hard OOD fallback.  An all-action DR
+sensitivity still implies about a 60.26% relative reduction, so diversity is
+valuable but the full-copy action is too coarse under the frozen resource
+limit when risky frames are numerous.
 
 The LOFO completion-distribution, robust OOD, exact decimal resource replay,
 uniform/myopic baselines, cross-fitted resource oracle, DR/HT value, shared
@@ -650,6 +666,30 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Close and archive randomized environment replay
+
+- Resumed from a byte-rehashed dataset/LOFO prefix at clean commit `3edf1ad`.
+  The corrected policy replay completed in about 18 minutes, all five plots
+  published, and top-manifest SHA-256 closed as
+  `3c5bdcae98e75e91332ec3821d7555076cdead926d6a1746a09a1359d83a6a3e`.
+- Independently rehashed every declared artifact remotely and after local
+  extraction.  The complete 171,531,136-byte analysis archive passes
+  `zstd -t` with SHA-256
+  `ca0bede79bfd9ee0cc067a8f080a22cab71dc60b05f9475dc83e35c2aa39b7f0`.
+- The cross-fitted resource ceiling fails both go/no-go gates at 18.7993%
+  eligible-row misses and 27.87% relative reduction.  Myopic primary-risk
+  ranking is only 0.5407 percentage points worse and realizes 92.55% of the
+  ceiling gain.  Control-risk and treated-rescue AUC remain 0.9746 and 0.9165.
+- Diagnosed resource/action-space pressure rather than a useless predictor:
+  the reported treat-all DR sensitivity implies 10.3577% misses and 60.26%
+  relative reduction, but it has no 372 ms/run feasibility.  Video workload's
+  62.5% hard OOD rate separately requires denser workload/interactions support.
+- Visually inspected all five figures and archived the compact evidence under
+  `key_experiment_results/16_environment_generalization_randomized_v1` in
+  `c0085b0`.  Next freeze the held-out closed-loop analyzer, preserving the
+  randomized-versus-qualification estimand boundary, then run the nine frozen
+  64-worker waves.
 
 ### 2026-08-06 - Repair sparse eligible-run replay before outcomes
 
