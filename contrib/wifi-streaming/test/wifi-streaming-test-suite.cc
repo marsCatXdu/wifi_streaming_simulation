@@ -326,6 +326,31 @@ class PredictionTelemetryCollectorTestAccess
         return collector->BuildRollingSample(collector->m_paths.at(pathId), nowNs, 1000);
     }
 
+    static PredictionRollingSample BuildFragmentedPhyWindow(
+        Ptr<PredictionTelemetryCollector> collector,
+        uint8_t pathId)
+    {
+        auto& path = collector->m_paths.at(pathId);
+        constexpr int64_t segmentNs = 100;
+        // Three exact 100 ns intervals accumulate as a double slightly above
+        // the exact 0.3 us coverage and reproduce the production failure.
+        constexpr int64_t segmentCount = 3;
+        constexpr int64_t windowNs = segmentNs * segmentCount;
+        path.telemetryStartNs = 0;
+        path.phyIntervals.clear();
+        path.phyIntervalSerial = 0;
+        for (int64_t index = 0; index < segmentCount; ++index)
+        {
+            const int64_t startNs = index * segmentNs;
+            path.phyIntervals.push_back({startNs,
+                                         startNs + segmentNs,
+                                         WifiPhyState::IDLE,
+                                         static_cast<uint64_t>(startNs),
+                                         path.phyIntervalSerial++});
+        }
+        return collector->BuildRollingSample(path, windowNs, 1000);
+    }
+
     static std::string MakeSupportMask(bool wifiBound, bool oracleSupported)
     {
         return PredictionTelemetryCollector::MakeSupportMask(wifiBound, oracleSupported);
@@ -1151,6 +1176,23 @@ class PredictionPhyHistoryTestCase : public TestCase
                                   100,
                                   1e-9,
                                   "Corrected RX history TX duration is incorrect");
+
+        const auto fragmentedWindow =
+            PredictionTelemetryCollectorTestAccess::BuildFragmentedPhyWindow(collector, 0);
+        NS_TEST_ASSERT_MSG_EQ_TOL(fragmentedWindow.historyCoverageUs,
+                                  0.3,
+                                  1e-9,
+                                  "Fragmented history coverage is incorrect");
+        NS_TEST_ASSERT_MSG_EQ(*fragmentedWindow.phyIdleFraction,
+                              1.0,
+                              "Fragmented single-state history exceeded unit occupancy");
+        NS_TEST_ASSERT_MSG_EQ(*fragmentedWindow.phyTxFraction +
+                                  *fragmentedWindow.phyRxFraction +
+                                  *fragmentedWindow.phyBusyFraction +
+                                  *fragmentedWindow.phyIdleFraction +
+                                  *fragmentedWindow.phyOtherFraction,
+                              1.0,
+                              "Fragmented PHY fractions do not normalize exactly");
         Simulator::Destroy();
     }
 };

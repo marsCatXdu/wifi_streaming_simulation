@@ -1870,11 +1870,15 @@ PredictionTelemetryCollector::BuildRollingSample(const PathState& path,
                              result.phyOtherTimeUs;
         NS_ABORT_MSG_IF(std::abs(total - result.historyCoverageUs) > 0.001,
                         "PHY state durations do not sum to available history coverage");
-        result.phyTxFraction = result.phyTxTimeUs / result.historyCoverageUs;
-        result.phyRxFraction = result.phyRxTimeUs / result.historyCoverageUs;
-        result.phyBusyFraction = result.phyBusyTimeUs / result.historyCoverageUs;
-        result.phyIdleFraction = result.phyIdleTimeUs / result.historyCoverageUs;
-        result.phyOtherFraction = result.phyOtherTimeUs / result.historyCoverageUs;
+        // Normalize by the accumulated state duration.  It already reconciles
+        // with the exact history coverage above, while using the same floating-
+        // point sum as the numerators prevents a fragmented single-state window
+        // from producing a fraction infinitesimally greater than one.
+        result.phyTxFraction = result.phyTxTimeUs / total;
+        result.phyRxFraction = result.phyRxTimeUs / total;
+        result.phyBusyFraction = result.phyBusyTimeUs / total;
+        result.phyIdleFraction = result.phyIdleTimeUs / total;
+        result.phyOtherFraction = result.phyOtherTimeUs / total;
     }
     return result;
 }
