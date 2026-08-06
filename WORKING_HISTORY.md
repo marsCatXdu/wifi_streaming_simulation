@@ -127,6 +127,7 @@ P99.
 | Handle empty eligible-run support | `40b6be1` | Condition policy value on 383 represented runs while retaining all 384 runs for resource accounting |
 | Resume verified environment analysis prefix | `60c03f3` | Rehash and reuse only the completed dataset and LOFO stages after a later-stage failure |
 | Archive randomized environment replay | `c0085b0` | Checksum-closed six-family LOFO, OOD, resource-ceiling, and five-figure evidence |
+| Freeze held-out qualification analysis | `101f132`, `ab9e008` | Exact hierarchical gates, strict 576-run closure, and eleven checksum-bound statistical/historical plots |
 
 The latest validator milestone is `34e9296`.  It retains the exact historical
 paired-T2 checks and adds independent reconstruction of the distributional
@@ -227,8 +228,11 @@ remains the engineering champion after the distributional closed-loop test.
   checksum, interpret, plot, and archive the analysis only after its top-level
   manifest closes.  The held-out V2/distributional-shadow/STR execution matrix
   is frozen at `257b194` as 576 simulations in nine full 64-worker waves.
-  Freeze its analyzer before launch, then use the actual closed-loop family
-  results to choose the next predictor/allocation intervention.
+  The all-generated analyzer is frozen at `101f132` and the eleven-figure
+  statistical/historical plot suite at `ab9e008`.  Deploy this exact clean
+  boundary, close all nine waves without inspecting outcomes, then use the
+  actual closed-loop family results to choose the next predictor/allocation
+  intervention.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -238,14 +242,13 @@ item only when the research objective genuinely changes.
 The active boundary is the held-out closed-loop environment qualification.
 The 384-run randomized analysis is complete, checksum-closed, fetched, and
 archived under `key_experiment_results/16_environment_generalization_randomized_v1`
-through `c0085b0`.  Freeze the qualification analyzer before launching any of
-the 576 simulations.  It must report direct all-generated paired STR miss,
-completed-P99, sender-airtime, and background gates at aggregate, family, and
-scenario levels.  It must mark the predeclared fraction-of-randomized-oracle
-gate `not_assessable` because the eligible-row replay and all-generated
-closed-loop outcomes are different estimands.  After the analyzer and plot
-contracts are source-closed, deploy the frozen matrix in nine complete
-64-worker waves and inspect nothing until all arms close.
+through `c0085b0`.  The qualification analyzer and plot contracts are now
+source-closed through `ab9e008`.  They report direct all-generated paired STR
+miss, completed HF7 P99, sender airtime, and background gates at aggregate,
+family, and scenario levels, and mark the predeclared randomized-oracle
+fraction `not_assessable` because the two populations differ.  Deploy this
+exact clean boundary in nine complete 64-worker waves and inspect nothing
+until all 576 arms close.
 
 One compound-shift scenario contributes only 16 included rows across four
 runs after the frozen warmup and action-contamination exclusions.  Preserve
@@ -666,6 +669,30 @@ Do not repeat an entry unless relevant code changed after it ran.
   were visually inspected.
 
 ## Work log
+
+### 2026-08-06 - Freeze held-out closed-loop evaluation before launch
+
+- Froze the qualification analysis contract and implementation in `101f132`.
+  It requires the exact 576-run manifest, derived run IDs, scenario identities,
+  one clean build commit, and fresh strict validation of every run.  Point
+  estimates weight families, scenarios, and replicates equally; one shared
+  10,000-replicate bootstrap keeps families fixed and resamples scenario
+  clusters then whole paired replicates.
+- Kept direct all-generated STR victory separate from parent promotion.  The
+  eligible-row randomized ceiling and all-generated closed-loop outcomes are
+  noncommensurate, so the oracle-gain fraction and parent promotion readiness
+  are explicitly `not_assessable`; all assessable aggregate and per-family
+  gates remain enforced.
+- Added the checksum-bound plot suite in `ab9e008`: six aggregate/family/
+  scenario qualification figures plus the historical completion CDF, PDF,
+  deadline/completion, miss-burst CDF, and resource views.  Historical plots
+  freshly revalidate all raw runs and label pooled distributions descriptive
+  and completed latency survivor-conditioned.
+- Thirteen focused generator, analyzer, hierarchy/gate, and plot tests pass.
+  A full 10,000-resample synthetic replay is deterministic, and all eleven
+  PNG/PDF renderings were generated and visually reviewed.  Next record this
+  boundary, push it, then deploy the exact clean commit and run all nine waves
+  without inspecting partial outcomes.
 
 ### 2026-08-06 - Close and archive randomized environment replay
 
