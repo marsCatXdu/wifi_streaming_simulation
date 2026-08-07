@@ -624,6 +624,7 @@ def _bootstrap(
         for arm in ARM_ORDER if arm != "str_mlo_nmaxinflights_1"
     }
     joint_success = 0
+    engineering_joint_success = 0
     for _ in range(BOOTSTRAP_REPLICATIONS):
         selected = [
             units[scenario][index]
@@ -661,6 +662,9 @@ def _bootstrap(
         oracle = comparisons["oracle_eventual_missing_repair_t2"]
         joint_success += int(
             oracle["miss_delta"][-1] < 0 and oracle["airtime_ratio"][-1] <= 1
+        )
+        engineering_joint_success += int(
+            oracle["miss_delta"][-1] < 0 and oracle["airtime_ratio"][-1] <= 1.20
         )
 
     def interval(values: Sequence[float], estimate: float) -> dict[str, float]:
@@ -717,6 +721,9 @@ def _bootstrap(
         "versus_str": contrast_report,
         "oracle_joint_point_success_bootstrap_probability": (
             joint_success / BOOTSTRAP_REPLICATIONS
+        ),
+        "oracle_joint_1p20_success_bootstrap_probability": (
+            engineering_joint_success / BOOTSTRAP_REPLICATIONS
         ),
     }
 
@@ -1044,6 +1051,15 @@ def _report_markdown(report: dict[str, Any]) -> str:
         f"{decisive['airtime_ratio']['ci95_high']:.4f}).",
         f"- Bootstrap probability of satisfying both point inequalities: "
         f"{100 * decisive['joint_success_bootstrap_probability']:.2f}%.",
+        f"- Pre-existing 1.20 engineering sensitivity: "
+        f"**{'PASS' if decisive['engineering_1p20_point_success'] else 'FAIL'}** "
+        f"at the point estimate; paired-bootstrap joint probability "
+        f"{100 * decisive['engineering_1p20_joint_bootstrap_probability']:.2f}%.",
+        f"- Primary-only airtime floor / STR: "
+        f"{decisive['primary_only_airtime_floor']['airtime_ratio']:.4f}; "
+        f"equal-airtime repair headroom "
+        f"{decisive['primary_only_airtime_floor']['repair_headroom_us_per_run'] / 1000:+.2f} "
+        f"ms/run.",
         "",
         decisive["interpretation"],
         "",
@@ -1104,6 +1120,23 @@ def analyze(shard_roots: Sequence[Path], output: Path, workers: int) -> dict[str
         oracle_comparison["miss_delta"]["estimate"] < 0
         and oracle_comparison["airtime_ratio"]["estimate"] <= 1
     )
+    engineering_1p20_point_success = (
+        oracle_comparison["miss_delta"]["estimate"] < 0
+        and oracle_comparison["airtime_ratio"]["estimate"] <= 1.20
+    )
+    primary_airtime = aggregate["single_5ghz_no_redundancy"][
+        "sender_airtime_mean_us"
+    ]
+    str_airtime = aggregate["str_mlo_nmaxinflights_1"]["sender_airtime_mean_us"]
+    primary_only_airtime_floor = {
+        "airtime_ratio": primary_airtime / str_airtime,
+        "repair_headroom_us_per_run": str_airtime - primary_airtime,
+        "nonnegative_repair_can_reach_equal_airtime": primary_airtime <= str_airtime,
+        "interpretation": (
+            "Any repair layered on the unchanged primary-only sender has "
+            "nonnegative airtime and cannot cross below this floor."
+        ),
+    }
     if point_success:
         interpretation = (
             "The privileged packet-level action forms a lower-left point than STR. "
@@ -1146,6 +1179,11 @@ def analyze(shard_roots: Sequence[Path], output: Path, workers: int) -> dict[str
             "joint_success_bootstrap_probability": bootstrap[
                 "oracle_joint_point_success_bootstrap_probability"
             ],
+            "engineering_1p20_point_success": engineering_1p20_point_success,
+            "engineering_1p20_joint_bootstrap_probability": bootstrap[
+                "oracle_joint_1p20_success_bootstrap_probability"
+            ],
+            "primary_only_airtime_floor": primary_only_airtime_floor,
             "interpretation": interpretation,
         },
         "next_boundary": next_boundary,

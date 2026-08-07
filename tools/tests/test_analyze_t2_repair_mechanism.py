@@ -141,6 +141,9 @@ class T2RepairMechanismAnalysisTest(unittest.TestCase):
         self.assertEqual(
             result["oracle_joint_point_success_bootstrap_probability"], 1.0
         )
+        self.assertEqual(
+            result["oracle_joint_1p20_success_bootstrap_probability"], 1.0
+        )
 
 
 if __name__ == "__main__":
