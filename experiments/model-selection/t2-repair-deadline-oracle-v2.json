@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "experiment_id": "t2_repair_deadline_oracle_v2",
+  "status": "pre_result_freeze",
+  "purpose": "Correct the rejected V1 oracle input semantics and run only the 20 privileged deadline-missing packet-repair arms needed to finish the frozen mechanism gate.",
+  "predecessor": {
+    "contract_path": "experiments/model-selection/t2-repair-mechanism-v1.json",
+    "contract_sha256": "bb5f0c805497a741a3f5155573712a615c151da8f6181f6e3e89f6e8d4a94511",
+    "simulation_project_commit": "791bb2d27fb910be1393227de251c7c74e7f4b40",
+    "simulation_executable_sha256": "ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d",
+    "rejected_arm_id": "oracle_eventual_missing_repair_t2",
+    "valid_factual_run_count": 100,
+    "valid_factual_runs_must_not_be_rerun": true
+  },
+  "failure_diagnosis": {
+    "artifact_manifest_path": "key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic/analysis_artifact_manifest.json",
+    "artifact_manifest_sha256": "f2f9d3974fa09dfd694459b13a5ec0cfa6ddfa450d46d25ac8ba8cb40ec027b9",
+    "diagnostic_path": "key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic/oracle_pair_diagnostic.json",
+    "diagnostic_sha256": "59834dd29ff4457b9665335fb5d7f5c2e25a83449bb5b6541d8319a534ab09e2",
+    "root_cause": "The V1 sidecar complement included a first primary packet received only after the deadline because receiver state was created lazily. It therefore omitted one deadline-late packet from 12,456 plans.",
+    "v1_oracle_outputs_must_not_enter_performance_estimates": true
+  },
+  "input_closure": {
+    "shard_count": 2,
+    "paired_units_per_shard": 10,
+    "total_paired_units": 20,
+    "reserved_confirmation_seeds_1301_through_1348_must_not_be_used": true,
+    "v1_manifest_sha256_by_shard": {
+      "0": "1f09bc43379edf7212517e4b811e1bcb6f2d62b004d035f47039098da0861e19",
+      "1": "814cb2bcfb6a52fbabc0223deec8f44b409350a8ed7387b6ffcca49158aa68c1"
+    },
+    "deadline_corrected_action_frames_by_shard": {
+      "0": 7703,
+      "1": 7074
+    },
+    "deadline_corrected_repair_packets_by_shard": {
+      "0": 79157,
+      "1": 71822
+    },
+    "late_first_arrival_corrections_by_shard": {
+      "0": 6600,
+      "1": 5856
+    }
+  },
+  "sidecar_derivation": {
+    "schema_version": 2,
+    "source_arm_id": "single_5ghz_no_redundancy",
+    "source_files": [
+      "frames.csv",
+      "frame_packet_outcomes.csv"
+    ],
+    "inclusive_deadline_rule": "If union_first_packet_us is empty or greater than generation_time_us + deadline_us, no recorded source packet is timely. Otherwise the deadline-timely set is link_1_source_packet_indices.",
+    "repair_plan": "The complement of the deadline-timely primary source-packet set over [0, source_packet_count).",
+    "late_first_arrival_rule": "A baseline first packet strictly after the integer-microsecond deadline is excluded from the timely set; all source packets are then repaired.",
+    "wire_format": "Retain the canonical ten-column packet-outcome CSV understood by the frozen executable, while replacing union, copy-0, and link-1 sets with the derived deadline-timely set and replacing the missing set with its complement.",
+    "source_hash_and_derivation_report_required": true
+  },
+  "execution": {
+    "arm_id": "oracle_deadline_missing_repair_t2_v2",
+    "topology": "dual_interface",
+    "runtime_policy": "mechanism_oracle_repair_t2",
+    "t2_offset_us": 2000,
+    "primary_band": "5 GHz",
+    "repair_band": "2.4 GHz",
+    "new_simulation_run_count": 20,
+    "reuse_exact_v1_binary": true,
+    "reuse_exact_scenarios_seeds_and_hosts": true,
+    "no_environment_parameter_changes": true,
+    "output_root_must_be_new": true
+  },
+  "validity": {
+    "every_new_run_must_pass_strict_validation": true,
+    "every_action_must_equal_its_checksum_bound_deadline_sidecar_plan": true,
+    "primary_sender_application_bytes_sent_and_received_must_match_the_paired_baseline": true,
+    "primary_sender_phy_tx_airtime_must_match_the_paired_baseline": true,
+    "primary_sender_successful_mpdus_and_retransmissions_must_match_the_paired_baseline": true,
+    "receiver_primary_packet_set_drift_must_be_reported_not_silently_filtered": true,
+    "paired_potential_interpretation": "This is privileged replay of the paired no-repair deadline potential, not an implementable causal policy and not a claim that treatment leaves receiver-level primary arrival timing unchanged.",
+    "prohibited_claim": "Do not call this an exact within-run omniscient oracle if receiver-level primary packet sets differ."
+  },
+  "outcomes": {
+    "primary": "All-generated deadline misses over every generated frame.",
+    "latency": "All-generated deadline-censored completion latency.",
+    "resource": "Measured total target-sender PHY TX airtime over both links.",
+    "completed_frame_p99": "Descriptive and survivor-conditioned only.",
+    "additional": [
+      "deadline-miss burst length",
+      "repair action completion",
+      "per-link sender airtime",
+      "T2 queue and ACK state"
+    ]
+  },
+  "decision": {
+    "original_equal_airtime_test": "The repaired arm must have fewer misses than STR and a paired measured sender-airtime ratio <= 1.0.",
+    "engineering_sensitivity": "Also report whether it has fewer misses than STR at sender-airtime ratio <= 1.20; this does not replace the original equal-airtime test.",
+    "primary_only_airtime_floor_warning": "The observed 5 GHz-only primary already consumes 1.1682x STR airtime, so any repair has little headroom under 1.20.",
+    "no_static_projection_substitution": "A static cost or rescue projection may accompany but cannot replace the new closed-loop replay.",
+    "stop_after_result_archive": true,
+    "no_predictor_training_or_action_redesign_in_this_iteration": true
+  }
+}
