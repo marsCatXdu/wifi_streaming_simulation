@@ -389,8 +389,12 @@ The implementation and campaign contract are committed through `0f4169e`.
 The clean-commit canary completed all three 1,800-frame arms for
 radio-propagation p16 seed 21001, and strict validation promoted every run.
 Each resolved config reports adaptive Minstrel and exactly eight isolated
-manager streams.  The next boundary is to deploy one 288-run shard to each
-documented VM.  Retrieve outputs before any repair or rerun, compare directly with
+manager streams.  Both VMs now run clean `3ec0319` with identical executable
+SHA-256 `7e49b6eeb352a474e8d21b856ad2d90ade35e22a3be1f723058b31f3532af291`.
+Persistent services `wifi-adaptive-mcs-shard0-3ec0319.service` and
+`wifi-adaptive-mcs-shard1-3ec0319.service` started with 64 workers and 288
+runs each; both manifests have the exact shard identity and both hosts began
+64 simulator processes.  Retrieve outputs before any repair or rerun, compare directly with
 `key_experiment_results/17_environment_generalization_qualification_v1`,
 archive figures and a concise analysis, commit/push, and stop.  Do not begin a
 new predictor, action, dataset, or environment iteration afterward.
@@ -1047,6 +1051,10 @@ Do not repeat an entry unless relevant code changed after it ran.
   as `0f4169e`.  A real three-arm canary from the latter commit completed and
   passed strict replay for all 5,400 generated frames; this opens the formal
   two-VM launch gate.
+- Deployed clean `3ec0319` to both documented VMs, verified identical
+  executables and 144/144 configurations remotely, then launched the two
+  persistent 288-run services.  Initial service, manifest, and 64-process
+  checks passed on both hosts.
 
 ### 2026-08-07 - Analyze the deadline-correct repair replay
 
