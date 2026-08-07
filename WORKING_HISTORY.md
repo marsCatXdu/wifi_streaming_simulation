@@ -310,7 +310,7 @@ to this held-out population, so no policy is promoted.
   lose decisively to STR on all-generated misses; completed-frame P99 is
   `not_assessable` because 28 valid runs have fewer than 100 completions.
   This pipeline is complete and paused before a new scientific iteration.
-- [ ] Complete the frozen packet-repair mechanism gate before training another
+- [x] Complete the frozen packet-repair mechanism gate before training another
   predictor.  Compare identical-seed STR, primary-only, full copy at T0 and
   T2, privileged eventual-missing packet repair at T2, and 12.5% ideal
   systematic repair across legacy p17, compound p19, OBSS-intensity p17/p19,
@@ -346,10 +346,12 @@ to this held-out population, so no policy is promoted.
   retrieved, and entered the clean `0196788` analysis.  Deadline repair cuts
   misses from 31.7556% for STR to 17.6167%, but consumes 1.5721x sender
   airtime and therefore fails both the equal-airtime and 1.20 gates.  Its
-  report and eleven figure pairs are copied into the key-result archive.  Run
-  and archive only the separately labeled optimistic subset sensitivity at
-  `65b2dbb`, then mark this item complete and stop before redesigning the
-  action or training a model.
+  report and eleven figure pairs are copied into the key-result archive.  The
+  separately labeled optimistic subset sensitivity through `ea3559a` also
+  fails: pooled noncausal selection at 1.20 projects 11,827 misses versus
+  STR's 11,432, and the optimistic minimum ratio to beat STR by one miss is
+  1.2051 before fixed overhead.  The complete diagnostic is archived beside
+  the main result.  Stop before redesigning the action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -448,21 +450,21 @@ the paired-potential wording.  All eleven PNG/PDF pairs were visually
 reviewed, and the result is copied under
 `key_experiment_results/18_t2_repair_mechanism_v1/deadline_oracle_v2`.
 
-The only remaining work in this iteration is the explicitly post-result,
-optimistic subset sensitivity frozen at `65b2dbb`.  It may use factual rescues
-and measured per-frame tagged airtime to bound the 1.20 ceiling, but must state
-that it ignores fixed overhead, feedback, changed contention, and causal
-prediction.  Archive it, update this history, and stop.  Do not start a
-subsequent action or predictor iteration.
+The explicitly post-result optimistic subset sensitivity is complete through
+`ea3559a`.  It noncausally pools budget across all runs, chooses only factual
+rescues, and ignores fixed overhead and changed feedback.  At 1.20 it selects
+2,950 rescues and projects 11,827 misses, still 395 worse than STR.  Beating
+STR by one miss requires an optimistic minimum ratio of 1.2051 before omitted
+overhead.  Its checksum-bound artifact is archived below the main result.
+This iteration is complete.  Stop and do not start a subsequent action or
+predictor iteration without user review.
 
-The decisive question is whether the privileged eventual-missing packet
-repair arm has fewer all-generated misses than STR at a paired measured total
-sender-airtime ratio no greater than one.  If it cannot form that lower-left
-point, prediction cannot rescue this action architecture.  If it can, the
-next iteration should redesign partial or coded repair first and train a
-causal selector only afterward.  Stop after the current campaign is merged,
-plotted, analyzed, and archived; do not start that conditional next iteration
-without discussion.
+The decisive question is answered negatively.  Privileged deadline repair
+has fewer all-generated misses than STR but consumes 1.5721x airtime; even its
+optimistic noncausal subset cannot beat STR at 1.20.  Prediction cannot rescue
+this action architecture under the current resource target.  Any future work
+must first discuss a different redundancy action, then train a causal selector
+only after the action itself shows an adequate resource frontier.
 
 The authoritative result is
 `key_experiment_results/17_environment_generalization_qualification_v1`.
@@ -1007,8 +1009,11 @@ Do not repeat an entry unless relevant code changed after it ran.
   every bootstrap draw.  Primary-only already uses 1.1682x STR and leaves
   only 211.92 ms/run of 1.20 headroom before repair.
 - Added the explicitly post-result optimistic subset sensitivity at `65b2dbb`
-  to avoid confusing failure of the exhaustive arm with a proof about every
-  selected subset.  Run and archive that diagnostic only, then stop.
+  and corrected its negative-headroom reporting at `ea3559a`.  The pooled
+  noncausal 1.20 upper sensitivity selects 2,950 factual rescues and projects
+  11,827 misses, 395 worse than STR.  The optimistic tagged-airtime ratio
+  needed to beat STR by one miss is 1.2051 before fixed overhead.  Archived
+  the checksum-bound diagnostic beside the main result and stopped.
 
 ### 2026-08-07 - Launch the deadline-correct repair replay
 

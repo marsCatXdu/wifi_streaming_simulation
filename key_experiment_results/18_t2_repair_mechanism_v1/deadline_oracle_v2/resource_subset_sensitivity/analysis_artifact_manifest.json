@@ -1,0 +1,116 @@
+{
+  "analysis": "t2-repair-resource-subset-sensitivity-v1",
+  "analyzer_identity": {
+    "project_commit": "ea3559a8daec28b3fdcf957761d5614a3b007bc1",
+    "worktree_clean": true
+  },
+  "artifacts": {
+    "REPORT.md": {
+      "bytes": 1187,
+      "sha256": "e85a0b40d7979afe026d547d8b226b1f6164b4f709201c2fc305fbc8d430ce5d"
+    },
+    "resource_subset_sensitivity.json": {
+      "bytes": 8672,
+      "sha256": "7d255b278d0b35727008d0f97adae2299276d88e0b0d5f572623c9ed5fbbc17f"
+    },
+    "unit_projection.csv": {
+      "bytes": 4001,
+      "sha256": "f0a1e24bf3fe4bc9b4d77fae3f8059ef24fb6c6d69ba2772fe783c41b33c07ae"
+    }
+  },
+  "counts": {
+    "paired_units": 20
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "analysis_contract": {
+      "bytes": 5783,
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/experiments/model-selection/t2-repair-deadline-oracle-v2.json",
+      "sha256": "2df18a10f7b584af516d56c77350175f30e7b10c190fbd7f61da598b7b592cea"
+    },
+    "excluded_rejected_v1_oracle_runs": 20,
+    "included_corrected_runs": 20,
+    "included_factual_runs": 100,
+    "paired_potential_interpretation": "This is privileged replay of the paired no-repair deadline potential, not an implementable causal policy and not a claim that treatment leaves receiver-level primary arrival timing unchanged.",
+    "paired_unit_count": 20,
+    "shards": [
+      {
+        "corrected": {
+          "baseline_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs",
+          "included_corrected_runs": 10,
+          "manifest": {
+            "bytes": 87154,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs/experiment_manifest.json",
+            "sha256": "260da29d1caf296c7a5eec844d5c5a69a7c78b81d103954322d07513abd2d933"
+          },
+          "pair_validation": {
+            "bytes": 10592,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs/deadline_oracle_pair_validation.json",
+            "sha256": "1e99a904283c688feda9602bcede6bb176c64352715743947e9c7b34072cc8a6"
+          },
+          "receiver_primary_drift_frames": 4897,
+          "receiver_primary_drift_packets": 4910,
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs"
+        },
+        "factual": {
+          "attempt_recovery": {
+            "all_promoted": true,
+            "bytes": 3653,
+            "orchestration_project_commit": "fb26a4b26f3aef03e41ef2ecdd2bd0c1a137fb15",
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs/attempt_recovery.json",
+            "recovered_count": 10,
+            "sha256": "ad38d8f859bf1869530b134cc0565066e82cc10ed002550d1e820b202c1e9187"
+          },
+          "excluded_v1_oracle_runs": 10,
+          "included_factual_runs": 50,
+          "manifest": {
+            "bytes": 251839,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs/experiment_manifest.json",
+            "sha256": "1f09bc43379edf7212517e4b811e1bcb6f2d62b004d035f47039098da0861e19"
+          },
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs"
+        },
+        "shard_index": 0
+      },
+      {
+        "corrected": {
+          "baseline_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs",
+          "included_corrected_runs": 10,
+          "manifest": {
+            "bytes": 87146,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs/experiment_manifest.json",
+            "sha256": "edf85fbf353f9875c91cbb412fa6c0f92267961eff63ad2a43fcb1fdf80b3797"
+          },
+          "pair_validation": {
+            "bytes": 10591,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs/deadline_oracle_pair_validation.json",
+            "sha256": "8b42346f98f6c3b51fde8b061a6e07f675b5f7a1cbd88c612c0051fef72967b1"
+          },
+          "receiver_primary_drift_frames": 4060,
+          "receiver_primary_drift_packets": 4064,
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs"
+        },
+        "factual": {
+          "attempt_recovery": {
+            "all_promoted": true,
+            "bytes": 3303,
+            "orchestration_project_commit": "fb26a4b26f3aef03e41ef2ecdd2bd0c1a137fb15",
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs/attempt_recovery.json",
+            "recovered_count": 9,
+            "sha256": "a8287d97e9682ce6d06be2c8483fe9d8af5fab6221b26fe97924c47c1288ea17"
+          },
+          "excluded_v1_oracle_runs": 10,
+          "included_factual_runs": 50,
+          "manifest": {
+            "bytes": 251819,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs/experiment_manifest.json",
+            "sha256": "814cb2bcfb6a52fbabc0223deec8f44b409350a8ed7387b6ffcca49158aa68c1"
+          },
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs"
+        },
+        "shard_index": 1
+      }
+    ],
+    "simulation_project_commit": "791bb2d27fb910be1393227de251c7c74e7f4b40"
+  }
+}

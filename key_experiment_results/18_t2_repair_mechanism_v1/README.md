@@ -44,6 +44,27 @@ identical in all pairs, but receiver primary packet sets drift in 8,957 of
 36,000 frames (24.88%).  The archive reports this boundary explicitly and
 does not silently filter affected frames.
 
+### Optimistic subset resource sensitivity
+
+`deadline_oracle_v2/resource_subset_sensitivity/` is explicitly post-result
+and is not simulated-policy evidence.  It noncausally selects only factual
+rescues, charges their measured tagged PPDU airtime from the full-action run,
+allows airtime to transfer across all 20 runs, and ignores fixed secondary
+overhead and changed closed-loop contention.  These assumptions make it an
+optimistic upper sensitivity.
+
+At the aggregate 1.20 budget, this projection selects the cheapest 2,950 of
+8,436 factual rescues and produces 11,827 projected misses.  That is still
+395 more than STR's 11,432.  Strictly beating STR by one miss requires 3,346
+rescues and has an optimistic minimum sender-airtime ratio of `1.2051` before
+fixed overhead or feedback.  Nine of 20 primary-only runs individually
+exceed the 1.20 cap before repair.
+
+Thus a perfect selector cannot recover the desired result merely by pruning
+this action under the 1.20 target on this panel.  The unlimited corrected arm
+also achieves only a 44.52% relative miss reduction versus STR, short of the
+longer-term greater-than-50% aspiration even at 1.5721x airtime.
+
 ## Protected factual phase 1
 
 `factual_phase1/` contains 20 identical-seed units for STR MLO, single-link
@@ -137,8 +158,7 @@ records the clean analyzer identity and both source-manifest hashes.
 Preserve all archives unchanged.  The V1 oracle arm is rejected, and the
 corrected V2 replay completes the requested simulation gate.  The exhaustive
 deadline-repair action strongly improves reliability but is not resource
-viable.  A separately labeled post-result static subset sensitivity may bound
-whether choosing fewer factual rescues could fit the resource budget, but it
-cannot replace a causal closed-loop experiment.  Stop after archiving that
-diagnostic; do not train another predictor, redesign the action, or open
-reserved confirmation seeds in this iteration.
+viable.  The archived optimistic subset sensitivity also fails to beat STR
+under 1.20 and cannot replace a causal closed-loop experiment.  This iteration
+is complete: stop for review and do not train another predictor, redesign the
+action, or open reserved confirmation seeds.

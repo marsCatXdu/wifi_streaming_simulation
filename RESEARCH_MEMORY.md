@@ -190,13 +190,23 @@ ms/run on the secondary link.  Full copy confirms diversity but costs about
 2.09x.  The fixed 12.5% ideal-FEC action also fails: 40.5833% misses at
 1.4232x airtime.
 
-Do not overstate the exhaustive-arm failure as proof that every selected
-subset must fail.  The frozen contract permits a separately labeled,
-optimistic static sensitivity using factual rescues and measured per-frame
-tagged airtime.  Such a projection ignores fixed secondary overhead,
-closed-loop feedback, changed contention, and causal prediction; it may bound
-the ceiling but cannot qualify a policy.  Finish and archive that diagnostic,
-then stop for review before changing the action or training another model.
+The separately archived post-result subset sensitivity is deliberately
+optimistic: it noncausally selects only factual rescues, transfers airtime
+across all 20 runs, charges measured tagged PPDU airtime, and ignores fixed
+secondary overhead and changed closed-loop contention.  Even then, the pooled
+1.20 budget selects only 2,950 rescues and projects 11,827 misses, 395 more
+than STR.  Strictly beating STR by one miss requires 3,346 rescues and an
+optimistic minimum airtime ratio of 1.2051 before omitted overhead.  Nine of
+20 primary-only runs individually exceed 1.20 before repair.
+
+This closes the immediate scientific question: a better predictor or selector
+cannot make this packet-repair action beat STR under the 1.20 target on the
+representative panel.  The unlimited privileged action also reaches only a
+44.52% relative miss reduction, short of the greater-than-50% aspiration even
+at 1.5721x airtime.  Stop for review before changing the action architecture
+or training another model.  If work resumes, the evidence points toward
+changing how redundancy is encoded and scheduled, not another score-only
+predictor iteration.
 
 ## Temporal-T2 48-pair STR qualification
 
