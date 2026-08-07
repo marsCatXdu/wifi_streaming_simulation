@@ -328,12 +328,16 @@ to this held-out population, so no policy is promoted.
   diagnosis.  All 100 factual runs pass strict validation and their protected
   five-arm result is archived under
   `key_experiment_results/18_t2_repair_mechanism_v1/factual_phase1`.  Both
-  oracle shard closures fail because primary outcomes drift in compound seeds
-  21173 and 21174.  Next, enumerate that drift and determine whether the
-  privileged counterfactual remains identified.  Admit oracle evidence only
-  if the frozen closure can be satisfied without weakening it; otherwise
-  archive a failed-oracle mechanism conclusion.  Stop before redesigning the
-  action or training a model.
+  oracle shard closures fail because primary outcomes first drift in compound
+  seeds 21173 and 21174.  The complete strict diagnostic at `961c14d` shows
+  that all 20 pairs are affected: lazy receiver-state creation omits one
+  deadline-late packet from 12,456 repair plans.  The checksum-bound failed
+  replay is archived under
+  `key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
+  V1 oracle evidence is rejected.  Next, freeze the minimum deadline-correct,
+  finalization-independent replay needed to answer the packet-repair gate;
+  preserve the 100 factual arms and all V1 outputs unchanged.  Stop before
+  redesigning the action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -381,8 +385,9 @@ are retained locally under
 `results/t2_repair_mechanism_v1/complete_remote`; each run passes individual
 strict validation.  The frozen post-run pair audit nevertheless stops on
 primary-outcome differences in compound seed 21173 frame 2 on shard 0 and
-compound seed 21174 frame 33 on shard 1.  No oracle result is currently
-admissible.  The factual analyzer at `9538afe` excludes all 20 oracle runs,
+compound seed 21174 frame 33 on shard 1.  The full diagnostic subsequently
+found closure failures in all 20 pairs.  No V1 oracle result is admissible.
+The factual analyzer at `9538afe` excludes all 20 oracle runs,
 strictly validates the remaining 100, and emits a checksum-bound eight-figure
 result archived under
 `key_experiment_results/18_t2_repair_mechanism_v1/factual_phase1`.
@@ -397,6 +402,18 @@ secondary airtime.  Its secondary queue is generally small, while primary ACK
 deficit is saturated at ten packets.  OBSS p17 is the only family where FEC
 beats STR, and both are already in a collapse regime, so it is not evidence of
 a generally useful action.
+
+The clean diagnostic at `961c14d` strict-validates and tree-hashes the 60
+relevant STR/baseline/oracle runs.  It finds 12,456 baseline frames whose first
+recorded packet arrived only after the deadline; lazy receiver-state creation
+nonetheless includes that packet, so the V1 sidecar repairs the other packets
+and systematically omits this one.  This explains 9,172 flawed-replay misses.
+The flawed arm has 36.7917% misses at 1.5679x STR airtime and is diagnostic
+only.  All pairs have identical aggregate primary application bytes, PHY TX
+airtime, MPDU successes, and retransmissions, but 23 additional deadline-edge
+packet differences and 8,520 snapshot differences prevent exact per-frame
+closure.  The complete artifact is archived under
+`key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
 
 The decisive question is whether the privileged eventual-missing packet
 repair arm has fewer all-generated misses than STR at a paired measured total
@@ -925,6 +942,28 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Reject the flawed packet-repair oracle replay
+
+- Enumerated all 20 failed pairs instead of stopping at the first error per
+  shard.  All 60 relevant runs remain individually strict-valid and all V1
+  actions exactly match their source sidecars.
+- Found a receiver deadline-semantics defect in the oracle source: when the
+  first primary packet arrives after the deadline, lazy state creation records
+  it before immediate finalization.  The V1 plan therefore omits one late
+  packet in 12,456 frames and under-repairs 138,523 versus 150,979 packets.
+- Added the standard-library diagnostic and focused tests at `c34b019`, then
+  added a sandbox-compatible serial validation path at `961c14d`.  Eleven
+  runner/diagnostic tests pass.
+- Generated a clean, checksum-bound diagnostic over all 36,000 paired frames.
+  The flawed replay records 13,245 misses (36.7917%) versus STR's 11,432
+  (31.7556%) at 1.5679x airtime.  Exactly 9,172 misses contain the omitted
+  packet.  These are failure-diagnostic values, not an oracle ceiling.
+- Archived the report, source-tree identities, exact frame/pair tables, and
+  artifact hashes under
+  `key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
+  Preserve the valid factual panel and reject all V1 oracle outcomes before a
+  narrowly corrected replay.
 
 ### 2026-08-07 - Protect the complete factual mechanism panel
 

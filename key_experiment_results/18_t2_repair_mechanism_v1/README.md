@@ -34,9 +34,34 @@ queue overload nor that scalar deficit explains or predicts the failures.
 Full copy still demonstrates a large diversity gain, but both launch times
 cost about `2.09x` STR airtime.  T2 is slightly worse than T0 and does not save
 airtime.  This leaves the privileged packet-repair arm as the decisive test.
-No oracle result is reported here: two compound-scenario pairs first exposed
-primary-outcome drift (seed 21173 frame 2 and seed 21174 frame 33), violating
-the frozen counterfactual closure requirement.
+No oracle result is reported here: compound seeds 21173 and 21174 exposed the
+first primary-outcome differences, but the complete diagnostic shows that all
+20 pairs violate the frozen counterfactual closure requirement.
+
+## Failed-oracle diagnosis
+
+`oracle_pair_diagnostic/` strictly validates all 60 STR, primary-only, and
+oracle-replay runs, binds every source run tree by checksum, and enumerates all
+36,000 paired frames.  The existing replay is not an oracle estimate:
+
+- 12,456 baseline frames record one first primary packet only after its
+  deadline.  Lazy receiver-state creation includes that late packet in the
+  sidecar, so the plan repairs the other packets but omits this one.
+- The frozen sidecar requests 138,523 repair packets.  A deadline-correct plan
+  would request 150,979, or 8.99% more.
+- 9,172 flawed-replay misses contain exactly the omitted packet.  There are
+  23 additional near-deadline primary-set differences and 8,520 T2 snapshot
+  differences, so exact per-frame counterfactual closure is unavailable.
+- Aggregate primary-link application bytes, PHY TX airtime, successful MPDUs,
+  and retransmissions nevertheless match in every pair.  This localizes the
+  main defect to deadline/finalization semantics, rather than failed or
+  incomplete simulations.
+- The flawed replay has 13,245 misses (36.7917%) at 10,440.77 ms/run sender
+  airtime: 5.0361 percentage points worse than STR at 1.5679x airtime.  These
+  values diagnose the bad plan only and must not be used as a repair ceiling.
+
+The primary-only stream itself costs 1.1682x STR airtime, leaving very little
+room under the project's 1.20 engineering target before any repair is sent.
 
 ## Partial pre-fix evidence
 
@@ -71,9 +96,9 @@ records the clean analyzer identity and both source-manifest hashes.
 
 ## Current boundary
 
-Preserve this five-arm result unchanged while enumerating and diagnosing the
-oracle primary-outcome drift.  The oracle can enter a formal six-arm result
-only if its privileged action and same-seed counterfactual are scientifically
-identified under the frozen contract.  Stop after resolving or rejecting that
-oracle construction and archiving the mechanism-gate conclusion; do not train
-another predictor or redesign the action in this iteration.
+Preserve both archives unchanged.  The V1 oracle arm is rejected.  A corrected
+replay, if performed, must use packets absent at the deadline, add evidence
+that is independent of receiver finalization, and rerun only the minimum
+baseline/oracle subset needed to establish same-build closure.  Do not reuse
+the flawed oracle outputs, rerun the 100 valid factual arms, train another
+predictor, or redesign the action in this iteration.
