@@ -152,6 +152,28 @@ def _arm_map() -> dict[tuple[str, str], str]:
     }
 
 
+def _validate_adaptive_mcs_resolved(config: dict[str, Any], label: str) -> None:
+    """Bind an adaptive matrix entry to its resolved manager provenance."""
+
+    wifi = config.get("wifi")
+    expected = {
+        "mcs_mode": "adaptive",
+        "station_manager": "MinstrelHtWifiManager",
+        "adaptive_mcs_update_interval_ms": 50,
+        "adaptive_mcs_use_latest_amendment_only": True,
+        "adaptive_mcs_random_stream_base": 900000,
+        "adaptive_mcs_random_stream_count": 8,
+        "data_mode": "manager_selected",
+        "control_mode": "manager_selected,manager_selected",
+        "data_modes_per_link": ["manager_selected", "manager_selected"],
+    }
+    _require(
+        isinstance(wifi, dict)
+        and all(wifi.get(key) == value for key, value in expected.items()),
+        f"{label}: resolved adaptive-MCS provenance differs",
+    )
+
+
 def validate_adaptive_shards(
     shard_roots: Sequence[Path],
 ) -> tuple[list[dict[str, Any]], tuple[str, ...], dict[str, tuple[str, ...]], list[dict[str, Any]]]:
@@ -234,6 +256,9 @@ def validate_adaptive_shards(
             run_dir = root / run_id
             _require(run_dir.is_dir() and not run_dir.is_symlink(),
                      f"adaptive run directory is absent: {run_id}")
+            _validate_adaptive_mcs_resolved(
+                _read_json(run_dir / "resolved_config.json"), run_id
+            )
             observed[run_id] = (row, run_dir)
         identities.append({
             "index": index,

@@ -17,15 +17,34 @@ if str(TOOLS) not in sys.path:
 
 from analyze_environment_generalization_adaptive_mcs_v1 import (  # noqa: E402
     ARMS,
+    AdaptiveMcsAnalysisError,
     METRICS,
     MODES,
     _history_job,
+    _validate_adaptive_mcs_resolved,
     bootstrap,
     build_grid,
 )
 
 
 class AdaptiveMcsAnalysisTest(unittest.TestCase):
+    def test_resolved_config_must_select_exact_adaptive_manager(self) -> None:
+        wifi = {
+            "mcs_mode": "adaptive",
+            "station_manager": "MinstrelHtWifiManager",
+            "adaptive_mcs_update_interval_ms": 50,
+            "adaptive_mcs_use_latest_amendment_only": True,
+            "adaptive_mcs_random_stream_base": 900000,
+            "adaptive_mcs_random_stream_count": 8,
+            "data_mode": "manager_selected",
+            "control_mode": "manager_selected,manager_selected",
+            "data_modes_per_link": ["manager_selected", "manager_selected"],
+        }
+        _validate_adaptive_mcs_resolved({"wifi": wifi}, "valid")
+        wifi["mcs_mode"] = "fixed"
+        with self.assertRaises(AdaptiveMcsAnalysisError):
+            _validate_adaptive_mcs_resolved({"wifi": wifi}, "fixed")
+
     def test_history_reduction_includes_incomplete_and_late_frames(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             run_dir = Path(temporary)
