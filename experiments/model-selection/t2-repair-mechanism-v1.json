@@ -1,0 +1,144 @@
+{
+  "schema_version": 1,
+  "experiment_id": "t2_repair_mechanism_v1",
+  "purpose": "Test whether a privileged packet-level repair action can beat STR MLO without using more measured target-sender airtime before training another predictor.",
+  "status": "pre_result_freeze",
+  "source_scenario_catalog": {
+    "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+    "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593",
+    "phase": "closed_loop_qualification"
+  },
+  "selection_scope": {
+    "opened_data_only": true,
+    "not_a_confirmation_campaign": true,
+    "reserved_confirmation_seeds_1301_through_1348_must_not_be_used": true,
+    "selection_rationale": "Use nontrivial cases that separate mechanism behavior: clear legacy, compound, and radio failures plus the sign-changing OBSS-intensity p17 and p19 pair.",
+    "scenarios": [
+      {
+        "scenario_id": "legacy-coexistence-qualification-p17",
+        "family_id": "legacy_coexistence",
+        "seeds": [21133, 21134, 21135, 21136]
+      },
+      {
+        "scenario_id": "compound-shift-qualification-p19",
+        "family_id": "compound_shift",
+        "seeds": [21173, 21174, 21175, 21176]
+      },
+      {
+        "scenario_id": "obss-intensity-qualification-p17",
+        "family_id": "obss_intensity",
+        "seeds": [21037, 21038, 21039, 21040]
+      },
+      {
+        "scenario_id": "obss-intensity-qualification-p19",
+        "family_id": "obss_intensity",
+        "seeds": [21045, 21046, 21047, 21048]
+      },
+      {
+        "scenario_id": "radio-propagation-qualification-p17",
+        "family_id": "radio_propagation",
+        "seeds": [21005, 21006, 21007, 21008]
+      }
+    ]
+  },
+  "pairing": {
+    "rng_run": 1,
+    "identical_seed_and_scenario_across_all_arms": true,
+    "all_arms_for_one_scenario_seed_unit_run_on_the_same_host": true,
+    "host_assignment_balanced_by_scenario_and_seed": true,
+    "paired_unit_count": 20,
+    "arm_count": 6,
+    "run_count": 120
+  },
+  "common_contract": {
+    "stream_and_environment": "Use the exact frozen scenario configuration without favorable environment changes.",
+    "primary_application_path": 1,
+    "primary_band": "5 GHz",
+    "secondary_application_path": 0,
+    "secondary_band": "2.4 GHz",
+    "t2_offset_us": 2000,
+    "str_mlo_nmaxinflights": 1,
+    "fec_abstraction": "Ideal systematic MDS-style erasure repair over equal-size padded source symbols; this is an optimistic action-space bound, not a claim about a concrete codec implementation.",
+    "fec_repair_symbol_count": "ceil(source_packet_count / 8)",
+    "fec_payload_accounting": "Each repair symbol has the full configured application payload size; padding and all wire/MAC overhead consume measured airtime.",
+    "copy_or_repair_launch_order": "ascending source or repair symbol index unless the oracle plan explicitly records another deterministic order"
+  },
+  "arms": [
+    {
+      "arm_id": "str_mlo_nmaxinflights_1",
+      "topology": "mlo_str",
+      "policy": "fixed_link_0",
+      "description": "Native STR MLO reference."
+    },
+    {
+      "arm_id": "single_5ghz_no_redundancy",
+      "topology": "dual_interface",
+      "policy": "fixed_link_1",
+      "description": "Primary-only 5 GHz reference and source of exact no-repair packet outcomes."
+    },
+    {
+      "arm_id": "full_copy_t0",
+      "topology": "dual_interface",
+      "policy": "full_duplication",
+      "description": "Unconditional complete secondary copy at frame generation."
+    },
+    {
+      "arm_id": "full_copy_t2",
+      "topology": "dual_interface",
+      "policy": "mechanism_full_copy_t2",
+      "description": "Unconditional complete secondary copy 2000 us after generation."
+    },
+    {
+      "arm_id": "oracle_eventual_missing_repair_t2",
+      "topology": "dual_interface",
+      "policy": "mechanism_oracle_repair_t2",
+      "description": "At T2, transmit only source packet indexes that the paired single-link run shows would still be absent at the inclusive deadline. This privileged hindsight replay is a mechanism ceiling and is not implementable.",
+      "required_validity_check": "The oracle run's primary-link packet outcomes must exactly match its paired no-repair source; otherwise the replay pair is invalid and must not support the decisive claim."
+    },
+    {
+      "arm_id": "ideal_systematic_fec_12p5_t2",
+      "topology": "dual_interface",
+      "policy": "mechanism_systematic_fec_t2",
+      "description": "At T2, unconditionally send ceil(k/8) ideal innovative repair symbols."
+    }
+  ],
+  "outcomes": {
+    "primary": {
+      "name": "all_generated_deadline_miss_rate",
+      "denominator": "every generated frame, including incomplete and collapse outcomes",
+      "higher_is_better": false
+    },
+    "secondary": [
+      "all-generated deadline-censored latency distribution min(completion_latency, deadline)",
+      "restricted mean deadline-censored latency",
+      "mean, p95, and maximum consecutive deadline-miss burst length",
+      "primary and secondary MAC queue packets and service bytes at T2",
+      "primary ACK deficit count and exact packet indexes at T2",
+      "secondary action packet or repair-symbol count",
+      "secondary copy or repair completion latency from action time",
+      "target-sender PHY TX airtime per physical link and total",
+      "background throughput as a non-inferiority diagnostic"
+    ],
+    "completed_frame_p99": {
+      "role": "descriptive_only",
+      "reason": "It is survivor-conditioned and is unassessable in collapse runs."
+    }
+  },
+  "decisive_test": {
+    "question": "Can the privileged packet-level T2 repair arm lower all-generated deadline misses relative to STR MLO while consuming no more measured total target-sender PHY TX airtime?",
+    "airtime_definition": "Sum of measured target-station PHY TX time over all physical links in the frozen measurement interval.",
+    "equal_or_lower_airtime": "paired oracle-to-STR airtime ratio <= 1",
+    "success": "Oracle has fewer all-generated deadline misses and equal-or-lower measured total target-sender airtime than paired STR. Report paired point estimates and uncertainty; do not convert an underpowered interval into proof of equivalence.",
+    "failure": "If a valid privileged oracle replay cannot form a point below and left of STR, stop predictor scaling and reconsider the multipath action architecture.",
+    "conditional_next_step": "If the oracle succeeds, redesign the action around partial or coded repair, then train a causal model to choose that action.",
+    "prohibited_substitution": "A post-hoc interpolation, static knapsack, or completed-frame-only latency result cannot by itself answer the decisive question."
+  },
+  "analysis_guards": {
+    "paired_seed_is_variance_control_not_identity_proof": true,
+    "oracle_is_privileged_hindsight_and_must_not_be_called_causal": true,
+    "ideal_fec_is_an_optimistic_mechanism_bound": true,
+    "miss_rate_and_censored_latency_must_include_all_generated_frames": true,
+    "collapse_runs_must_not_be_discarded": true,
+    "no_new_predictor_is_trained_in_this_iteration": true
+  }
+}
