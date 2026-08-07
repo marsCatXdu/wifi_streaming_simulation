@@ -1,0 +1,133 @@
+{
+  "analysis": "environment-generalization-adaptive-mcs-partial-snapshot-v1",
+  "complete_paired_unit_count": 159,
+  "excluded_incomplete_units": [
+    {
+      "family_id": "compound_shift",
+      "missing_arms": [
+        "str_mlo_nmaxinflights_1"
+      ],
+      "present_arms": [
+        "distributional_shadow_t2",
+        "score_aware_t2_v2"
+      ],
+      "run": 1,
+      "scenario_id": "compound-shift-qualification-p22",
+      "seed": 21188
+    }
+  ],
+  "limits": [
+    "This snapshot is retained before diagnosis or recovery of a failed run.",
+    "Only units with all three adaptive arms are compared to matching fixed units.",
+    "Coverage is incomplete and uneven; values are descriptive, not formal estimates.",
+    "CDFs pool frames; completion latency is survivor-conditioned."
+  ],
+  "matched_run_count_per_mode": 477,
+  "schema_version": 1,
+  "source_closure": {
+    "adaptive_manifests": [
+      {
+        "index": 0,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_adaptive_mcs_qualification_v1/shard0/experiment_manifest.json",
+        "promoted_run_count": 192,
+        "sha256": "238f54cb1e78c7fd75706968298069b1afa7f8a957a67bc3625642c2fb2e03b2"
+      },
+      {
+        "index": 1,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_adaptive_mcs_qualification_v1/shard1/experiment_manifest.json",
+        "promoted_run_count": 287,
+        "sha256": "98d3b5744ad0e5d1fab88d035fbf86256f24410e8f62b030247bcca5748b261c"
+      }
+    ],
+    "analyzer": {
+      "path": "tools/analyze_environment_generalization_adaptive_mcs_partial.py",
+      "project_commit": "6a019c8a75f943cbf2f5e2125a99b8307d7b1aae",
+      "sha256": "1515472bcbb4042e57f2896edf565f9d97b47a19fd19434d1bcb99b5ed3ca5d5",
+      "worktree_clean": true
+    },
+    "fixed_evidence": {
+      "analysis_artifact_manifest": {
+        "bytes": 5794,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/key_experiment_results/17_environment_generalization_qualification_v1/analysis/analysis_artifact_manifest.json",
+        "sha256": "dba7188133c161a8b822580b7f806801e02c9078f3867815d742347ea111a0c3"
+      },
+      "raw_manifest": {
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_closed_loop_qualification_v1_partial_47e1996/runs/experiment_manifest.json",
+        "sha256": "4c847ccc7d2e7d0ac9c154b0c4efc778ddcb403d0d12dabfd4a971c976269ef4"
+      },
+      "strict_validation": {
+        "mixed_build_identity": false,
+        "status": "pass",
+        "validated_run_count": 576
+      }
+    }
+  },
+  "status": "partial_pre_recovery_not_final",
+  "strictly_validated_promoted_run_count": 479,
+  "summary": {
+    "adaptive": {
+      "distributional_shadow_t2": {
+        "deadline_miss_count": 54592,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.76309127379455,
+        "mean_censored_latency_us": 9353.569927498253,
+        "mean_run_deadline_miss_rate": 0.18403913347309572,
+        "mean_sender_airtime_us": 6334432.9433962265,
+        "pooled_deadline_miss_rate": 0.17798643714136672,
+        "run_count": 159
+      },
+      "score_aware_t2_v2": {
+        "deadline_miss_count": 56610,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.771212102306077,
+        "mean_censored_latency_us": 9535.336689086886,
+        "mean_run_deadline_miss_rate": 0.19074947589098531,
+        "mean_sender_airtime_us": 6096104.660377358,
+        "pooled_deadline_miss_rate": 0.18456572769953053,
+        "run_count": 159
+      },
+      "str_mlo_nmaxinflights_1": {
+        "deadline_miss_count": 43649,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.780402106498954,
+        "mean_censored_latency_us": 8109.611544374562,
+        "mean_run_deadline_miss_rate": 0.14638685068716514,
+        "mean_sender_airtime_us": 5457490.7169811325,
+        "pooled_deadline_miss_rate": 0.14230894627021387,
+        "run_count": 159
+      }
+    },
+    "fixed": {
+      "distributional_shadow_t2": {
+        "deadline_miss_count": 42760,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.75649379287212,
+        "mean_censored_latency_us": 8760.800752096437,
+        "mean_run_deadline_miss_rate": 0.1432937339855579,
+        "mean_sender_airtime_us": 5945020.201257861,
+        "pooled_deadline_miss_rate": 0.13941053729786124,
+        "run_count": 159
+      },
+      "score_aware_t2_v2": {
+        "deadline_miss_count": 43717,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.7511342490566,
+        "mean_censored_latency_us": 8854.603420393665,
+        "mean_run_deadline_miss_rate": 0.14655107151176333,
+        "mean_sender_airtime_us": 5783747.522012578,
+        "pooled_deadline_miss_rate": 0.14253064684402714,
+        "run_count": 159
+      },
+      "str_mlo_nmaxinflights_1": {
+        "deadline_miss_count": 37618,
+        "generated_frame_count": 306720,
+        "mean_background_throughput_mbps": 31.784265680503147,
+        "mean_censored_latency_us": 7948.287726240391,
+        "mean_run_deadline_miss_rate": 0.12620865362217565,
+        "mean_sender_airtime_us": 5067439.459119497,
+        "pooled_deadline_miss_rate": 0.12264606155451226,
+        "run_count": 159
+      }
+    }
+  }
+}

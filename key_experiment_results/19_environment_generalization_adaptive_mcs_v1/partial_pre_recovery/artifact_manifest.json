@@ -1,0 +1,55 @@
+{
+  "analysis": "environment-generalization-adaptive-mcs-partial-snapshot-v1",
+  "artifacts": {
+    "OBSERVATIONS.md": {
+      "bytes": 1849,
+      "sha256": "8f5104b135568c7eb8fd43f053370acc0d540e34d1a8f2421ec501e281f60da6"
+    },
+    "README.md": {
+      "bytes": 652,
+      "sha256": "e6d5e9568793b501c570d7c5d25a125524e8a4b6211ed571916934ece3a3a78d"
+    },
+    "plots/partial_aggregate_fixed_vs_adaptive.pdf": {
+      "bytes": 18076,
+      "sha256": "051370d38190be9acdf0c46a83ddb76b353fd63dbe17a6b892d1c729d9788c44"
+    },
+    "plots/partial_aggregate_fixed_vs_adaptive.png": {
+      "bytes": 91384,
+      "sha256": "a91bcdeefac28662b85f97d8b2084a798c28f38c3d9e927147b40ae5b0e94fac"
+    },
+    "plots/partial_all_generated_censored_latency_cdf.pdf": {
+      "bytes": 60836,
+      "sha256": "b4f06d07975827f2a2632c4a2ce29f068c7c9ca0734a5b09da82818fcfae85ea"
+    },
+    "plots/partial_all_generated_censored_latency_cdf.png": {
+      "bytes": 103624,
+      "sha256": "2b0d00fa71758de0be2db4adad0f1f8c9acc10541093d42feda0610227534b6e"
+    },
+    "plots/partial_completion_latency_cdf.pdf": {
+      "bytes": 63934,
+      "sha256": "c3fc054584b72ae9b45f46853d294cd330c080d8f80ce7a05dfe9a3eac33a23c"
+    },
+    "plots/partial_completion_latency_cdf.png": {
+      "bytes": 108470,
+      "sha256": "ce643213d99e8734151ae23a91cefcd2d6c844647a7b9bd834984c45b1701bec"
+    },
+    "report.json": {
+      "bytes": 5441,
+      "sha256": "d7660f5c1fc3f55b9e793079f93ae76d88183bb96a00dc62245c776307415993"
+    },
+    "run_metrics.csv": {
+      "bytes": 176627,
+      "sha256": "30c85d0428d27248db58b1fe2aea83d88f7ae6569334196774dbb48f7ff781f8"
+    },
+    "source_manifests/adaptive_shard0_experiment_manifest.json": {
+      "bytes": 1170125,
+      "sha256": "238f54cb1e78c7fd75706968298069b1afa7f8a957a67bc3625642c2fb2e03b2"
+    },
+    "source_manifests/adaptive_shard1_experiment_manifest.json": {
+      "bytes": 1788503,
+      "sha256": "98d3b5744ad0e5d1fab88d035fbf86256f24410e8f62b030247bcca5748b261c"
+    }
+  },
+  "plot_count": 6,
+  "schema_version": 1
+}
