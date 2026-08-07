@@ -99,6 +99,7 @@ def _load_prefix(
 
 def _paired_grid(
     observations: Sequence[dict[str, Any]],
+    arm_order: Sequence[str] = ARM_ORDER,
 ) -> dict[tuple[str, int, int], dict[str, dict[str, Any]]]:
     grid: dict[tuple[str, int, int], dict[str, dict[str, Any]]] = {}
     for row in observations:
@@ -107,14 +108,16 @@ def _paired_grid(
         mechanism._require(row["arm_id"] not in target, "duplicate paired arm")
         target[row["arm_id"]] = row
     mechanism._require(
-        len(grid) == 20 and all(set(unit) == set(ARM_ORDER) for unit in grid.values()),
-        "validated prefix grid is incomplete",
+        len(grid) == 20
+        and all(set(unit) == set(arm_order) for unit in grid.values()),
+        "validated factual grid is incomplete",
     )
     return grid
 
 
 def _bootstrap(
-    grid: dict[tuple[str, int, int], dict[str, dict[str, Any]]]
+    grid: dict[tuple[str, int, int], dict[str, dict[str, Any]]],
+    arm_order: Sequence[str] = ARM_ORDER,
 ) -> dict[str, Any]:
     scenarios = sorted({key[0] for key in grid})
     units = {
@@ -124,7 +127,7 @@ def _bootstrap(
     rng = np.random.default_rng(BOOTSTRAP_SEED)
     draws = {
         arm: {"miss_rate": [], "censored_mean_us": [], "airtime_ratio": []}
-        for arm in ARM_ORDER[1:]
+        for arm in arm_order[1:]
     }
     for _ in range(BOOTSTRAP_REPLICATIONS):
         selected = [
@@ -133,7 +136,7 @@ def _bootstrap(
             for index in rng.integers(0, len(units[scenario]), len(units[scenario]))
         ]
         values: dict[str, dict[str, float]] = {}
-        for arm in ARM_ORDER:
+        for arm in arm_order:
             rows = [grid[key][arm] for key in selected]
             generated = sum(row["generated_frames"] for row in rows)
             values[arm] = {
@@ -144,8 +147,8 @@ def _bootstrap(
                 / generated,
                 "airtime_us": sum(row["sender_airtime_us"] for row in rows),
             }
-        baseline = values[ARM_ORDER[0]]
-        for arm in ARM_ORDER[1:]:
+        baseline = values[arm_order[0]]
+        for arm in arm_order[1:]:
             draws[arm]["miss_rate"].append(
                 values[arm]["miss_rate"] - baseline["miss_rate"]
             )
@@ -160,9 +163,9 @@ def _bootstrap(
         arm: mechanism._summarize(
             [row for unit in grid.values() for name, row in unit.items() if name == arm]
         )
-        for arm in ARM_ORDER
+        for arm in arm_order
     }
-    baseline = aggregate[ARM_ORDER[0]]
+    baseline = aggregate[arm_order[0]]
 
     def interval(values: Sequence[float], estimate: float) -> dict[str, float]:
         return {
@@ -172,7 +175,7 @@ def _bootstrap(
         }
 
     contrasts = {}
-    for arm in ARM_ORDER[1:]:
+    for arm in arm_order[1:]:
         candidate = aggregate[arm]
         contrasts[arm] = {
             "miss_rate_delta": interval(
@@ -203,16 +206,18 @@ def _render_plots(
     observations: Sequence[dict[str, Any]],
     grid: dict[tuple[str, int, int], dict[str, dict[str, Any]]],
     output: Path,
+    arm_order: Sequence[str] = ARM_ORDER,
+    title_prefix: str = "Valid pre-fix prefix",
 ) -> list[Path]:
     _, plt = mechanism._plot_modules()
     artifacts: list[Path] = []
     scenarios = list(mechanism.SCENARIO_LABELS)
-    labels = [mechanism.ARM_LABELS[arm] for arm in ARM_ORDER]
-    width = 0.19
+    labels = [mechanism.ARM_LABELS[arm] for arm in arm_order]
+    width = 0.76 / len(arm_order)
 
     figure, axis = plt.subplots(figsize=(11.5, 5.3))
     x = np.arange(len(scenarios))
-    for index, arm in enumerate(ARM_ORDER):
+    for index, arm in enumerate(arm_order):
         values = [
             100
             * mechanism._summarize(
@@ -225,7 +230,7 @@ def _render_plots(
             for scenario in scenarios
         ]
         axis.bar(
-            x + (index - 1.5) * width,
+            x + (index - (len(arm_order) - 1) / 2) * width,
             values,
             width,
             label=mechanism.ARM_LABELS[arm],
@@ -233,14 +238,14 @@ def _render_plots(
         )
     axis.set_xticks(x, [mechanism.SCENARIO_LABELS[item] for item in scenarios])
     axis.set_ylabel("All-generated deadline misses (%)")
-    axis.set_title("Valid pre-fix prefix: reliability by scenario")
+    axis.set_title(f"{title_prefix}: reliability by scenario")
     axis.legend(fontsize=8, ncol=2)
     axis.grid(axis="y", alpha=0.25)
     artifacts.extend(mechanism._finish(figure, output, "deadline_miss_by_scenario"))
     plt.close(figure)
 
     figure, axis = plt.subplots(figsize=(8.2, 5.3))
-    for arm in ARM_ORDER:
+    for arm in arm_order:
         values = [
             value / 1000
             for row in observations
@@ -259,7 +264,7 @@ def _render_plots(
     axis.set_ylim(0, 1.002)
     axis.set_xlabel("Deadline-censored frame latency (ms)")
     axis.set_ylabel("CDF over all generated frames")
-    axis.set_title("Valid pre-fix prefix: all-generated completion CDF")
+    axis.set_title(f"{title_prefix}: all-generated completion CDF")
     axis.legend(fontsize=8)
     axis.grid(alpha=0.25)
     artifacts.extend(mechanism._finish(figure, output, "censored_latency_cdf"))
@@ -267,7 +272,7 @@ def _render_plots(
 
     figure, axis = plt.subplots(figsize=(8.2, 5.3))
     bins = np.linspace(0, 33.333, 90)
-    for arm in ARM_ORDER:
+    for arm in arm_order:
         values = [
             min(value / 1000, bins[-1])
             for row in observations
@@ -285,7 +290,7 @@ def _render_plots(
         )
     axis.set_xlabel("Deadline-censored frame latency (ms)")
     axis.set_ylabel("Density")
-    axis.set_title("Valid pre-fix prefix: all-generated completion PDF")
+    axis.set_title(f"{title_prefix}: all-generated completion PDF")
     axis.legend(fontsize=8)
     axis.grid(alpha=0.2)
     artifacts.extend(mechanism._finish(figure, output, "censored_latency_pdf"))
@@ -297,26 +302,26 @@ def _render_plots(
             row["airtime_link_0_us"] for row in observations if row["arm_id"] == arm
         )
         / 1000
-        for arm in ARM_ORDER
+        for arm in arm_order
     ]
     link1 = [
         statistics.fmean(
             row["airtime_link_1_us"] for row in observations if row["arm_id"] == arm
         )
         / 1000
-        for arm in ARM_ORDER
+        for arm in arm_order
     ]
     axis.bar(labels, link1, label="5 GHz / link 1", color="#4c78a8")
     axis.bar(labels, link0, bottom=link1, label="2.4 GHz / link 0", color="#f2cf5b")
     axis.set_ylabel("Mean target-sender PHY TX airtime (ms/run)")
-    axis.set_title("Valid pre-fix prefix: measured sender airtime")
+    axis.set_title(f"{title_prefix}: measured sender airtime")
     axis.legend()
     axis.grid(axis="y", alpha=0.25)
     artifacts.extend(mechanism._finish(figure, output, "sender_airtime_by_link"))
     plt.close(figure)
 
     figure, axis = plt.subplots(figsize=(8.2, 5.2))
-    for arm in ARM_ORDER:
+    for arm in arm_order:
         values = [
             value
             for row in observations
@@ -333,7 +338,7 @@ def _render_plots(
         )
     axis.set_xlabel("Consecutive deadline misses (frames)")
     axis.set_ylabel("CDF over miss bursts")
-    axis.set_title("Valid pre-fix prefix: deadline-miss bursts")
+    axis.set_title(f"{title_prefix}: deadline-miss bursts")
     axis.legend(fontsize=8)
     axis.grid(alpha=0.25)
     artifacts.extend(mechanism._finish(figure, output, "deadline_miss_burst_cdf"))
@@ -343,27 +348,27 @@ def _render_plots(
     family_colors = dict(
         zip(scenarios, ("#4c78a8", "#f58518", "#54a24b", "#e45756", "#b279a2"))
     )
-    positions = {arm: index for index, arm in enumerate(ARM_ORDER[1:])}
+    positions = {arm: index for index, arm in enumerate(arm_order[1:])}
     for scenario in scenarios:
         for key, unit in sorted(grid.items()):
             if key[0] != scenario:
                 continue
-            for arm in ARM_ORDER[1:]:
+            for arm in arm_order[1:]:
                 axis.scatter(
                     positions[arm],
                     100
                     * (
                         unit[arm]["deadline_miss_rate"]
-                        - unit[ARM_ORDER[0]]["deadline_miss_rate"]
+                        - unit[arm_order[0]]["deadline_miss_rate"]
                     ),
                     color=family_colors[scenario],
                     s=35,
                     alpha=0.8,
                 )
     axis.axhline(0, color="black", linestyle="--", linewidth=1)
-    axis.set_xticks(range(len(ARM_ORDER) - 1), labels[1:])
+    axis.set_xticks(range(len(arm_order) - 1), labels[1:])
     axis.set_ylabel("Candidate - STR misses (percentage points per unit)")
-    axis.set_title("Valid pre-fix prefix: paired reliability effects")
+    axis.set_title(f"{title_prefix}: paired reliability effects")
     axis.grid(axis="y", alpha=0.25)
     artifacts.extend(mechanism._finish(figure, output, "paired_miss_delta"))
     plt.close(figure)
@@ -374,7 +379,7 @@ def _render_plots(
         (axes[1], "secondary_mac_queue_packets", "Secondary MAC queue at T2"),
         (axes[2], "primary_ack_deficit_packets", "Primary ACK deficit at T2"),
     ):
-        arms = ARM_ORDER[1:]
+        arms = arm_order[1:]
         values = [
             [
                 item
