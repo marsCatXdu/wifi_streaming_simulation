@@ -385,10 +385,12 @@ scenario/seed/run/arm identities as the archived fixed campaign, with only
 paired units, and all 144 unique adaptive configurations pass executable
 configuration-only validation.
 
-The next boundary is a clean implementation/campaign commit followed by a
-real three-arm canary.  If the canary passes strict validation, deploy one
-288-run shard to each documented VM.  Retrieve outputs before any repair or
-rerun, compare directly with
+The implementation and campaign contract are committed through `0f4169e`.
+The clean-commit canary completed all three 1,800-frame arms for
+radio-propagation p16 seed 21001, and strict validation promoted every run.
+Each resolved config reports adaptive Minstrel and exactly eight isolated
+manager streams.  The next boundary is to deploy one 288-run shard to each
+documented VM.  Retrieve outputs before any repair or rerun, compare directly with
 `key_experiment_results/17_environment_generalization_qualification_v1`,
 archive figures and a concise analysis, commit/push, and stop.  Do not begin a
 new predictor, action, dataset, or environment iteration afterward.
@@ -1041,6 +1043,10 @@ Do not repeat an entry unless relevant code changed after it ran.
   and one source-hash assertion are pre-existing frozen-source/local-artifact
   closure failures.  Do not weaken those frozen contracts or rewrite
   historical evidence for this campaign.
+- Committed the implementation as `ab05eaa` and the frozen campaign boundary
+  as `0f4169e`.  A real three-arm canary from the latter commit completed and
+  passed strict replay for all 5,400 generated frames; this opens the formal
+  two-VM launch gate.
 
 ### 2026-08-07 - Analyze the deadline-correct repair replay
 
