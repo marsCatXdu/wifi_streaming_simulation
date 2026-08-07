@@ -234,6 +234,27 @@ def recover_valid_attempts(
     return report
 
 
+def _recovery_report_name(output_root: Path) -> str | None:
+    """Retain an existing successful recovery reference across later resumes."""
+    path = output_root / "attempt_recovery.json"
+    if not path.exists():
+        return None
+    report = json.loads(path.read_text(encoding="utf-8"))
+    recovered = report.get("recovered")
+    if (
+        report.get("schema_version") != 1
+        or report.get("all_recovered_attempts_strictly_validated") is not True
+        or not isinstance(recovered, list)
+        or report.get("recovered_count") != len(recovered)
+        or any(
+            not isinstance(row, dict) or row.get("state") != "promoted"
+            for row in recovered
+        )
+    ):
+        raise ValueError("existing attempt recovery report is not closed")
+    return path.name
+
+
 def _contract_path(declaration: dict[str, Any], key: str) -> Path:
     value = declaration.get(key)
     if not isinstance(value, str) or not value:
@@ -657,7 +678,7 @@ def main() -> None:
             "simulation_project_commit": commit,
             "orchestration_project_commit": runner_commit,
             "expected_executable": executable,
-            "recovery_report": "attempt_recovery.json" if recovery else None,
+            "recovery_report": _recovery_report_name(output_root),
         }
     specs_by_id = {spec["run_id"]: spec for spec in all_specs}
     for item in manifest["runs"]:

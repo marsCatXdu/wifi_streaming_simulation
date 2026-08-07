@@ -164,6 +164,29 @@ class T2RepairMechanismRunnerTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "binary hash drift"):
                     runner._verify_streaming_executable("0" * 64)
 
+    def test_resume_retains_only_closed_recovery_report(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.assertIsNone(runner._recovery_report_name(root))
+            report = {
+                "schema_version": 1,
+                "recovered_count": 1,
+                "all_recovered_attempts_strictly_validated": True,
+                "recovered": [{"run_id": "a" * 20, "state": "promoted"}],
+            }
+            (root / "attempt_recovery.json").write_text(
+                json.dumps(report), encoding="utf-8"
+            )
+            self.assertEqual(
+                runner._recovery_report_name(root), "attempt_recovery.json"
+            )
+            report["recovered"][0]["state"] = "validated_attempt"
+            (root / "attempt_recovery.json").write_text(
+                json.dumps(report), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "report is not closed"):
+                runner._recovery_report_name(root)
+
 
 if __name__ == "__main__":
     unittest.main()
