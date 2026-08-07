@@ -1093,6 +1093,66 @@ def _write_json(path: Path, value: Any) -> None:
     )
 
 
+def paired_delta_rows(
+    rows: Sequence[dict[str, Any]],
+    families: Sequence[str],
+    scenarios: dict[str, Sequence[str]],
+) -> list[dict[str, Any]]:
+    """Preserve exact run identities for each adaptive-minus-fixed delta."""
+
+    indexed: dict[
+        tuple[str, str, int, int, str], dict[str, dict[str, Any]]
+    ] = {}
+    for row in rows:
+        key = (
+            row["family_id"], row["scenario_id"], row["seed"], row["run"],
+            row["arm_id"],
+        )
+        pair = indexed.setdefault(key, {})
+        _require(row["mode"] not in pair, "duplicate paired-delta row")
+        pair[row["mode"]] = row
+    _require(
+        len(indexed) == 576
+        and all(set(pair) == set(MODES) for pair in indexed.values()),
+        "paired-delta closure differs",
+    )
+    family_order = {family: index for index, family in enumerate(families)}
+    scenario_order = {
+        scenario: index
+        for family in families
+        for index, scenario in enumerate(scenarios[family])
+    }
+    arm_order = {arm: index for index, arm in enumerate(ARMS)}
+    result = []
+    for key in sorted(indexed, key=lambda value: (
+        family_order[value[0]], scenario_order[value[1]], value[2], value[3],
+        arm_order[value[4]],
+    )):
+        fixed = indexed[key]["fixed"]
+        adaptive = indexed[key]["adaptive"]
+        result.append({
+            "family_id": key[0],
+            "scenario_id": key[1],
+            "seed": key[2],
+            "run": key[3],
+            "arm_id": key[4],
+            "fixed_run_id": fixed["run_id"],
+            "adaptive_run_id": adaptive["run_id"],
+            "deadline_miss_delta": (
+                adaptive["all_generated_deadline_miss_rate"]
+                - fixed["all_generated_deadline_miss_rate"]
+            ),
+            "sender_airtime_ratio": (
+                adaptive["sender_airtime_us"] / fixed["sender_airtime_us"]
+            ),
+            "censored_mean_delta_us": (
+                adaptive["all_generated_censored_mean_us"]
+                - fixed["all_generated_censored_mean_us"]
+            ),
+        })
+    return result
+
+
 def _markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Fixed versus adaptive target-MCS qualification",
@@ -1159,6 +1219,8 @@ def _markdown(report: dict[str, Any]) -> str:
         "rules, and conservative EhtMcs5-derived reservations were intentionally "
         "not retrained or retuned. Differences therefore include closed-loop "
         "interaction between rate adaptation and the frozen policies.",
+        "The aggregate estimates and intervals weight families, scenarios, and "
+        "replicates equally. CDF/PDF figures pool frames and are descriptive.",
         "",
     ])
     return "\n".join(lines)
@@ -1313,36 +1375,7 @@ def analyze(
             for metric, interval in values.items()
         ]
         _write_csv(analysis_dir / "comparison_intervals.csv", comparison_table)
-        paired_rows = []
-        for family in families:
-            for scenario in scenarios[family]:
-                for unit in grid[family][scenario]:
-                    for arm in ARMS:
-                        paired_rows.append({
-                            "family_id": family,
-                            "scenario_id": scenario,
-                            "arm_id": arm,
-                            "deadline_miss_delta": (
-                                unit["adaptive"][arm][
-                                    "all_generated_deadline_miss_rate"
-                                ]
-                                - unit["fixed"][arm][
-                                    "all_generated_deadline_miss_rate"
-                                ]
-                            ),
-                            "sender_airtime_ratio": (
-                                unit["adaptive"][arm]["sender_airtime_us"]
-                                / unit["fixed"][arm]["sender_airtime_us"]
-                            ),
-                            "censored_mean_delta_us": (
-                                unit["adaptive"][arm][
-                                    "all_generated_censored_mean_us"
-                                ]
-                                - unit["fixed"][arm][
-                                    "all_generated_censored_mean_us"
-                                ]
-                            ),
-                        })
+        paired_rows = paired_delta_rows(rows, families, scenarios)
         _write_csv(analysis_dir / "paired_mcs_deltas.csv", paired_rows)
         plot_paths = render_plots(report, history, plots_dir)
         _write_json(

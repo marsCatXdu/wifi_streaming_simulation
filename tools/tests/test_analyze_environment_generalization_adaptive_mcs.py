@@ -24,6 +24,7 @@ from analyze_environment_generalization_adaptive_mcs_v1 import (  # noqa: E402
     _validate_adaptive_mcs_resolved,
     bootstrap,
     build_grid,
+    paired_delta_rows,
 )
 
 
@@ -146,6 +147,16 @@ class AdaptiveMcsAnalysisTest(unittest.TestCase):
         ]["deadline_miss_delta"]
         self.assertAlmostEqual(delta["estimate"], -0.01)
         self.assertLess(delta["ci95_high"], 0)
+        for index, row in enumerate(rows):
+            row["run_id"] = f"run-{index}"
+        paired = paired_delta_rows(rows, families, scenarios)
+        self.assertEqual(len(paired), 576)
+        self.assertEqual(len({row["fixed_run_id"] for row in paired}), 576)
+        self.assertEqual(len({row["adaptive_run_id"] for row in paired}), 576)
+        self.assertTrue(all(
+            abs(row["deadline_miss_delta"] + 0.01) < 1e-12
+            for row in paired
+        ))
 
 
 if __name__ == "__main__":
