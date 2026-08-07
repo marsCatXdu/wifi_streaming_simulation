@@ -301,19 +301,51 @@ to this held-out population, so no policy is promoted.
   lose decisively to STR on all-generated misses; completed-frame P99 is
   `not_assessable` because 28 valid runs have fewer than 100 completions.
   This pipeline is complete and paused before a new scientific iteration.
+- [ ] Complete the frozen packet-repair mechanism gate before training another
+  predictor.  Compare identical-seed STR, primary-only, full copy at T0 and
+  T2, privileged eventual-missing packet repair at T2, and 12.5% ideal
+  systematic repair across legacy p17, compound p19, OBSS-intensity p17/p19,
+  and radio p17.  Use all-generated deadline misses and deadline-censored
+  latency as the stable outcomes; completed-frame P99 is descriptive only.
+  Runtime primitives, strict telemetry validation, the pre-result contract,
+  and the two-stage sharded runner are complete through `791bb2d`.  The 120-run
+  matrix is active as two 60-run shards on the two experiment VMs.  Fetch,
+  checksum, validate, merge, plot, analyze, and archive the result, then stop
+  before redesigning the action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The requested six-step qualification pipeline is complete.  All 576 frozen
-runs were recovered without seed substitution, strictly validated, analyzed,
-plotted, fetched, checksum-closed, archived, documented, committed, and
-pushed.  Scientific work is now **PAUSED FOR USER REVIEW**.  Do not launch a
-new candidate, generate a larger dataset, consume reserved confirmation
-seeds, or begin another iteration until the user reviews this result and the
-next direction is discussed.
+The user reviewed the failed held-out qualification and authorized one small
+action-mechanism gate before any further predictor work.  The current boundary
+is the frozen six-arm `t2_repair_mechanism_v1` campaign at `791bb2d`, not a
+larger model or dataset.  It uses 20 opened qualification scenario/seed units,
+keeps all six arms for a unit on one host, and does not touch seeds `1301`
+through `1348`.
+
+Shard 0 runs as
+`wifi-t2-repair-mechanism-shard0-791bb2d.service` on
+`10.120.16.105:30022`.  Shard 1 runs as
+`wifi-t2-repair-mechanism-shard1-791bb2d-retry1.service` on
+`10.120.17.30:30022`.  The clone's first service was stopped by logind ten
+seconds after SSH logout because `Linger=no`; it produced zero validated runs
+and 50 incomplete attempt directories.  Those attempts were inspected before
+retry, per the recovery rule.  Enabling linger as the same unprivileged user
+fixed the launch-lifetime defect, and the runner resumed the same manifest
+root.  Both VMs have clean commit `791bb2d`, identical executable SHA-256
+`ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`,
+and a passing focused controller test.
+
+The decisive question is whether the privileged eventual-missing packet
+repair arm has fewer all-generated misses than STR at a paired measured total
+sender-airtime ratio no greater than one.  If it cannot form that lower-left
+point, prediction cannot rescue this action architecture.  If it can, the
+next iteration should redesign partial or coded repair first and train a
+causal selector only afterward.  Stop after the current campaign is merged,
+plotted, analyzed, and archived; do not start that conditional next iteration
+without discussion.
 
 The authoritative result is
 `key_experiment_results/17_environment_generalization_qualification_v1`.
@@ -833,6 +865,30 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Launch the packet-repair mechanism gate
+
+- Froze five representative opened scenarios and four seeds per scenario in
+  `t2-repair-mechanism-v1.json`.  The six identical-seed arms are STR,
+  primary-only 5 GHz, full copy at T0, full copy at T2, privileged T2 repair
+  of only the primary packets absent at the deadline, and `ceil(k/8)` ideal
+  systematic repair symbols at T2.
+- Added source-packet and coded-symbol actions, exact per-frame packet outcomes,
+  paired T2 queue/ACK telemetry, measured-airtime settlement, and strict
+  validation through `504fe44`.  All five executable action/observation paths
+  pass fresh end-to-end short runs; both C++ module suites pass locally.
+- Added the hash-closed two-stage sharded runner in `791bb2d`.  Phase 2 cannot
+  start until each paired primary-only sidecar validates.  Its closure check
+  requires the oracle run's primary packet outcome to be byte-identical to the
+  baseline and its repair plan to equal the baseline eventual-missing set.
+- Pushed through `791bb2d`, transferred and verified a 2.5 MB Git bundle to
+  both VMs without changing their archival local remotes, built identical
+  executables, and passed the focused controller test on both.
+- Launched 10 complete paired units per VM.  The clone's first service stopped
+  after logout because user lingering was disabled; it had zero promoted runs.
+  Enabled linger without sudo and resumed the unchanged shard root.  The
+  original shard and cloned retry service are both active.  Preserve and fetch
+  validated evidence before diagnosing any subsequent failure.
 
 ### 2026-08-07 - Clone and validate a second experiment VM
 
