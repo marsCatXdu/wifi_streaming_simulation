@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "contract_id": "environment-generalization-adaptive-mcs-deterministic-failure-v1",
+  "status": "post_execution_exception_frozen_before_final_analysis",
+  "parent_runtime_contract": {
+    "path": "experiments/model-selection/environment-generalization-adaptive-mcs-qualification-v1.json",
+    "sha256": "aaedf15300b40d221e526ee5c4f27a205510f49b793caa203aa5f7fe16f6dff7"
+  },
+  "simulation_project_commit": "3ec03196d3ad1207b888433b134096fde1aa9670",
+  "executable_sha256": "7e49b6eeb352a474e8d21b856ad2d90ade35e22a3be1f723058b31f3532af291",
+  "final_shard_manifests": [
+    {
+      "shard_index": 0,
+      "promoted_run_count": 288,
+      "sha256": "788a8af494faa37224fcf845cb82ec9357cf20f22e51c49bff74e2e679378f57"
+    },
+    {
+      "shard_index": 1,
+      "promoted_run_count": 287,
+      "sha256": "52c430a0bb3e5ba02c4e1025769b566e7894caad4792271dca880e0866fb89b7"
+    }
+  ],
+  "deterministic_failure": {
+    "run_id": "5663378425ecf42d9a21",
+    "shard_index": 1,
+    "family_id": "compound_shift",
+    "scenario_id": "compound-shift-qualification-p22",
+    "parameter_sample": 22,
+    "seed": 21188,
+    "run": 1,
+    "arm_id": "str_mlo_nmaxinflights_1",
+    "topology": "mlo_str",
+    "policy": "fixed_link_0",
+    "assertion_simulation_time_s": 29.947258708,
+    "assertion": "apInfo.m_linkId < m_scanParams.channelList.size()",
+    "source_location": "src/wifi/model/wifi-assoc-manager.cc:161",
+    "attempt_count": 2,
+    "byte_identical_partial_artifacts": {
+      "frames.csv": "b93e336d3e8a30ff5f8c4046739da9a0342a8c105669cb6c8480c061a8b7c952",
+      "policy_decisions.csv": "5a4df56688272d32f16f1b2bb7bd0d2be29aa2e42781b4a54adc158d1f9ef839",
+      "resolved_config.json": "142e0338424614680e60c9bac2f1bc15b75e78364ed483de734c25956e0e4c91"
+    },
+    "first_attempt_stdout_sha256": "2947919dba5005d2bcb9d6ba65964ac8d77abd807052737488539d4576d749c4",
+    "second_attempt_stdout_sha256": "08dd2e4ecb2a611ee0db2905eb2ed7f4dfd672358409f965bdec277962465520"
+  },
+  "analysis_resolution": {
+    "strictly_validate_all_promoted_adaptive_runs": 575,
+    "exclude_incomplete_three_arm_unit_from_both_mcs_modes": true,
+    "matched_paired_unit_count": 191,
+    "analyzed_run_count_per_mcs_mode": 573,
+    "replacement_seed_allowed": false,
+    "patched_binary_allowed": false,
+    "further_retry_allowed": false
+  },
+  "evidence_archive": "key_experiment_results/19_environment_generalization_adaptive_mcs_v1/partial_pre_recovery/FAILURE_DIAGNOSTIC.md"
+}

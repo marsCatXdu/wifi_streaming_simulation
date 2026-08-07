@@ -157,6 +157,23 @@ class AdaptiveMcsAnalysisTest(unittest.TestCase):
             abs(row["deadline_miss_delta"] + 0.01) < 1e-12
             for row in paired
         ))
+        reduced = [
+            row
+            for row in rows
+            if not (
+                row["family_id"] == families[0]
+                and row["scenario_id"] == scenarios[families[0]][0]
+                and row["seed"] == 1000
+            )
+        ]
+        reduced_grid = build_grid(
+            reduced, families, scenarios, expected_unit_count=191
+        )
+        self.assertEqual(len(reduced_grid[families[0]][scenarios[families[0]][0]]), 3)
+        reduced_paired = paired_delta_rows(
+            reduced, families, scenarios, expected_pair_count=573
+        )
+        self.assertEqual(len(reduced_paired), 573)
 
 
 if __name__ == "__main__":

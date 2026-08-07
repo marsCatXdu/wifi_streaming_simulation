@@ -32,6 +32,10 @@ CONFIG_PATH = ROOT / (
 CONTRACT_PATH = ROOT / (
     "experiments/model-selection/environment-generalization-adaptive-mcs-qualification-v1.json"
 )
+DETERMINISTIC_FAILURE_CONTRACT_PATH = ROOT / (
+    "experiments/model-selection/"
+    "environment-generalization-adaptive-mcs-deterministic-failure-v1.json"
+)
 FIXED_RESULT = ROOT / "key_experiment_results/17_environment_generalization_qualification_v1"
 FIXED_ANALYSIS = FIXED_RESULT / "analysis"
 FIXED_RAW_ROOT = ROOT / (
@@ -176,10 +180,21 @@ def _validate_adaptive_mcs_resolved(config: dict[str, Any], label: str) -> None:
 
 def validate_adaptive_shards(
     shard_roots: Sequence[Path],
+    missing_run_id: str | None = None,
+    missing_shard_index: int | None = None,
 ) -> tuple[list[dict[str, Any]], tuple[str, ...], dict[str, tuple[str, ...]], list[dict[str, Any]]]:
-    """Validate two exact 288-run manifests and construct strict replay jobs."""
+    """Validate exact shard manifests and construct strict replay jobs."""
 
     _require(len(shard_roots) == 2, "exactly two adaptive shard roots are required")
+    _require(
+        (missing_run_id is None and missing_shard_index is None)
+        or (
+            isinstance(missing_run_id, str)
+            and len(missing_run_id) == 20
+            and missing_shard_index in {0, 1}
+        ),
+        "deterministic-failure shard identity is incomplete",
+    )
     document = run_experiments.load_yaml(CONFIG_PATH)
     runtime = run_experiments.validate_runtime_contract(document)
     _require(runtime is not None, "adaptive runtime contract is absent")
@@ -217,6 +232,7 @@ def validate_adaptive_shards(
             "full_matrix_run_count": 576,
             "selected_run_count": 288,
         }
+        expected_complete_count = 288 - int(index == missing_shard_index)
         _require(
             manifest.get("schema_version") == 2
             and manifest.get("experiment")
@@ -233,7 +249,7 @@ def validate_adaptive_shards(
             f"adaptive shard {index} identity differs",
         )
         rows = manifest.get("runs")
-        _require(isinstance(rows, list) and len(rows) == 288,
+        _require(isinstance(rows, list) and len(rows) == expected_complete_count,
                  f"adaptive shard {index} is incomplete")
         for row in rows:
             run_id = row.get("run_id") if isinstance(row, dict) else None
@@ -267,10 +283,16 @@ def validate_adaptive_shards(
             "complete_run_count": len(rows),
             "shard": copy.deepcopy(required_shard),
         })
-    _require(set(observed) == set(expected), "adaptive shard union is not exact")
+    expected_observed = set(expected)
+    if missing_run_id is not None:
+        _require(missing_run_id in expected, "missing run is outside frozen matrix")
+        expected_observed.remove(missing_run_id)
+    _require(set(observed) == expected_observed, "adaptive shard union is not exact")
 
     jobs: list[dict[str, Any]] = []
     for run_id, spec in expected.items():
+        if run_id not in observed:
+            continue
         scenario = spec["scenario"]
         jobs.append({
             "run_id": run_id,
@@ -379,7 +401,9 @@ def load_fixed_rows() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     }
 
 
-def adaptive_rows(observations: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+def adaptive_rows(
+    observations: Sequence[dict[str, Any]], expected_count: int = 576
+) -> list[dict[str, Any]]:
     """Normalize strict adaptive observations into the comparison table."""
 
     rows = []
@@ -399,7 +423,7 @@ def adaptive_rows(observations: Sequence[dict[str, Any]]) -> list[dict[str, Any]
                 )
             },
         })
-    _require(len(rows) == 576, "adaptive strict observation count differs")
+    _require(len(rows) == expected_count, "adaptive strict observation count differs")
     return rows
 
 
@@ -521,6 +545,7 @@ def build_grid(
     rows: Sequence[dict[str, Any]],
     families: Sequence[str],
     scenarios: dict[str, Sequence[str]],
+    expected_unit_count: int = 192,
 ) -> dict[str, dict[str, list[dict[str, dict[str, dict[str, float]]]]]]:
     """Build exact mode/arm observations for every paired unit."""
 
@@ -543,14 +568,15 @@ def build_grid(
                 for key, value in indexed.items()
                 if key[0] == family and key[1] == scenario
             ]
-            _require(len(members) == 4, f"paired replicates differ for {scenario}")
+            _require(0 < len(members) <= 4,
+                     f"paired replicates differ for {scenario}")
             for unit in members:
                 _require(
                     all(set(unit[mode]) == set(ARMS) for mode in MODES),
                     f"mode/arm closure differs for {scenario}",
                 )
             grid[family][scenario] = members
-    _require(len(indexed) == 192, "paired unit count differs")
+    _require(len(indexed) == expected_unit_count, "paired unit count differs")
     return grid
 
 
@@ -787,7 +813,9 @@ def _p99_support(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
                     for row in rows
                     if row["mode"] == mode and row["arm_id"] == arm
                 ),
-                "total_run_count": 192,
+                "total_run_count": sum(
+                    row["mode"] == mode and row["arm_id"] == arm for row in rows
+                ),
             }
             for arm in ARMS
         }
@@ -859,7 +887,10 @@ def render_plots(
         axis.set_ylabel(label)
         axis.grid(axis="y", alpha=0.25)
     axes[0, 0].legend()
-    figure.suptitle("Held-out 576-run MCS ablation")
+    figure.suptitle(
+        "Held-out MCS ablation: "
+        f"{report['population']['paired_unit_count']} matched units"
+    )
     artifacts.extend(_finish(figure, directory, "aggregate_fixed_vs_adaptive"))
 
     families = list(report["family_points"])
@@ -1097,6 +1128,7 @@ def paired_delta_rows(
     rows: Sequence[dict[str, Any]],
     families: Sequence[str],
     scenarios: dict[str, Sequence[str]],
+    expected_pair_count: int = 576,
 ) -> list[dict[str, Any]]:
     """Preserve exact run identities for each adaptive-minus-fixed delta."""
 
@@ -1112,7 +1144,7 @@ def paired_delta_rows(
         _require(row["mode"] not in pair, "duplicate paired-delta row")
         pair[row["mode"]] = row
     _require(
-        len(indexed) == 576
+        len(indexed) == expected_pair_count
         and all(set(pair) == set(MODES) for pair in indexed.values()),
         "paired-delta closure differs",
     )
@@ -1154,12 +1186,16 @@ def paired_delta_rows(
 
 
 def _markdown(report: dict[str, Any]) -> str:
+    population = report["population"]
     lines = [
         "# Fixed versus adaptive target-MCS qualification",
         "",
-        "All 576 adaptive runs and the archived 576 fixed runs are included. "
-        "Deadline misses and deadline-censored latency use every generated frame; "
-        "completion CDF/PDF and run-level P99 remain survivor-conditioned.",
+        f"All {population['adaptive_promoted_run_count']} promoted adaptive runs "
+        "passed fresh strict validation.  The comparison uses "
+        f"{population['paired_unit_count']} complete matched three-arm units per "
+        "MCS mode. Deadline misses and deadline-censored latency use every "
+        "generated frame; completion CDF/PDF and run-level P99 remain "
+        "survivor-conditioned.",
         "",
         "## Aggregate results",
         "",
@@ -1176,7 +1212,7 @@ def _markdown(report: dict[str, Any]) -> str:
                 f"{values['all_generated_censored_mean_us']['estimate'] / 1000:.3f} ms | "
                 f"{values['sender_airtime_us']['estimate'] / 1000:.3f} ms | "
                 f"{values['background_throughput_mbps']['estimate']:.3f} Mbit/s | "
-                f"{support['supported_run_count']}/192 |"
+                f"{support['supported_run_count']}/{support['total_run_count']} |"
             )
     lines.extend(["", "## Adaptive minus fixed MCS", ""])
     for arm in ARMS:
@@ -1226,14 +1262,69 @@ def _markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _load_deterministic_failure_contract(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    resolved = path.resolve()
+    _require(
+        resolved == DETERMINISTIC_FAILURE_CONTRACT_PATH.resolve(),
+        "unknown deterministic-failure contract",
+    )
+    contract = _read_json(resolved)
+    failure = contract.get("deterministic_failure")
+    resolution = contract.get("analysis_resolution")
+    parent = contract.get("parent_runtime_contract")
+    _require(
+        contract.get("schema_version") == 1
+        and contract.get("contract_id")
+        == "environment-generalization-adaptive-mcs-deterministic-failure-v1"
+        and contract.get("status")
+        == "post_execution_exception_frozen_before_final_analysis"
+        and isinstance(parent, dict)
+        and parent.get("path") == str(CONTRACT_PATH.relative_to(ROOT))
+        and parent.get("sha256") == _sha256(CONTRACT_PATH)
+        and contract.get("simulation_project_commit") == SIMULATION_COMMIT
+        and isinstance(failure, dict)
+        and failure.get("run_id") == "5663378425ecf42d9a21"
+        and failure.get("shard_index") == 1
+        and failure.get("family_id") == "compound_shift"
+        and failure.get("scenario_id") == "compound-shift-qualification-p22"
+        and failure.get("seed") == 21188
+        and failure.get("run") == 1
+        and failure.get("arm_id") == "str_mlo_nmaxinflights_1"
+        and failure.get("attempt_count") == 2
+        and isinstance(resolution, dict)
+        and resolution.get("strictly_validate_all_promoted_adaptive_runs") == 575
+        and resolution.get("matched_paired_unit_count") == 191
+        and resolution.get("analyzed_run_count_per_mcs_mode") == 573
+        and resolution.get("replacement_seed_allowed") is False
+        and resolution.get("patched_binary_allowed") is False
+        and resolution.get("further_retry_allowed") is False,
+        "deterministic-failure contract differs",
+    )
+    return contract
+
+
+def _unit_key(row: dict[str, Any]) -> tuple[str, str, int, int]:
+    return (
+        row["family_id"], row["scenario_id"], int(row["seed"]), int(row["run"])
+    )
+
+
 def analyze(
-    shard_roots: Sequence[Path], output: Path, workers: int
+    shard_roots: Sequence[Path],
+    output: Path,
+    workers: int,
+    deterministic_failure_contract: Path | None = None,
 ) -> Path:
     """Strictly validate adaptive evidence, compare, plot, and archive atomically."""
 
     _require(workers > 0, "workers must be positive")
     _require(not output.exists(), f"output already exists: {output}")
     git_identity = _git_identity()
+    failure_contract = _load_deterministic_failure_contract(
+        deterministic_failure_contract
+    )
     contract = _read_json(CONTRACT_PATH)
     _require(
         contract.get("runtime_contract_id")
@@ -1241,16 +1332,58 @@ def analyze(
         and contract.get("analysis", {}).get("stop_after_archive") is True,
         "adaptive analysis contract differs",
     )
-    jobs, families, scenarios, shard_identities = validate_adaptive_shards(shard_roots)
+    failure = (
+        failure_contract["deterministic_failure"]
+        if failure_contract is not None
+        else None
+    )
+    jobs, families, scenarios, shard_identities = validate_adaptive_shards(
+        shard_roots,
+        None if failure is None else failure["run_id"],
+        None if failure is None else failure["shard_index"],
+    )
+    if failure_contract is not None:
+        expected_manifests = {
+            row["shard_index"]: row
+            for row in failure_contract["final_shard_manifests"]
+        }
+        _require(
+            len(expected_manifests) == 2
+            and all(
+                identity["sha256"] == expected_manifests[identity["index"]]["sha256"]
+                and identity["complete_run_count"]
+                == expected_manifests[identity["index"]]["promoted_run_count"]
+                for identity in shard_identities
+            ),
+            "final shard manifests differ from failure contract",
+        )
     observations = complete.collect_observations(jobs, workers)
     fixed_rows, fixed_identity = load_fixed_rows()
-    rows = fixed_rows + adaptive_rows(observations)
+    expected_adaptive_count = 575 if failure_contract is not None else 576
+    adaptive = adaptive_rows(observations, expected_adaptive_count)
+    if failure is not None:
+        excluded_unit = (
+            failure["family_id"], failure["scenario_id"], failure["seed"],
+            failure["run"],
+        )
+        adaptive = [row for row in adaptive if _unit_key(row) != excluded_unit]
+        fixed = [row for row in fixed_rows if _unit_key(row) != excluded_unit]
+    else:
+        excluded_unit = None
+        fixed = fixed_rows
+    paired_unit_count = 191 if failure_contract is not None else 192
+    analyzed_run_count = paired_unit_count * len(ARMS)
+    _require(
+        len(adaptive) == len(fixed) == analyzed_run_count,
+        "matched analysis population differs",
+    )
+    rows = fixed + adaptive
     history_means, history = collect_history(rows, workers)
     for row in rows:
         row["all_generated_censored_mean_us"] = history_means[
             (row["mode"], row["run_id"])
         ]
-    grid = build_grid(rows, families, scenarios)
+    grid = build_grid(rows, families, scenarios, paired_unit_count)
     result = bootstrap(grid, families, scenarios)
     p99_support = _p99_support(rows)
     report = {
@@ -1269,6 +1402,16 @@ def analyze(
                 "path": str(CONTRACT_PATH.relative_to(ROOT)),
                 "sha256": _sha256(CONTRACT_PATH),
             },
+            "deterministic_failure_contract": (
+                None
+                if failure_contract is None
+                else {
+                    "path": str(
+                        DETERMINISTIC_FAILURE_CONTRACT_PATH.relative_to(ROOT)
+                    ),
+                    "sha256": _sha256(DETERMINISTIC_FAILURE_CONTRACT_PATH),
+                }
+            ),
             "strict_validator": {
                 "path": "tools/validate_outputs.py",
                 "sha256": _sha256(ROOT / "tools/validate_outputs.py"),
@@ -1276,14 +1419,27 @@ def analyze(
         },
         "population": {
             "modes": list(MODES),
-            "run_count_per_mode": 576,
-            "paired_unit_count": 192,
+            "adaptive_promoted_run_count": len(observations),
+            "archived_fixed_run_count": len(fixed_rows),
+            "analyzed_run_count_per_mode": analyzed_run_count,
+            "paired_unit_count": paired_unit_count,
             "arm_count": 3,
             "family_count": 6,
             "scenario_count": 48,
+            "excluded_unit": (
+                None
+                if failure is None
+                else {
+                    key: failure[key]
+                    for key in (
+                        "family_id", "scenario_id", "parameter_sample", "seed",
+                        "run", "run_id", "arm_id",
+                    )
+                }
+            ),
         },
         "strict_validation": {
-            "adaptive": "pass: 576 freshly validated runs",
+            "adaptive": f"pass: {len(observations)} freshly validated runs",
             "fixed": "checksum-bound archived strict validation: 576 runs",
         },
         "bootstrap": {
@@ -1301,7 +1457,11 @@ def analyze(
             "Completion CDF/PDF and completed-frame P99 are survivor-conditioned.",
             "Predictors, actions, admission policies, and canonical reservations are unchanged.",
             "The fixed campaign is reused from its checksum-closed archived strict analysis.",
+            "One deterministic native ns-3 failure is excluded as a complete three-arm unit."
+            if failure is not None
+            else "The adaptive campaign is complete.",
         ],
+        "execution_exception": failure_contract,
     }
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1375,7 +1535,9 @@ def analyze(
             for metric, interval in values.items()
         ]
         _write_csv(analysis_dir / "comparison_intervals.csv", comparison_table)
-        paired_rows = paired_delta_rows(rows, families, scenarios)
+        paired_rows = paired_delta_rows(
+            rows, families, scenarios, analyzed_run_count
+        )
         _write_csv(analysis_dir / "paired_mcs_deltas.csv", paired_rows)
         plot_paths = render_plots(report, history, plots_dir)
         _write_json(
@@ -1407,7 +1569,8 @@ def analyze(
                 "counts": {
                     "adaptive_strictly_validated_runs": len(observations),
                     "fixed_archived_runs": len(fixed_rows),
-                    "paired_units": 192,
+                    "analyzed_runs_per_mode": analyzed_run_count,
+                    "paired_units": paired_unit_count,
                     "figures": len(EXPECTED_PLOTS),
                     "figure_formats": 2,
                 },
@@ -1426,6 +1589,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--adaptive-shard-root", type=Path, action="append", required=True)
     parser.add_argument("--output-directory", type=Path, required=True)
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--deterministic-failure-contract", type=Path)
     args = parser.parse_args(argv)
     if len(args.adaptive_shard_root) != 2:
         parser.error("--adaptive-shard-root must be supplied exactly twice")
@@ -1434,6 +1598,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             [path.resolve() for path in args.adaptive_shard_root],
             args.output_directory.resolve(),
             args.workers,
+            args.deterministic_failure_contract,
         )
     except (
         AdaptiveMcsAnalysisError,
