@@ -155,6 +155,7 @@ P99.
 | Freeze deadline-correct oracle V2 | `fcb8474` | Finalization-independent repair plans, unchanged binary, and strict paired replay gates |
 | Analyze deadline-correct repair | `0196788` | Mixed-source 120-run closure, paired uncertainty, resource gates, and eleven figures |
 | Bound repair subset resources | `65b2dbb` | Explicit post-result optimistic sensitivity without treating it as policy evidence |
+| Archive corrected mechanism gate | `fef14a6` | Checksum-bound replay, subset ceiling, durable conclusions, and stop boundary |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
