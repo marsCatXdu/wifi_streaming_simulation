@@ -394,7 +394,12 @@ SHA-256 `7e49b6eeb352a474e8d21b856ad2d90ade35e22a3be1f723058b31f3532af291`.
 Persistent services `wifi-adaptive-mcs-shard0-3ec0319.service` and
 `wifi-adaptive-mcs-shard1-3ec0319.service` started with 64 workers and 288
 runs each; both manifests have the exact shard identity and both hosts began
-64 simulator processes.  Retrieve outputs before any repair or rerun, compare directly with
+64 simulator processes.  The pre-result comparison analyzer and its focused
+tests are frozen and pushed at `3fd6b05`; it requires the exact two-shard
+576-run closure, freshly strict-validates every adaptive run, binds the
+checksum-closed fixed evidence, and produces ten PNG/PDF figure pairs using
+all-generated reliability plus explicitly survivor-conditioned completion
+statistics.  Retrieve outputs before any repair or rerun, compare directly with
 `key_experiment_results/17_environment_generalization_qualification_v1`,
 archive figures and a concise analysis, commit/push, and stop.  Do not begin a
 new predictor, action, dataset, or environment iteration afterward.
@@ -1055,6 +1060,11 @@ Do not repeat an entry unless relevant code changed after it ran.
   executables and 144/144 configurations remotely, then launched the two
   persistent 288-run services.  Initial service, manifest, and 64-process
   checks passed on both hosts.
+- Froze the outcome-blind comparison and plotting pipeline at `3fd6b05` while
+  the formal campaign was still in its first wave.  Eighteen focused analyzer,
+  plotter, campaign, and MCS tests pass, as does a synthetic render of all 20
+  planned PNG/PDF artifacts.  The archive will also retain exact copies of
+  both adaptive source manifests.
 
 ### 2026-08-07 - Analyze the deadline-correct repair replay
 
