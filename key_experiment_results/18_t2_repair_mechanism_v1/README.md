@@ -1,10 +1,48 @@
 # T2 packet-repair mechanism experiment
 
-This directory preserves the valid evidence from the frozen six-arm mechanism
-campaign.  All 120 simulations finished and were retrieved.  The protected
+This directory preserves the valid evidence from the frozen mechanism gate.
+All original 120 simulations finished and were retrieved.  The protected
 factual archive contains the 100 individually strict-valid non-oracle runs;
-the 20 oracle runs are excluded because their same-seed primary outcomes did
-not pass the predeclared pair-closure audit.
+the 20 original oracle runs remain excluded because their deadline semantics
+did not pass the predeclared pair-closure audit.  A separate corrected replay
+reran only those 20 privileged repair arms with finalization-independent
+deadline plans.
+
+## Corrected deadline-repair result
+
+`deadline_oracle_v2/` combines the immutable 100-run factual panel with the
+20 corrected repair runs.  It strictly validates all 120 included runs,
+excludes every rejected V1 oracle output, hashes 2,540 raw source files, and
+contains 11 visually reviewed PNG/PDF figure pairs.
+
+| Arm | Deadline misses | Miss rate | Censored mean | Sender airtime |
+| --- | ---: | ---: | ---: | ---: |
+| STR MLO | 11,432 / 36,000 | 31.7556% | 15.776 ms | 6,658.94 ms/run |
+| 5 GHz only | 14,777 / 36,000 | 41.0472% | 19.614 ms | 7,778.81 ms/run |
+| Full copy T0 | 6,767 / 36,000 | 18.7972% | 11.459 ms | 13,920.77 ms/run |
+| Full copy T2 | 6,832 / 36,000 | 18.9778% | 12.316 ms | 13,964.40 ms/run |
+| Deadline repair T2 | 6,342 / 36,000 | 17.6167% | 14.345 ms | 10,468.22 ms/run |
+| Ideal FEC T2 | 14,610 / 36,000 | 40.5833% | 19.398 ms | 9,477.21 ms/run |
+
+Deadline repair improves reliability in every scenario and saves 8,436 of
+14,777 primary-only misses, while changing one primary success into a miss.
+Against STR, its miss-rate delta is `-14.1389` percentage points (paired 95%
+CI `-19.4890` to `-10.0361`) and its relative miss reduction is 44.52%.  The
+all-generated deadline-censored mean also improves by 1.431 ms (95% CI 0.317
+to 2.803 ms).
+
+The resource result is nevertheless decisive for this exhaustive action:
+its sender-airtime ratio is `1.5721` (95% CI `1.5064` to `1.6316`).  It fails
+both the original equal-airtime question and the project's 1.20 engineering
+limit with zero joint successes in 10,000 paired bootstrap draws.  Even the
+unchanged primary-only path costs `1.1682x` STR, leaving only 211.92 ms/run of
+headroom at 1.20, versus 2,689.41 ms/run of measured secondary repair airtime.
+
+The correction is a paired replay of the no-repair deadline potential, not an
+exact within-run omniscient oracle.  Aggregate primary sender counters remain
+identical in all pairs, but receiver primary packet sets drift in 8,957 of
+36,000 frames (24.88%).  The archive reports this boundary explicitly and
+does not silently filter affected frames.
 
 ## Protected factual phase 1
 
@@ -96,9 +134,11 @@ records the clean analyzer identity and both source-manifest hashes.
 
 ## Current boundary
 
-Preserve both archives unchanged.  The V1 oracle arm is rejected.  A corrected
-replay, if performed, must use packets absent at the deadline, add evidence
-that is independent of receiver finalization, and rerun only the minimum
-baseline/oracle subset needed to establish same-build closure.  Do not reuse
-the flawed oracle outputs, rerun the 100 valid factual arms, train another
-predictor, or redesign the action in this iteration.
+Preserve all archives unchanged.  The V1 oracle arm is rejected, and the
+corrected V2 replay completes the requested simulation gate.  The exhaustive
+deadline-repair action strongly improves reliability but is not resource
+viable.  A separately labeled post-result static subset sensitivity may bound
+whether choosing fewer factual rescues could fit the resource budget, but it
+cannot replace a causal closed-loop experiment.  Stop after archiving that
+diagnostic; do not train another predictor, redesign the action, or open
+reserved confirmation seeds in this iteration.

@@ -147,6 +147,57 @@ estimand, treat collapse as an outcome rather than missing data, and diagnose
 why selective duplication worsens incomplete-frame cascades under legacy and
 compound contention before expanding model complexity.
 
+## T2 packet-repair mechanism gate
+
+The representative five-scenario mechanism gate is complete.  Its valid
+factual panel has 20 matched units and five arms; a separate corrected replay
+adds only the 20 privileged deadline-repair runs.  The authoritative archive
+is `key_experiment_results/18_t2_repair_mechanism_v1`.  The 20 original V1
+oracle runs remain rejected and must never enter a performance estimate: lazy
+receiver-state creation caused their sidecars to omit a first packet that
+arrived only after the frame deadline.
+
+The corrected arm uses a finalization-independent no-repair deadline
+potential.  It acts on all 14,777 frames whose primary-only copy misses and
+requests 150,979 repair packets.  It is privileged and nondeployable, and it
+is not an exact within-run omniscient oracle because treatment changes the
+receiver primary packet set in 8,957 of 36,000 frames.  Aggregate primary
+sender application bytes, PHY TX airtime, successful MPDUs, and
+retransmissions remain identical in all 20 pairs.
+
+| Arm | Misses / generated | Miss rate | Mean sender airtime |
+| --- | ---: | ---: | ---: |
+| STR MLO | 11,432 / 36,000 | 31.7556% | 6,658.94 ms/run |
+| Primary-only 5 GHz | 14,777 / 36,000 | 41.0472% | 7,778.81 ms/run |
+| Full copy T0 | 6,767 / 36,000 | 18.7972% | 13,920.77 ms/run |
+| Full copy T2 | 6,832 / 36,000 | 18.9778% | 13,964.40 ms/run |
+| Deadline repair T2 | 6,342 / 36,000 | 17.6167% | 10,468.22 ms/run |
+| Ideal 12.5% FEC T2 | 14,610 / 36,000 | 40.5833% | 9,477.21 ms/run |
+
+Deadline repair rescues 8,436 primary misses, introduces one miss under the
+paired replay, and reduces misses by 44.52% relative to STR.  Its STR miss
+delta is -14.1389 percentage points with paired 95% interval [-19.4890,
+-10.0361].  Reliability improves in all five scenarios, and the stable
+all-generated deadline-censored mean improves by 1.431 ms with interval
+[-2.803, -0.317] ms.
+
+The exhaustive action fails the resource question.  Its sender-airtime ratio
+is 1.5721 with interval [1.5064, 1.6316], so both the original equal-airtime
+gate and the 1.20 engineering sensitivity fail in every one of 10,000 paired
+bootstrap draws.  Primary-only already costs 1.1682x STR; at 1.20 this leaves
+only 211.92 ms/run before repair, while the corrected arm uses 2,689.41
+ms/run on the secondary link.  Full copy confirms diversity but costs about
+2.09x.  The fixed 12.5% ideal-FEC action also fails: 40.5833% misses at
+1.4232x airtime.
+
+Do not overstate the exhaustive-arm failure as proof that every selected
+subset must fail.  The frozen contract permits a separately labeled,
+optimistic static sensitivity using factual rescues and measured per-frame
+tagged airtime.  Such a projection ignores fixed secondary overhead,
+closed-loop feedback, changed contention, and causal prediction; it may bound
+the ceiling but cannot qualify a policy.  Finish and archive that diagnostic,
+then stop for review before changing the action or training another model.
+
 ## Temporal-T2 48-pair STR qualification
 
 The compiled primary-only temporal-T2 policy was run against STR MLO on the

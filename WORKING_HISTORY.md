@@ -153,6 +153,8 @@ P99.
 | Archive factual mechanism panel | `1d19fd2` | Protected five-arm result after excluding every flawed V1 oracle replay |
 | Diagnose failed repair oracle | `02f5f7b` | Complete 20-pair deadline-semantics diagnosis and checksum-bound failure artifact |
 | Freeze deadline-correct oracle V2 | `fcb8474` | Finalization-independent repair plans, unchanged binary, and strict paired replay gates |
+| Analyze deadline-correct repair | `0196788` | Mixed-source 120-run closure, paired uncertainty, resource gates, and eleven figures |
+| Bound repair subset resources | `65b2dbb` | Explicit post-result optimistic sensitivity without treating it as policy evidence |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
@@ -339,11 +341,15 @@ to this held-out population, so no policy is promoted.
   `key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
   V1 oracle evidence is rejected.  The minimum deadline-correct,
   finalization-independent V2 replay is frozen at `fcb8474`; it preserves the
-  exact original executable and all 100 factual arms and schedules only 20
-  corrected oracle runs.  Both ten-run VM shards passed prepare-only checks
-  and are running under the persistent services recorded below.  Retrieve,
-  validate, merge, plot, analyze, and archive this final gate, then stop before
-  redesigning the action or training a model.
+  exact original executable and all 100 factual arms and reruns only 20
+  corrected repair arms.  All 20 finished, passed strict pair closure, were
+  retrieved, and entered the clean `0196788` analysis.  Deadline repair cuts
+  misses from 31.7556% for STR to 17.6167%, but consumes 1.5721x sender
+  airtime and therefore fails both the equal-airtime and 1.20 gates.  Its
+  report and eleven figure pairs are copied into the key-result archive.  Run
+  and archive only the separately labeled optimistic subset sensitivity at
+  `65b2dbb`, then mark this item complete and stop before redesigning the
+  action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -423,11 +429,31 @@ closure.  The complete artifact is archived under
 
 The minimum V2 correction is frozen at `fcb8474`.  It reuses the original
 binary and replaces only the 20 oracle sidecars with deadline-correct plans;
-the 100 factual runs remain immutable.  Both ten-run shards are currently
-running under persistent user services on the two experiment VMs.  Once they
-finish, retrieve valid output before any repair, close strict pair validation,
-and archive the merged plots and analysis.  Do not start a subsequent action
-or predictor iteration.
+the 100 factual runs remain immutable.  Both ten-run shards finished with
+status 0 and strict pair closure.  Their complete 180 MB roots were retrieved
+before local analysis.  A local resume attempt revalidated the runs but then
+stopped because the current checkout's unrelated executable hash differs from
+the frozen VM binary; it did not change remote evidence.  The two locally
+rewritten manifests were immediately restored byte-for-byte from the VMs and
+their SHA-256 identities match the authoritative remote copies.
+
+The clean `0196788` analyzer combines exactly 100 factual and 20 corrected
+runs while excluding every rejected V1 oracle output.  Deadline repair has
+6,342/36,000 misses (17.6167%) versus STR's 11,432 (31.7556%), a paired delta
+of -14.1389 percentage points with 95% CI [-19.4890, -10.0361].  Its
+sender-airtime ratio is 1.5721 with CI [1.5064, 1.6316], so both the original
+equal-airtime and 1.20 engineering gates fail with zero joint successes in
+10,000 bootstrap draws.  Receiver primary sets drift in 8,957 frames; retain
+the paired-potential wording.  All eleven PNG/PDF pairs were visually
+reviewed, and the result is copied under
+`key_experiment_results/18_t2_repair_mechanism_v1/deadline_oracle_v2`.
+
+The only remaining work in this iteration is the explicitly post-result,
+optimistic subset sensitivity frozen at `65b2dbb`.  It may use factual rescues
+and measured per-frame tagged airtime to bound the 1.20 ceiling, but must state
+that it ignores fixed overhead, feedback, changed contention, and causal
+prediction.  Archive it, update this history, and stop.  Do not start a
+subsequent action or predictor iteration.
 
 The decisive question is whether the privileged eventual-missing packet
 repair arm has fewer all-generated misses than STR at a paired measured total
@@ -956,6 +982,33 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Analyze the deadline-correct repair replay
+
+- Both persistent services finished all ten runs with status 0.  Each shard's
+  final closure has 18,000 frames, exact sidecar/action agreement, and exact
+  aggregate primary sender counters.  Retrieved both complete roots before
+  any local analysis.
+- Shard closure records 2,930 and 3,412 misses.  Receiver primary packet sets
+  drift in 4,897 and 4,060 frames, respectively, so the treatment remains a
+  paired no-repair deadline-potential replay rather than an exact within-run
+  oracle.
+- Froze the mixed-source analyzer at `0196788` before executing it.  It
+  strictly validates 100 immutable factual runs plus 20 corrected runs,
+  excludes all 20 rejected V1 outputs, hashes 2,540 raw files, and produces
+  eleven PNG/PDF figure pairs.  All figures were visually reviewed.
+- Deadline repair records 6,342/36,000 misses (17.6167%), rescuing 8,436 of
+  14,777 primary misses and introducing one miss under the paired replay.
+  STR records 11,432 misses (31.7556%).  The paired miss delta is -14.1389
+  points with 95% CI [-19.4890, -10.0361], and reliability improves in every
+  scenario.
+- The repair arm uses 10,468.22 ms/run sender airtime, or 1.5721x STR with
+  95% CI [1.5064, 1.6316].  It fails equal airtime and the 1.20 sensitivity in
+  every bootstrap draw.  Primary-only already uses 1.1682x STR and leaves
+  only 211.92 ms/run of 1.20 headroom before repair.
+- Added the explicitly post-result optimistic subset sensitivity at `65b2dbb`
+  to avoid confusing failure of the exhaustive arm with a proof about every
+  selected subset.  Run and archive that diagnostic only, then stop.
 
 ### 2026-08-07 - Launch the deadline-correct repair replay
 

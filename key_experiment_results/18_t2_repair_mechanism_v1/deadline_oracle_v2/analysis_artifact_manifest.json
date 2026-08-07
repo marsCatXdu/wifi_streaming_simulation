@@ -1,0 +1,224 @@
+{
+  "analysis": "t2-repair-deadline-oracle-analysis-v2",
+  "analyzer_identity": {
+    "project_commit": "0196788121a59397feb5e073100110669f201bcc",
+    "worktree_clean": true
+  },
+  "artifacts": {
+    "REPORT.md": {
+      "bytes": 2322,
+      "sha256": "d3b7be81755c718c579d61c2273af42cea9e7c523b0d1072c6f024c05a62d3cb"
+    },
+    "aggregate_metrics.csv": {
+      "bytes": 3089,
+      "sha256": "fcb11acb374723bf5448d5060c566f192dfbb836c2067540058eb2aadf4f8869"
+    },
+    "deadline_oracle_v2_report.json": {
+      "bytes": 76917,
+      "sha256": "5b63d176f03e866719c777e93f4521c426acb7a0ff434068ca3433f198a094d7"
+    },
+    "pair_closure.csv": {
+      "bytes": 2463,
+      "sha256": "c7a0a7d41148b9e9623bccc5923637e291dfdfd16c13f7f26b935dc81873eea8"
+    },
+    "plots/action_completion_cdf.pdf": {
+      "bytes": 79775,
+      "sha256": "cd0e03c51db96afb57e566dab88a757b4d145512ca2b7f2ad0c16c936410fe43"
+    },
+    "plots/action_completion_cdf.png": {
+      "bytes": 95627,
+      "sha256": "31cb111d5822e55ca136f1e8c5a1fbc4c21f0b2dae3e1f72f69430b9528aa263"
+    },
+    "plots/all_generated_censored_latency_cdf.pdf": {
+      "bytes": 143226,
+      "sha256": "35b9b2340355a77ed6e41a6349e5d744ceb5951c38ac31c854325ea3d5151430"
+    },
+    "plots/all_generated_censored_latency_cdf.png": {
+      "bytes": 134540,
+      "sha256": "2c01d9d25a25f4e58363cd10b987f6e433939ea002b92012103d06aec3603dd7"
+    },
+    "plots/all_generated_censored_latency_pdf.pdf": {
+      "bytes": 21559,
+      "sha256": "2fbfc8c9c6d9b33440354e409d19edbc9c5b7fe4d5998ba6477f73c732cd4893"
+    },
+    "plots/all_generated_censored_latency_pdf.png": {
+      "bytes": 62673,
+      "sha256": "4c2f295030e6249ba3fd534f78dec1dce9b9323abd0801af0573a0b149b0a9e6"
+    },
+    "plots/deadline_miss_burst_cdf.pdf": {
+      "bytes": 21035,
+      "sha256": "5de2c09ec23565956731a9178582c07edaf75c74945bbc313082671360ac0ffd"
+    },
+    "plots/deadline_miss_burst_cdf.png": {
+      "bytes": 65009,
+      "sha256": "e6ef76eeba9129bdd33e9bd5035baf5f00cc9990a6e5f3d74f5f3f987290aeed"
+    },
+    "plots/deadline_miss_rate_by_scenario.pdf": {
+      "bytes": 19151,
+      "sha256": "d283b322ffac9ab58a286bc711388e5e49d72ce1d7c04960c0d87225cadea97d"
+    },
+    "plots/deadline_miss_rate_by_scenario.png": {
+      "bytes": 67699,
+      "sha256": "d77783fbb07c0489d29d6522a3cc410f41c6c2ff089b6f37a7a15ea8157e17b3"
+    },
+    "plots/deadline_outcome_composition.pdf": {
+      "bytes": 17006,
+      "sha256": "f89c81f8d1bbe2ae776b10eb025fc5bdbc3960415e8d8c7240abc0641944c933"
+    },
+    "plots/deadline_outcome_composition.png": {
+      "bytes": 77030,
+      "sha256": "b803dfb7183912bf7d2f2ded2b1ab71051a74017b9b5b3dc3a19404f45230daa"
+    },
+    "plots/oracle_equal_airtime_frontier.pdf": {
+      "bytes": 18919,
+      "sha256": "386b6b73f5f64d95ec06d4f0b9c0fa02fa04e0aa985ffb28a6c8feb8d047fc7f"
+    },
+    "plots/oracle_equal_airtime_frontier.png": {
+      "bytes": 80268,
+      "sha256": "0a9cda62a0464ef9d644be87fe2d1898b43c1cffee3e88266092c2e3d05beb40"
+    },
+    "plots/paired_oracle_miss_delta.pdf": {
+      "bytes": 18384,
+      "sha256": "d0139152fca58572aba622b11749a32f215347ce745c0aa57804fb8adcecb8f3"
+    },
+    "plots/paired_oracle_miss_delta.png": {
+      "bytes": 76061,
+      "sha256": "ea145a3a99e81861a837126b18c7c4c980888362333d8469dc8d3b37ac0a4d59"
+    },
+    "plots/receiver_primary_drift_by_scenario.pdf": {
+      "bytes": 17525,
+      "sha256": "98909b5dd0e2391bb9189c6bbbcafcd0be1c9c974f5ff6a2448c97c8810cf54f"
+    },
+    "plots/receiver_primary_drift_by_scenario.png": {
+      "bytes": 76620,
+      "sha256": "ba5a321c202b695d39c19a989d97dacdc22f25592124f91f68430e0ad552e662"
+    },
+    "plots/sender_airtime_by_link.pdf": {
+      "bytes": 18107,
+      "sha256": "ee37f94ca7ff2f5ff080d4226703bec3a63632a82c46b4428ae468ac4c8ae082"
+    },
+    "plots/sender_airtime_by_link.png": {
+      "bytes": 88896,
+      "sha256": "2c6f27cfd291c85dc14436cff682543e9ec6b4e276d813c2dd8fe30e2de4051e"
+    },
+    "plots/t2_queue_and_ack_state.pdf": {
+      "bytes": 17969,
+      "sha256": "e98bbe9f15fa640e9ed0ae1f90b45debcbdcc49cc64a993ec202dca072e02dc3"
+    },
+    "plots/t2_queue_and_ack_state.png": {
+      "bytes": 72740,
+      "sha256": "7d3e2bc2e662a1597e1a683e500bb07fd2cf4d3ee39ae48e46e0ceb32cfebfd5"
+    },
+    "raw_run_tree_manifest.csv": {
+      "bytes": 327270,
+      "sha256": "143519958fbc890c4beaa64ffd759b35f3a06f5e5d8fd49b9dd99c2779743c17"
+    },
+    "run_metrics.csv": {
+      "bytes": 29783,
+      "sha256": "ceffaf484696e6620cc3a98b127b68f7f4c88d553c9d28308295cbe022ba2181"
+    },
+    "scenario_metrics.csv": {
+      "bytes": 12481,
+      "sha256": "275d69b3c36baeb0df988b744143d2dd3037986062e236277e12218b0c143d6f"
+    }
+  },
+  "counts": {
+    "excluded_rejected_v1_oracle_runs": 20,
+    "paired_units": 20,
+    "png_figures": 11,
+    "raw_files": 2540,
+    "strictly_validated_runs": 120
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "analysis_contract": {
+      "bytes": 5783,
+      "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/experiments/model-selection/t2-repair-deadline-oracle-v2.json",
+      "sha256": "2df18a10f7b584af516d56c77350175f30e7b10c190fbd7f61da598b7b592cea"
+    },
+    "excluded_rejected_v1_oracle_runs": 20,
+    "included_corrected_runs": 20,
+    "included_factual_runs": 100,
+    "paired_potential_interpretation": "This is privileged replay of the paired no-repair deadline potential, not an implementable causal policy and not a claim that treatment leaves receiver-level primary arrival timing unchanged.",
+    "paired_unit_count": 20,
+    "shards": [
+      {
+        "corrected": {
+          "baseline_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs",
+          "included_corrected_runs": 10,
+          "manifest": {
+            "bytes": 87154,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs/experiment_manifest.json",
+            "sha256": "260da29d1caf296c7a5eec844d5c5a69a7c78b81d103954322d07513abd2d933"
+          },
+          "pair_validation": {
+            "bytes": 10592,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs/deadline_oracle_pair_validation.json",
+            "sha256": "1e99a904283c688feda9602bcede6bb176c64352715743947e9c7b34072cc8a6"
+          },
+          "receiver_primary_drift_frames": 4897,
+          "receiver_primary_drift_packets": 4910,
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_0_of_2/runs"
+        },
+        "factual": {
+          "attempt_recovery": {
+            "all_promoted": true,
+            "bytes": 3653,
+            "orchestration_project_commit": "fb26a4b26f3aef03e41ef2ecdd2bd0c1a137fb15",
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs/attempt_recovery.json",
+            "recovered_count": 10,
+            "sha256": "ad38d8f859bf1869530b134cc0565066e82cc10ed002550d1e820b202c1e9187"
+          },
+          "excluded_v1_oracle_runs": 10,
+          "included_factual_runs": 50,
+          "manifest": {
+            "bytes": 251839,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs/experiment_manifest.json",
+            "sha256": "1f09bc43379edf7212517e4b811e1bcb6f2d62b004d035f47039098da0861e19"
+          },
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_0_of_2/runs"
+        },
+        "shard_index": 0
+      },
+      {
+        "corrected": {
+          "baseline_root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs",
+          "included_corrected_runs": 10,
+          "manifest": {
+            "bytes": 87146,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs/experiment_manifest.json",
+            "sha256": "edf85fbf353f9875c91cbb412fa6c0f92267961eff63ad2a43fcb1fdf80b3797"
+          },
+          "pair_validation": {
+            "bytes": 10591,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs/deadline_oracle_pair_validation.json",
+            "sha256": "8b42346f98f6c3b51fde8b061a6e07f675b5f7a1cbd88c612c0051fef72967b1"
+          },
+          "receiver_primary_drift_frames": 4060,
+          "receiver_primary_drift_packets": 4064,
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_deadline_oracle_v2/complete_remote/shard_1_of_2/runs"
+        },
+        "factual": {
+          "attempt_recovery": {
+            "all_promoted": true,
+            "bytes": 3303,
+            "orchestration_project_commit": "fb26a4b26f3aef03e41ef2ecdd2bd0c1a137fb15",
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs/attempt_recovery.json",
+            "recovered_count": 9,
+            "sha256": "a8287d97e9682ce6d06be2c8483fe9d8af5fab6221b26fe97924c47c1288ea17"
+          },
+          "excluded_v1_oracle_runs": 10,
+          "included_factual_runs": 50,
+          "manifest": {
+            "bytes": 251819,
+            "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs/experiment_manifest.json",
+            "sha256": "814cb2bcfb6a52fbabc0223deec8f44b409350a8ed7387b6ffcca49158aa68c1"
+          },
+          "root": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/complete_remote/shard_1_of_2/runs"
+        },
+        "shard_index": 1
+      }
+    ],
+    "simulation_project_commit": "791bb2d27fb910be1393227de251c7c74e7f4b40"
+  }
+}
