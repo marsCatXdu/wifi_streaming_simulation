@@ -308,10 +308,18 @@ to this held-out population, so no policy is promoted.
   and radio p17.  Use all-generated deadline misses and deadline-censored
   latency as the stable outcomes; completed-frame P99 is descriptive only.
   Runtime primitives, strict telemetry validation, the pre-result contract,
-  and the two-stage sharded runner are complete through `791bb2d`.  The 120-run
-  matrix is active as two 60-run shards on the two experiment VMs.  Fetch,
-  checksum, validate, merge, plot, analyze, and archive the result, then stop
-  before redesigning the action or training a model.
+  and the two-stage sharded runner are complete through `791bb2d`.  Phase 1
+  finished all 100 simulations: all 80 non-FEC runs and one non-exercising FEC
+  run were promoted, while 19 complete coded FEC attempts hit a generic
+  source-packet completion invariant.  Before changing validation, all 81
+  promoted outputs and all 19 attempts were retrieved.  The clean `e06796f`
+  prefix analyzer strictly validated and plotted the balanced 80-run,
+  four-arm panel; compact evidence is under
+  `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.  Next,
+  correct coded-completion validation, recover rather than rerun the 19 FEC
+  outputs, execute only the 20 oracle runs, then checksum, merge, plot,
+  analyze, and archive the six-arm result.  Stop before redesigning the action
+  or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -325,18 +333,30 @@ larger model or dataset.  It uses 20 opened qualification scenario/seed units,
 keeps all six arms for a unit on one host, and does not touch seeds `1301`
 through `1348`.
 
-Shard 0 runs as
-`wifi-t2-repair-mechanism-shard0-791bb2d.service` on
-`10.120.16.105:30022`.  Shard 1 runs as
-`wifi-t2-repair-mechanism-shard1-791bb2d-retry1.service` on
-`10.120.17.30:30022`.  The clone's first service was stopped by logind ten
-seconds after SSH logout because `Linger=no`; it produced zero validated runs
-and 50 incomplete attempt directories.  Those attempts were inspected before
-retry, per the recovery rule.  Enabling linger as the same unprivileged user
-fixed the launch-lifetime defect, and the runner resumed the same manifest
-root.  Both VMs have clean commit `791bb2d`, identical executable SHA-256
-`ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`,
-and a passing focused controller test.
+Shard 0 service `wifi-t2-repair-mechanism-shard0-791bb2d.service` and shard 1
+service `wifi-t2-repair-mechanism-shard1-791bb2d-retry1.service` have stopped
+at the phase-1 boundary.  The clone's first service had previously been
+stopped by logind ten seconds after SSH logout because `Linger=no`; it
+produced zero promoted runs.  Enabling linger as the same unprivileged user
+fixed that launch-lifetime defect.  Both VMs used clean commit `791bb2d` and
+identical executable SHA-256
+`ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`.
+
+The stable phase-1 evidence consists of 80/80 promoted non-FEC runs, one
+promoted FEC run that did not need coded completion, and 19 complete FEC
+attempts rejected by the old generic invariant `complete frame lacks unique
+packets`.  No oracle run launched.  The promoted data are locally retained
+under `results/t2_repair_mechanism_v1/remote_prefix`; the 19 attempt trees are
+under `results/t2_repair_mechanism_v1/failed_attempts`.  The balanced pre-fix
+analysis at clean commit `e06796f` is archived under
+`key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.
+
+The partial result confirms diversity but not resource viability.  STR has
+31.7556% all-generated misses.  Full T0 and T2 reduce this to 18.7972% and
+18.9778%, but consume 2.0905x and 2.0971x STR sender airtime.  Their paired
+miss improvements are decisive, yet neither approaches the equal-airtime
+question.  OBSS p17 is the hardest scenario: STR misses 72.10%, single 5 GHz
+56.60%, full T0 52.93%, and full T2 52.61%.
 
 The decisive question is whether the privileged eventual-missing packet
 repair arm has fewer all-generated misses than STR at a paired measured total
@@ -865,6 +885,30 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Preserve and analyze the mechanism phase-1 prefix
+
+- Both services completed all 100 phase-1 simulations.  The runner promoted
+  all 80 non-FEC outputs and one benign FEC output, then stopped before the
+  oracle phase because 19 coded FEC completions violated an old generic
+  validator assumption that a completed frame must receive every source
+  packet.
+- Retrieved the 81 promoted outputs and, separately, all 19 complete attempt
+  directories before changing validation or launching a rerun.  The balanced
+  four-arm panel contains all 20 identical-seed units and 36,000 generated
+  frames per arm.
+- Added the clean prefix analyzer at `e06796f`.  It strictly validates only a
+  complete STR/single/T0/T2 grid, uses all-generated deadline misses and
+  deadline-censored latency, applies a 10,000-sample scenario-stratified paired
+  bootstrap, and labels completed P99 as survivor-conditioned.
+- Generated and visually inspected the scenario miss, censored CDF/PDF,
+  per-link airtime, burst, paired-effect, and T2 queue/ACK figures.  Archived
+  the report, tables, manifests, and PNG/PDF figures under
+  `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.
+- Full copy beats STR on aggregate reliability but costs about 2.09x airtime;
+  T2 does not save airtime versus T0.  OBSS p17 remains a severe collapse
+  regime even under full copy.  This prefix cannot answer the oracle
+  equal-airtime question, so no action or predictor decision is made from it.
 
 ### 2026-08-07 - Launch the packet-repair mechanism gate
 

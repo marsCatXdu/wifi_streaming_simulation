@@ -1,0 +1,119 @@
+{
+  "analysis": "t2-repair-mechanism-valid-prefix-v1",
+  "analyzer_identity": {
+    "project_commit": "e06796fb8f2e24f0cd426bb59da5c7c6af578703",
+    "worktree_clean": true
+  },
+  "artifacts": {
+    "REPORT.md": {
+      "bytes": 1622,
+      "sha256": "8a8b3cfce240c46975ad5dd1e0daa4eedde726e856ec7b53a2ef0470d3750506"
+    },
+    "aggregate_metrics.csv": {
+      "bytes": 2234,
+      "sha256": "d5447aa8f9d215846ffbea235db2ad13c01b93d3be826ecd1f325c2792f726fc"
+    },
+    "plots/censored_latency_cdf.pdf": {
+      "bytes": 99523,
+      "sha256": "538bb3a1b9e0033fbc25e869b9c5d4179b140985e80343e01ddf0f2c1db5186f"
+    },
+    "plots/censored_latency_cdf.png": {
+      "bytes": 104373,
+      "sha256": "bf8a19b43b9024018a88b6a209274107f4389e44b9ca54b6021233834a4a0bc1"
+    },
+    "plots/censored_latency_pdf.pdf": {
+      "bytes": 19793,
+      "sha256": "897336a873fb2122b3c9300de81e64a9e80ca0c5f83b41a0dd67876b57d7d32d"
+    },
+    "plots/censored_latency_pdf.png": {
+      "bytes": 54940,
+      "sha256": "28ea70983657754a8b9c600140c5b484c838b642e4943c16e323612a8bba3087"
+    },
+    "plots/deadline_miss_burst_cdf.pdf": {
+      "bytes": 19369,
+      "sha256": "ff4fb9a96afe60b2b6d6b8427c21cfaa7ba1be95705a501c8767aecb8a7f543e"
+    },
+    "plots/deadline_miss_burst_cdf.png": {
+      "bytes": 61263,
+      "sha256": "5688c49a94832f8fabb38c732764bc9fc6a1467785e210cbf8d57983d6d739f5"
+    },
+    "plots/deadline_miss_by_scenario.pdf": {
+      "bytes": 18794,
+      "sha256": "b8e0eb5d1754ca4b8ea966b8461b23e6bb73d7f99a775f7b95bf898289b42bc8"
+    },
+    "plots/deadline_miss_by_scenario.png": {
+      "bytes": 62132,
+      "sha256": "7d649492444006bf07f84709f35b7957df65474ec680deb7c8024c6ccc56b2c1"
+    },
+    "plots/paired_miss_delta.pdf": {
+      "bytes": 23110,
+      "sha256": "12ace39a8cdd9a30a6a64f454a7fd0eb55689ddf89e1f74971d465579a8705c2"
+    },
+    "plots/paired_miss_delta.png": {
+      "bytes": 73240,
+      "sha256": "84275e90803e1630c8891a460677161db68942dc7db53b62b06627267091fc43"
+    },
+    "plots/sender_airtime_by_link.pdf": {
+      "bytes": 17109,
+      "sha256": "4a7965f0a0c70f8d0553b8982f440a134f9e5a514f929897bd2a4ae988aa6576"
+    },
+    "plots/sender_airtime_by_link.png": {
+      "bytes": 62420,
+      "sha256": "497095757178dfe3c63bf1f31c0f4f833d3c9f80e234703d108393ccb6cdafa4"
+    },
+    "plots/t2_queue_and_ack_state.pdf": {
+      "bytes": 16803,
+      "sha256": "990f72c2db5d03d379f796c1d8219306ef666acdd3a48cf8d846f30fe47e6730"
+    },
+    "plots/t2_queue_and_ack_state.png": {
+      "bytes": 61814,
+      "sha256": "d2abce37a8b19fae517031ee3c2513d2fa6ec67a509e881b3490fadf43989ac0"
+    },
+    "prefix_report.json": {
+      "bytes": 44656,
+      "sha256": "aa2e22a99355b18854f66442d0fcf9abfb219ff47418c77b079c733b8ef3fa37"
+    },
+    "run_metrics.csv": {
+      "bytes": 19501,
+      "sha256": "401d2edd1d974463a0089ac76936558518d807a498a915e2ffd35665c769f53c"
+    },
+    "scenario_metrics.csv": {
+      "bytes": 7986,
+      "sha256": "dc67a80844f9ea4246ba72f6e6f31ff05ccd161f422a55536b9c38ea59004e42"
+    }
+  },
+  "counts": {
+    "paired_units": 20,
+    "png_figures": 7,
+    "strictly_validated_runs": 80
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "excluded_promoted_arms": {
+      "ideal_systematic_fec_12p5_t2": 1
+    },
+    "included_paired_units": 20,
+    "included_run_count": 80,
+    "known_phase_boundary": {
+      "fec_attempts_rejected_by_old_validator": 19,
+      "fec_runs_promoted": 1,
+      "oracle_runs_launched": 0
+    },
+    "manifests": [
+      {
+        "bytes": 253062,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/remote_prefix/shard_0_of_2/runs/experiment_manifest.json",
+        "promoted_runs": 40,
+        "sha256": "f881df6dc1bf2e4ebfd1719efd47bf4b1f52e7012fbc27bfcc1843027cc36006"
+      },
+      {
+        "bytes": 259257,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/t2_repair_mechanism_v1/remote_prefix/shard_1_of_2/runs/experiment_manifest.json",
+        "promoted_runs": 41,
+        "sha256": "5a65575a9e829ce5f914537ba325de20344391bdb61ae89af8130925ab2cd1d8"
+      }
+    ],
+    "promoted_run_count": 81,
+    "simulation_project_commit": "791bb2d27fb910be1393227de251c7c74e7f4b40"
+  }
+}
