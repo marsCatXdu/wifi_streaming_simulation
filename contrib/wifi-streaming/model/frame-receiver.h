@@ -59,7 +59,11 @@ class FrameReceiver : public Application
         std::set<uint32_t> unionPackets;
         std::map<uint8_t, std::set<uint32_t>> copyPackets;
         std::map<uint8_t, std::set<uint32_t>> linkPackets;
+        std::set<uint32_t> codedRepairPackets;
         std::map<uint32_t, uint8_t> firstLinkForPacket;
+        std::optional<uint32_t> secondaryActionPacketCount;
+        bool secondaryActionIsCoded{false};
+        bool codedRepairContributed{false};
         bool duplicatedFrame{false};
         uint32_t duplicates{0};
         std::optional<uint64_t> firstArrivalUs;

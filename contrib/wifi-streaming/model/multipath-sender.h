@@ -124,6 +124,17 @@ class MultipathSender : public Application
         const std::vector<uint32_t>& packetIndices) const;
 
     /**
+     * Return a descriptor for ideal systematic coded-repair symbols.
+     *
+     * @param frameId Application frame identifier.
+     * @param repairPacketCount Number of innovative repair symbols.
+     * @return Projected descriptor when the frame is pending; empty otherwise.
+     */
+    std::optional<DelayedCopyDescriptor> GetDelayedSecondaryCodedRepairDescriptor(
+        uint64_t frameId,
+        uint32_t repairPacketCount) const;
+
+    /**
      * Query primary packet indexes not yet positively acknowledged.
      *
      * @param key Registered primary frame-copy identity.
@@ -175,6 +186,18 @@ class MultipathSender : public Application
                                  const std::vector<uint32_t>& packetIndices,
                                  const std::string& reason);
 
+    /**
+     * Launch ideal systematic coded-repair symbols on the delayed path.
+     *
+     * @param frameId Application frame identifier.
+     * @param repairPacketCount Number of innovative repair symbols.
+     * @param reason Policy decision reason recorded in metrics.
+     * @return True when the repair action was launched.
+     */
+    bool RequestSecondaryCodedRepair(uint64_t frameId,
+                                     uint32_t repairPacketCount,
+                                     const std::string& reason);
+
     uint64_t GetPacketsSent() const;
     uint64_t GetBytesSent() const;
     uint64_t GetRedundantBytesSent() const;
@@ -218,6 +241,20 @@ class MultipathSender : public Application
     bool RequestSecondaryCopyInternal(uint64_t frameId,
                                       const std::optional<std::vector<uint32_t>>& packetIndices,
                                       const std::string& reason);
+
+    /**
+     * Launch a fully resolved delayed plan.
+     *
+     * @param frame Delayed-frame state being consumed.
+     * @param launchPlan Exact plan to schedule.
+     * @param reason Policy reason recorded in metrics.
+     * @param predictionTracked Whether packet progress belongs to a registered plan.
+     * @return True after the launch is recorded.
+     */
+    bool LaunchDelayedPlan(DelayedFrameState& frame,
+                           const PacketizationPlan& launchPlan,
+                           const std::string& reason,
+                           bool predictionTracked);
     void ScheduleCopy(const PacketizationPlan& plan,
                       bool redundant,
                       bool predictionTracked = true);

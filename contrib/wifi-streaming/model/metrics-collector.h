@@ -34,6 +34,12 @@ struct FrameResult
     std::optional<uint64_t> copy1CompletionUs;
     uint32_t uniquePacketsReceived{0};
     uint32_t duplicatePacketsReceived{0};
+    uint32_t codedRepairPacketsReceived{0};
+    std::vector<uint32_t> receivedSourcePacketIndices;
+    std::vector<uint32_t> missingSourcePacketIndices;
+    std::map<uint8_t, std::vector<uint32_t>> sourcePacketIndicesByCopy;
+    std::map<uint8_t, std::vector<uint32_t>> sourcePacketIndicesByLink;
+    std::vector<uint32_t> receivedCodedRepairIndices;
     bool deadlineMiss{false};
     bool incomplete{false};
     std::string completionMode{"none"};
@@ -66,6 +72,13 @@ class MetricsCollector : public Object
     void SetRunId(const std::string& runId);
     const std::string& GetRunId() const;
     void SetOutputFiles(const std::string& framesFile, const std::string& decisionsFile);
+
+    /**
+     * Configure the optional exact packet-outcome sidecar.
+     *
+     * @param packetOutcomesFile CSV path, or an empty string to disable it.
+     */
+    void SetPacketOutcomesFile(const std::string& packetOutcomesFile);
     void RegisterExpectedFrame(const FrameDescriptor& frame);
     void RecordFrame(const FrameResult& result);
     void RecordPolicyDecision(const PolicyDecisionRecord& decision);
@@ -96,6 +109,9 @@ class MetricsCollector : public Object
     /** Write the final policy-decision CSV header. */
     void WriteDecisionHeader();
 
+    /** Write the exact packet-outcome CSV header. */
+    void WritePacketOutcomeHeader();
+
     /**
      * Write one final policy decision.
      *
@@ -106,6 +122,7 @@ class MetricsCollector : public Object
     std::string m_runId{"run"};
     std::ofstream m_frames;
     std::ofstream m_decisions;
+    std::ofstream m_packetOutcomes;
     std::vector<FrameResult> m_results;
     std::map<uint64_t, PolicyDecisionRecord> m_policyDecisions;
     std::map<uint64_t, FrameDescriptor> m_expectedFrames;

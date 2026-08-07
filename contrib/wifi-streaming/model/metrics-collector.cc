@@ -26,6 +26,26 @@ WriteOptional(std::ostream& output, const std::optional<T>& value)
     }
 }
 
+void
+WriteIndices(std::ostream& output, const std::vector<uint32_t>& indices)
+{
+    for (std::size_t index = 0; index < indices.size(); ++index)
+    {
+        output << (index == 0 ? "" : ";") << indices[index];
+    }
+}
+
+void
+WriteMappedIndices(std::ostream& output,
+                   const std::map<uint8_t, std::vector<uint32_t>>& indices,
+                   uint8_t key)
+{
+    if (const auto entry = indices.find(key); entry != indices.end())
+    {
+        WriteIndices(output, entry->second);
+    }
+}
+
 } // namespace
 
 TypeId
@@ -66,6 +86,21 @@ MetricsCollector::SetOutputFiles(const std::string& framesFile, const std::strin
 }
 
 void
+MetricsCollector::SetPacketOutcomesFile(const std::string& packetOutcomesFile)
+{
+    NS_ABORT_MSG_IF(m_packetOutcomes.is_open(),
+                    "Packet-outcome output may be configured only once");
+    if (packetOutcomesFile.empty())
+    {
+        return;
+    }
+    m_packetOutcomes.open(packetOutcomesFile, std::ios::out | std::ios::trunc);
+    NS_ABORT_MSG_IF(!m_packetOutcomes,
+                    "Cannot open packet-outcome output " << packetOutcomesFile);
+    WritePacketOutcomeHeader();
+}
+
+void
 MetricsCollector::RegisterExpectedFrame(const FrameDescriptor& frame)
 {
     NS_ABORT_MSG_IF(m_expectedFrames.contains(frame.frameId),
@@ -89,6 +124,16 @@ MetricsCollector::WriteDecisionHeader()
 {
     m_decisions << "run_id,frame_id,decision_time_us,policy,primary_link,duplicated,"
                    "secondary_link,reason,primary_score,secondary_score\n";
+}
+
+void
+MetricsCollector::WritePacketOutcomeHeader()
+{
+    m_packetOutcomes
+        << "run_id,frame_id,source_packet_count,received_source_packet_indices,"
+           "missing_source_packet_indices,copy_0_source_packet_indices,"
+           "copy_1_source_packet_indices,link_0_source_packet_indices,"
+           "link_1_source_packet_indices,received_coded_repair_indices\n";
 }
 
 void
@@ -132,6 +177,26 @@ MetricsCollector::RecordFrame(const FrameResult& result)
                  << stored.duplicatePacketsReceived << ',' << stored.deadlineMiss << ','
                  << stored.incomplete << ',' << stored.completionMode << '\n';
         m_frames.flush();
+    }
+    if (m_packetOutcomes)
+    {
+        m_packetOutcomes << stored.runId << ',' << stored.frame.frameId << ','
+                         << stored.frame.packetCount << ',';
+        WriteIndices(m_packetOutcomes, stored.receivedSourcePacketIndices);
+        m_packetOutcomes << ',';
+        WriteIndices(m_packetOutcomes, stored.missingSourcePacketIndices);
+        m_packetOutcomes << ',';
+        WriteMappedIndices(m_packetOutcomes, stored.sourcePacketIndicesByCopy, 0);
+        m_packetOutcomes << ',';
+        WriteMappedIndices(m_packetOutcomes, stored.sourcePacketIndicesByCopy, 1);
+        m_packetOutcomes << ',';
+        WriteMappedIndices(m_packetOutcomes, stored.sourcePacketIndicesByLink, 0);
+        m_packetOutcomes << ',';
+        WriteMappedIndices(m_packetOutcomes, stored.sourcePacketIndicesByLink, 1);
+        m_packetOutcomes << ',';
+        WriteIndices(m_packetOutcomes, stored.receivedCodedRepairIndices);
+        m_packetOutcomes << '\n';
+        m_packetOutcomes.flush();
     }
     if (decision != m_policyDecisions.end())
     {
@@ -187,6 +252,11 @@ MetricsCollector::FinalizeMissingFrames()
         result.frame = m_expectedFrames.begin()->second;
         result.incomplete = true;
         result.deadlineMiss = result.frame.deadlineUs > 0;
+        result.missingSourcePacketIndices.reserve(result.frame.packetCount);
+        for (uint32_t index = 0; index < result.frame.packetCount; ++index)
+        {
+            result.missingSourcePacketIndices.push_back(index);
+        }
         RecordFrame(result);
     }
 }

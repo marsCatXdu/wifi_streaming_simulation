@@ -164,31 +164,79 @@ FrameReceiver::ProcessPacket(Ptr<Packet> packet)
         state.duplicatedFrame ||
         ((header.flags & StreamingHeader::FLAG_DUPLICATED_FRAME) != 0);
 
-    auto& copyPackets = state.copyPackets[header.copyId];
-    const bool newForCopy = copyPackets.insert(header.packetIndex).second;
-    if (newForCopy && copyPackets.size() == state.frame.packetCount)
+    const bool codedRepair = header.IsCodedRepair();
+    const bool partialCopy = (header.flags & StreamingHeader::FLAG_PARTIAL_COPY) != 0;
+    if (codedRepair || partialCopy)
     {
-        state.copyCompletionUs.emplace(header.copyId, nowUs);
+        const uint32_t actionPacketCount = header.GetActionPacketCount();
+        if (!state.secondaryActionPacketCount)
+        {
+            state.secondaryActionPacketCount = actionPacketCount;
+            state.secondaryActionIsCoded = codedRepair;
+        }
+        else if (*state.secondaryActionPacketCount != actionPacketCount ||
+                 state.secondaryActionIsCoded != codedRepair)
+        {
+            NS_LOG_WARN("Discarding inconsistent delayed-action metadata for frame "
+                        << header.frameId);
+            return;
+        }
     }
-    state.linkPackets[header.senderLinkId].insert(header.packetIndex);
 
-    const bool newUnionPacket = state.unionPackets.insert(header.packetIndex).second;
-    if (!newUnionPacket)
+    if (codedRepair)
     {
-        ++state.duplicates;
+        const bool newRepair = state.codedRepairPackets.insert(header.packetIndex).second;
+        if (!newRepair)
+        {
+            ++state.duplicates;
+        }
+        if (newRepair && state.secondaryActionPacketCount &&
+            state.codedRepairPackets.size() == *state.secondaryActionPacketCount)
+        {
+            state.copyCompletionUs.emplace(header.copyId, nowUs);
+        }
     }
     else
     {
-        state.firstLinkForPacket.emplace(header.packetIndex, header.senderLinkId);
+        auto& copyPackets = state.copyPackets[header.copyId];
+        const bool newForCopy = copyPackets.insert(header.packetIndex).second;
+        const uint32_t expectedCopyPackets =
+            partialCopy ? *state.secondaryActionPacketCount : state.frame.packetCount;
+        if (newForCopy && copyPackets.size() == expectedCopyPackets)
+        {
+            state.copyCompletionUs.emplace(header.copyId, nowUs);
+        }
+        state.linkPackets[header.senderLinkId].insert(header.packetIndex);
+
+        const bool newUnionPacket = state.unionPackets.insert(header.packetIndex).second;
+        if (!newUnionPacket)
+        {
+            ++state.duplicates;
+        }
+        else
+        {
+            state.firstLinkForPacket.emplace(header.packetIndex, header.senderLinkId);
+        }
     }
-    if (!state.completionUs && state.unionPackets.size() == state.frame.packetCount)
+    if (!state.completionUs &&
+        state.unionPackets.size() + state.codedRepairPackets.size() >=
+            state.frame.packetCount)
     {
         state.completionUs = nowUs;
         state.completionTime = Simulator::Now();
+        state.codedRepairContributed =
+            state.unionPackets.size() < state.frame.packetCount;
     }
+    const bool secondaryComplete =
+        state.secondaryActionPacketCount
+            ? (state.secondaryActionIsCoded
+                   ? state.codedRepairPackets.size() ==
+                         *state.secondaryActionPacketCount
+                   : state.copyPackets[1].size() ==
+                         *state.secondaryActionPacketCount)
+            : state.copyPackets[1].size() == state.frame.packetCount;
     const bool allCopiesComplete =
-        state.copyPackets[0].size() == state.frame.packetCount &&
-        state.copyPackets[1].size() == state.frame.packetCount;
+        state.copyPackets[0].size() == state.frame.packetCount && secondaryComplete;
     // Selective/adaptive duplication may launch copy 1 after the primary has
     // already delivered every packet. Hold those frames open until both copies
     // complete or the deadline/cleanup timer expires; otherwise the secondary
@@ -231,6 +279,32 @@ FrameReceiver::Finalize(uint64_t frameId, bool expired)
     }
     result.uniquePacketsReceived = state.unionPackets.size();
     result.duplicatePacketsReceived = state.duplicates;
+    result.codedRepairPacketsReceived = state.codedRepairPackets.size();
+    result.receivedSourcePacketIndices.assign(state.unionPackets.begin(),
+                                              state.unionPackets.end());
+    result.missingSourcePacketIndices.reserve(state.frame.packetCount -
+                                              state.unionPackets.size());
+    for (uint32_t index = 0; index < state.frame.packetCount; ++index)
+    {
+        if (!state.unionPackets.contains(index))
+        {
+            result.missingSourcePacketIndices.push_back(index);
+        }
+    }
+    for (const auto& [copyId, packets] : state.copyPackets)
+    {
+        result.sourcePacketIndicesByCopy.emplace(
+            copyId,
+            std::vector<uint32_t>(packets.begin(), packets.end()));
+    }
+    for (const auto& [linkId, packets] : state.linkPackets)
+    {
+        result.sourcePacketIndicesByLink.emplace(
+            linkId,
+            std::vector<uint32_t>(packets.begin(), packets.end()));
+    }
+    result.receivedCodedRepairIndices.assign(state.codedRepairPackets.begin(),
+                                             state.codedRepairPackets.end());
     result.incomplete = !state.completionUs.has_value();
     const Time absoluteDeadline = NanoSeconds(state.frame.generationTimeNs) +
                                   MicroSeconds(state.frame.deadlineUs);
@@ -243,7 +317,11 @@ FrameReceiver::Finalize(uint64_t frameId, bool expired)
     {
         contributingLinks.insert(entry.second);
     }
-    if (contributingLinks.size() > 1)
+    if (state.codedRepairContributed)
+    {
+        result.completionMode = "coded_repair";
+    }
+    else if (contributingLinks.size() > 1)
     {
         result.completionMode = "mixed";
     }

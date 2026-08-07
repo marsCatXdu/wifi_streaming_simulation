@@ -63,6 +63,30 @@ StreamingHeader::GetTypeId()
     return tid;
 }
 
+uint16_t
+StreamingHeader::WithActionPacketCount(uint16_t baseFlags, uint32_t packetCount)
+{
+    if (packetCount == 0 || packetCount > 255)
+    {
+        throw std::invalid_argument("streaming action packet count must be in [1,255]");
+    }
+    return static_cast<uint16_t>(
+        (baseFlags & ~ACTION_PACKET_COUNT_MASK) |
+        (static_cast<uint16_t>(packetCount) << ACTION_PACKET_COUNT_SHIFT));
+}
+
+uint32_t
+StreamingHeader::GetActionPacketCount() const
+{
+    return (flags & ACTION_PACKET_COUNT_MASK) >> ACTION_PACKET_COUNT_SHIFT;
+}
+
+bool
+StreamingHeader::IsCodedRepair() const
+{
+    return (flags & FLAG_CODED_REPAIR) != 0;
+}
+
 TypeId
 StreamingHeader::GetInstanceTypeId() const
 {
@@ -119,9 +143,34 @@ StreamingHeader::Deserialize(Buffer::Iterator start)
 bool
 StreamingHeader::IsValid() const
 {
-    return magic == MAGIC && version == VERSION && packetCount > 0 &&
-           packetIndex < packetCount &&
-           static_cast<uint8_t>(frameType) <= static_cast<uint8_t>(FrameType::PRIORITY_LOW);
+    if (magic != MAGIC || version != VERSION || packetCount == 0 ||
+        static_cast<uint8_t>(frameType) > static_cast<uint8_t>(FrameType::PRIORITY_LOW))
+    {
+        return false;
+    }
+    const bool partial = (flags & FLAG_PARTIAL_COPY) != 0;
+    const bool coded = IsCodedRepair();
+    const uint32_t actionPacketCount = GetActionPacketCount();
+    if (partial && coded)
+    {
+        return false;
+    }
+    if (coded)
+    {
+        return actionPacketCount > 0 &&
+               packetIndex >= packetCount &&
+               static_cast<uint64_t>(packetIndex) <
+                   static_cast<uint64_t>(packetCount) + actionPacketCount;
+    }
+    if (partial && actionPacketCount == 0)
+    {
+        return false;
+    }
+    if (!partial && actionPacketCount != 0)
+    {
+        return false;
+    }
+    return packetIndex < packetCount;
 }
 
 void

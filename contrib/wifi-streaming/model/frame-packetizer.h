@@ -135,6 +135,21 @@ class FramePacketizer
                                            const std::vector<uint32_t>& packetIndices);
 
     /**
+     * Build ideal systematic MDS-style repair symbols for a canonical plan.
+     *
+     * The source packets are treated as equally sized, zero-padded symbols.
+     * Repair symbols therefore carry the largest source payload size. Their
+     * packet indexes follow the source namespace and are marked as coded
+     * repair in the streaming header flags.
+     *
+     * @param plan Canonical full-copy packetization plan.
+     * @param repairPacketCount Number of innovative repair symbols to send.
+     * @return Ordered ideal coded-repair plan.
+     */
+    static PacketizationPlan MakeSystematicRepair(const PacketizationPlan& plan,
+                                                  uint32_t repairPacketCount);
+
+    /**
      * Plan and materialize a frame in one compatibility operation.
      *
      * @param frame Frame to packetize.

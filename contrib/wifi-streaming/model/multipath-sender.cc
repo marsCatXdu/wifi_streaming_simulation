@@ -156,6 +156,20 @@ MultipathSender::GetDelayedSecondaryPacketDescriptor(
         FramePacketizer::SelectPackets(frame->second.secondaryPlan, packetIndices));
 }
 
+std::optional<DelayedCopyDescriptor>
+MultipathSender::GetDelayedSecondaryCodedRepairDescriptor(uint64_t frameId,
+                                                          uint32_t repairPacketCount) const
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return std::nullopt;
+    }
+    return DescribeDelayedPlan(
+        FramePacketizer::MakeSystematicRepair(frame->second.secondaryPlan,
+                                              repairPacketCount));
+}
+
 std::optional<std::vector<uint32_t>>
 MultipathSender::GetUnacknowledgedPacketIndices(const PredictionFrameKey& key) const
 {
@@ -224,6 +238,33 @@ MultipathSender::RequestSecondaryPackets(uint64_t frameId,
 }
 
 bool
+MultipathSender::RequestSecondaryCodedRepair(uint64_t frameId,
+                                             uint32_t repairPacketCount,
+                                             const std::string& reason)
+{
+    auto frame = m_delayedFrames.find(frameId);
+    if (frame == m_delayedFrames.end() || frame->second.launched)
+    {
+        return false;
+    }
+    const auto repairPlan =
+        FramePacketizer::MakeSystematicRepair(frame->second.secondaryPlan,
+                                              repairPacketCount);
+    const uint64_t deadlineNs =
+        repairPlan.frame.generationTimeNs +
+        static_cast<uint64_t>(repairPlan.frame.deadlineUs) * 1000;
+    const int64_t nowNs = Simulator::Now().GetNanoSeconds();
+    if (nowNs < 0 || static_cast<uint64_t>(nowNs) >= deadlineNs)
+    {
+        return false;
+    }
+    // The prediction collector owns a canonical source-packet plan. Coded
+    // symbols live in a separate packet-index namespace and are deliberately
+    // excluded from that source-plan progress accounting.
+    return LaunchDelayedPlan(frame->second, repairPlan, reason, false);
+}
+
+bool
 MultipathSender::RequestSecondaryCopyInternal(
     uint64_t frameId,
     const std::optional<std::vector<uint32_t>>& packetIndices,
@@ -247,11 +288,23 @@ MultipathSender::RequestSecondaryCopyInternal(
                                 ? FramePacketizer::SelectPackets(canonicalPlan,
                                                                  *packetIndices)
                                 : canonicalPlan;
-    frame->second.launched = true;
-    ScheduleCopy(launchPlan, true, m_delayedSecondaryPredictionTrackingEnabled);
+    return LaunchDelayedPlan(frame->second,
+                             launchPlan,
+                             reason,
+                             m_delayedSecondaryPredictionTrackingEnabled);
+}
+
+bool
+MultipathSender::LaunchDelayedPlan(DelayedFrameState& frame,
+                                   const PacketizationPlan& launchPlan,
+                                   const std::string& reason,
+                                   bool predictionTracked)
+{
+    frame.launched = true;
+    ScheduleCopy(launchPlan, true, predictionTracked);
     if (m_collector)
     {
-        m_collector->MarkPolicyDecisionDuplicated(frameId,
+        m_collector->MarkPolicyDecisionDuplicated(launchPlan.frame.frameId,
                                                    Simulator::Now().GetMicroSeconds(),
                                                    launchPlan.pathId,
                                                    reason);

@@ -74,6 +74,10 @@ FramePacketizer::Materialize(const PacketizationPlan& plan) const
         tag.copyId = plan.copyId;
         tag.packetIndex = planned.packetIndex;
         tag.packetCount = plan.frame.packetCount;
+        if ((plan.flags & StreamingHeader::FLAG_CODED_REPAIR) != 0)
+        {
+            tag.packetCount += static_cast<uint32_t>(plan.packets.size());
+        }
         tag.generationTimeNs = plan.frame.generationTimeNs;
         tag.deadlineTimeNs =
             plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
@@ -117,6 +121,9 @@ FramePacketizer::SelectPackets(const PacketizationPlan& plan,
     PacketizationPlan selected = plan;
     selected.packets.clear();
     selected.packets.reserve(packetIndices.size());
+    selected.flags = StreamingHeader::WithActionPacketCount(
+        static_cast<uint16_t>(selected.flags | StreamingHeader::FLAG_PARTIAL_COPY),
+        packetIndices.size());
     std::set<uint32_t> uniqueIndices;
     for (std::size_t launchIndex = 0; launchIndex < packetIndices.size(); ++launchIndex)
     {
@@ -130,6 +137,56 @@ FramePacketizer::SelectPackets(const PacketizationPlan& plan,
         selected.packets.push_back(packet);
     }
     return selected;
+}
+
+PacketizationPlan
+FramePacketizer::MakeSystematicRepair(const PacketizationPlan& plan,
+                                      uint32_t repairPacketCount)
+{
+    NS_ABORT_MSG_IF(plan.frame.packetCount == 0 ||
+                        plan.frame.packetCount != plan.packets.size(),
+                    "Systematic repair requires a canonical full-copy plan");
+    NS_ABORT_MSG_IF(repairPacketCount == 0 || repairPacketCount > 255 ||
+                        repairPacketCount > plan.packets.size(),
+                    "Systematic repair count must be in [1,min(255,source packet count)]");
+    for (std::size_t index = 0; index < plan.packets.size(); ++index)
+    {
+        NS_ABORT_MSG_IF(plan.packets[index].packetIndex != index,
+                        "Systematic repair requires contiguous canonical indexes");
+    }
+
+    const auto largestPayload =
+        std::max_element(plan.packets.begin(),
+                         plan.packets.end(),
+                         [](const auto& left, const auto& right) {
+                             return left.applicationPayloadBytes < right.applicationPayloadBytes;
+                         })
+            ->applicationPayloadBytes;
+    PacketizationPlan repair = plan;
+    repair.flags = StreamingHeader::WithActionPacketCount(
+        static_cast<uint16_t>((repair.flags & ~StreamingHeader::FLAG_PARTIAL_COPY) |
+                              StreamingHeader::FLAG_CODED_REPAIR),
+        repairPacketCount);
+    repair.packets.clear();
+    repair.packets.reserve(repairPacketCount);
+    for (uint32_t repairIndex = 0; repairIndex < repairPacketCount; ++repairIndex)
+    {
+        PlannedPacket packet;
+        packet.packetIndex = plan.frame.packetCount + repairIndex;
+        packet.applicationPayloadBytes = largestPayload;
+        if (plan.packets.front().expectedMacServiceBytes)
+        {
+            const uint32_t sourcePayload = plan.packets.front().applicationPayloadBytes;
+            NS_ABORT_MSG_IF(*plan.packets.front().expectedMacServiceBytes < sourcePayload,
+                            "Canonical MAC service bytes are smaller than source payload");
+            packet.expectedMacServiceBytes =
+                largestPayload +
+                (*plan.packets.front().expectedMacServiceBytes - sourcePayload);
+        }
+        packet.offset = plan.packets[repairIndex].offset;
+        repair.packets.push_back(packet);
+    }
+    return repair;
 }
 
 PacketizationPlan

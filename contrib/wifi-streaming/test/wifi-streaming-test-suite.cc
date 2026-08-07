@@ -618,7 +618,7 @@ class HeaderTestCase : public TestCase
         source.deadlineUs = 33333;
         source.copyId = 1;
         source.senderLinkId = 2;
-        source.flags = 0xa55a;
+        source.flags = StreamingHeader::FLAG_DUPLICATED_FRAME;
 
         auto packet = Create<Packet>();
         packet->AddHeader(source);
@@ -644,6 +644,27 @@ class HeaderTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(decoded.copyId, source.copyId, "Copy ID changed");
         NS_TEST_ASSERT_MSG_EQ(decoded.senderLinkId, source.senderLinkId, "Link ID changed");
         NS_TEST_ASSERT_MSG_EQ(decoded.flags, source.flags, "Flags changed");
+
+        StreamingHeader coded = source;
+        coded.packetCount = 7;
+        coded.packetIndex = 8;
+        coded.flags = StreamingHeader::WithActionPacketCount(
+            static_cast<uint16_t>(StreamingHeader::FLAG_DUPLICATED_FRAME |
+                                  StreamingHeader::FLAG_CODED_REPAIR),
+            2);
+        NS_TEST_ASSERT_MSG_EQ(coded.IsValid(), true, "Valid coded repair was rejected");
+        NS_TEST_ASSERT_MSG_EQ(coded.GetActionPacketCount(),
+                              2,
+                              "Coded repair count was not decoded");
+        coded.packetIndex = 9;
+        NS_TEST_ASSERT_MSG_EQ(coded.IsValid(), false, "Out-of-range repair was accepted");
+
+        StreamingHeader partial = source;
+        partial.flags = StreamingHeader::WithActionPacketCount(
+            static_cast<uint16_t>(StreamingHeader::FLAG_DUPLICATED_FRAME |
+                                  StreamingHeader::FLAG_PARTIAL_COPY),
+            2);
+        NS_TEST_ASSERT_MSG_EQ(partial.IsValid(), true, "Valid partial copy was rejected");
 
         StreamingHeader truncated;
         NS_TEST_ASSERT_MSG_EQ(Create<Packet>(10)->RemoveHeader(truncated),
@@ -836,6 +857,99 @@ class PacketizerTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(explicitSelection.packets[1].packetIndex,
                               0,
                               "Explicit projection changed a noncontiguous index");
+        NS_TEST_ASSERT_MSG_EQ(
+            (explicitSelection.flags & StreamingHeader::FLAG_PARTIAL_COPY) != 0,
+            true,
+            "Explicit projection lacks its partial-copy marker");
+        NS_TEST_ASSERT_MSG_EQ(
+            static_cast<uint32_t>((explicitSelection.flags &
+                                   StreamingHeader::ACTION_PACKET_COUNT_MASK) >>
+                                  StreamingHeader::ACTION_PACKET_COUNT_SHIFT),
+            2,
+            "Explicit projection lacks its action packet count");
+
+        const auto repair = FramePacketizer::MakeSystematicRepair(plan, 2);
+        NS_TEST_ASSERT_MSG_EQ(repair.packets.size(), 2, "Wrong repair symbol count");
+        NS_TEST_ASSERT_MSG_EQ(repair.packets[0].packetIndex,
+                              3,
+                              "First repair symbol overlaps source namespace");
+        NS_TEST_ASSERT_MSG_EQ(repair.packets[1].packetIndex,
+                              4,
+                              "Repair symbol indexes are not contiguous");
+        NS_TEST_ASSERT_MSG_EQ(repair.packets[1].applicationPayloadBytes,
+                              1000,
+                              "Repair symbol did not account for source padding");
+        NS_TEST_ASSERT_MSG_EQ(*repair.packets[1].expectedMacServiceBytes,
+                              1086,
+                              "Repair symbol MAC service bytes omit padding");
+        const auto repairEmissions = packetizer.Materialize(repair);
+        StreamingHeader repairHeader;
+        NS_TEST_ASSERT_MSG_EQ(repairEmissions[0].packet->PeekHeader(repairHeader),
+                              StreamingHeader::SERIALIZED_SIZE,
+                              "Repair header is malformed");
+        NS_TEST_ASSERT_MSG_EQ(repairHeader.IsCodedRepair(),
+                              true,
+                              "Repair packet lacks its coded marker");
+        NS_TEST_ASSERT_MSG_EQ(repairEmissions[0].frameTag.IsValid(),
+                              true,
+                              "Repair frame tag is structurally invalid");
+    }
+};
+
+class CodedRepairReassemblyTestCase : public TestCase
+{
+  public:
+    CodedRepairReassemblyTestCase()
+        : TestCase("Ideal coded repair completes after k innovative symbols")
+    {
+    }
+
+  private:
+    void DoRun() override
+    {
+        auto collector = CreateObject<MetricsCollector>();
+        auto receiver = CreateObject<FrameReceiver>();
+        receiver->SetMetricsCollector(collector);
+        receiver->SetHoldForDelayedSecondary(true);
+
+        receiver->ProcessPacket(MakeStreamingPacket(31, 0, 3, 0, 1, 1000));
+        receiver->ProcessPacket(MakeStreamingPacket(31, 2, 3, 0, 1, 1000));
+        const uint16_t repairFlags = StreamingHeader::WithActionPacketCount(
+            static_cast<uint16_t>(StreamingHeader::FLAG_DUPLICATED_FRAME |
+                                  StreamingHeader::FLAG_CODED_REPAIR),
+            1);
+        Simulator::Schedule(MicroSeconds(100),
+                            &FrameReceiver::ProcessPacket,
+                            PeekPointer(receiver),
+                            MakeStreamingPacket(31, 3, 3, 1, 0, 1000, 0, repairFlags));
+        Simulator::Stop(MicroSeconds(1000) + NanoSeconds(1));
+        Simulator::Run();
+
+        NS_TEST_ASSERT_MSG_EQ(collector->GetFrameResults().size(),
+                              1,
+                              "Coded frame did not finalize");
+        const auto& result = collector->GetFrameResults().front();
+        NS_TEST_ASSERT_MSG_EQ(result.deadlineMiss,
+                              false,
+                              "Innovative repair did not rescue the frame");
+        NS_TEST_ASSERT_MSG_EQ(result.unionCompletionUs.has_value() &&
+                                  *result.unionCompletionUs == 100,
+                              true,
+                              "Coded completion time is wrong");
+        NS_TEST_ASSERT_MSG_EQ(result.copy1CompletionUs.has_value() &&
+                                  *result.copy1CompletionUs == 100,
+                              true,
+                              "Repair action completion time is missing");
+        NS_TEST_ASSERT_MSG_EQ(result.codedRepairPacketsReceived,
+                              1,
+                              "Repair symbol was not counted");
+        NS_TEST_ASSERT_MSG_EQ(result.missingSourcePacketIndices.size(),
+                              1,
+                              "Coded completion hid the missing source packet");
+        NS_TEST_ASSERT_MSG_EQ(result.completionMode,
+                              "coded_repair",
+                              "Coded contribution was not identified");
+        Simulator::Destroy();
     }
 };
 
@@ -5025,6 +5139,7 @@ class WifiStreamingTestSuite : public TestSuite
         AddTestCase(new HeaderTestCase, TestCase::Duration::QUICK);
         AddTestCase(new TraceSourceTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PacketizerTestCase, TestCase::Duration::QUICK);
+        AddTestCase(new CodedRepairReassemblyTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionCollectorFoundationTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionPollingTestCase, TestCase::Duration::QUICK);
         AddTestCase(new PredictionPhyHistoryTestCase, TestCase::Duration::QUICK);
