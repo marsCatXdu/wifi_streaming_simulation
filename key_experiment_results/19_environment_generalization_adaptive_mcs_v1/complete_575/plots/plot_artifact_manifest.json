@@ -1,0 +1,86 @@
+{
+  "analysis": "environment-generalization-adaptive-mcs-comparison-v1",
+  "plots": {
+    "adaptive_policy_vs_str_by_scenario.pdf": {
+      "bytes": 17893,
+      "sha256": "ae5ee87b1a9489a642af7af492b37281a3c957e94c05940c5b5db682817cc9ce"
+    },
+    "adaptive_policy_vs_str_by_scenario.png": {
+      "bytes": 67923,
+      "sha256": "6c85b6f0aba6936353d999193c563768f2c8a0223735026350898112333c070d"
+    },
+    "aggregate_fixed_vs_adaptive.pdf": {
+      "bytes": 21690,
+      "sha256": "5e801ad234baf80d5bbe0db298592e3cbcea74ac3e20697fcf78c8ab731b93a0"
+    },
+    "aggregate_fixed_vs_adaptive.png": {
+      "bytes": 141161,
+      "sha256": "52445bcf3fe49090d74deb2f7a51214f6b0bbf37a55661f80122eaa894fb7aab"
+    },
+    "all_generated_censored_latency_cdf.pdf": {
+      "bytes": 62656,
+      "sha256": "4c928f1dfda4aaefb4383ea21c23c9c247557cab53017e96ff89ecdf6cfcce5d"
+    },
+    "all_generated_censored_latency_cdf.png": {
+      "bytes": 106991,
+      "sha256": "0735b214fc0f5aad702703f268d0d91a2f01da123da604df1cb263caf4241d53"
+    },
+    "all_generated_censored_latency_pdf.pdf": {
+      "bytes": 20235,
+      "sha256": "d81d51476d81b8b5bd25fee712cf974a8ea85f669938d53bf1dd5633a6254203"
+    },
+    "all_generated_censored_latency_pdf.png": {
+      "bytes": 77018,
+      "sha256": "8f9bf176cbc44d05e5c18df1920224c28f6d50a568cf8eef018ba17206564e56"
+    },
+    "completion_latency_cdf.pdf": {
+      "bytes": 66076,
+      "sha256": "aaacf1c7a3c901f82b7bc016494c3fc83b0e9b062fa4091fbf9544bace8a47f4"
+    },
+    "completion_latency_cdf.png": {
+      "bytes": 113632,
+      "sha256": "585e2b8cf32c0fa6f977ef9d6341fbd4b47c35095628b637165f3144c04651dd"
+    },
+    "completion_latency_pdf.pdf": {
+      "bytes": 20802,
+      "sha256": "a43bb0bed4cb0a5248dce39da25b4a4539f97c36ff6e5205cd131630e93884c6"
+    },
+    "completion_latency_pdf.png": {
+      "bytes": 75238,
+      "sha256": "79849e7a87c8c2580e73740b2d87eb0e4ae708372e5c856e86f846538ef09ff3"
+    },
+    "deadline_miss_burst_cdf.pdf": {
+      "bytes": 23265,
+      "sha256": "c7f10327bccd0c54db8d2b1bdf2964f63f6df93ab337196e367e89ce1992867f"
+    },
+    "deadline_miss_burst_cdf.png": {
+      "bytes": 73128,
+      "sha256": "dbeaa329e4a4c042ffb9d728e1c8d426e5c48e491539eaec3e1d1f15dfc3f361"
+    },
+    "deadline_outcome_composition.pdf": {
+      "bytes": 16845,
+      "sha256": "4538b3e7adaac8861890f62ab5d814c08843db00624a86943facd403f03336c6"
+    },
+    "deadline_outcome_composition.png": {
+      "bytes": 63513,
+      "sha256": "197ede417effc853ab5c0cf40408e737559f3353d1cce86779b3ed52c09dd084"
+    },
+    "family_deadline_miss_fixed_vs_adaptive.pdf": {
+      "bytes": 21162,
+      "sha256": "2652c45fc9f3a6547239947610661b37706e1952ee85311592c7558312edd902"
+    },
+    "family_deadline_miss_fixed_vs_adaptive.png": {
+      "bytes": 291343,
+      "sha256": "40bfd5903102503b598694f3291e61603891f5727e7a699e0edf0775219c6729"
+    },
+    "scenario_fixed_vs_adaptive.pdf": {
+      "bytes": 27238,
+      "sha256": "8cc62b2815f1568b240502d06ce3ad47d087f9acaddf6df5b854e4ff0d146dcb"
+    },
+    "scenario_fixed_vs_adaptive.png": {
+      "bytes": 169512,
+      "sha256": "2ad116dc91ab7b1c2d897dc167d37f89931914b70e75c450f1f74bb891c7a118"
+    }
+  },
+  "schema_version": 1
+}

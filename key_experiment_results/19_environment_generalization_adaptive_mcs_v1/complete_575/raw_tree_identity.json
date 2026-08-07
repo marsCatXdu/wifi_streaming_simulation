@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "algorithm": "sha256 of sorted sha256sum records over all regular files using paths relative to each shard root",
+  "local_remote_match": true,
+  "shards": [
+    {
+      "shard_index": 0,
+      "manifest_sha256": "788a8af494faa37224fcf845cb82ec9357cf20f22e51c49bff74e2e679378f57",
+      "regular_file_count": 4514,
+      "regular_file_bytes": 2143594984,
+      "raw_tree_sha256": "123d344e857589e0c624b65a98b0937440e79f63e8c45473b35fc5babb816e20"
+    },
+    {
+      "shard_index": 1,
+      "manifest_sha256": "52c430a0bb3e5ba02c4e1025769b566e7894caad4792271dca880e0866fb89b7",
+      "regular_file_count": 4508,
+      "regular_file_bytes": 2152111585,
+      "raw_tree_sha256": "a58c5bc000c321be6787fab1e08cd07a85e1e0cfbc7f5599d26e2dfcd009078f"
+    }
+  ]
+}

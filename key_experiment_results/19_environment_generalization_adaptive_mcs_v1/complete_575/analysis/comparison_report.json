@@ -1,0 +1,2754 @@
+{
+  "analysis": "environment-generalization-adaptive-mcs-comparison-v1",
+  "bootstrap": {
+    "method": "shared paired family/scenario/replicate hierarchical bootstrap",
+    "random_seed": 8231415969872262531,
+    "replications": 10000
+  },
+  "comparisons": {
+    "adaptive_distributional_minus_adaptive_str": {
+      "background_throughput_loss": {
+        "ci95_high": 0.0031594690584541133,
+        "ci95_low": -0.006998256302151007,
+        "estimate": -0.001149206202094577
+      },
+      "censored_mean_delta_us": {
+        "ci95_high": 2262.3151330017845,
+        "ci95_low": 1106.1210860603173,
+        "estimate": 1653.0321805073308
+      },
+      "deadline_miss_delta": {
+        "ci95_high": 0.06711741987598323,
+        "ci95_low": 0.030390480407221147,
+        "estimate": 0.04744020061728396
+      },
+      "relative_deadline_miss_change": {
+        "ci95_high": 0.4571674110285624,
+        "ci95_low": 0.1584749845135545,
+        "estimate": 0.267513671827198
+      },
+      "sender_airtime_ratio": {
+        "ci95_high": 1.246520463248132,
+        "ci95_low": 1.0210813667019167,
+        "estimate": 1.1345483007074408
+      }
+    },
+    "adaptive_minus_fixed__distributional_shadow_t2": {
+      "background_throughput_loss": {
+        "ci95_high": 0.0027220339640332456,
+        "ci95_low": -0.005340533664570968,
+        "estimate": -0.000572681468159919
+      },
+      "censored_mean_delta_us": {
+        "ci95_high": 1132.8897243561926,
+        "ci95_low": 6.997327088156001,
+        "estimate": 524.785942804785
+      },
+      "deadline_miss_delta": {
+        "ci95_high": 0.06192417717511705,
+        "ci95_low": 0.016802743786713408,
+        "estimate": 0.03719376929012347
+      },
+      "relative_deadline_miss_change": {
+        "ci95_high": 0.34280643805831307,
+        "ci95_low": 0.09651497915221391,
+        "estimate": 0.1982780340074144
+      },
+      "sender_airtime_ratio": {
+        "ci95_high": 1.1768306998539406,
+        "ci95_low": 0.9582407866881921,
+        "estimate": 1.0663381241920318
+      }
+    },
+    "adaptive_minus_fixed__score_aware_t2_v2": {
+      "background_throughput_loss": {
+        "ci95_high": 0.0021513674707441155,
+        "ci95_low": -0.005761745073385049,
+        "estimate": -0.0011077132674417456
+      },
+      "censored_mean_delta_us": {
+        "ci95_high": 1225.7777477418485,
+        "ci95_low": 60.688298734086466,
+        "estimate": 599.3772526041648
+      },
+      "deadline_miss_delta": {
+        "ci95_high": 0.06572507354359569,
+        "ci95_low": 0.019234886992026756,
+        "estimate": 0.040477912808641936
+      },
+      "relative_deadline_miss_change": {
+        "ci95_high": 0.35641141702811324,
+        "ci95_low": 0.10773515737134921,
+        "estimate": 0.21158679381788925
+      },
+      "sender_airtime_ratio": {
+        "ci95_high": 1.1623352021126905,
+        "ci95_low": 0.9510337517280386,
+        "estimate": 1.0552836634434364
+      }
+    },
+    "adaptive_minus_fixed__str_mlo_nmaxinflights_1": {
+      "background_throughput_loss": {
+        "ci95_high": 0.008836032150896827,
+        "ci95_low": -0.0049032427484359264,
+        "estimate": 0.0020787873769686493
+      },
+      "censored_mean_delta_us": {
+        "ci95_high": 459.6087590742547,
+        "ci95_low": -239.6164621790294,
+        "estimate": 93.90214409722103
+      },
+      "deadline_miss_delta": {
+        "ci95_high": 0.03016271628791652,
+        "ci95_low": 0.0047160954689989655,
+        "estimate": 0.016900800540123467
+      },
+      "relative_deadline_miss_change": {
+        "ci95_high": 0.21053467992860186,
+        "ci95_low": 0.03048897777608492,
+        "estimate": 0.10534249725337896
+      },
+      "sender_airtime_ratio": {
+        "ci95_high": 1.2042080618351227,
+        "ci95_low": 0.9645655379271596,
+        "estimate": 1.082202390710093
+      }
+    },
+    "adaptive_v2_minus_adaptive_str": {
+      "background_throughput_loss": {
+        "ci95_high": 0.002863796359206152,
+        "ci95_low": -0.007153441753677925,
+        "estimate": -0.0013690600026303734
+      },
+      "censored_mean_delta_us": {
+        "ci95_high": 2470.0082820717726,
+        "ci95_low": 1238.696364298918,
+        "estimate": 1825.3415690104157
+      },
+      "deadline_miss_delta": {
+        "ci95_high": 0.07624504796084733,
+        "ci95_low": 0.03557294261277165,
+        "estimate": 0.054446855709876535
+      },
+      "relative_deadline_miss_change": {
+        "ci95_high": 0.5241886385581898,
+        "ci95_low": 0.18368466083165189,
+        "estimate": 0.30702396070998317
+      },
+      "sender_airtime_ratio": {
+        "ci95_high": 1.2037238923697,
+        "ci95_low": 0.9822989637738007,
+        "estimate": 1.0934486332179532
+      }
+    }
+  },
+  "execution_exception": {
+    "analysis_resolution": {
+      "analyzed_run_count_per_mcs_mode": 573,
+      "exclude_incomplete_three_arm_unit_from_both_mcs_modes": true,
+      "further_retry_allowed": false,
+      "matched_paired_unit_count": 191,
+      "patched_binary_allowed": false,
+      "replacement_seed_allowed": false,
+      "strictly_validate_all_promoted_adaptive_runs": 575
+    },
+    "contract_id": "environment-generalization-adaptive-mcs-deterministic-failure-v1",
+    "deterministic_failure": {
+      "arm_id": "str_mlo_nmaxinflights_1",
+      "assertion": "apInfo.m_linkId < m_scanParams.channelList.size()",
+      "assertion_simulation_time_s": 29.947258708,
+      "attempt_count": 2,
+      "byte_identical_partial_artifacts": {
+        "frames.csv": "b93e336d3e8a30ff5f8c4046739da9a0342a8c105669cb6c8480c061a8b7c952",
+        "policy_decisions.csv": "5a4df56688272d32f16f1b2bb7bd0d2be29aa2e42781b4a54adc158d1f9ef839",
+        "resolved_config.json": "142e0338424614680e60c9bac2f1bc15b75e78364ed483de734c25956e0e4c91"
+      },
+      "family_id": "compound_shift",
+      "first_attempt_stdout_sha256": "2947919dba5005d2bcb9d6ba65964ac8d77abd807052737488539d4576d749c4",
+      "parameter_sample": 22,
+      "policy": "fixed_link_0",
+      "run": 1,
+      "run_id": "5663378425ecf42d9a21",
+      "scenario_id": "compound-shift-qualification-p22",
+      "second_attempt_stdout_sha256": "08dd2e4ecb2a611ee0db2905eb2ed7f4dfd672358409f965bdec277962465520",
+      "seed": 21188,
+      "shard_index": 1,
+      "source_location": "src/wifi/model/wifi-assoc-manager.cc:161",
+      "topology": "mlo_str"
+    },
+    "evidence_archive": "key_experiment_results/19_environment_generalization_adaptive_mcs_v1/partial_pre_recovery/FAILURE_DIAGNOSTIC.md",
+    "executable_sha256": "7e49b6eeb352a474e8d21b856ad2d90ade35e22a3be1f723058b31f3532af291",
+    "final_shard_manifests": [
+      {
+        "promoted_run_count": 288,
+        "sha256": "788a8af494faa37224fcf845cb82ec9357cf20f22e51c49bff74e2e679378f57",
+        "shard_index": 0
+      },
+      {
+        "promoted_run_count": 287,
+        "sha256": "52c430a0bb3e5ba02c4e1025769b566e7894caad4792271dca880e0866fb89b7",
+        "shard_index": 1
+      }
+    ],
+    "parent_runtime_contract": {
+      "path": "experiments/model-selection/environment-generalization-adaptive-mcs-qualification-v1.json",
+      "sha256": "aaedf15300b40d221e526ee5c4f27a205510f49b793caa203aa5f7fe16f6dff7"
+    },
+    "schema_version": 1,
+    "simulation_project_commit": "3ec03196d3ad1207b888433b134096fde1aa9670",
+    "status": "post_execution_exception_frozen_before_final_analysis"
+  },
+  "family_points": {
+    "compound_shift": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 20956.132971643518,
+          "all_generated_deadline_miss_rate": 0.5240653935185186,
+          "background_throughput_mbps": 41.153396666666666,
+          "sender_airtime_us": 6388713.395833333
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 21248.47132378472,
+          "all_generated_deadline_miss_rate": 0.5389163773148148,
+          "background_throughput_mbps": 41.185995,
+          "sender_airtime_us": 6083288.59375
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 17340.69449797454,
+          "all_generated_deadline_miss_rate": 0.4259895833333333,
+          "background_throughput_mbps": 40.978071666666665,
+          "sender_airtime_us": 7280165.802083333
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 20151.178391203703,
+          "all_generated_deadline_miss_rate": 0.48288194444444443,
+          "background_throughput_mbps": 41.12071,
+          "sender_airtime_us": 5655962.541666667
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 20284.974742476854,
+          "all_generated_deadline_miss_rate": 0.49019097222222224,
+          "background_throughput_mbps": 41.099563333333336,
+          "sender_airtime_us": 5511334.489583333
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 17090.572575231483,
+          "all_generated_deadline_miss_rate": 0.4090972222222222,
+          "background_throughput_mbps": 40.920291666666664,
+          "sender_airtime_us": 5876526.833333333
+        }
+      }
+    },
+    "legacy_coexistence": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 14584.694375,
+          "all_generated_deadline_miss_rate": 0.30147569444444444,
+          "background_throughput_mbps": 26.57229,
+          "sender_airtime_us": 6714635.71875
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 14660.890381944444,
+          "all_generated_deadline_miss_rate": 0.3073263888888889,
+          "background_throughput_mbps": 26.57524,
+          "sender_airtime_us": 6526615.1875
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 10889.782430555555,
+          "all_generated_deadline_miss_rate": 0.2080034722222222,
+          "background_throughput_mbps": 26.36901,
+          "sender_airtime_us": 5889385.0625
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 14371.257152777778,
+          "all_generated_deadline_miss_rate": 0.27642361111111113,
+          "background_throughput_mbps": 26.480015,
+          "sender_airtime_us": 6517980.09375
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 14465.974149305555,
+          "all_generated_deadline_miss_rate": 0.2812673611111111,
+          "background_throughput_mbps": 26.482875,
+          "sender_airtime_us": 6385802.4375
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 11097.082916666666,
+          "all_generated_deadline_miss_rate": 0.1986284722222222,
+          "background_throughput_mbps": 26.63939,
+          "sender_airtime_us": 5507760.25
+        }
+      }
+    },
+    "obss_geometry_mac": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 3764.9319791666667,
+          "all_generated_deadline_miss_rate": 0.015729166666666666,
+          "background_throughput_mbps": 26.666175,
+          "sender_airtime_us": 4455687.25
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 3722.7197395833336,
+          "all_generated_deadline_miss_rate": 0.014305555555555556,
+          "background_throughput_mbps": 26.666240000000002,
+          "sender_airtime_us": 4345648.8125
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 3572.400763888889,
+          "all_generated_deadline_miss_rate": 0.012864583333333334,
+          "background_throughput_mbps": 26.66745,
+          "sender_airtime_us": 3592139.5
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 4037.0989930555556,
+          "all_generated_deadline_miss_rate": 0.010208333333333333,
+          "background_throughput_mbps": 26.666215,
+          "sender_airtime_us": 4976020.5625
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 4018.696579861111,
+          "all_generated_deadline_miss_rate": 0.008940972222222222,
+          "background_throughput_mbps": 26.66599,
+          "sender_airtime_us": 4797816.625
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 3897.036875,
+          "all_generated_deadline_miss_rate": 0.009236111111111112,
+          "background_throughput_mbps": 26.667255,
+          "sender_airtime_us": 4213300.75
+        }
+      }
+    },
+    "obss_intensity": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 13637.26421875,
+          "all_generated_deadline_miss_rate": 0.30494791666666665,
+          "background_throughput_mbps": 46.13345476666667,
+          "sender_airtime_us": 5665160.03125
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 13776.938350694445,
+          "all_generated_deadline_miss_rate": 0.30973958333333335,
+          "background_throughput_mbps": 46.14027013333333,
+          "sender_airtime_us": 5481755.9375
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 12678.442152777778,
+          "all_generated_deadline_miss_rate": 0.27618055555555554,
+          "background_throughput_mbps": 46.39145296666666,
+          "sender_airtime_us": 4960101.3125
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 13061.32517361111,
+          "all_generated_deadline_miss_rate": 0.26428819444444446,
+          "background_throughput_mbps": 46.154103533333334,
+          "sender_airtime_us": 5818478.21875
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 13115.876597222223,
+          "all_generated_deadline_miss_rate": 0.2670138888888889,
+          "background_throughput_mbps": 46.1116083,
+          "sender_airtime_us": 5688508.28125
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 12707.640659722221,
+          "all_generated_deadline_miss_rate": 0.26711805555555557,
+          "background_throughput_mbps": 46.473530100000005,
+          "sender_airtime_us": 4940451.0
+        }
+      }
+    },
+    "radio_propagation": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 9670.655659722222,
+          "all_generated_deadline_miss_rate": 0.18670138888888888,
+          "background_throughput_mbps": 26.640005,
+          "sender_airtime_us": 10386340.90625
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 10141.607690972221,
+          "all_generated_deadline_miss_rate": 0.20272569444444444,
+          "background_throughput_mbps": 26.64013,
+          "sender_airtime_us": 9877316.5625
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 8150.466041666667,
+          "all_generated_deadline_miss_rate": 0.1264236111111111,
+          "background_throughput_mbps": 26.53574,
+          "sender_airtime_us": 8093492.78125
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 7420.248854166666,
+          "all_generated_deadline_miss_rate": 0.07729166666666666,
+          "background_throughput_mbps": 26.63312,
+          "sender_airtime_us": 7341915.53125
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 7681.168038194444,
+          "all_generated_deadline_miss_rate": 0.08583333333333333,
+          "background_throughput_mbps": 26.633235,
+          "sender_airtime_us": 7116639.21875
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 6906.874375,
+          "all_generated_deadline_miss_rate": 0.06677083333333333,
+          "background_throughput_mbps": 26.64395,
+          "sender_airtime_us": 5830317.78125
+        }
+      }
+    },
+    "video_workload": {
+      "adaptive": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 2760.152287326389,
+          "all_generated_deadline_miss_rate": 0.01574652777777778,
+          "background_throughput_mbps": 26.566110000000002,
+          "sender_airtime_us": 4434327.6875
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 2857.0603356481483,
+          "all_generated_deadline_miss_rate": 0.01769241898148148,
+          "background_throughput_mbps": 26.5661,
+          "sender_airtime_us": 4352042.6875
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 2823.852521701389,
+          "all_generated_deadline_miss_rate": 0.014563078703703705,
+          "background_throughput_mbps": 26.567325,
+          "sender_airtime_us": 3717765.625
+        }
+      },
+      "fixed": {
+        "distributional_shadow_t2": {
+          "all_generated_censored_mean_us": 3184.007269965278,
+          "all_generated_deadline_miss_rate": 0.014409722222222223,
+          "background_throughput_mbps": 26.566385,
+          "sender_airtime_us": 5367693.125
+        },
+        "score_aware_t2_v2": {
+          "all_generated_censored_mean_us": 3244.7341999421296,
+          "all_generated_deadline_miss_rate": 0.01459201388888889,
+          "background_throughput_mbps": 26.566295,
+          "sender_airtime_us": 5245692.0
+        },
+        "str_mlo_nmaxinflights_1": {
+          "all_generated_censored_mean_us": 3193.018142361111,
+          "all_generated_deadline_miss_rate": 0.011769386574074074,
+          "background_throughput_mbps": 26.567735,
+          "sender_airtime_us": 4617575.75
+        }
+      }
+    }
+  },
+  "interpretation_limits": [
+    "Deadline misses and deadline-censored latency include every generated frame.",
+    "Completion CDF/PDF and completed-frame P99 are survivor-conditioned.",
+    "Predictors, actions, admission policies, and canonical reservations are unchanged.",
+    "The fixed campaign is reused from its checksum-closed archived strict analysis.",
+    "One deterministic native ns-3 failure is excluded as a complete three-arm unit."
+  ],
+  "p99_support": {
+    "adaptive": {
+      "distributional_shadow_t2": {
+        "supported_run_count": 176,
+        "total_run_count": 191
+      },
+      "score_aware_t2_v2": {
+        "supported_run_count": 174,
+        "total_run_count": 191
+      },
+      "str_mlo_nmaxinflights_1": {
+        "supported_run_count": 181,
+        "total_run_count": 191
+      }
+    },
+    "fixed": {
+      "distributional_shadow_t2": {
+        "supported_run_count": 183,
+        "total_run_count": 191
+      },
+      "score_aware_t2_v2": {
+        "supported_run_count": 181,
+        "total_run_count": 191
+      },
+      "str_mlo_nmaxinflights_1": {
+        "supported_run_count": 184,
+        "total_run_count": 191
+      }
+    }
+  },
+  "population": {
+    "adaptive_promoted_run_count": 575,
+    "analyzed_run_count_per_mode": 573,
+    "archived_fixed_run_count": 576,
+    "arm_count": 3,
+    "excluded_unit": {
+      "arm_id": "str_mlo_nmaxinflights_1",
+      "family_id": "compound_shift",
+      "parameter_sample": 22,
+      "run": 1,
+      "run_id": "5663378425ecf42d9a21",
+      "scenario_id": "compound-shift-qualification-p22",
+      "seed": 21188
+    },
+    "family_count": 6,
+    "modes": [
+      "fixed",
+      "adaptive"
+    ],
+    "paired_unit_count": 191,
+    "scenario_count": 48
+  },
+  "scenario_points": {
+    "compound_shift": {
+      "compound-shift-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 28605.936458333334,
+            "all_generated_deadline_miss_rate": 0.5782986111111111,
+            "background_throughput_mbps": 39.202400000000004,
+            "sender_airtime_us": 7039672.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 29945.547569444447,
+            "all_generated_deadline_miss_rate": 0.6194444444444445,
+            "background_throughput_mbps": 39.4022,
+            "sender_airtime_us": 6312101.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 22439.063194444447,
+            "all_generated_deadline_miss_rate": 0.41041666666666665,
+            "background_throughput_mbps": 39.456,
+            "sender_airtime_us": 6544662.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 26548.255729166667,
+            "all_generated_deadline_miss_rate": 0.4973958333333333,
+            "background_throughput_mbps": 39.48332,
+            "sender_airtime_us": 5128817.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 27150.994791666668,
+            "all_generated_deadline_miss_rate": 0.5170138888888889,
+            "background_throughput_mbps": 39.49224,
+            "sender_airtime_us": 4855134.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 21972.050520833334,
+            "all_generated_deadline_miss_rate": 0.39774305555555556,
+            "background_throughput_mbps": 39.51072,
+            "sender_airtime_us": 4359450.75
+          }
+        }
+      },
+      "compound-shift-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 14114.745833333334,
+            "all_generated_deadline_miss_rate": 0.26569444444444446,
+            "background_throughput_mbps": 29.49444,
+            "sender_airtime_us": 5872101.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 14630.582083333333,
+            "all_generated_deadline_miss_rate": 0.2875,
+            "background_throughput_mbps": 29.49496,
+            "sender_airtime_us": 5455509.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6951.497638888889,
+            "all_generated_deadline_miss_rate": 0.09458333333333332,
+            "background_throughput_mbps": 29.50296,
+            "sender_airtime_us": 3817708.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 12644.380694444444,
+            "all_generated_deadline_miss_rate": 0.2075,
+            "background_throughput_mbps": 28.330759999999998,
+            "sender_airtime_us": 5843566.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 12741.930972222222,
+            "all_generated_deadline_miss_rate": 0.22083333333333333,
+            "background_throughput_mbps": 28.33232,
+            "sender_airtime_us": 5784886.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6793.791527777777,
+            "all_generated_deadline_miss_rate": 0.07680555555555556,
+            "background_throughput_mbps": 29.50524,
+            "sender_airtime_us": 4165884.0
+          }
+        }
+      },
+      "compound-shift-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 6936.304166666667,
+            "all_generated_deadline_miss_rate": 0.059548611111111115,
+            "background_throughput_mbps": 40.21928,
+            "sender_airtime_us": 3223900.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 6438.256076388889,
+            "all_generated_deadline_miss_rate": 0.052256944444444446,
+            "background_throughput_mbps": 40.22116,
+            "sender_airtime_us": 3379688.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4270.741493055555,
+            "all_generated_deadline_miss_rate": 0.027083333333333334,
+            "background_throughput_mbps": 40.22708,
+            "sender_airtime_us": 2380180.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 6895.640798611112,
+            "all_generated_deadline_miss_rate": 0.04565972222222222,
+            "background_throughput_mbps": 40.21164,
+            "sender_airtime_us": 3895725.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 6987.9625,
+            "all_generated_deadline_miss_rate": 0.050347222222222224,
+            "background_throughput_mbps": 40.21628,
+            "sender_airtime_us": 3911205.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4837.617534722222,
+            "all_generated_deadline_miss_rate": 0.027256944444444445,
+            "background_throughput_mbps": 40.2272,
+            "sender_airtime_us": 3107876.25
+          }
+        }
+      },
+      "compound-shift-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15065.482083333332,
+            "all_generated_deadline_miss_rate": 0.26125,
+            "background_throughput_mbps": 22.65424,
+            "sender_airtime_us": 7401515.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 15351.447638888889,
+            "all_generated_deadline_miss_rate": 0.27958333333333335,
+            "background_throughput_mbps": 22.65908,
+            "sender_airtime_us": 7154792.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7660.744722222223,
+            "all_generated_deadline_miss_rate": 0.09236111111111112,
+            "background_throughput_mbps": 22.76108,
+            "sender_airtime_us": 4798247.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15445.475277777778,
+            "all_generated_deadline_miss_rate": 0.26416666666666666,
+            "background_throughput_mbps": 22.74736,
+            "sender_airtime_us": 7172107.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 15553.91138888889,
+            "all_generated_deadline_miss_rate": 0.2713888888888889,
+            "background_throughput_mbps": 22.74832,
+            "sender_airtime_us": 7126437.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 8095.55375,
+            "all_generated_deadline_miss_rate": 0.08944444444444444,
+            "background_throughput_mbps": 22.75584,
+            "sender_airtime_us": 5171193.0
+          }
+        }
+      },
+      "compound-shift-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 20761.939814814814,
+            "all_generated_deadline_miss_rate": 0.8975,
+            "background_throughput_mbps": 48.374880000000005,
+            "sender_airtime_us": 8957844.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 20777.543796296297,
+            "all_generated_deadline_miss_rate": 0.8982407407407408,
+            "background_throughput_mbps": 48.3798,
+            "sender_airtime_us": 8334642.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 18430.912685185187,
+            "all_generated_deadline_miss_rate": 0.7819444444444444,
+            "background_throughput_mbps": 46.51944,
+            "sender_airtime_us": 16155765.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 19978.854444444445,
+            "all_generated_deadline_miss_rate": 0.8391666666666666,
+            "background_throughput_mbps": 48.30328,
+            "sender_airtime_us": 8341329.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 20005.130925925925,
+            "all_generated_deadline_miss_rate": 0.8413888888888889,
+            "background_throughput_mbps": 48.30832,
+            "sender_airtime_us": 7959205.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 19765.254074074073,
+            "all_generated_deadline_miss_rate": 0.8323148148148148,
+            "background_throughput_mbps": 48.62504,
+            "sender_airtime_us": 11499697.5
+          }
+        }
+      },
+      "compound-shift-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 9250.962870370371,
+            "all_generated_deadline_miss_rate": 0.22574074074074074,
+            "background_throughput_mbps": 21.85564,
+            "sender_airtime_us": 10282886.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 9933.79824074074,
+            "all_generated_deadline_miss_rate": 0.26981481481481484,
+            "background_throughput_mbps": 21.85568,
+            "sender_airtime_us": 9845235.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7584.729074074074,
+            "all_generated_deadline_miss_rate": 0.1648148148148148,
+            "background_throughput_mbps": 22.13716,
+            "sender_airtime_us": 8228608.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7765.014722222222,
+            "all_generated_deadline_miss_rate": 0.1575925925925926,
+            "background_throughput_mbps": 22.12868,
+            "sender_airtime_us": 8164040.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8043.051851851852,
+            "all_generated_deadline_miss_rate": 0.17342592592592593,
+            "background_throughput_mbps": 22.12932,
+            "sender_airtime_us": 7873673.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6275.735185185185,
+            "all_generated_deadline_miss_rate": 0.10703703703703704,
+            "background_throughput_mbps": 21.27968,
+            "sender_airtime_us": 6565126.0
+          }
+        }
+      },
+      "compound-shift-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 41658.44212962963,
+            "all_generated_deadline_miss_rate": 0.9997685185185184,
+            "background_throughput_mbps": 63.57749333333334,
+            "sender_airtime_us": 2423881.6666666665
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 41658.44212962963,
+            "all_generated_deadline_miss_rate": 0.9997685185185184,
+            "background_throughput_mbps": 63.55648,
+            "sender_airtime_us": 2595055.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 41661.38009259259,
+            "all_generated_deadline_miss_rate": 0.9997685185185184,
+            "background_throughput_mbps": 63.440693333333336,
+            "sender_airtime_us": 6185035.666666667
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 41648.4900462963,
+            "all_generated_deadline_miss_rate": 0.9990740740740741,
+            "background_throughput_mbps": 63.78832,
+            "sender_airtime_us": 2383626.3333333335
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 41630.35162037037,
+            "all_generated_deadline_miss_rate": 0.9983796296296297,
+            "background_throughput_mbps": 63.50522666666666,
+            "sender_airtime_us": 2499543.6666666665
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 41612.05023148149,
+            "all_generated_deadline_miss_rate": 0.9981481481481481,
+            "background_throughput_mbps": 63.25477333333333,
+            "sender_airtime_us": 5554671.666666667
+          }
+        }
+      },
+      "compound-shift-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 31255.250416666666,
+            "all_generated_deadline_miss_rate": 0.9047222222222222,
+            "background_throughput_mbps": 63.848800000000004,
+            "sender_airtime_us": 5907904.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 31252.153055555555,
+            "all_generated_deadline_miss_rate": 0.9047222222222222,
+            "background_throughput_mbps": 63.9186,
+            "sender_airtime_us": 5589284.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 29726.487083333333,
+            "all_generated_deadline_miss_rate": 0.8369444444444445,
+            "background_throughput_mbps": 63.78016,
+            "sender_airtime_us": 10131117.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 30283.315416666665,
+            "all_generated_deadline_miss_rate": 0.8525,
+            "background_throughput_mbps": 63.972319999999996,
+            "sender_airtime_us": 4318488.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 30166.46388888889,
+            "all_generated_deadline_miss_rate": 0.84875,
+            "background_throughput_mbps": 64.06448,
+            "sender_airtime_us": 4080588.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 27372.527777777777,
+            "all_generated_deadline_miss_rate": 0.7440277777777777,
+            "background_throughput_mbps": 62.20384,
+            "sender_airtime_us": 6588315.5
+          }
+        }
+      }
+    },
+    "legacy_coexistence": {
+      "legacy-coexistence-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 5253.69,
+            "all_generated_deadline_miss_rate": 0.035277777777777776,
+            "background_throughput_mbps": 26.56348,
+            "sender_airtime_us": 5476671.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 5554.14625,
+            "all_generated_deadline_miss_rate": 0.04875,
+            "background_throughput_mbps": 26.56372,
+            "sender_airtime_us": 5104484.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5387.725694444444,
+            "all_generated_deadline_miss_rate": 0.03861111111111111,
+            "background_throughput_mbps": 26.56532,
+            "sender_airtime_us": 4621428.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 5375.313611111111,
+            "all_generated_deadline_miss_rate": 0.02625,
+            "background_throughput_mbps": 26.56472,
+            "sender_airtime_us": 5422385.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 5592.7804166666665,
+            "all_generated_deadline_miss_rate": 0.03166666666666667,
+            "background_throughput_mbps": 26.56484,
+            "sender_airtime_us": 5283358.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5753.195138888888,
+            "all_generated_deadline_miss_rate": 0.02847222222222222,
+            "background_throughput_mbps": 26.56676,
+            "sender_airtime_us": 5052413.5
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 22961.6875,
+            "all_generated_deadline_miss_rate": 0.5580555555555555,
+            "background_throughput_mbps": 26.83676,
+            "sender_airtime_us": 8891613.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 23011.893055555556,
+            "all_generated_deadline_miss_rate": 0.5619444444444445,
+            "background_throughput_mbps": 26.83728,
+            "sender_airtime_us": 8659681.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 15520.065277777778,
+            "all_generated_deadline_miss_rate": 0.31875,
+            "background_throughput_mbps": 26.8904,
+            "sender_airtime_us": 6189009.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 20937.753333333334,
+            "all_generated_deadline_miss_rate": 0.46069444444444446,
+            "background_throughput_mbps": 26.85952,
+            "sender_airtime_us": 7276596.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 21207.26625,
+            "all_generated_deadline_miss_rate": 0.47388888888888886,
+            "background_throughput_mbps": 26.85932,
+            "sender_airtime_us": 7029593.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 15464.605833333333,
+            "all_generated_deadline_miss_rate": 0.3023611111111111,
+            "background_throughput_mbps": 26.90212,
+            "sender_airtime_us": 6263381.0
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15575.077916666667,
+            "all_generated_deadline_miss_rate": 0.27208333333333334,
+            "background_throughput_mbps": 26.5384,
+            "sender_airtime_us": 6868638.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 15709.349166666667,
+            "all_generated_deadline_miss_rate": 0.2777777777777778,
+            "background_throughput_mbps": 26.5398,
+            "sender_airtime_us": 6825865.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 9930.04625,
+            "all_generated_deadline_miss_rate": 0.14208333333333334,
+            "background_throughput_mbps": 26.542559999999998,
+            "sender_airtime_us": 5243680.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15999.720000000001,
+            "all_generated_deadline_miss_rate": 0.27652777777777776,
+            "background_throughput_mbps": 26.53752,
+            "sender_airtime_us": 7450001.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 16045.787777777778,
+            "all_generated_deadline_miss_rate": 0.2797222222222222,
+            "background_throughput_mbps": 26.536360000000002,
+            "sender_airtime_us": 7370389.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 10030.08,
+            "all_generated_deadline_miss_rate": 0.13083333333333333,
+            "background_throughput_mbps": 26.545160000000003,
+            "sender_airtime_us": 5549308.25
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 9795.698055555555,
+            "all_generated_deadline_miss_rate": 0.13930555555555557,
+            "background_throughput_mbps": 26.48452,
+            "sender_airtime_us": 5711958.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 10017.600972222222,
+            "all_generated_deadline_miss_rate": 0.14930555555555555,
+            "background_throughput_mbps": 26.487000000000002,
+            "sender_airtime_us": 5599701.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6512.290138888889,
+            "all_generated_deadline_miss_rate": 0.07083333333333333,
+            "background_throughput_mbps": 26.48472,
+            "sender_airtime_us": 4309189.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 9453.09375,
+            "all_generated_deadline_miss_rate": 0.12305555555555556,
+            "background_throughput_mbps": 25.511000000000003,
+            "sender_airtime_us": 6075551.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 9480.898888888889,
+            "all_generated_deadline_miss_rate": 0.12444444444444444,
+            "background_throughput_mbps": 25.51124,
+            "sender_airtime_us": 6018301.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6638.260416666667,
+            "all_generated_deadline_miss_rate": 0.06166666666666667,
+            "background_throughput_mbps": 26.49072,
+            "sender_airtime_us": 4722157.5
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7275.903333333333,
+            "all_generated_deadline_miss_rate": 0.08736111111111111,
+            "background_throughput_mbps": 26.69388,
+            "sender_airtime_us": 5248442.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 7180.002777777778,
+            "all_generated_deadline_miss_rate": 0.08888888888888889,
+            "background_throughput_mbps": 26.69436,
+            "sender_airtime_us": 5255278.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3881.797777777778,
+            "all_generated_deadline_miss_rate": 0.02708333333333333,
+            "background_throughput_mbps": 26.69728,
+            "sender_airtime_us": 3341571.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7977.727916666667,
+            "all_generated_deadline_miss_rate": 0.08513888888888889,
+            "background_throughput_mbps": 26.69256,
+            "sender_airtime_us": 5771452.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 7868.296249999999,
+            "all_generated_deadline_miss_rate": 0.08652777777777777,
+            "background_throughput_mbps": 26.69312,
+            "sender_airtime_us": 5778618.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4521.383333333333,
+            "all_generated_deadline_miss_rate": 0.027777777777777776,
+            "background_throughput_mbps": 26.69588,
+            "sender_airtime_us": 4157207.0
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15842.974583333335,
+            "all_generated_deadline_miss_rate": 0.31069444444444444,
+            "background_throughput_mbps": 26.88044,
+            "sender_airtime_us": 7466765.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 15748.382916666667,
+            "all_generated_deadline_miss_rate": 0.31583333333333335,
+            "background_throughput_mbps": 26.881240000000002,
+            "sender_airtime_us": 7372786.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7773.892777777778,
+            "all_generated_deadline_miss_rate": 0.11166666666666666,
+            "background_throughput_mbps": 24.83912,
+            "sender_airtime_us": 4569940.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15113.669166666667,
+            "all_generated_deadline_miss_rate": 0.26916666666666667,
+            "background_throughput_mbps": 26.882199999999997,
+            "sender_airtime_us": 6921091.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 15114.398888888889,
+            "all_generated_deadline_miss_rate": 0.27152777777777776,
+            "background_throughput_mbps": 26.88296,
+            "sender_airtime_us": 6848287.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 8428.542083333334,
+            "all_generated_deadline_miss_rate": 0.10611111111111111,
+            "background_throughput_mbps": 26.90132,
+            "sender_airtime_us": 4921778.75
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 32018.13388888889,
+            "all_generated_deadline_miss_rate": 0.928611111111111,
+            "background_throughput_mbps": 25.788520000000002,
+            "sender_airtime_us": 8560560.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 32051.437222222223,
+            "all_generated_deadline_miss_rate": 0.9302777777777778,
+            "background_throughput_mbps": 25.80544,
+            "sender_airtime_us": 8073360.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 31551.498194444444,
+            "all_generated_deadline_miss_rate": 0.9016666666666666,
+            "background_throughput_mbps": 26.13616,
+            "sender_airtime_us": 14188306.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 31416.209305555556,
+            "all_generated_deadline_miss_rate": 0.8898611111111111,
+            "background_throughput_mbps": 26.0014,
+            "sender_airtime_us": 6835548.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 31482.01375,
+            "all_generated_deadline_miss_rate": 0.8943055555555556,
+            "background_throughput_mbps": 26.02268,
+            "sender_airtime_us": 6520899.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 30842.28111111111,
+            "all_generated_deadline_miss_rate": 0.8748611111111111,
+            "background_throughput_mbps": 26.21296,
+            "sender_airtime_us": 8069617.75
+          }
+        }
+      },
+      "legacy-coexistence-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7954.389722222222,
+            "all_generated_deadline_miss_rate": 0.08041666666666666,
+            "background_throughput_mbps": 26.79232,
+            "sender_airtime_us": 5492436.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8014.310694444444,
+            "all_generated_deadline_miss_rate": 0.08583333333333333,
+            "background_throughput_mbps": 26.79308,
+            "sender_airtime_us": 5321764.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 6560.943333333334,
+            "all_generated_deadline_miss_rate": 0.05333333333333334,
+            "background_throughput_mbps": 26.79652,
+            "sender_airtime_us": 4651954.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 8696.570138888888,
+            "all_generated_deadline_miss_rate": 0.08069444444444444,
+            "background_throughput_mbps": 26.7912,
+            "sender_airtime_us": 6391215.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8936.350972222222,
+            "all_generated_deadline_miss_rate": 0.08805555555555555,
+            "background_throughput_mbps": 26.79248,
+            "sender_airtime_us": 6236970.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7098.315416666666,
+            "all_generated_deadline_miss_rate": 0.05694444444444444,
+            "background_throughput_mbps": 26.8002,
+            "sender_airtime_us": 5326218.25
+          }
+        }
+      }
+    },
+    "obss_geometry_mac": {
+      "obss-geometry-mac-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2921.4162499999998,
+            "all_generated_deadline_miss_rate": 0.008611111111111111,
+            "background_throughput_mbps": 26.62456,
+            "sender_airtime_us": 3783041.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3049.581388888889,
+            "all_generated_deadline_miss_rate": 0.009722222222222222,
+            "background_throughput_mbps": 26.62456,
+            "sender_airtime_us": 3607993.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3018.6843055555555,
+            "all_generated_deadline_miss_rate": 0.008611111111111111,
+            "background_throughput_mbps": 26.62488,
+            "sender_airtime_us": 3300499.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3365.471805555556,
+            "all_generated_deadline_miss_rate": 0.004583333333333333,
+            "background_throughput_mbps": 26.61916,
+            "sender_airtime_us": 4640043.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3499.2797222222225,
+            "all_generated_deadline_miss_rate": 0.005694444444444445,
+            "background_throughput_mbps": 26.61916,
+            "sender_airtime_us": 4452860.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3293.5422222222223,
+            "all_generated_deadline_miss_rate": 0.005138888888888889,
+            "background_throughput_mbps": 26.6244,
+            "sender_airtime_us": 3975667.75
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2983.837777777778,
+            "all_generated_deadline_miss_rate": 0.004861111111111111,
+            "background_throughput_mbps": 26.665680000000002,
+            "sender_airtime_us": 4182386.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2989.7768055555557,
+            "all_generated_deadline_miss_rate": 0.004722222222222222,
+            "background_throughput_mbps": 26.665680000000002,
+            "sender_airtime_us": 4058696.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2758.2648611111113,
+            "all_generated_deadline_miss_rate": 0.0043055555555555555,
+            "background_throughput_mbps": 26.66572,
+            "sender_airtime_us": 3347099.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3234.8720833333336,
+            "all_generated_deadline_miss_rate": 0.0020833333333333333,
+            "background_throughput_mbps": 26.66572,
+            "sender_airtime_us": 4558770.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3252.512083333333,
+            "all_generated_deadline_miss_rate": 0.0018055555555555557,
+            "background_throughput_mbps": 26.66572,
+            "sender_airtime_us": 4440771.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2966.4063888888886,
+            "all_generated_deadline_miss_rate": 0.002361111111111111,
+            "background_throughput_mbps": 26.66572,
+            "sender_airtime_us": 3848751.25
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4388.991527777778,
+            "all_generated_deadline_miss_rate": 0.02388888888888889,
+            "background_throughput_mbps": 26.52248,
+            "sender_airtime_us": 4857984.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3995.2770833333334,
+            "all_generated_deadline_miss_rate": 0.015277777777777777,
+            "background_throughput_mbps": 26.52248,
+            "sender_airtime_us": 4887878.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3579.085972222222,
+            "all_generated_deadline_miss_rate": 0.014027777777777778,
+            "background_throughput_mbps": 26.52368,
+            "sender_airtime_us": 3736913.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4460.789027777778,
+            "all_generated_deadline_miss_rate": 0.014305555555555556,
+            "background_throughput_mbps": 26.52368,
+            "sender_airtime_us": 5056022.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4197.417777777778,
+            "all_generated_deadline_miss_rate": 0.00875,
+            "background_throughput_mbps": 26.52368,
+            "sender_airtime_us": 5023189.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3623.177777777778,
+            "all_generated_deadline_miss_rate": 0.008194444444444445,
+            "background_throughput_mbps": 26.52368,
+            "sender_airtime_us": 4033800.5
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4095.224583333333,
+            "all_generated_deadline_miss_rate": 0.01513888888888889,
+            "background_throughput_mbps": 26.86896,
+            "sender_airtime_us": 4571324.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4092.8709722222225,
+            "all_generated_deadline_miss_rate": 0.014166666666666666,
+            "background_throughput_mbps": 26.86964,
+            "sender_airtime_us": 4415601.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4010.1744444444444,
+            "all_generated_deadline_miss_rate": 0.01611111111111111,
+            "background_throughput_mbps": 26.8686,
+            "sender_airtime_us": 3702020.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4647.327222222222,
+            "all_generated_deadline_miss_rate": 0.011527777777777777,
+            "background_throughput_mbps": 26.86716,
+            "sender_airtime_us": 5441212.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4643.374305555555,
+            "all_generated_deadline_miss_rate": 0.010555555555555556,
+            "background_throughput_mbps": 26.86652,
+            "sender_airtime_us": 5244498.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4531.269027777778,
+            "all_generated_deadline_miss_rate": 0.011388888888888888,
+            "background_throughput_mbps": 26.86904,
+            "sender_airtime_us": 4625467.5
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4018.7027777777776,
+            "all_generated_deadline_miss_rate": 0.018055555555555554,
+            "background_throughput_mbps": 26.46328,
+            "sender_airtime_us": 4754255.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4088.7808333333332,
+            "all_generated_deadline_miss_rate": 0.01972222222222222,
+            "background_throughput_mbps": 26.46328,
+            "sender_airtime_us": 4537043.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4281.809444444444,
+            "all_generated_deadline_miss_rate": 0.016805555555555556,
+            "background_throughput_mbps": 26.464,
+            "sender_airtime_us": 3956434.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4361.454027777778,
+            "all_generated_deadline_miss_rate": 0.012638888888888889,
+            "background_throughput_mbps": 26.464,
+            "sender_airtime_us": 5302288.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4454.2827777777775,
+            "all_generated_deadline_miss_rate": 0.012361111111111111,
+            "background_throughput_mbps": 26.464,
+            "sender_airtime_us": 5002335.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4788.948194444444,
+            "all_generated_deadline_miss_rate": 0.014166666666666666,
+            "background_throughput_mbps": 26.464,
+            "sender_airtime_us": 4657052.5
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3671.168888888889,
+            "all_generated_deadline_miss_rate": 0.013194444444444444,
+            "background_throughput_mbps": 26.70168,
+            "sender_airtime_us": 4643565.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3927.7023611111113,
+            "all_generated_deadline_miss_rate": 0.018333333333333333,
+            "background_throughput_mbps": 26.70152,
+            "sender_airtime_us": 4453224.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3827.942361111111,
+            "all_generated_deadline_miss_rate": 0.014583333333333334,
+            "background_throughput_mbps": 26.70996,
+            "sender_airtime_us": 3740426.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3644.2604166666665,
+            "all_generated_deadline_miss_rate": 0.0061111111111111106,
+            "background_throughput_mbps": 26.70724,
+            "sender_airtime_us": 4869452.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3720.9625,
+            "all_generated_deadline_miss_rate": 0.006805555555555555,
+            "background_throughput_mbps": 26.70608,
+            "sender_airtime_us": 4554193.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4188.827222222222,
+            "all_generated_deadline_miss_rate": 0.010833333333333334,
+            "background_throughput_mbps": 26.70844,
+            "sender_airtime_us": 4367152.0
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4165.000555555555,
+            "all_generated_deadline_miss_rate": 0.023888888888888887,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 4562808.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4048.8968055555556,
+            "all_generated_deadline_miss_rate": 0.01916666666666667,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 4514855.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3675.3481944444447,
+            "all_generated_deadline_miss_rate": 0.017083333333333332,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 3450884.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4389.409583333333,
+            "all_generated_deadline_miss_rate": 0.020416666666666666,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 4924457.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4366.254861111111,
+            "all_generated_deadline_miss_rate": 0.018055555555555554,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 4731438.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4138.111666666667,
+            "all_generated_deadline_miss_rate": 0.013888888888888888,
+            "background_throughput_mbps": 26.63544,
+            "sender_airtime_us": 4156005.75
+          }
+        }
+      },
+      "obss-geometry-mac-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3875.1134722222223,
+            "all_generated_deadline_miss_rate": 0.018194444444444444,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 4290133.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3588.871666666667,
+            "all_generated_deadline_miss_rate": 0.013333333333333334,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 4289897.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3427.896527777778,
+            "all_generated_deadline_miss_rate": 0.01138888888888889,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 3502837.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4193.207777777778,
+            "all_generated_deadline_miss_rate": 0.01,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 5015918.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4015.488611111111,
+            "all_generated_deadline_miss_rate": 0.0075,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 4933247.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3646.0125,
+            "all_generated_deadline_miss_rate": 0.007916666666666667,
+            "background_throughput_mbps": 26.84732,
+            "sender_airtime_us": 4042508.75
+          }
+        }
+      }
+    },
+    "obss_intensity": {
+      "obss-intensity-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4562.098888888889,
+            "all_generated_deadline_miss_rate": 0.03305555555555555,
+            "background_throughput_mbps": 30.33308,
+            "sender_airtime_us": 4529529.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4969.045694444445,
+            "all_generated_deadline_miss_rate": 0.04375,
+            "background_throughput_mbps": 30.33284,
+            "sender_airtime_us": 4417703.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4494.244722222222,
+            "all_generated_deadline_miss_rate": 0.03236111111111111,
+            "background_throughput_mbps": 30.34216,
+            "sender_airtime_us": 3740734.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 5093.32125,
+            "all_generated_deadline_miss_rate": 0.024999999999999998,
+            "background_throughput_mbps": 30.33444,
+            "sender_airtime_us": 5593828.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 5205.28,
+            "all_generated_deadline_miss_rate": 0.028055555555555556,
+            "background_throughput_mbps": 30.334600000000002,
+            "sender_airtime_us": 5466168.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4955.226805555556,
+            "all_generated_deadline_miss_rate": 0.028333333333333335,
+            "background_throughput_mbps": 30.33484,
+            "sender_airtime_us": 4538807.0
+          }
+        }
+      },
+      "obss-intensity-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 28959.060555555556,
+            "all_generated_deadline_miss_rate": 0.7984722222222222,
+            "background_throughput_mbps": 71.82024,
+            "sender_airtime_us": 6933164.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 28987.33861111111,
+            "all_generated_deadline_miss_rate": 0.7994444444444444,
+            "background_throughput_mbps": 71.94912,
+            "sender_airtime_us": 6790617.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 27562.866527777776,
+            "all_generated_deadline_miss_rate": 0.73875,
+            "background_throughput_mbps": 72.91268,
+            "sender_airtime_us": 8203647.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 23078.21138888889,
+            "all_generated_deadline_miss_rate": 0.5572222222222223,
+            "background_throughput_mbps": 70.74876,
+            "sender_airtime_us": 6570919.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 23103.95888888889,
+            "all_generated_deadline_miss_rate": 0.5604166666666667,
+            "background_throughput_mbps": 70.82384,
+            "sender_airtime_us": 6488132.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 27083.745,
+            "all_generated_deadline_miss_rate": 0.7209722222222222,
+            "background_throughput_mbps": 72.62484,
+            "sender_airtime_us": 6061842.5
+          }
+        }
+      },
+      "obss-intensity-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7304.768194444445,
+            "all_generated_deadline_miss_rate": 0.09041666666666666,
+            "background_throughput_mbps": 40.85348,
+            "sender_airtime_us": 5594218.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 7169.61,
+            "all_generated_deadline_miss_rate": 0.08833333333333333,
+            "background_throughput_mbps": 40.853719999999996,
+            "sender_airtime_us": 5465098.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5494.610138888888,
+            "all_generated_deadline_miss_rate": 0.05291666666666667,
+            "background_throughput_mbps": 40.85704,
+            "sender_airtime_us": 4003846.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 7534.321944444445,
+            "all_generated_deadline_miss_rate": 0.07777777777777778,
+            "background_throughput_mbps": 40.85704,
+            "sender_airtime_us": 6016922.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 7525.097083333333,
+            "all_generated_deadline_miss_rate": 0.07902777777777778,
+            "background_throughput_mbps": 40.72996,
+            "sender_airtime_us": 5878432.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5730.636527777778,
+            "all_generated_deadline_miss_rate": 0.04416666666666667,
+            "background_throughput_mbps": 40.85692,
+            "sender_airtime_us": 4716788.75
+          }
+        }
+      },
+      "obss-intensity-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 17580.40777777778,
+            "all_generated_deadline_miss_rate": 0.3655555555555556,
+            "background_throughput_mbps": 51.49574,
+            "sender_airtime_us": 8178590.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 18008.931666666667,
+            "all_generated_deadline_miss_rate": 0.3883333333333333,
+            "background_throughput_mbps": 51.49922,
+            "sender_airtime_us": 7719166.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 14780.040694444444,
+            "all_generated_deadline_miss_rate": 0.27944444444444444,
+            "background_throughput_mbps": 52.463319999999996,
+            "sender_airtime_us": 6659664.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 17816.932777777776,
+            "all_generated_deadline_miss_rate": 0.3695833333333333,
+            "background_throughput_mbps": 52.14466,
+            "sender_airtime_us": 7096298.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 17939.874722222223,
+            "all_generated_deadline_miss_rate": 0.37777777777777777,
+            "background_throughput_mbps": 52.15796,
+            "sender_airtime_us": 6840596.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 14458.394722222221,
+            "all_generated_deadline_miss_rate": 0.28652777777777777,
+            "background_throughput_mbps": 52.22288,
+            "sender_airtime_us": 5826959.0
+          }
+        }
+      },
+      "obss-intensity-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 32847.00277777778,
+            "all_generated_deadline_miss_rate": 0.9758333333333333,
+            "background_throughput_mbps": 71.14565999999999,
+            "sender_airtime_us": 4543681.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 32708.765277777777,
+            "all_generated_deadline_miss_rate": 0.9686111111111111,
+            "background_throughput_mbps": 71.07004,
+            "sender_airtime_us": 4547447.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 32430.765694444446,
+            "all_generated_deadline_miss_rate": 0.9543055555555555,
+            "background_throughput_mbps": 71.13532000000001,
+            "sender_airtime_us": 4940728.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 31924.139166666668,
+            "all_generated_deadline_miss_rate": 0.9302777777777778,
+            "background_throughput_mbps": 71.72744,
+            "sender_airtime_us": 4140200.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 31828.125,
+            "all_generated_deadline_miss_rate": 0.925,
+            "background_throughput_mbps": 71.426,
+            "sender_airtime_us": 4296437.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 31709.88597222222,
+            "all_generated_deadline_miss_rate": 0.9234722222222222,
+            "background_throughput_mbps": 72.32836,
+            "sender_airtime_us": 4321214.0
+          }
+        }
+      },
+      "obss-intensity-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 5634.379027777777,
+            "all_generated_deadline_miss_rate": 0.03805555555555556,
+            "background_throughput_mbps": 39.25078186666667,
+            "sender_airtime_us": 5152985.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 5922.839444444445,
+            "all_generated_deadline_miss_rate": 0.0475,
+            "background_throughput_mbps": 39.25068373333333,
+            "sender_airtime_us": 4980563.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5122.678472222222,
+            "all_generated_deadline_miss_rate": 0.029166666666666667,
+            "background_throughput_mbps": 39.254020266666664,
+            "sender_airtime_us": 4013850.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 6468.757083333334,
+            "all_generated_deadline_miss_rate": 0.035416666666666666,
+            "background_throughput_mbps": 39.25078186666667,
+            "sender_airtime_us": 5997649.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 6449.395416666666,
+            "all_generated_deadline_miss_rate": 0.03708333333333333,
+            "background_throughput_mbps": 39.25053653333333,
+            "sender_airtime_us": 5858641.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 5865.957361111112,
+            "all_generated_deadline_miss_rate": 0.03,
+            "background_throughput_mbps": 39.250929066666664,
+            "sender_airtime_us": 4882158.5
+          }
+        }
+      },
+      "obss-intensity-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 8107.527083333333,
+            "all_generated_deadline_miss_rate": 0.10722222222222222,
+            "background_throughput_mbps": 46.06275626666667,
+            "sender_airtime_us": 5863221.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8334.140138888888,
+            "all_generated_deadline_miss_rate": 0.11055555555555556,
+            "background_throughput_mbps": 46.060597333333334,
+            "sender_airtime_us": 5538068.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7606.941666666667,
+            "all_generated_deadline_miss_rate": 0.09138888888888888,
+            "background_throughput_mbps": 46.06290346666667,
+            "sender_airtime_us": 4484133.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 8390.513194444444,
+            "all_generated_deadline_miss_rate": 0.09513888888888888,
+            "background_throughput_mbps": 46.0643264,
+            "sender_airtime_us": 6257024.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8612.539166666666,
+            "all_generated_deadline_miss_rate": 0.10347222222222222,
+            "background_throughput_mbps": 46.06466986666667,
+            "sender_airtime_us": 5967264.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 7940.440277777778,
+            "all_generated_deadline_miss_rate": 0.08180555555555556,
+            "background_throughput_mbps": 46.06457173333333,
+            "sender_airtime_us": 5123194.0
+          }
+        }
+      },
+      "obss-intensity-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4102.8694444444445,
+            "all_generated_deadline_miss_rate": 0.03097222222222222,
+            "background_throughput_mbps": 18.1059,
+            "sender_airtime_us": 4525890.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4114.835972222222,
+            "all_generated_deadline_miss_rate": 0.03138888888888889,
+            "background_throughput_mbps": 18.10594,
+            "sender_airtime_us": 4395382.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3935.3893055555554,
+            "all_generated_deadline_miss_rate": 0.03111111111111111,
+            "background_throughput_mbps": 18.10418,
+            "sender_airtime_us": 3634206.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4184.404583333333,
+            "all_generated_deadline_miss_rate": 0.02388888888888889,
+            "background_throughput_mbps": 18.10538,
+            "sender_airtime_us": 4874983.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4262.7425,
+            "all_generated_deadline_miss_rate": 0.025277777777777777,
+            "background_throughput_mbps": 18.1053,
+            "sender_airtime_us": 4712393.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3916.8386111111113,
+            "all_generated_deadline_miss_rate": 0.021666666666666667,
+            "background_throughput_mbps": 18.1049,
+            "sender_airtime_us": 4052644.25
+          }
+        }
+      }
+    },
+    "radio_propagation": {
+      "radio-propagation-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2338.5065277777776,
+            "all_generated_deadline_miss_rate": 0.0043055555555555555,
+            "background_throughput_mbps": 26.79204,
+            "sender_airtime_us": 3225861.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2451.9431944444445,
+            "all_generated_deadline_miss_rate": 0.005833333333333334,
+            "background_throughput_mbps": 26.79204,
+            "sender_airtime_us": 3160313.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2225.0820833333332,
+            "all_generated_deadline_miss_rate": 0.0044444444444444444,
+            "background_throughput_mbps": 26.79208,
+            "sender_airtime_us": 2864809.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2863.4094444444445,
+            "all_generated_deadline_miss_rate": 0.0011111111111111111,
+            "background_throughput_mbps": 26.792160000000003,
+            "sender_airtime_us": 4163414.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2902.7147222222225,
+            "all_generated_deadline_miss_rate": 0.00125,
+            "background_throughput_mbps": 26.792160000000003,
+            "sender_airtime_us": 4084227.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2625.6506944444445,
+            "all_generated_deadline_miss_rate": 0.0020833333333333333,
+            "background_throughput_mbps": 26.79208,
+            "sender_airtime_us": 3617037.25
+          }
+        }
+      },
+      "radio-propagation-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 22454.086527777778,
+            "all_generated_deadline_miss_rate": 0.5302777777777777,
+            "background_throughput_mbps": 26.5836,
+            "sender_airtime_us": 24545077.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 23694.917638888888,
+            "all_generated_deadline_miss_rate": 0.5773611111111111,
+            "background_throughput_mbps": 26.58364,
+            "sender_airtime_us": 23935134.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 18079.48597222222,
+            "all_generated_deadline_miss_rate": 0.35791666666666666,
+            "background_throughput_mbps": 26.59016,
+            "sender_airtime_us": 18467521.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 15668.035972222222,
+            "all_generated_deadline_miss_rate": 0.22652777777777777,
+            "background_throughput_mbps": 26.59032,
+            "sender_airtime_us": 13878153.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 16174.75875,
+            "all_generated_deadline_miss_rate": 0.24625,
+            "background_throughput_mbps": 26.59036,
+            "sender_airtime_us": 13610812.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 13779.891527777778,
+            "all_generated_deadline_miss_rate": 0.18847222222222224,
+            "background_throughput_mbps": 26.59324,
+            "sender_airtime_us": 9971326.5
+          }
+        }
+      },
+      "radio-propagation-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2750.0930555555556,
+            "all_generated_deadline_miss_rate": 0.0061111111111111106,
+            "background_throughput_mbps": 26.50932,
+            "sender_airtime_us": 3436827.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2801.083611111111,
+            "all_generated_deadline_miss_rate": 0.0061111111111111106,
+            "background_throughput_mbps": 26.50884,
+            "sender_airtime_us": 3338363.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2988.9129166666667,
+            "all_generated_deadline_miss_rate": 0.008194444444444445,
+            "background_throughput_mbps": 26.51044,
+            "sender_airtime_us": 3095469.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3334.1491666666666,
+            "all_generated_deadline_miss_rate": 0.0031944444444444446,
+            "background_throughput_mbps": 26.50948,
+            "sender_airtime_us": 4581796.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3404.211388888889,
+            "all_generated_deadline_miss_rate": 0.0044444444444444444,
+            "background_throughput_mbps": 26.50908,
+            "sender_airtime_us": 4334138.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3640.1012499999997,
+            "all_generated_deadline_miss_rate": 0.006527777777777778,
+            "background_throughput_mbps": 26.51228,
+            "sender_airtime_us": 4082809.5
+          }
+        }
+      },
+      "radio-propagation-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3793.928472222222,
+            "all_generated_deadline_miss_rate": 0.011944444444444445,
+            "background_throughput_mbps": 27.08056,
+            "sender_airtime_us": 4625661.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3857.7281944444444,
+            "all_generated_deadline_miss_rate": 0.013194444444444444,
+            "background_throughput_mbps": 27.08068,
+            "sender_airtime_us": 4495303.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3665.1143055555553,
+            "all_generated_deadline_miss_rate": 0.01375,
+            "background_throughput_mbps": 27.082160000000002,
+            "sender_airtime_us": 3612285.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4331.118194444444,
+            "all_generated_deadline_miss_rate": 0.007361111111111111,
+            "background_throughput_mbps": 27.080280000000002,
+            "sender_airtime_us": 5415189.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4397.85,
+            "all_generated_deadline_miss_rate": 0.008472222222222223,
+            "background_throughput_mbps": 27.08032,
+            "sender_airtime_us": 5293275.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4155.518194444445,
+            "all_generated_deadline_miss_rate": 0.009166666666666667,
+            "background_throughput_mbps": 27.08228,
+            "sender_airtime_us": 4443484.0
+          }
+        }
+      },
+      "radio-propagation-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 11503.399722222222,
+            "all_generated_deadline_miss_rate": 0.1713888888888889,
+            "background_throughput_mbps": 26.64456,
+            "sender_airtime_us": 13075347.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 12417.736527777777,
+            "all_generated_deadline_miss_rate": 0.20125,
+            "background_throughput_mbps": 26.64592,
+            "sender_airtime_us": 12121066.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 10530.891666666666,
+            "all_generated_deadline_miss_rate": 0.1313888888888889,
+            "background_throughput_mbps": 26.64676,
+            "sender_airtime_us": 9457932.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 8171.922916666666,
+            "all_generated_deadline_miss_rate": 0.06791666666666667,
+            "background_throughput_mbps": 26.64232,
+            "sender_airtime_us": 8494619.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 8675.591944444444,
+            "all_generated_deadline_miss_rate": 0.08555555555555557,
+            "background_throughput_mbps": 26.643440000000002,
+            "sender_airtime_us": 8131806.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 8368.621805555556,
+            "all_generated_deadline_miss_rate": 0.06958333333333333,
+            "background_throughput_mbps": 26.647,
+            "sender_airtime_us": 6837293.0
+          }
+        }
+      },
+      "radio-propagation-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4619.089583333333,
+            "all_generated_deadline_miss_rate": 0.020277777777777777,
+            "background_throughput_mbps": 26.24716,
+            "sender_airtime_us": 5534304.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4987.67875,
+            "all_generated_deadline_miss_rate": 0.029305555555555557,
+            "background_throughput_mbps": 26.2472,
+            "sender_airtime_us": 5112753.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3916.5820833333332,
+            "all_generated_deadline_miss_rate": 0.016527777777777777,
+            "background_throughput_mbps": 25.39808,
+            "sender_airtime_us": 4145902.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4410.685,
+            "all_generated_deadline_miss_rate": 0.009027777777777779,
+            "background_throughput_mbps": 26.2488,
+            "sender_airtime_us": 5455676.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4502.679861111111,
+            "all_generated_deadline_miss_rate": 0.010555555555555556,
+            "background_throughput_mbps": 26.2488,
+            "sender_airtime_us": 5356471.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4076.2463888888888,
+            "all_generated_deadline_miss_rate": 0.009444444444444445,
+            "background_throughput_mbps": 26.249679999999998,
+            "sender_airtime_us": 4443147.0
+          }
+        }
+      },
+      "radio-propagation-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 1943.2931944444445,
+            "all_generated_deadline_miss_rate": 0.0015277777777777779,
+            "background_throughput_mbps": 26.93436,
+            "sender_airtime_us": 2565522.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2021.3265277777778,
+            "all_generated_deadline_miss_rate": 0.00125,
+            "background_throughput_mbps": 26.93448,
+            "sender_airtime_us": 2478765.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 1770.6402777777778,
+            "all_generated_deadline_miss_rate": 0.0011111111111111111,
+            "background_throughput_mbps": 26.93552,
+            "sender_airtime_us": 2262248.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2641.124027777778,
+            "all_generated_deadline_miss_rate": 0.0006944444444444445,
+            "background_throughput_mbps": 26.86872,
+            "sender_airtime_us": 4030577.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2745.2991666666667,
+            "all_generated_deadline_miss_rate": 0.00125,
+            "background_throughput_mbps": 26.86872,
+            "sender_airtime_us": 3830841.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2469.588333333333,
+            "all_generated_deadline_miss_rate": 0.0006944444444444445,
+            "background_throughput_mbps": 26.93532,
+            "sender_airtime_us": 3520908.75
+          }
+        }
+      },
+      "radio-propagation-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 27962.848194444443,
+            "all_generated_deadline_miss_rate": 0.7477777777777778,
+            "background_throughput_mbps": 26.32844,
+            "sender_airtime_us": 26082125.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 28900.447083333333,
+            "all_generated_deadline_miss_rate": 0.7875,
+            "background_throughput_mbps": 26.32824,
+            "sender_airtime_us": 24376833.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 22027.019027777777,
+            "all_generated_deadline_miss_rate": 0.47805555555555557,
+            "background_throughput_mbps": 26.33072,
+            "sender_airtime_us": 20841773.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 17941.54611111111,
+            "all_generated_deadline_miss_rate": 0.3025,
+            "background_throughput_mbps": 26.33288,
+            "sender_airtime_us": 12715897.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 18646.238472222223,
+            "all_generated_deadline_miss_rate": 0.3288888888888889,
+            "background_throughput_mbps": 26.333,
+            "sender_airtime_us": 12291540.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 16139.376805555556,
+            "all_generated_deadline_miss_rate": 0.24819444444444444,
+            "background_throughput_mbps": 26.33972,
+            "sender_airtime_us": 9726536.25
+          }
+        }
+      }
+    },
+    "video_workload": {
+      "video-workload-qualification-p16": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2685.5905555555555,
+            "all_generated_deadline_miss_rate": 0.029444444444444443,
+            "background_throughput_mbps": 26.22976,
+            "sender_airtime_us": 5820225.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2732.7819444444444,
+            "all_generated_deadline_miss_rate": 0.03131944444444444,
+            "background_throughput_mbps": 26.23056,
+            "sender_airtime_us": 5751974.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2335.998125,
+            "all_generated_deadline_miss_rate": 0.020277777777777777,
+            "background_throughput_mbps": 26.23608,
+            "sender_airtime_us": 4729910.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3057.8169444444443,
+            "all_generated_deadline_miss_rate": 0.028541666666666667,
+            "background_throughput_mbps": 26.2352,
+            "sender_airtime_us": 6790170.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3057.722222222222,
+            "all_generated_deadline_miss_rate": 0.02777777777777778,
+            "background_throughput_mbps": 26.2348,
+            "sender_airtime_us": 6751311.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2697.3595138888886,
+            "all_generated_deadline_miss_rate": 0.01826388888888889,
+            "background_throughput_mbps": 26.23728,
+            "sender_airtime_us": 5817001.25
+          }
+        }
+      },
+      "video-workload-qualification-p17": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3326.7351388888887,
+            "all_generated_deadline_miss_rate": 0.03777777777777778,
+            "background_throughput_mbps": 26.74172,
+            "sender_airtime_us": 7736382.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3323.9181944444445,
+            "all_generated_deadline_miss_rate": 0.040625,
+            "background_throughput_mbps": 26.74168,
+            "sender_airtime_us": 7790390.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3085.2840277777777,
+            "all_generated_deadline_miss_rate": 0.028055555555555556,
+            "background_throughput_mbps": 26.74152,
+            "sender_airtime_us": 6745912.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 4073.47375,
+            "all_generated_deadline_miss_rate": 0.042986111111111114,
+            "background_throughput_mbps": 26.73844,
+            "sender_airtime_us": 9868357.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4092.531736111111,
+            "all_generated_deadline_miss_rate": 0.04597222222222223,
+            "background_throughput_mbps": 26.738680000000002,
+            "sender_airtime_us": 9855391.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3694.0421527777776,
+            "all_generated_deadline_miss_rate": 0.028958333333333332,
+            "background_throughput_mbps": 26.7426,
+            "sender_airtime_us": 8745437.75
+          }
+        }
+      },
+      "video-workload-qualification-p18": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3433.9001736111113,
+            "all_generated_deadline_miss_rate": 0.008333333333333333,
+            "background_throughput_mbps": 26.858800000000002,
+            "sender_airtime_us": 3664705.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3525.3996527777776,
+            "all_generated_deadline_miss_rate": 0.010590277777777778,
+            "background_throughput_mbps": 26.85884,
+            "sender_airtime_us": 3571665.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4363.790277777778,
+            "all_generated_deadline_miss_rate": 0.013368055555555557,
+            "background_throughput_mbps": 26.859560000000002,
+            "sender_airtime_us": 3389152.75
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3914.171875,
+            "all_generated_deadline_miss_rate": 0.0036458333333333334,
+            "background_throughput_mbps": 26.8598,
+            "sender_airtime_us": 4412670.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 4047.100520833333,
+            "all_generated_deadline_miss_rate": 0.004861111111111111,
+            "background_throughput_mbps": 26.85976,
+            "sender_airtime_us": 4194030.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 4753.2626736111115,
+            "all_generated_deadline_miss_rate": 0.009375,
+            "background_throughput_mbps": 26.85892,
+            "sender_airtime_us": 3925653.75
+          }
+        }
+      },
+      "video-workload-qualification-p19": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2991.4572222222223,
+            "all_generated_deadline_miss_rate": 0.007361111111111111,
+            "background_throughput_mbps": 26.344279999999998,
+            "sender_airtime_us": 3751549.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3058.1669444444447,
+            "all_generated_deadline_miss_rate": 0.008333333333333333,
+            "background_throughput_mbps": 26.344279999999998,
+            "sender_airtime_us": 3561659.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3235.9797222222223,
+            "all_generated_deadline_miss_rate": 0.009583333333333333,
+            "background_throughput_mbps": 26.34468,
+            "sender_airtime_us": 3160828.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3344.990277777778,
+            "all_generated_deadline_miss_rate": 0.004166666666666667,
+            "background_throughput_mbps": 26.34396,
+            "sender_airtime_us": 4489400.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3451.0740277777777,
+            "all_generated_deadline_miss_rate": 0.0044444444444444444,
+            "background_throughput_mbps": 26.3436,
+            "sender_airtime_us": 4213265.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3699.314027777778,
+            "all_generated_deadline_miss_rate": 0.008611111111111111,
+            "background_throughput_mbps": 26.34484,
+            "sender_airtime_us": 3892198.25
+          }
+        }
+      },
+      "video-workload-qualification-p20": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 1980.470925925926,
+            "all_generated_deadline_miss_rate": 0.008425925925925925,
+            "background_throughput_mbps": 26.45956,
+            "sender_airtime_us": 3637097.5
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2094.7689814814817,
+            "all_generated_deadline_miss_rate": 0.010555555555555554,
+            "background_throughput_mbps": 26.45908,
+            "sender_airtime_us": 3529890.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 1970.193888888889,
+            "all_generated_deadline_miss_rate": 0.008796296296296297,
+            "background_throughput_mbps": 26.45864,
+            "sender_airtime_us": 2949258.5
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2329.088888888889,
+            "all_generated_deadline_miss_rate": 0.007222222222222222,
+            "background_throughput_mbps": 26.4586,
+            "sender_airtime_us": 4472715.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2310.2328703703706,
+            "all_generated_deadline_miss_rate": 0.004907407407407407,
+            "background_throughput_mbps": 26.45812,
+            "sender_airtime_us": 4342764.0
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2332.6477777777777,
+            "all_generated_deadline_miss_rate": 0.0077777777777777776,
+            "background_throughput_mbps": 26.45928,
+            "sender_airtime_us": 3843270.25
+          }
+        }
+      },
+      "video-workload-qualification-p21": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 2728.971666666667,
+            "all_generated_deadline_miss_rate": 0.006666666666666666,
+            "background_throughput_mbps": 26.61456,
+            "sender_airtime_us": 3351257.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 2799.7834722222224,
+            "all_generated_deadline_miss_rate": 0.007222222222222222,
+            "background_throughput_mbps": 26.61424,
+            "sender_airtime_us": 3258408.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2908.9098611111112,
+            "all_generated_deadline_miss_rate": 0.012222222222222223,
+            "background_throughput_mbps": 26.61356,
+            "sender_airtime_us": 2703633.0
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3160.7675,
+            "all_generated_deadline_miss_rate": 0.00375,
+            "background_throughput_mbps": 26.61388,
+            "sender_airtime_us": 4057511.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3200.818611111111,
+            "all_generated_deadline_miss_rate": 0.004027777777777778,
+            "background_throughput_mbps": 26.614,
+            "sender_airtime_us": 3943563.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3189.3748611111114,
+            "all_generated_deadline_miss_rate": 0.004861111111111111,
+            "background_throughput_mbps": 26.614800000000002,
+            "sender_airtime_us": 3329775.5
+          }
+        }
+      },
+      "video-workload-qualification-p22": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3398.679074074074,
+            "all_generated_deadline_miss_rate": 0.026574074074074076,
+            "background_throughput_mbps": 26.79552,
+            "sender_airtime_us": 5764924.0
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3409.5589814814816,
+            "all_generated_deadline_miss_rate": 0.029074074074074075,
+            "background_throughput_mbps": 26.79532,
+            "sender_airtime_us": 5737808.5
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 2911.281111111111,
+            "all_generated_deadline_miss_rate": 0.01916666666666667,
+            "background_throughput_mbps": 26.79708,
+            "sender_airtime_us": 4679851.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 3900.9994444444446,
+            "all_generated_deadline_miss_rate": 0.024444444444444442,
+            "background_throughput_mbps": 26.794719999999998,
+            "sender_airtime_us": 6846020.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 3845.867222222222,
+            "all_generated_deadline_miss_rate": 0.022314814814814815,
+            "background_throughput_mbps": 26.7948,
+            "sender_airtime_us": 6778323.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 3281.6769444444444,
+            "all_generated_deadline_miss_rate": 0.013703703703703704,
+            "background_throughput_mbps": 26.7964,
+            "sender_airtime_us": 5758093.25
+          }
+        }
+      },
+      "video-workload-qualification-p23": {
+        "adaptive": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 1535.4135416666668,
+            "all_generated_deadline_miss_rate": 0.001388888888888889,
+            "background_throughput_mbps": 26.48468,
+            "sender_airtime_us": 1748480.25
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 1912.104513888889,
+            "all_generated_deadline_miss_rate": 0.0038194444444444443,
+            "background_throughput_mbps": 26.4848,
+            "sender_airtime_us": 1614544.25
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 1779.3831597222222,
+            "all_generated_deadline_miss_rate": 0.0050347222222222225,
+            "background_throughput_mbps": 26.487479999999998,
+            "sender_airtime_us": 1383579.25
+          }
+        },
+        "fixed": {
+          "distributional_shadow_t2": {
+            "all_generated_censored_mean_us": 1690.7494791666668,
+            "all_generated_deadline_miss_rate": 0.0005208333333333333,
+            "background_throughput_mbps": 26.48648,
+            "sender_airtime_us": 2004699.75
+          },
+          "score_aware_t2_v2": {
+            "all_generated_censored_mean_us": 1952.5263888888887,
+            "all_generated_deadline_miss_rate": 0.0024305555555555556,
+            "background_throughput_mbps": 26.4866,
+            "sender_airtime_us": 1886886.75
+          },
+          "str_mlo_nmaxinflights_1": {
+            "all_generated_censored_mean_us": 1896.4671875,
+            "all_generated_deadline_miss_rate": 0.0026041666666666665,
+            "background_throughput_mbps": 26.48776,
+            "sender_airtime_us": 1629176.0
+          }
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "source_closure": {
+    "adaptive_shard_manifests": [
+      {
+        "complete_run_count": 288,
+        "index": 0,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_adaptive_mcs_qualification_v1/shard0/experiment_manifest.json",
+        "sha256": "788a8af494faa37224fcf845cb82ec9357cf20f22e51c49bff74e2e679378f57",
+        "shard": {
+          "count": 2,
+          "full_matrix_run_count": 576,
+          "index": 0,
+          "schema_version": 1,
+          "selected_run_count": 288,
+          "selection": "paired_unit_round_robin_v1"
+        }
+      },
+      {
+        "complete_run_count": 287,
+        "index": 1,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_adaptive_mcs_qualification_v1/shard1/experiment_manifest.json",
+        "sha256": "52c430a0bb3e5ba02c4e1025769b566e7894caad4792271dca880e0866fb89b7",
+        "shard": {
+          "count": 2,
+          "full_matrix_run_count": 576,
+          "index": 1,
+          "schema_version": 1,
+          "selected_run_count": 288,
+          "selection": "paired_unit_round_robin_v1"
+        }
+      }
+    ],
+    "analyzer": {
+      "path": "tools/analyze_environment_generalization_adaptive_mcs_v1.py",
+      "project_commit": "6630288c53beb4b3fed3a50d8538f3bc6cdb7a62",
+      "sha256": "8b9511f984d8240ca9238f2adc989fa91d13fd3a288a183e0877109fdfda3b45",
+      "worktree_clean": true
+    },
+    "deterministic_failure_contract": {
+      "path": "experiments/model-selection/environment-generalization-adaptive-mcs-deterministic-failure-v1.json",
+      "sha256": "bc8e19cbec41364871bfdaf6629fb2f67795af1443808d6ef21f0b434c34bf2d"
+    },
+    "fixed_evidence": {
+      "analysis_artifact_manifest": {
+        "bytes": 5794,
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/key_experiment_results/17_environment_generalization_qualification_v1/analysis/analysis_artifact_manifest.json",
+        "sha256": "dba7188133c161a8b822580b7f806801e02c9078f3867815d742347ea111a0c3"
+      },
+      "raw_manifest": {
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/environment_generalization_closed_loop_qualification_v1_partial_47e1996/runs/experiment_manifest.json",
+        "sha256": "4c847ccc7d2e7d0ac9c154b0c4efc778ddcb403d0d12dabfd4a971c976269ef4"
+      },
+      "strict_validation": {
+        "mixed_build_identity": false,
+        "status": "pass",
+        "validated_run_count": 576
+      }
+    },
+    "runtime_contract": {
+      "path": "experiments/model-selection/environment-generalization-adaptive-mcs-qualification-v1.json",
+      "sha256": "aaedf15300b40d221e526ee5c4f27a205510f49b793caa203aa5f7fe16f6dff7"
+    },
+    "simulation_project_commit": "3ec03196d3ad1207b888433b134096fde1aa9670",
+    "strict_validator": {
+      "path": "tools/validate_outputs.py",
+      "sha256": "34e76ed4b74e85058f1facfecb851a0acb0740fca3fa994101461e551ad38551"
+    }
+  },
+  "strict_validation": {
+    "adaptive": "pass: 575 freshly validated runs",
+    "fixed": "checksum-bound archived strict validation: 576 runs"
+  },
+  "treatments": {
+    "adaptive": {
+      "distributional_shadow_t2": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 13178.520351996722,
+          "ci95_low": 8574.771584535658,
+          "estimate": 10895.6385819348
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.297789174973865,
+          "ci95_low": 0.15234584137088478,
+          "estimate": 0.2247776813271605
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.829487193338124,
+          "ci95_low": 29.568218357559164,
+          "estimate": 32.28857190555556
+        },
+        "sender_airtime_us": {
+          "ci95_high": 7592109.792607526,
+          "ci95_low": 5273821.698547547,
+          "estimate": 6340810.831597223
+        }
+      },
+      "score_aware_t2_v2": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 13382.05398148023,
+          "ci95_low": 8719.370133909624,
+          "estimate": 11067.947970437885
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.3055204180136494,
+          "ci95_low": 0.158815972611136,
+          "estimate": 0.23178433641975307
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.83497845375,
+          "ci95_low": 29.57175561027778,
+          "estimate": 32.29566252222222
+        },
+        "sender_airtime_us": {
+          "ci95_high": 7315594.172878864,
+          "ci95_low": 5095554.210336861,
+          "estimate": 6111111.296875
+        }
+      },
+      "str_mlo_nmaxinflights_1": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 11431.537359081758,
+          "ci95_low": 7011.29018793014,
+          "estimate": 9242.606401427469
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.2451101102414999,
+          "ci95_low": 0.11066435064621916,
+          "estimate": 0.17733748070987654
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.809124064668296,
+          "ci95_low": 29.51339344055556,
+          "estimate": 32.25150827222222
+        },
+        "sender_airtime_us": {
+          "ci95_high": 6713585.612387153,
+          "ci95_low": 4584800.181586022,
+          "estimate": 5588841.680555555
+        }
+      }
+    },
+    "fixed": {
+      "distributional_shadow_t2": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 12347.61599600994,
+          "ci95_low": 8369.644553355274,
+          "estimate": 10370.852639130015
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.24994490798943697,
+          "ci95_low": 0.12618921199845679,
+          "estimate": 0.18758391203703703
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.810266480887094,
+          "ci95_low": 29.54364468097223,
+          "estimate": 32.27009142222222
+        },
+        "sender_airtime_us": {
+          "ci95_high": 6570122.213583669,
+          "ci95_low": 5400183.842431115,
+          "estimate": 5946341.678819444
+        }
+      },
+      "score_aware_t2_v2": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 12455.162444290054,
+          "ci95_low": 8463.398913107521,
+          "estimate": 10468.57071783372
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.2535997857473989,
+          "ci95_low": 0.12993849503590454,
+          "estimate": 0.19130642361111114
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.802608865878135,
+          "ci95_low": 29.533926954318996,
+          "estimate": 32.25992777222222
+        },
+        "sender_airtime_us": {
+          "ci95_high": 6403430.321614583,
+          "ci95_low": 5255386.104515289,
+          "estimate": 5790965.508680556
+        }
+      },
+      "str_mlo_nmaxinflights_1": {
+        "all_generated_censored_mean_us": {
+          "ci95_high": 11171.931792073172,
+          "ci95_low": 7088.410124053579,
+          "estimate": 9148.704257330248
+        },
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.22566652412976654,
+          "ci95_low": 0.09658527887451464,
+          "estimate": 0.16043668016975307
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 34.887297063711685,
+          "ci95_low": 29.571065045833333,
+          "estimate": 32.318691961111114
+        },
+        "sender_airtime_us": {
+          "ci95_high": 5701858.402847783,
+          "ci95_low": 4686110.065208333,
+          "estimate": 5164322.060763889
+        }
+      }
+    }
+  }
+}

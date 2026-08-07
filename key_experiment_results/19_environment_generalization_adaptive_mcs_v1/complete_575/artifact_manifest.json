@@ -1,0 +1,146 @@
+{
+  "analysis": "environment-generalization-adaptive-mcs-comparison-v1",
+  "artifacts": {
+    "OBSERVATIONS.md": {
+      "bytes": 3097,
+      "sha256": "cf793616b1520a975e619a055550fe4fc703762d245badfd4cdc133b09c70345"
+    },
+    "README.md": {
+      "bytes": 2326,
+      "sha256": "ad432667cc5527099367dab6e4f88e85e0afb8c0985e757b3533e3119ab1aaca"
+    },
+    "analysis/comparison_intervals.csv": {
+      "bytes": 3203,
+      "sha256": "fa6c7125485014df4ed08d51ec5f344b0dce3a0daa8ceeafbca56cce4d6c0a1d"
+    },
+    "analysis/comparison_report.json": {
+      "bytes": 113646,
+      "sha256": "54601c8c05f913d3887c06bc277bb3b37248295fba491c9af3edc08e4ba45af9"
+    },
+    "analysis/comparison_report.md": {
+      "bytes": 2326,
+      "sha256": "ad432667cc5527099367dab6e4f88e85e0afb8c0985e757b3533e3119ab1aaca"
+    },
+    "analysis/family_metrics.csv": {
+      "bytes": 4137,
+      "sha256": "dab7ccde2dd2c03af81beae2bd97273910fc337b86c5f365d363a44b4c805989"
+    },
+    "analysis/paired_mcs_deltas.csv": {
+      "bytes": 104557,
+      "sha256": "61cb88d3c442a8fba5d2f8b957972470747295ba33e0fb47a54ff90440e23e40"
+    },
+    "analysis/run_metrics.csv": {
+      "bytes": 236173,
+      "sha256": "a16669999caf8713c6872ea07061087c86b815747690704fd465772a24d8ff24"
+    },
+    "analysis/scenario_metrics.csv": {
+      "bytes": 40526,
+      "sha256": "3cd6701e11bbbf3943336d93a2d854cec53c41b576176d302147004517077eaa"
+    },
+    "plots/adaptive_policy_vs_str_by_scenario.pdf": {
+      "bytes": 17893,
+      "sha256": "ae5ee87b1a9489a642af7af492b37281a3c957e94c05940c5b5db682817cc9ce"
+    },
+    "plots/adaptive_policy_vs_str_by_scenario.png": {
+      "bytes": 67923,
+      "sha256": "6c85b6f0aba6936353d999193c563768f2c8a0223735026350898112333c070d"
+    },
+    "plots/aggregate_fixed_vs_adaptive.pdf": {
+      "bytes": 21690,
+      "sha256": "5e801ad234baf80d5bbe0db298592e3cbcea74ac3e20697fcf78c8ab731b93a0"
+    },
+    "plots/aggregate_fixed_vs_adaptive.png": {
+      "bytes": 141161,
+      "sha256": "52445bcf3fe49090d74deb2f7a51214f6b0bbf37a55661f80122eaa894fb7aab"
+    },
+    "plots/all_generated_censored_latency_cdf.pdf": {
+      "bytes": 62656,
+      "sha256": "4c928f1dfda4aaefb4383ea21c23c9c247557cab53017e96ff89ecdf6cfcce5d"
+    },
+    "plots/all_generated_censored_latency_cdf.png": {
+      "bytes": 106991,
+      "sha256": "0735b214fc0f5aad702703f268d0d91a2f01da123da604df1cb263caf4241d53"
+    },
+    "plots/all_generated_censored_latency_pdf.pdf": {
+      "bytes": 20235,
+      "sha256": "d81d51476d81b8b5bd25fee712cf974a8ea85f669938d53bf1dd5633a6254203"
+    },
+    "plots/all_generated_censored_latency_pdf.png": {
+      "bytes": 77018,
+      "sha256": "8f9bf176cbc44d05e5c18df1920224c28f6d50a568cf8eef018ba17206564e56"
+    },
+    "plots/completion_latency_cdf.pdf": {
+      "bytes": 66076,
+      "sha256": "aaacf1c7a3c901f82b7bc016494c3fc83b0e9b062fa4091fbf9544bace8a47f4"
+    },
+    "plots/completion_latency_cdf.png": {
+      "bytes": 113632,
+      "sha256": "585e2b8cf32c0fa6f977ef9d6341fbd4b47c35095628b637165f3144c04651dd"
+    },
+    "plots/completion_latency_pdf.pdf": {
+      "bytes": 20802,
+      "sha256": "a43bb0bed4cb0a5248dce39da25b4a4539f97c36ff6e5205cd131630e93884c6"
+    },
+    "plots/completion_latency_pdf.png": {
+      "bytes": 75238,
+      "sha256": "79849e7a87c8c2580e73740b2d87eb0e4ae708372e5c856e86f846538ef09ff3"
+    },
+    "plots/deadline_miss_burst_cdf.pdf": {
+      "bytes": 23265,
+      "sha256": "c7f10327bccd0c54db8d2b1bdf2964f63f6df93ab337196e367e89ce1992867f"
+    },
+    "plots/deadline_miss_burst_cdf.png": {
+      "bytes": 73128,
+      "sha256": "dbeaa329e4a4c042ffb9d728e1c8d426e5c48e491539eaec3e1d1f15dfc3f361"
+    },
+    "plots/deadline_outcome_composition.pdf": {
+      "bytes": 16845,
+      "sha256": "4538b3e7adaac8861890f62ab5d814c08843db00624a86943facd403f03336c6"
+    },
+    "plots/deadline_outcome_composition.png": {
+      "bytes": 63513,
+      "sha256": "197ede417effc853ab5c0cf40408e737559f3353d1cce86779b3ed52c09dd084"
+    },
+    "plots/family_deadline_miss_fixed_vs_adaptive.pdf": {
+      "bytes": 21162,
+      "sha256": "2652c45fc9f3a6547239947610661b37706e1952ee85311592c7558312edd902"
+    },
+    "plots/family_deadline_miss_fixed_vs_adaptive.png": {
+      "bytes": 291343,
+      "sha256": "40bfd5903102503b598694f3291e61603891f5727e7a699e0edf0775219c6729"
+    },
+    "plots/plot_artifact_manifest.json": {
+      "bytes": 3215,
+      "sha256": "636786190e7b772d30cf2dd2e2a25fc70f204cb584e0ce6bd1eaafbbc0c87dff"
+    },
+    "plots/scenario_fixed_vs_adaptive.pdf": {
+      "bytes": 27238,
+      "sha256": "8cc62b2815f1568b240502d06ce3ad47d087f9acaddf6df5b854e4ff0d146dcb"
+    },
+    "plots/scenario_fixed_vs_adaptive.png": {
+      "bytes": 169512,
+      "sha256": "2ad116dc91ab7b1c2d897dc167d37f89931914b70e75c450f1f74bb891c7a118"
+    },
+    "raw_tree_identity.json": {
+      "bytes": 782,
+      "sha256": "6cc83911dde7273ade676764b832205c69f2b8ab85942d47cb9d0869abde6304"
+    },
+    "source_manifests/adaptive_shard0_experiment_manifest.json": {
+      "bytes": 1794703,
+      "sha256": "788a8af494faa37224fcf845cb82ec9357cf20f22e51c49bff74e2e679378f57"
+    },
+    "source_manifests/adaptive_shard1_experiment_manifest.json": {
+      "bytes": 1013598,
+      "sha256": "52c430a0bb3e5ba02c4e1025769b566e7894caad4792271dca880e0866fb89b7"
+    }
+  },
+  "counts": {
+    "adaptive_strictly_validated_runs": 575,
+    "analyzed_runs_per_mode": 573,
+    "figure_formats": 2,
+    "figures": 10,
+    "fixed_archived_runs": 576,
+    "paired_units": 191
+  },
+  "schema_version": 1
+}
