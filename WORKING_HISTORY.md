@@ -319,14 +319,21 @@ to this held-out population, so no policy is promoted.
   promoted outputs and all 19 attempts were retrieved.  The clean `e06796f`
   prefix analyzer strictly validated and plotted the balanced 80-run,
   four-arm panel; compact evidence is under
-  `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.  Next,
+  `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.
   Coded-completion validation is corrected at `280b18b`; all 19 preserved
   attempts pass.  The hash-bound recovery/oracle-only runner at `fb26a4b` was
   rehearsed on copies, then promoted 10 and 9 attempts in place without a
   simulation rerun.  Each shard now contains all 50 phase-1 runs.  The 20
-  oracle runs are active as two persistent services.  When they finish,
-  checksum, fetch, strictly validate, merge, plot, analyze, and archive the
-  six-arm result.  Stop before redesigning the action or training a model.
+  oracle simulations also finished; all 120 run trees were retrieved before
+  diagnosis.  All 100 factual runs pass strict validation and their protected
+  five-arm result is archived under
+  `key_experiment_results/18_t2_repair_mechanism_v1/factual_phase1`.  Both
+  oracle shard closures fail because primary outcomes drift in compound seeds
+  21173 and 21174.  Next, enumerate that drift and determine whether the
+  privileged counterfactual remains identified.  Admit oracle evidence only
+  if the frozen closure can be satisfied without weakening it; otherwise
+  archive a failed-oracle mechanism conclusion.  Stop before redesigning the
+  action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -369,20 +376,27 @@ rehearsal closed at 50 runs per shard.  The same tool then promoted 10 and 9
 attempts on the VMs; both recovery reports mark every row `promoted` and both
 manifests now contain all 50 phase-1 runs.
 
-Only the oracle phase is now active.  Services
-`wifi-t2-repair-oracle-shard0-fb26a4b.service` on `10.120.16.105:30022` and
-`wifi-t2-repair-oracle-shard1-fb26a4b.service` on `10.120.17.30:30022` run ten
-oracle simulations each.  Both clean checkouts are at `fb26a4b`, but derive
-and report the original simulation identity `791bb2d`; execution is permitted
-only after matching executable SHA-256
-`ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`.
+The oracle services finished all ten simulations per shard.  All 120 run trees
+are retained locally under
+`results/t2_repair_mechanism_v1/complete_remote`; each run passes individual
+strict validation.  The frozen post-run pair audit nevertheless stops on
+primary-outcome differences in compound seed 21173 frame 2 on shard 0 and
+compound seed 21174 frame 33 on shard 1.  No oracle result is currently
+admissible.  The factual analyzer at `9538afe` excludes all 20 oracle runs,
+strictly validates the remaining 100, and emits a checksum-bound eight-figure
+result archived under
+`key_experiment_results/18_t2_repair_mechanism_v1/factual_phase1`.
 
-The partial result confirms diversity but not resource viability.  STR has
-31.7556% all-generated misses.  Full T0 and T2 reduce this to 18.7972% and
-18.9778%, but consume 2.0905x and 2.0971x STR sender airtime.  Their paired
-miss improvements are decisive, yet neither approaches the equal-airtime
-question.  OBSS p17 is the hardest scenario: STR misses 72.10%, single 5 GHz
-56.60%, full T0 52.93%, and full T2 52.61%.
+The protected factual result confirms diversity but not resource viability.
+STR has 31.7556% all-generated misses.  Full T0 and T2 reduce this to 18.7972%
+and 18.9778%, but consume 2.0905x and 2.0971x STR sender airtime.  Ideal 12.5%
+FEC T2 has 40.5833% misses and 1.4232x airtime; versus STR its paired miss
+delta is +8.8278 percentage points with 95% CI [+3.0667, +14.0224].  It is
+only 0.4639 points better than 5 GHz alone despite 1,698 ms/run of added
+secondary airtime.  Its secondary queue is generally small, while primary ACK
+deficit is saturated at ten packets.  OBSS p17 is the only family where FEC
+beats STR, and both are already in a collapse regime, so it is not evidence of
+a generally useful action.
 
 The decisive question is whether the privileged eventual-missing packet
 repair arm has fewer all-generated misses than STR at a paired measured total
@@ -911,6 +925,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Protect the complete factual mechanism panel
+
+- Both oracle services finished, bringing the campaign to 120/120 simulated
+  and individually strict-valid runs.  Retrieved both complete 60-run shards
+  before any diagnosis, repair, or rerun.
+- Both frozen oracle pair-closure audits failed on primary packet outcomes:
+  compound seed 21173 frame 2 on shard 0 and seed 21174 frame 33 on shard 1.
+  Excluded all 20 oracle runs rather than weakening the counterfactual
+  contract or selecting only apparently matching pairs.
+- Added the clean factual analyzer at `9538afe`.  It strictly validates the
+  balanced 100-run, five-arm panel and generated eight PNG/PDF figures plus
+  aggregate, per-run, and per-scenario tables.  Every artifact hash verifies.
+- Archived the protected result under
+  `key_experiment_results/18_t2_repair_mechanism_v1/factual_phase1`.  FEC T2
+  loses to STR on misses (+8.8278 percentage points, paired 95% CI +3.0667 to
+  +14.0224) while consuming 1.4232x airtime.  Small secondary queues and a
+  saturated ten-packet ACK-deficit signal argue against simple queue pressure
+  as the main explanation.
+- The next and final boundary for this iteration is to enumerate the oracle
+  drift and decide whether a valid equal-airtime oracle conclusion can be
+  identified.  Do not begin predictor or action redesign afterward without
+  review.
 
 ### 2026-08-07 - Preserve and analyze the mechanism phase-1 prefix
 
