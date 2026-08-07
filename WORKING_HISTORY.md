@@ -150,6 +150,9 @@ P99.
 | Archive valid mechanism prefix | `cb42b50` | Seven-figure partial evidence and persistent failure diagnosis |
 | Validate coded frame completion | `280b18b` | Exact source-plus-innovative-symbol completion accounting and mutation tests |
 | Recover mechanism attempts | `fb26a4b` | Hash-bound no-rerun promotion and oracle-only continuation gates |
+| Archive factual mechanism panel | `1d19fd2` | Protected five-arm result after excluding every flawed V1 oracle replay |
+| Diagnose failed repair oracle | `02f5f7b` | Complete 20-pair deadline-semantics diagnosis and checksum-bound failure artifact |
+| Freeze deadline-correct oracle V2 | `fcb8474` | Finalization-independent repair plans, unchanged binary, and strict paired replay gates |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
@@ -334,9 +337,12 @@ to this held-out population, so no policy is promoted.
   deadline-late packet from 12,456 repair plans.  The checksum-bound failed
   replay is archived under
   `key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
-  V1 oracle evidence is rejected.  Next, freeze the minimum deadline-correct,
-  finalization-independent replay needed to answer the packet-repair gate;
-  preserve the 100 factual arms and all V1 outputs unchanged.  Stop before
+  V1 oracle evidence is rejected.  The minimum deadline-correct,
+  finalization-independent V2 replay is frozen at `fcb8474`; it preserves the
+  exact original executable and all 100 factual arms and schedules only 20
+  corrected oracle runs.  Both ten-run VM shards passed prepare-only checks
+  and are running under the persistent services recorded below.  Retrieve,
+  validate, merge, plot, analyze, and archive this final gate, then stop before
   redesigning the action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
@@ -414,6 +420,14 @@ airtime, MPDU successes, and retransmissions, but 23 additional deadline-edge
 packet differences and 8,520 snapshot differences prevent exact per-frame
 closure.  The complete artifact is archived under
 `key_experiment_results/18_t2_repair_mechanism_v1/oracle_pair_diagnostic`.
+
+The minimum V2 correction is frozen at `fcb8474`.  It reuses the original
+binary and replaces only the 20 oracle sidecars with deadline-correct plans;
+the 100 factual runs remain immutable.  Both ten-run shards are currently
+running under persistent user services on the two experiment VMs.  Once they
+finish, retrieve valid output before any repair, close strict pair validation,
+and archive the merged plots and analysis.  Do not start a subsequent action
+or predictor iteration.
 
 The decisive question is whether the privileged eventual-missing packet
 repair arm has fewer all-generated misses than STR at a paired measured total
@@ -942,6 +956,37 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Launch the deadline-correct repair replay
+
+- Froze the narrowly corrected V2 contract and runner at `fcb8474`.  The
+  correction defines the timely primary set independently of lazy receiver
+  state: when the first primary arrival is absent or strictly after the
+  integer-microsecond frame deadline, the timely set is empty; otherwise it
+  is the baseline link-1 receipt set.  The repair plan is the packet universe
+  minus that timely set.
+- Reuse the exact `791bb2d` simulation implementation and executable SHA-256
+  `ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`.
+  No C++ source, factual run, opened scenario/seed unit, or reserved
+  confirmation seed changes.  The V2 contract SHA-256 is
+  `2df18a10f7b584af516d56c77350175f30e7b10c190fbd7f61da598b7b592cea`.
+- Thirteen focused tests and both prepare-only shards pass.  Shard 0 contains
+  79,157 planned repair packets including 6,600 deadline corrections; shard 1
+  contains 71,822 including 5,856 corrections.
+- Launched the ten new runs per VM under
+  `wifi-t2-deadline-oracle-v2-shard0-fcb8474.service` on
+  `10.120.16.105:30022` and
+  `wifi-t2-deadline-oracle-v2-shard1-fcb8474.service` on
+  `10.120.17.30:30022`.  Invocation IDs are
+  `e41d9809f75e412d97b61a52b503fb98` and
+  `891599d20e5c446d94a3729c987a3442`.  Both services are active with all ten
+  attempts started at the last poll; zero runs have yet crossed atomic
+  validation and manifest publication.
+- Treat this arm as a paired no-repair potential-outcome replay, not an exact
+  within-run oracle if the repair changes later receiver state.  Strictly
+  require exact sidecar actions and aggregate primary sender counters, report
+  receiver-set drift, and evaluate both the equal-airtime question and the
+  `1.20` engineering sensitivity.  Stop after the result is archived.
 
 ### 2026-08-07 - Reject the flawed packet-repair oracle replay
 
