@@ -58,7 +58,43 @@ class T2RepairResourceSensitivityTest(unittest.TestCase):
         self.assertEqual(result["selected_rescues"], 3)
         self.assertEqual(result["projected_deadline_misses"], 6)
         self.assertFalse(result["beats_str_on_misses"])
+        self.assertTrue(result["all_runs_resource_feasible"])
         self.assertAlmostEqual(result["projected_deadline_miss_rate"], 0.3)
+
+    def test_negative_headroom_marks_run_projection_infeasible(self) -> None:
+        units = [
+            {
+                "primary_deadline_misses": 3,
+                "str_deadline_misses": 3,
+                "generated_frames": 10,
+                "equal_airtime": {
+                    "selected_rescues": 1,
+                    "spent_measured_tagged_airtime_us": 0.0,
+                    "budget_us": 0.0,
+                    "raw_headroom_us": -1.0,
+                },
+            }
+        ]
+        result = sensitivity._projection(units, "equal_airtime")
+        self.assertEqual(result["projected_deadline_misses"], 2)
+        self.assertEqual(result["resource_infeasible_run_count"], 1)
+        self.assertFalse(result["all_runs_resource_feasible"])
+        self.assertFalse(result["beats_str_on_misses"])
+
+    def test_minimum_pooled_ratio_uses_cheapest_required_rescues(self) -> None:
+        units = [
+            {
+                "primary_deadline_misses": 5,
+                "str_deadline_misses": 3,
+                "rescue_costs_us": [5.0, 1.0, 2.0],
+                "primary_sender_airtime_us": 100.0,
+                "str_sender_airtime_us": 100.0,
+            }
+        ]
+        result = sensitivity._minimum_pooled_ratio_to_beat_str(units)
+        self.assertEqual(result["required_rescues_for_one_fewer_miss_than_str"], 3)
+        self.assertAlmostEqual(result["selected_measured_tagged_airtime_us"], 8.0)
+        self.assertAlmostEqual(result["optimistic_minimum_sender_airtime_ratio"], 1.08)
 
 
 if __name__ == "__main__":

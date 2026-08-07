@@ -180,14 +180,25 @@ def _projection(
     generated = sum(int(row["generated_frames"]) for row in units)
     selected = sum(int(row[budget_key]["selected_rescues"]) for row in units)
     projected_misses = primary_misses - selected
+    infeasible_runs = sum(
+        float(row[budget_key]["raw_headroom_us"]) < 0 for row in units
+    )
     return {
-        "budget_scope": "separate nontransferable budget within every paired run",
+        "budget_scope": (
+            "separate nontransferable cap within every paired run; negative "
+            "headroom makes that run resource-infeasible before repair"
+        ),
         "primary_deadline_misses": primary_misses,
         "str_deadline_misses": str_misses,
         "selected_rescues": selected,
         "projected_deadline_misses": projected_misses,
         "projected_deadline_miss_rate": projected_misses / generated,
-        "beats_str_on_misses": projected_misses < str_misses,
+        "resource_feasible_run_count": len(units) - infeasible_runs,
+        "resource_infeasible_run_count": infeasible_runs,
+        "all_runs_resource_feasible": infeasible_runs == 0,
+        "beats_str_on_misses": (
+            infeasible_runs == 0 and projected_misses < str_misses
+        ),
         "total_raw_headroom_us": sum(
             float(row[budget_key]["raw_headroom_us"]) for row in units
         ),
@@ -198,6 +209,34 @@ def _projection(
             float(row[budget_key]["spent_measured_tagged_airtime_us"])
             for row in units
         ),
+    }
+
+
+def _minimum_pooled_ratio_to_beat_str(
+    units: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    primary_misses = sum(int(row["primary_deadline_misses"]) for row in units)
+    str_misses = sum(int(row["str_deadline_misses"]) for row in units)
+    required_rescues = primary_misses - str_misses + 1
+    costs = sorted(cost for row in units for cost in row["rescue_costs_us"])
+    mechanism._require(
+        0 < required_rescues <= len(costs),
+        "factual rescue support cannot reach a strict STR improvement",
+    )
+    selected_cost = sum(costs[:required_rescues])
+    primary_airtime = sum(float(row["primary_sender_airtime_us"]) for row in units)
+    str_airtime = sum(float(row["str_sender_airtime_us"]) for row in units)
+    return {
+        "budget_scope": (
+            "optimistic noncausal pooled tagged-airtime lower sensitivity"
+        ),
+        "required_rescues_for_one_fewer_miss_than_str": required_rescues,
+        "selected_measured_tagged_airtime_us": selected_cost,
+        "projected_deadline_misses": primary_misses - required_rescues,
+        "optimistic_minimum_sender_airtime_ratio": (
+            primary_airtime + selected_cost
+        )
+        / str_airtime,
     }
 
 
@@ -263,6 +302,7 @@ def _report_markdown(report: dict[str, Any]) -> str:
     equal = report["per_run_equal_airtime_projection"]
     engineering = report["per_run_1p20_projection"]
     pooled = report["pooled_1p20_upper_sensitivity"]
+    minimum = report["minimum_pooled_ratio_to_beat_str"]
     return "\n".join(
         [
             "# Post-result repair subset resource sensitivity",
@@ -289,6 +329,13 @@ def _report_markdown(report: dict[str, Any]) -> str:
             f"arm records {equal['primary_deadline_misses']:,}. The equal-airtime",
             "headroom is negative before any repair because primary-only already",
             "uses more airtime than STR.",
+            "",
+            f"Even under pooled noncausal selection, at least "
+            f"{minimum['required_rescues_for_one_fewer_miss_than_str']:,} factual "
+            f"rescues are needed to beat STR. Their optimistic measured tagged-cost "
+            f"floor implies a sender-airtime ratio of "
+            f"{minimum['optimistic_minimum_sender_airtime_ratio']:.4f} before fixed "
+            "secondary overhead or closed-loop effects.",
             "",
             "A failure even in the pooled 1.20 sensitivity is strong negative",
             "evidence. A pass would show only an optimistic selection ceiling and",
@@ -325,6 +372,9 @@ def analyze(
         "per_run_1p20_projection": _projection(units, "engineering_1p20"),
         "pooled_equal_airtime_upper_sensitivity": _pooled_projection(units, 1.0),
         "pooled_1p20_upper_sensitivity": _pooled_projection(units, 1.20),
+        "minimum_pooled_ratio_to_beat_str": _minimum_pooled_ratio_to_beat_str(
+            units
+        ),
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     mechanism._require(not output.exists(), f"output already exists: {output}")
