@@ -555,6 +555,7 @@ class FrameTagTestCase : public TestCase
         source.deadlineTimeNs = 156789789;
         source.frameSizeBytes = 54321;
         source.frameType = FrameType::I_FRAME;
+        source.flags = StreamingHeader::FLAG_DUPLICATED_FRAME;
 
         auto packet = Create<Packet>(100);
         const uint32_t wireSize = packet->GetSize();
@@ -580,6 +581,7 @@ class FrameTagTestCase : public TestCase
         NS_TEST_ASSERT_MSG_EQ(static_cast<uint8_t>(decoded.frameType),
                               static_cast<uint8_t>(source.frameType),
                               "Frame type changed");
+        NS_TEST_ASSERT_MSG_EQ(decoded.flags, source.flags, "Frame flags changed");
         NS_TEST_ASSERT_MSG_EQ(decoded.IsValid(), true, "Valid tag was rejected");
 
         auto copy = packet->Copy();

@@ -178,6 +178,10 @@ struct StreamingRunConfig
     uint64_t randomizedAssignmentWindowStopNs{0};  ///< Exclusive assignment-window stop.
     std::string randomizedCostEstimator{
         "not_applicable"}; ///< Frozen full-copy airtime cost estimator.
+    bool mechanismTelemetryEnabled{false}; ///< Whether paired T2 state is recorded.
+    std::string mechanismAction{"not_applicable"}; ///< Frozen mechanism action.
+    std::string mechanismOraclePacketOutcomeFile; ///< Privileged oracle source path.
+    uint32_t mechanismSystematicRepairDivisor{8}; ///< Ideal repair denominator.
     uint32_t fullDuplicationPrimaryPath{0};
     double staticLink0Score{0};
     double staticLink1Score{0};

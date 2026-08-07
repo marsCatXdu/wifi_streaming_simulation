@@ -18,6 +18,7 @@ NS_OBJECT_ENSURE_REGISTERED(SelectiveDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveAirtimeDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(AdaptiveDeficitDuplicationPolicy);
 NS_OBJECT_ENSURE_REGISTERED(RandomizedFullCopyExplorationPolicy);
+NS_OBJECT_ENSURE_REGISTERED(MechanismT2Policy);
 NS_OBJECT_ENSURE_REGISTERED(PairedValueT2Policy);
 NS_OBJECT_ENSURE_REGISTERED(DistributionalShadowT2Policy);
 
@@ -332,6 +333,53 @@ std::string
 RandomizedFullCopyExplorationPolicy::GetName() const
 {
     return "randomized_full_copy_exploration";
+}
+
+TypeId
+MechanismT2Policy::GetTypeId()
+{
+    static TypeId tid = TypeId("ns3::MechanismT2Policy")
+                            .SetParent<RedundancyPolicy>()
+                            .SetGroupName("WifiStreaming")
+                            .AddConstructor<MechanismT2Policy>();
+    return tid;
+}
+
+MechanismT2Policy::MechanismT2Policy() = default;
+
+void
+MechanismT2Policy::SetKind(MechanismT2PolicyKind kind)
+{
+    m_kind = kind;
+}
+
+PolicyDecision
+MechanismT2Policy::Decide(const FrameDescriptor&,
+                          const LinkTelemetrySnapshot& telemetry)
+{
+    PolicyDecision decision;
+    decision.primaryPath = 1;
+    decision.reason = "T2 mechanism experiment primary";
+    if (auto score = telemetry.pathScores.find(1); score != telemetry.pathScores.end())
+    {
+        decision.primaryScore = score->second;
+    }
+    return decision;
+}
+
+std::string
+MechanismT2Policy::GetName() const
+{
+    switch (m_kind)
+    {
+    case MechanismT2PolicyKind::FULL_COPY:
+        return "mechanism_full_copy_t2";
+    case MechanismT2PolicyKind::ORACLE_REPAIR:
+        return "mechanism_oracle_repair_t2";
+    case MechanismT2PolicyKind::SYSTEMATIC_REPAIR:
+        return "mechanism_systematic_fec_t2";
+    }
+    return "mechanism_unknown_t2";
 }
 
 TypeId

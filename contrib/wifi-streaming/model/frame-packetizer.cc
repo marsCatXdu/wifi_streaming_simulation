@@ -83,6 +83,7 @@ FramePacketizer::Materialize(const PacketizationPlan& plan) const
             plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
         tag.frameSizeBytes = plan.frame.frameSizeBytes;
         tag.frameType = plan.frame.frameType;
+        tag.flags = plan.flags;
         emissions.push_back({packet, tag, planned.offset});
     }
     return emissions;

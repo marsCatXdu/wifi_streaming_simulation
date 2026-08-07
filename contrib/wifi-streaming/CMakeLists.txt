@@ -29,6 +29,7 @@ build_lib(
     model/experiment-output.cc
     model/randomized-frame-assignment.cc
     model/randomized-intervention-controller.cc
+    model/mechanism-experiment-controller.cc
     model/redundancy-policy.cc
     model/multipath-sender.cc
     model/frame-receiver.cc
@@ -64,6 +65,7 @@ build_lib(
     model/experiment-output.h
     model/randomized-frame-assignment.h
     model/randomized-intervention-controller.h
+    model/mechanism-experiment-controller.h
     model/redundancy-policy.h
     model/multipath-sender.h
     model/frame-receiver.h
@@ -84,6 +86,7 @@ build_lib(
     test/paired-value-t2-controller-test.cc
     test/distributional-shadow-t2-controller-test.cc
     test/randomized-intervention-controller-test.cc
+    test/mechanism-experiment-controller-test.cc
     test/secondary-airtime-primitives-test.cc
     test/permanent-airtime-credit-ledger-test.cc
     test/wifi-streaming-test-suite.cc

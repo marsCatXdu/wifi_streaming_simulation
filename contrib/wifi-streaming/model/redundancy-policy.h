@@ -214,6 +214,49 @@ class RandomizedFullCopyExplorationPolicy : public RedundancyPolicy
 };
 
 /**
+ * Delayed action selected for the frozen T2 mechanism experiment.
+ */
+enum class MechanismT2PolicyKind
+{
+    FULL_COPY,        ///< Complete secondary copy at T2.
+    ORACLE_REPAIR,    ///< Privileged eventual-missing source repair at T2.
+    SYSTEMATIC_REPAIR ///< Ideal systematic coded repair at T2.
+};
+
+/**
+ * Fixed 5 GHz primary policy for the T2 repair mechanism experiment.
+ *
+ * The policy itself never duplicates at frame generation. A separate
+ * MechanismExperimentController executes the configured delayed action.
+ */
+class MechanismT2Policy : public RedundancyPolicy
+{
+  public:
+    /**
+     * Return runtime type information.
+     *
+     * @return Policy TypeId.
+     */
+    static TypeId GetTypeId();
+
+    MechanismT2Policy();
+
+    /**
+     * Select the experiment action identity used for provenance.
+     *
+     * @param kind Frozen delayed action kind.
+     */
+    void SetKind(MechanismT2PolicyKind kind);
+
+    PolicyDecision Decide(const FrameDescriptor& frame,
+                          const LinkTelemetrySnapshot& telemetry) override;
+    std::string GetName() const override;
+
+  private:
+    MechanismT2PolicyKind m_kind{MechanismT2PolicyKind::FULL_COPY}; ///< Delayed action.
+};
+
+/**
  * Select the frozen primary path for paired temporal T2 value control.
  *
  * This policy never duplicates at the frame boundary. The paired-value T2

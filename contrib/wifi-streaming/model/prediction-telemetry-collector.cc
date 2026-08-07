@@ -1102,6 +1102,7 @@ PredictionTelemetryCollector::RegisterFrame(const PacketizationPlan& plan)
         plan.frame.generationTimeNs + static_cast<uint64_t>(plan.frame.deadlineUs) * 1000;
     frameTag.frameSizeBytes = plan.frame.frameSizeBytes;
     frameTag.frameType = plan.frame.frameType;
+    frameTag.flags = plan.flags;
     WriteEvent("FRAME_REGISTERED", plan.pathId, frameTag, std::nullopt, std::nullopt);
     for (std::size_t index = 1; index < m_sampleOffsetsUs.size(); ++index)
     {
@@ -1202,7 +1203,7 @@ PredictionTelemetryCollector::NotifyQueueEnqueue(uint8_t pathId, Ptr<const WifiM
     entry.stableMpdu = GetStableMpdu(mpdu);
     entry.macServiceBytes = mpdu->GetPacketSize();
     entry.enqueueTimeNs = nowNs;
-    if (tagged)
+    if (tagged && !tag.IsCodedRepair())
     {
         entry.tag = tag;
     }
@@ -1316,6 +1317,10 @@ PredictionTelemetryCollector::NotifyPhyTxBegin(uint8_t pathId, Ptr<const Packet>
     {
         return;
     }
+    if (tag.IsCodedRepair())
+    {
+        return;
+    }
     NS_ABORT_MSG_IF(tag.pathId != pathId,
                     "Tagged PHY transmission appeared on a different application path");
     auto pathIterator = m_paths.find(pathId);
@@ -1409,6 +1414,10 @@ PredictionTelemetryCollector::NotifyResponseTimeout(uint8_t pathId, Ptr<const Wi
     {
         return;
     }
+    if (tag.IsCodedRepair())
+    {
+        return;
+    }
     NS_ABORT_MSG_IF(tag.pathId != pathId,
                     "Tagged failed attempt appeared on a different application path");
     auto& path = m_paths.at(pathId);
@@ -1422,6 +1431,10 @@ PredictionTelemetryCollector::NotifyAckedMpdu(uint8_t pathId, Ptr<const WifiMpdu
 {
     StreamingFrameTag tag;
     if (!GetTag(mpdu, tag))
+    {
+        return;
+    }
+    if (tag.IsCodedRepair())
     {
         return;
     }
@@ -1487,6 +1500,10 @@ PredictionTelemetryCollector::NotifyDroppedMpdu(uint8_t pathId,
 {
     StreamingFrameTag tag;
     if (!GetTag(mpdu, tag))
+    {
+        return;
+    }
+    if (tag.IsCodedRepair())
     {
         return;
     }

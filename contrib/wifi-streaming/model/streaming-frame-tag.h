@@ -25,7 +25,7 @@ namespace ns3
 class StreamingFrameTag : public Tag
 {
   public:
-    static constexpr uint32_t SERIALIZED_SIZE = 39; ///< Serialized tag size.
+    static constexpr uint32_t SERIALIZED_SIZE = 41; ///< Serialized tag size.
 
     /**
      * Return the runtime type information.
@@ -47,6 +47,13 @@ class StreamingFrameTag : public Tag
      */
     bool IsValid() const;
 
+    /**
+     * Return whether this tag identifies an ideal coded-repair symbol.
+     *
+     * @return True for a coded-repair symbol.
+     */
+    bool IsCodedRepair() const;
+
     uint64_t frameId{0};          ///< Application frame identifier.
     uint8_t pathId{0};            ///< Application path identifier.
     uint8_t copyId{0};            ///< Application copy identifier.
@@ -56,6 +63,7 @@ class StreamingFrameTag : public Tag
     uint64_t deadlineTimeNs{0};   ///< Absolute frame deadline in nanoseconds.
     uint32_t frameSizeBytes{0};   ///< Encoded-video frame size in bytes.
     FrameType frameType{FrameType::UNKNOWN}; ///< Application frame type.
+    uint16_t flags{0}; ///< StreamingHeader semantic flags.
 };
 
 } // namespace ns3

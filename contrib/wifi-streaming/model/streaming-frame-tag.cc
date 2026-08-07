@@ -45,6 +45,7 @@ StreamingFrameTag::Serialize(TagBuffer buffer) const
     buffer.WriteU64(deadlineTimeNs);
     buffer.WriteU32(frameSizeBytes);
     buffer.WriteU8(static_cast<uint8_t>(frameType));
+    buffer.WriteU16(flags);
 }
 
 void
@@ -59,6 +60,7 @@ StreamingFrameTag::Deserialize(TagBuffer buffer)
     deadlineTimeNs = buffer.ReadU64();
     frameSizeBytes = buffer.ReadU32();
     frameType = static_cast<FrameType>(buffer.ReadU8());
+    flags = buffer.ReadU16();
 }
 
 void
@@ -74,6 +76,12 @@ StreamingFrameTag::IsValid() const
 {
     return packetCount > 0 && packetIndex < packetCount &&
            static_cast<uint8_t>(frameType) <= static_cast<uint8_t>(FrameType::PRIORITY_LOW);
+}
+
+bool
+StreamingFrameTag::IsCodedRepair() const
+{
+    return (flags & StreamingHeader::FLAG_CODED_REPAIR) != 0;
 }
 
 } // namespace ns3

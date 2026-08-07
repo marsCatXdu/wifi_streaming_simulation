@@ -57,6 +57,14 @@ SupportsStagedAdaptivePolicy(const std::string& policyName)
     return ClosedLoopRiskPredictor::HasExactStagedModelContract();
 }
 
+bool
+IsMechanismT2Policy(const std::string& policyName)
+{
+    return policyName == "mechanism_full_copy_t2" ||
+           policyName == "mechanism_oracle_repair_t2" ||
+           policyName == "mechanism_systematic_fec_t2";
+}
+
 void
 PopulateNeighborCaches()
 {
@@ -464,6 +472,9 @@ main(int argc, char* argv[])
     double randomizedT2Probability{0.08};
     double randomizedT4Probability{0.12};
     uint64_t randomizedAssignmentStopGuardUs{534000};
+    bool mechanismTelemetryEnabled{false};
+    std::string mechanismOraclePacketOutcomeFile;
+    uint32_t mechanismSystematicRepairDivisor{8};
     uint32_t fullDuplicationPrimaryPath = 0;
     uint32_t queueMaxPackets = 500;
     uint32_t queueMaxDelayMs = 500;
@@ -571,7 +582,8 @@ main(int argc, char* argv[])
                      "selective_duplication, adaptive_airtime_duplication, "
                      "adaptive_deficit_duplication, randomized_full_copy_exploration, "
                      "paired_value_duplication_t2, or "
-                     "distributional_shadow_duplication_t2",
+                     "distributional_shadow_duplication_t2, mechanism_full_copy_t2, "
+                     "mechanism_oracle_repair_t2, or mechanism_systematic_fec_t2",
                      policyName);
     command.AddValue("staticLink0Score",
                      "Static link 0 score (lower is better)",
@@ -681,6 +693,15 @@ main(int argc, char* argv[])
     command.AddValue("randomizedAssignmentStopGuardUs",
                      "Guard before measurement stop for randomized assignment",
                      randomizedAssignmentStopGuardUs);
+    command.AddValue("mechanismTelemetryEnabled",
+                     "Record paired primary/secondary T2 mechanism telemetry",
+                     mechanismTelemetryEnabled);
+    command.AddValue("mechanismOraclePacketOutcomeFile",
+                     "Paired primary-only packet outcomes for privileged oracle replay",
+                     mechanismOraclePacketOutcomeFile);
+    command.AddValue("mechanismSystematicRepairDivisor",
+                     "Send ceil(source packets / divisor) ideal T2 repair symbols",
+                     mechanismSystematicRepairDivisor);
     command.AddValue("fullDuplicationPrimaryPath",
                      "Primary path for unconditional application duplication",
                      fullDuplicationPrimaryPath);
@@ -843,6 +864,8 @@ main(int argc, char* argv[])
         policyName == "distributional_shadow_duplication_t2";
     const bool pairedTemporalT2Control =
         pairedValueT2Control || distributionalShadowT2Control;
+    const bool mechanismT2Control = IsMechanismT2Policy(policyName);
+    const bool mechanismObservation = mechanismTelemetryEnabled || mechanismT2Control;
     const bool environmentGeneralizationT2FrameProfile =
         pairedTemporalT2FrameProfile == "environment_generalization_v1";
     NS_ABORT_MSG_IF(pairedTemporalT2FrameProfile != "canonical_v1" &&
@@ -879,11 +902,13 @@ main(int argc, char* argv[])
                              policyName != "adaptive_airtime_duplication" &&
                              policyName != "adaptive_deficit_duplication" &&
                              policyName != "randomized_full_copy_exploration" &&
-                             !pairedTemporalT2Control) ||
+                             policyName != "full_duplication" &&
+                             !pairedTemporalT2Control && !mechanismT2Control) ||
                             wifiStandard != "eht" || ulOfdmaEnabled || maxAmsduSize != 0 ||
                             fragmentationThreshold != 65535,
                         "Prediction telemetry requires dual_interface, a fixed-link or "
-                        "selective/adaptive/randomized policy, EHT, disabled UL OFDMA/A-MSDU, and "
+                        "selective/adaptive/randomized/mechanism policy, EHT, disabled UL "
+                        "OFDMA/A-MSDU, and "
                         "disabled fragmentation");
     }
     if (policyName == "selective_duplication")
@@ -1074,6 +1099,36 @@ main(int argc, char* argv[])
             "Randomized assignment stop guard must cover deadline/queue settlement and leave "
             "a common intervention window");
     }
+    if (mechanismObservation)
+    {
+        NS_ABORT_MSG_IF(topology != "dual_interface",
+                        "Mechanism telemetry requires dual_interface topology");
+        NS_ABORT_MSG_IF(!predictionTelemetryEnabled,
+                        "Mechanism telemetry requires prediction telemetry");
+        NS_ABORT_MSG_IF(policyName != "fixed_link_1" &&
+                            policyName != "full_duplication" &&
+                            !mechanismT2Control,
+                        "Mechanism telemetry supports fixed_link_1, full_duplication, or a "
+                        "mechanism T2 policy");
+        NS_ABORT_MSG_IF(emissionMode != "burst",
+                        "Mechanism telemetry requires burst emission");
+        NS_ABORT_MSG_IF(resolvedPredictionSampleOffsetsUs !=
+                            std::vector<uint64_t>({0, 2000}),
+                        "Mechanism telemetry requires exactly the T0 and T2 samples");
+        NS_ABORT_MSG_IF(mechanismSystematicRepairDivisor != 8,
+                        "The frozen mechanism experiment requires repair divisor 8");
+        NS_ABORT_MSG_IF(policyName == "full_duplication" &&
+                            fullDuplicationPrimaryPath != 1,
+                        "Mechanism full-copy T0 requires primary path 1");
+        NS_ABORT_MSG_IF(mechanismT2Control && !secondaryAirtimeMeterEnabled,
+                        "Mechanism T2 actions require the secondary airtime meter");
+        NS_ABORT_MSG_IF(policyName == "mechanism_oracle_repair_t2" &&
+                            mechanismOraclePacketOutcomeFile.empty(),
+                        "Mechanism oracle repair requires paired packet outcomes");
+        NS_ABORT_MSG_IF(policyName != "mechanism_oracle_repair_t2" &&
+                            !mechanismOraclePacketOutcomeFile.empty(),
+                        "Only mechanism oracle repair accepts paired packet outcomes");
+    }
     if (pairedTemporalT2Control)
     {
         NS_ABORT_MSG_IF(topology != "dual_interface",
@@ -1250,7 +1305,8 @@ main(int argc, char* argv[])
                         policyName != "adaptive_deficit_duplication" &&
                         policyName != "randomized_full_copy_exploration" &&
                         policyName != "paired_value_duplication_t2" &&
-                        policyName != "distributional_shadow_duplication_t2",
+                        policyName != "distributional_shadow_duplication_t2" &&
+                        !IsMechanismT2Policy(policyName),
                     "Unknown policy " << policyName);
     NS_ABORT_MSG_IF(fullDuplicationPrimaryPath > 1,
                     "fullDuplicationPrimaryPath must be 0 or 1");
@@ -1270,6 +1326,7 @@ main(int argc, char* argv[])
                         policyName != "randomized_full_copy_exploration" &&
                         policyName != "paired_value_duplication_t2" &&
                         policyName != "distributional_shadow_duplication_t2" &&
+                        !IsMechanismT2Policy(policyName) &&
                         policyName != "full_duplication",
                     "Secondary airtime metering supports only selective, adaptive, randomized, "
                     "or full duplication policies");
@@ -2627,6 +2684,17 @@ main(int argc, char* argv[])
         resolved.randomizedCostEstimator =
             std::string(RandomizedInterventionController::GetCostEstimatorId());
     }
+    resolved.mechanismTelemetryEnabled = mechanismObservation;
+    resolved.mechanismAction =
+        policyName == "mechanism_full_copy_t2"
+            ? "FULL_COPY_T2"
+        : policyName == "mechanism_oracle_repair_t2"
+            ? "ORACLE_EVENTUAL_MISSING_REPAIR_T2"
+        : policyName == "mechanism_systematic_fec_t2"
+            ? "IDEAL_SYSTEMATIC_REPAIR_T2"
+            : "OBSERVE";
+    resolved.mechanismOraclePacketOutcomeFile = mechanismOraclePacketOutcomeFile;
+    resolved.mechanismSystematicRepairDivisor = mechanismSystematicRepairDivisor;
     resolved.fullDuplicationPrimaryPath = fullDuplicationPrimaryPath;
     resolved.backgroundProfile = backgroundProfile;
     resolved.backgroundTraffic = backgroundTraffic;
@@ -2714,6 +2782,11 @@ main(int argc, char* argv[])
     metrics->SetRunId(runId);
     metrics->SetOutputFiles((std::filesystem::path(outputDir) / "frames.csv").string(),
                             (std::filesystem::path(outputDir) / "policy_decisions.csv").string());
+    if (mechanismObservation)
+    {
+        metrics->SetPacketOutcomesFile(
+            (std::filesystem::path(outputDir) / "frame_packet_outcomes.csv").string());
+    }
 
     Ptr<PredictionTelemetryCollector> predictionTelemetry;
     if (predictionTelemetryEnabled)
@@ -2737,7 +2810,7 @@ main(int argc, char* argv[])
                                           0,
                                           AC_BE);
         if (policyName == "randomized_full_copy_exploration" ||
-            pairedTemporalT2Control)
+            pairedTemporalT2Control || mechanismObservation)
         {
             // Bind the hypothetical secondary after the primary so T0 path
             // history is initialized in the same explicit causal order used
@@ -2755,7 +2828,7 @@ main(int argc, char* argv[])
         policyName == "adaptive_airtime_duplication" ||
         policyName == "adaptive_deficit_duplication" ||
         policyName == "randomized_full_copy_exploration" ||
-        pairedTemporalT2Control)
+        pairedTemporalT2Control || mechanismObservation)
     {
         // Keep primary-only frames open so a causal delayed secondary launch
         // can still be accepted before the deadline.
@@ -2818,6 +2891,11 @@ main(int argc, char* argv[])
         auto policy = CreateObject<FixedLinkPolicy>();
         policy->SetPath(policyName == "fixed_link_0" ? 0 : 1);
         sender->SetPolicy(policy);
+        if (mechanismObservation)
+        {
+            sender->SetDelayedSecondaryPath(0);
+            sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
+        }
     }
     else if (policyName == "static_best")
     {
@@ -2869,6 +2947,25 @@ main(int argc, char* argv[])
             DistributionalShadowT2Controller::SECONDARY_PATH_ID);
         sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
     }
+    else if (mechanismT2Control)
+    {
+        auto policy = CreateObject<MechanismT2Policy>();
+        if (policyName == "mechanism_full_copy_t2")
+        {
+            policy->SetKind(MechanismT2PolicyKind::FULL_COPY);
+        }
+        else if (policyName == "mechanism_oracle_repair_t2")
+        {
+            policy->SetKind(MechanismT2PolicyKind::ORACLE_REPAIR);
+        }
+        else
+        {
+            policy->SetKind(MechanismT2PolicyKind::SYSTEMATIC_REPAIR);
+        }
+        sender->SetPolicy(policy);
+        sender->SetDelayedSecondaryPath(MechanismExperimentController::SECONDARY_PATH_ID);
+        sender->SetDelayedSecondaryPredictionTrackingEnabled(true);
+    }
     else
     {
         auto policy = CreateObject<FullDuplicationPolicy>();
@@ -2881,6 +2978,7 @@ main(int argc, char* argv[])
     Ptr<RandomizedInterventionController> randomizedController;
     Ptr<PairedValueT2Controller> pairedValueController;
     Ptr<DistributionalShadowT2Controller> distributionalShadowController;
+    Ptr<MechanismExperimentController> mechanismController;
     Ptr<SecondaryAirtimeMeter> secondaryAirtimeMeter;
     const bool meterWanted =
         secondaryAirtimeMeterEnabled &&
@@ -2890,6 +2988,7 @@ main(int argc, char* argv[])
          policyName == "randomized_full_copy_exploration" ||
          policyName == "paired_value_duplication_t2" ||
          policyName == "distributional_shadow_duplication_t2" ||
+         mechanismT2Control ||
          policyName == "full_duplication");
     if (meterWanted)
     {
@@ -2905,6 +3004,38 @@ main(int argc, char* argv[])
             (std::filesystem::path(outputDir) / "secondary_airtime_events.csv").string(),
             (std::filesystem::path(outputDir) / "secondary_airtime_settlements.csv").string(),
             (std::filesystem::path(outputDir) / "secondary_airtime_summary.json").string());
+    }
+    if (mechanismObservation)
+    {
+        mechanismController = CreateObject<MechanismExperimentController>();
+        mechanismController->SetSender(PeekPointer(sender));
+        if (secondaryAirtimeMeter)
+        {
+            mechanismController->SetAirtimeMeter(secondaryAirtimeMeter);
+        }
+        if (policyName == "mechanism_full_copy_t2")
+        {
+            mechanismController->SetAction(MechanismT2Action::FULL_COPY);
+        }
+        else if (policyName == "mechanism_oracle_repair_t2")
+        {
+            mechanismController->SetAction(MechanismT2Action::ORACLE_REPAIR);
+            mechanismController->SetOraclePacketOutcomeFile(
+                mechanismOraclePacketOutcomeFile);
+        }
+        else if (policyName == "mechanism_systematic_fec_t2")
+        {
+            mechanismController->SetAction(MechanismT2Action::SYSTEMATIC_REPAIR);
+        }
+        mechanismController->SetSystematicRepairDivisor(
+            mechanismSystematicRepairDivisor);
+        mechanismController->SetOutputFiles(
+            runId,
+            (std::filesystem::path(outputDir) / "mechanism_t2_snapshots.csv").string(),
+            (std::filesystem::path(outputDir) / "mechanism_t2_actions.csv").string());
+        predictionTelemetry->SetSnapshotCallback(
+            MakeCallback(&MechanismExperimentController::NotifySnapshot,
+                         PeekPointer(mechanismController)));
     }
     if (policyName == "randomized_full_copy_exploration")
     {
@@ -3303,6 +3434,12 @@ main(int argc, char* argv[])
                         "Randomized intervention accepted more launches than it attempted");
     }
     metrics->FinalizeMissingFrames();
+    if (mechanismController)
+    {
+        NS_ABORT_MSG_IF(mechanismController->GetPairedFrameCount() !=
+                            metrics->GetFrameResults().size(),
+                        "Mechanism T2 pair count differs from generated frame count");
+    }
     if (pairedValueController || distributionalShadowController)
     {
         std::set<uint64_t> generatedFrameIds;
