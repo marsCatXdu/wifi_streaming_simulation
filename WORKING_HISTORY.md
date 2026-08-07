@@ -353,7 +353,7 @@ to this held-out population, so no policy is promoted.
   STR's 11,432, and the optimistic minimum ratio to beat STR by one miss is
   1.2051 before fixed overhead.  The complete diagnostic is archived beside
   the main result.  Stop before redesigning the action or training a model.
-- [ ] Repeat the complete 576-run held-out qualification as a controlled target
+- [x] Repeat the held-out qualification as a controlled target
   MCS ablation.  Preserve all 48 scenarios, 192 paired units, three arms,
   seeds, policies, model artifacts, and resource accounting; change only
   `wifi.mcs_mode` from its legacy fixed default to adaptive Minstrel-HT.  Keep
@@ -361,7 +361,15 @@ to this held-out population, so no policy is promoted.
   stream layout.  Run two intact 288-run shards, retrieve and strictly
   validate all outputs, plot fixed-versus-adaptive all-generated reliability
   and survivor-conditioned latency, archive a simple comparison, then stop
-  for user discussion without beginning another iteration.
+  for user discussion without beginning another iteration.  Shard 0 promoted
+  all 288 runs; shard 1 promoted 287.  The missing compound-p22 seed-21188
+  adaptive STR run deterministically aborts twice in native ns-3 association
+  scanning at the identical simulated time.  Its complete three-arm unit is
+  transparently excluded from both MCS modes; all 575 promoted adaptive runs
+  freshly pass strict validation and 191 matched units enter final analysis.
+  The final report and ten PNG/PDF figure pairs are archived under
+  `key_experiment_results/19_environment_generalization_adaptive_mcs_v1`
+  through `823ea7f`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -385,24 +393,24 @@ scenario/seed/run/arm identities as the archived fixed campaign, with only
 paired units, and all 144 unique adaptive configurations pass executable
 configuration-only validation.
 
-The implementation and campaign contract are committed through `0f4169e`.
-The clean-commit canary completed all three 1,800-frame arms for
-radio-propagation p16 seed 21001, and strict validation promoted every run.
-Each resolved config reports adaptive Minstrel and exactly eight isolated
-manager streams.  Both VMs now run clean `3ec0319` with identical executable
-SHA-256 `7e49b6eeb352a474e8d21b856ad2d90ade35e22a3be1f723058b31f3532af291`.
-Persistent services `wifi-adaptive-mcs-shard0-3ec0319.service` and
-`wifi-adaptive-mcs-shard1-3ec0319.service` started with 64 workers and 288
-runs each; both manifests have the exact shard identity and both hosts began
-64 simulator processes.  The pre-result comparison analyzer and its focused
-tests are frozen and pushed at `3fd6b05`; it requires the exact two-shard
-576-run closure, freshly strict-validates every adaptive run, binds the
-checksum-closed fixed evidence, and produces ten PNG/PDF figure pairs using
-all-generated reliability plus explicitly survivor-conditioned completion
-statistics.  Retrieve outputs before any repair or rerun, compare directly with
-`key_experiment_results/17_environment_generalization_qualification_v1`,
-archive figures and a concise analysis, commit/push, and stop.  Do not begin a
-new predictor, action, dataset, or environment iteration afterward.
+The controlled ablation is complete.  Adaptive Minstrel raises misses from
+16.0437% to 17.7337% for STR, from 19.1306% to 23.1784% for V2, and from
+18.7584% to 22.4778% for Distributional.  All three adaptive-minus-fixed miss
+intervals exclude zero; point sender-airtime ratios are 1.0822, 1.0553, and
+1.0663.  V2 and Distributional remain 5.4447 and 4.7440 percentage points
+worse than adaptive STR.  Background throughput is unchanged, and every miss
+is an incomplete frame, so faster-looking completed-frame curves are survivor
+conditioning.
+
+The final raw mirrors contain 4,514 and 4,508 regular files.  Their local and
+remote tree SHA-256 identities match at
+`123d344e857589e0c624b65a98b0937440e79f63e8c45473b35fc5babb816e20`
+and `a58c5bc000c321be6787fab1e08cd07a85e1e0cfbc7f5599d26e2dfcd009078f`.
+The result, partial pre-recovery checkpoint, deterministic-failure record,
+source manifests, reports, tables, and figures are all under
+`key_experiment_results/19_environment_generalization_adaptive_mcs_v1`.
+This boundary is closed.  Stop and wait for user discussion; do not begin a
+new predictor, action, dataset, retuning, or environment iteration.
 
 ### Superseded packet-repair boundary
 
@@ -1032,6 +1040,34 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-08 - Complete adaptive target-MCS qualification
+
+- Finished the two 288-run services using clean simulation commit `3ec0319`.
+  Shard 0 promoted 288 runs and shard 1 promoted 287.  Before diagnosis or
+  retry, retrieved 479 valid runs and all then-present attempt data, freshly
+  strict-validated them, plotted 159 complete matched units, and archived the
+  pre-recovery result at `ee70333`.
+- Diagnosed the missing adaptive STR run as an ns-3
+  `WifiAssocManager::MatchScanParams` assertion.  One exact unchanged retry
+  reproduced the same assertion at 29.947258708 simulated seconds with
+  byte-identical partial frame, decision, and resolved-config files.  Archived
+  the checksums and stopped retries without substituting a seed or patching the
+  campaign binary.
+- Froze the post-execution exception contract and 191-unit paired analysis at
+  `6630288`.  All 575 promoted adaptive runs pass fresh strict validation;
+  both MCS modes exclude the incomplete unit, leaving 573 analyzed runs each.
+- Generated and visually reviewed all ten fixed/adaptive PNG/PDF figure pairs.
+  Adaptive MCS significantly worsens all three arms, uses more sender airtime,
+  and leaves background throughput unchanged.  It is worse in 41/48 STR,
+  44/48 V2, and 43/48 Distributional scenario points.  All misses are
+  incomplete frames, not completed-but-late frames.
+- Checksum-matched both final local raw trees to their remote VM copies and
+  archived the identities, final tables, observations, source manifests, and
+  partial recovery evidence under
+  `key_experiment_results/19_environment_generalization_adaptive_mcs_v1` at
+  `823ea7f`.
+  Stop before any retuning or new experiment.
 
 ### 2026-08-08 - Freeze adaptive target-MCS qualification
 
