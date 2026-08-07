@@ -6,6 +6,7 @@ from __future__ import annotations
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +58,17 @@ class T2RepairOraclePairDiagnosticTest(unittest.TestCase):
         self.assertEqual(
             diagnostic._snapshot_differences(baseline, oracle), ["queue"]
         )
+
+    def test_single_worker_validation_does_not_spawn(self) -> None:
+        jobs = [{"run_id": "a"}, {"run_id": "b"}]
+        with mock.patch.object(
+            diagnostic,
+            "_validate_and_reduce",
+            side_effect=lambda job: {"run_id": job["run_id"]},
+        ) as validate:
+            result = diagnostic._strict_validate(jobs, workers=1)
+        self.assertEqual(set(result), {"a", "b"})
+        self.assertEqual(validate.call_count, 2)
 
 
 if __name__ == "__main__":

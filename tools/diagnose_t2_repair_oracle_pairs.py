@@ -531,6 +531,10 @@ def _load_campaign(
 def _strict_validate(
     jobs: Sequence[dict[str, Any]], workers: int
 ) -> dict[str, dict[str, Any]]:
+    if workers == 1:
+        results = {job["run_id"]: _validate_and_reduce(job) for job in jobs}
+        _require(len(results) == len(jobs), "strict validation result count differs")
+        return results
     results: dict[str, dict[str, Any]] = {}
     with ProcessPoolExecutor(max_workers=workers) as executor:
         futures = {
