@@ -2,8 +2,9 @@
 
 This file is the authoritative execution handoff for the current research
 work.  It records what is complete, what is in progress, and what must happen
-next.  Read it after `AGENTS.md` and `RESEARCH_MEMORY.md`, especially after a
-context compression or a new agent session.
+next.  Read it after `AGENTS.md`, `RESEARCH_MEMORY.md`, and
+`EXPERIMENT_HOSTS.md`, especially after a context compression or a new agent
+session.
 
 Keep this file factual.  Git, test output, and experiment artifacts remain the
 source of truth; reconcile this document with them before continuing work.
@@ -48,8 +49,10 @@ P99.
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
   is not a tuning dimension for this campaign.
-- Qualification host: VM SSH forwarded through
-  `jingweili@10.120.16.105:30022`, configured with 64 vCPUs.
+- Experiment hosts: two independent 64-vCPU VMs are directly reachable at
+  `jingweili@10.120.16.105:30022` and
+  `jingweili@10.120.17.30:30022`.  See `EXPERIMENT_HOSTS.md` for identities,
+  storage, forwarding, and distributed-campaign rules.
 - Qualification analysis uses one shared `10000 x 48` whole-run bootstrap
   index matrix for miss rate, P99, airtime, and background throughput.
 
@@ -830,6 +833,28 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-07 - Clone and validate a second experiment VM
+
+- Installed and enabled KVM/libvirt on physical host `10.120.17.30` without
+  restarting it.  The host has 96 logical CPUs, 503 GiB RAM, and about 1.3 TiB
+  free; `virt-host-validate qemu` passes all requirements relevant to this
+  software-only VM.
+- Made a crash-consistent live copy of `wifi-exp-f2e354c`: flushed the idle
+  guest, atomically pivoted to an external overlay, transferred the immutable
+  50.28 GB base directly between physical hosts, matched independent SHA-256
+  results, and obtained a clean `qemu-img check`.  Block-committed the 6.88 MiB
+  overlay, restored the original single-disk chain, and deleted only that
+  unreferenced temporary volume.
+- Defined autostart domain `wifi-exp-17-30` with 64 vCPUs and 48 GiB RAM.
+  Separated its UUID, machine ID, hostname, MAC, and SSH host keys while
+  retaining the authorized user key.  The original and clone now have distinct
+  ED25519 fingerprints and both accept batch-mode SSH through their own host's
+  port `30022`.
+- Verified both VMs concurrently at project commit `47e1996`; each reports 64
+  processors and runs `streaming-experiment --help` without build work.  No
+  physical host was restarted.  Exact operations and future two-host campaign
+  rules are recorded in `EXPERIMENT_HOSTS.md`.
 
 ### 2026-08-07 - Close and archive held-out qualification
 
