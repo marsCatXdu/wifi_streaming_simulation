@@ -2,7 +2,9 @@
 
 This directory archives the complete 576-run held-out campaign, its strict
 post-outcome reliability analysis, ten reviewed figures, the evidence-first
-568-run snapshot, and the exact recovery record.
+568-run snapshot, the exact recovery record, and a post-campaign diagnosis of
+why the randomized scenarios are much harder than the earlier neutral
+environment.
 
 The principal result is negative: distributional-shadow improves V2, but both
 selective full-copy policies have decisively more all-generated-frame deadline
@@ -152,6 +154,10 @@ The compressed pre-repair failure archive remains outside Git with SHA-256
 
 ## Archived artifacts
 
+- `SCENARIO_DIFFICULTY_DIAGNOSIS.md`: post-campaign operating-regime analysis
+  comparing neutral, the full 48-scenario population, and the later selected
+  five-scenario mechanism stress panel.  It does not alter the frozen
+  qualification result.
 - `experiment_manifest.json`: exact final 576-run expansion and command
   records.
 - `formal_analysis_status.json`: frozen analyzer failure and explicit
