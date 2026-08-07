@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import statistics
 import subprocess
 import tempfile
@@ -56,6 +57,11 @@ SCENARIO_LABELS = {
 }
 BOOTSTRAP_REPLICATIONS = 10_000
 BOOTSTRAP_SEED = 20260807
+RECOVERY_ORCHESTRATION_COMMIT = "fb26a4b26f3aef03e41ef2ecdd2bd0c1a137fb15"
+SIMULATION_EXECUTABLE_SHA256 = (
+    "ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d"
+)
+RECOVERY_COUNTS = {0: 10, 1: 9}
 
 
 class MechanismAnalysisError(RuntimeError):
@@ -166,6 +172,77 @@ def _background_bytes(run_dir: Path) -> int:
         return 0
     rows = _read_csv(path)
     return sum(int(row["bytes_received"]) for row in rows)
+
+
+def _recovery_source(
+    root: Path,
+    manifest: dict[str, Any],
+    shard_index: int,
+) -> dict[str, Any]:
+    """Validate the exact no-rerun recovery and binary continuation evidence."""
+    continuation = manifest.get("continuation")
+    _require(isinstance(continuation, dict), f"{root}: missing continuation evidence")
+    executable = continuation.get("expected_executable")
+    _require(
+        continuation.get("simulation_project_commit") == manifest["project_commit"]
+        and continuation.get("orchestration_project_commit")
+        == RECOVERY_ORCHESTRATION_COMMIT
+        and continuation.get("recovery_report") == "attempt_recovery.json"
+        and isinstance(executable, dict)
+        and executable.get("sha256") == SIMULATION_EXECUTABLE_SHA256
+        and isinstance(executable.get("bytes"), int)
+        and executable["bytes"] > 0
+        and isinstance(executable.get("path"), str)
+        and Path(executable.get("path", "")).name.startswith(
+            "ns3.48-streaming-experiment-"
+        ),
+        f"{root}: campaign continuation identity differs",
+    )
+    recovery_path = root / "attempt_recovery.json"
+    recovery = _read_json(recovery_path)
+    expected_count = RECOVERY_COUNTS[shard_index]
+    recovered = recovery.get("recovered")
+    _require(
+        recovery.get("schema_version") == 1
+        and recovery.get("simulation_project_commit") == manifest["project_commit"]
+        and recovery.get("validator_project_commit") == RECOVERY_ORCHESTRATION_COMMIT
+        and recovery.get("ns3_upstream_commit") == manifest["ns3_upstream_commit"]
+        and recovery.get("recovered_count") == expected_count
+        and recovery.get("all_recovered_attempts_strictly_validated") is True
+        and isinstance(recovered, list)
+        and len(recovered) == expected_count,
+        f"{root}: attempt recovery closure differs",
+    )
+    run_ids = set()
+    for row in recovered:
+        _require(
+            isinstance(row, dict)
+            and row.get("arm_id") == "ideal_systematic_fec_12p5_t2"
+            and row.get("state") == "promoted"
+            and isinstance(row.get("run_id"), str)
+            and re.fullmatch(r"[0-9a-f]{20}", row["run_id"]) is not None
+            and isinstance(row.get("file_count"), int)
+            and row["file_count"] > 0
+            and isinstance(row.get("bytes"), int)
+            and row["bytes"] > 0
+            and isinstance(row.get("tree_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", row["tree_sha256"])
+            is not None,
+            f"{root}: invalid recovered-attempt row",
+        )
+        run_ids.add(row["run_id"])
+    _require(len(run_ids) == expected_count, f"{root}: duplicate recovered run ID")
+    manifest_ids = {item["run_id"] for item in manifest.get("runs", [])}
+    _require(run_ids <= manifest_ids, f"{root}: recovered run absent from manifest")
+    return {
+        "path": str(recovery_path),
+        "bytes": recovery_path.stat().st_size,
+        "sha256": _sha256(recovery_path),
+        "recovered_count": expected_count,
+        "all_promoted": True,
+        "orchestration_project_commit": RECOVERY_ORCHESTRATION_COMMIT,
+        "simulation_executable_sha256": SIMULATION_EXECUTABLE_SHA256,
+    }
 
 
 def _snapshot_values(
@@ -392,6 +469,9 @@ def _load_manifests(
                 "bytes": pair_path.stat().st_size,
                 "sha256": _sha256(pair_path),
             },
+            "attempt_recovery": _recovery_source(
+                root, manifest, int(shard.get("index", -1))
+            ),
         })
     _require(shards == {(0, 2), (1, 2)}, "campaign shard identities differ")
     _require(len(commits) == 1 and len(jobs) == 120,

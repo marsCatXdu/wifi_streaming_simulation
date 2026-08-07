@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -55,6 +57,58 @@ def observation(scenario: str, seed: int, arm: str) -> dict[str, object]:
 
 
 class T2RepairMechanismAnalysisTest(unittest.TestCase):
+    def test_recovery_source_closes_exact_continuation_identity(self) -> None:
+        run_ids = [f"{index:020x}" for index in range(10)]
+        manifest = {
+            "project_commit": "a" * 40,
+            "ns3_upstream_commit": "b" * 40,
+            "runs": [{"run_id": run_id} for run_id in run_ids],
+            "continuation": {
+                "simulation_project_commit": "a" * 40,
+                "orchestration_project_commit": mechanism.RECOVERY_ORCHESTRATION_COMMIT,
+                "recovery_report": "attempt_recovery.json",
+                "expected_executable": {
+                    "path": "/build/ns3.48-streaming-experiment-default",
+                    "bytes": 123,
+                    "sha256": mechanism.SIMULATION_EXECUTABLE_SHA256,
+                },
+            },
+        }
+        recovery = {
+            "schema_version": 1,
+            "simulation_project_commit": "a" * 40,
+            "validator_project_commit": mechanism.RECOVERY_ORCHESTRATION_COMMIT,
+            "ns3_upstream_commit": "b" * 40,
+            "recovered_count": 10,
+            "all_recovered_attempts_strictly_validated": True,
+            "recovered": [
+                {
+                    "run_id": run_id,
+                    "arm_id": "ideal_systematic_fec_12p5_t2",
+                    "state": "promoted",
+                    "file_count": 12,
+                    "bytes": 1000,
+                    "tree_sha256": f"{index:064x}",
+                }
+                for index, run_id in enumerate(run_ids)
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "attempt_recovery.json").write_text(
+                json.dumps(recovery), encoding="utf-8"
+            )
+            source = mechanism._recovery_source(root, manifest, 0)
+            self.assertEqual(source["recovered_count"], 10)
+            recovery["recovered"][0]["state"] = "validated_attempt"
+            (root / "attempt_recovery.json").write_text(
+                json.dumps(recovery), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(
+                mechanism.MechanismAnalysisError, "invalid recovered-attempt row"
+            ):
+                mechanism._recovery_source(root, manifest, 0)
+
     def test_burst_lengths_retain_terminal_and_isolated_misses(self) -> None:
         self.assertEqual(
             mechanism._burst_lengths([False, True, False, True, True]),
