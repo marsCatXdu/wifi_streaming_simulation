@@ -1,0 +1,145 @@
+extends: closed_loop_adaptive_airtime_obss.yaml
+
+name: t2-repair-mechanism-v1
+output_root: results/t2_repair_mechanism_v1/runs
+workers: 64
+
+mechanism_contract:
+  id: t2_repair_mechanism_v1
+  path: experiments/model-selection/t2-repair-mechanism-v1.json
+  sha256: bb5f0c805497a741a3f5155573712a615c151da8f6181f6e3e89f6e8d4a94511
+
+base:
+  stream:
+    source: synthetic
+    duration: 60
+    fps: 30
+    frame_size: 12000
+    gop_length: 60
+    keyframe_size_multiplier: 4
+    payload_size: 1200
+    deadline_us: 33333
+    emission_mode: burst
+  wifi:
+    wifi_standard: eht
+    queue_max_packets: 500
+    queue_max_delay_ms: 500
+    max_ampdu_size: 65535
+    max_amsdu_size: 0
+    txop_limit_us: 0
+    rts_cts_threshold: 4692480
+    fragmentation_threshold: 65535
+    guard_interval_ns: 800
+    mlo_sta_max_inflights: 1
+    ul_ofdma_enabled: false
+
+seeds: [1]
+runs: [1]
+
+scenario_instances:
+  - scenario_id: radio-propagation-qualification-p17
+    family_id: radio_propagation
+    parameter_sample: 17
+    seeds: [21005, 21006, 21007, 21008]
+    runs: [1]
+    config:
+      propagation.nakagami_distance_1_m: 52.97
+      propagation.nakagami_distance_2_m: 196.74
+      propagation.nakagami_m0: 1.3302
+      propagation.nakagami_m1: 1.2343
+      propagation.nakagami_m2: 1.0194
+      propagation.path_loss_exponent: 3.7489
+      propagation.station_distance_m: 16.05
+  - scenario_id: obss-intensity-qualification-p17
+    family_id: obss_intensity
+    parameter_sample: 17
+    seeds: [21037, 21038, 21039, 21040]
+    runs: [1]
+    config:
+      obss.obss_dl_max_rate_mbps: 8.5009
+      obss.obss_dl_min_rate_mbps: 2.41
+      obss.obss_off_mean_ms: 186.44
+      obss.obss_on_mean_ms: 219.99
+      obss.obss_packet_size: 1200
+      obss.obss_ul_max_rate_mbps: 5.7591
+      obss.obss_ul_min_rate_mbps: 1.14
+  - scenario_id: obss-intensity-qualification-p19
+    family_id: obss_intensity
+    parameter_sample: 19
+    seeds: [21045, 21046, 21047, 21048]
+    runs: [1]
+    config:
+      obss.obss_dl_max_rate_mbps: 9.9833
+      obss.obss_dl_min_rate_mbps: 2.5902
+      obss.obss_off_mean_ms: 435.38
+      obss.obss_on_mean_ms: 249.82
+      obss.obss_packet_size: 600
+      obss.obss_ul_max_rate_mbps: 5.5524
+      obss.obss_ul_min_rate_mbps: 0.3428
+  - scenario_id: legacy-coexistence-qualification-p17
+    family_id: legacy_coexistence
+    parameter_sample: 17
+    seeds: [21133, 21134, 21135, 21136]
+    runs: [1]
+    config:
+      background.background_packet_size: 1472
+      background.background_profile: legacy_mixed8
+      background.background_rate_mbps: 2.9549
+      background.random_off_mean_ms: 185.21
+      background.random_on_mean_ms: 170.56
+  - scenario_id: compound-shift-qualification-p19
+    family_id: compound_shift
+    parameter_sample: 19
+    seeds: [21173, 21174, 21175, 21176]
+    runs: [1]
+    config:
+      background.background_profile: legacy_mixed8
+      background.background_rate_mbps: 2.5988
+      background.random_off_mean_ms: 200.6
+      background.random_on_mean_ms: 167.47
+      obss.obss_dl_max_rate_mbps: 7.7296
+      obss.obss_off_mean_ms: 286.3
+      obss.obss_on_mean_ms: 81.29
+      obss.obss_ul_max_rate_mbps: 2.9153
+      propagation.path_loss_exponent: 3.165
+      propagation.station_distance_m: 8.659
+      stream.deadline_us: 33333
+      stream.fps: 30
+      stream.frame_size: 12900
+      stream.gop_length: 90
+      stream.keyframe_size_multiplier: 3.472
+
+topologies:
+  - name: dual_interface
+    config:
+      prediction.prediction_telemetry_enabled: true
+      prediction.prediction_sample_offsets_us: [0, 2000]
+      prediction.prediction_history_windows_us: [1000, 5000, 20000]
+      prediction.prediction_polling_interval_us: 1000
+      prediction.prediction_polling_report_delay_us: 1000
+      prediction.prediction_event_log_enabled: false
+      prediction.prediction_oracle_features_enabled: false
+      prediction.mechanism_telemetry_enabled: true
+      prediction.mechanism_systematic_repair_divisor: 8
+  - name: mlo_str
+
+# The privileged oracle arm is derived after these five arms complete. Its
+# packet-outcome input is the exact paired fixed_link_1 run, not a shared file.
+policies:
+  - name: fixed_link_1
+    topologies: [dual_interface]
+  - name: full_duplication
+    topologies: [dual_interface]
+    config:
+      wifi.full_duplication_primary_path: 1
+      prediction.secondary_airtime_meter_enabled: true
+  - name: mechanism_full_copy_t2
+    topologies: [dual_interface]
+    config:
+      prediction.secondary_airtime_meter_enabled: true
+  - name: mechanism_systematic_fec_t2
+    topologies: [dual_interface]
+    config:
+      prediction.secondary_airtime_meter_enabled: true
+  - name: fixed_link_0
+    topologies: [mlo_str]
