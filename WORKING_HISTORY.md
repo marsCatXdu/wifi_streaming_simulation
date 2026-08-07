@@ -353,11 +353,47 @@ to this held-out population, so no policy is promoted.
   STR's 11,432, and the optimistic minimum ratio to beat STR by one miss is
   1.2051 before fixed overhead.  The complete diagnostic is archived beside
   the main result.  Stop before redesigning the action or training a model.
+- [ ] Repeat the complete 576-run held-out qualification as a controlled target
+  MCS ablation.  Preserve all 48 scenarios, 192 paired units, three arms,
+  seeds, policies, model artifacts, and resource accounting; change only
+  `wifi.mcs_mode` from its legacy fixed default to adaptive Minstrel-HT.  Keep
+  adaptive-manager RNG streams isolated from the legacy PHY/MAC/background
+  stream layout.  Run two intact 288-run shards, retrieve and strictly
+  validate all outputs, plot fixed-versus-adaptive all-generated reliability
+  and survivor-conditioned latency, archive a simple comparison, then stop
+  for user discussion without beginning another iteration.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
+
+The user explicitly superseded the prior post-mechanism pause with one
+controlled MCS experiment.  The active boundary is now
+`environment-generalization-adaptive-mcs-qualification-v1`.  The local
+implementation defaults to fixed `ConstantRateWifiManager`/EHT MCS 5 and
+selects `MinstrelHtWifiManager` only when `mcsMode=adaptive` is present.
+Minstrel uses a 50 ms update interval, the latest standard amendment, and a
+disjoint random-stream range beginning at 900000.
+
+Fixed-mode dual-interface and STR-MLO smoke outputs reproduce their pre-change
+summaries, MAC/link records, and normalized frame/decision rows exactly.
+Adaptive smoke runs complete in both topologies and each consumes exactly
+eight isolated manager streams.  The frozen matrix expands to the same 576
+scenario/seed/run/arm identities as the archived fixed campaign, with only
+`wifi.mcs_mode` added.  Its two shards contain 288 runs each without splitting
+paired units, and all 144 unique adaptive configurations pass executable
+configuration-only validation.
+
+The next boundary is a clean implementation/campaign commit followed by a
+real three-arm canary.  If the canary passes strict validation, deploy one
+288-run shard to each documented VM.  Retrieve outputs before any repair or
+rerun, compare directly with
+`key_experiment_results/17_environment_generalization_qualification_v1`,
+archive figures and a concise analysis, commit/push, and stop.  Do not begin a
+new predictor, action, dataset, or environment iteration afterward.
+
+### Superseded packet-repair boundary
 
 The user reviewed the failed held-out qualification and authorized one small
 action-mechanism gate before any further predictor work.  The current boundary
@@ -985,6 +1021,26 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-08 - Freeze adaptive target-MCS qualification
+
+- Added a fixed/adaptive target-MCS attribute with fixed behavior as the
+  backward-compatible default and Minstrel-HT as the adaptive treatment.
+- Preserved the legacy PHY, MAC, queue, and background RNG assignment by
+  moving only Minstrel's eight target-manager streams to a reserved range.
+- Reproduced pre-change fixed dual-interface and STR-MLO smoke outputs exactly
+  after removing run identity and new provenance fields; completed adaptive
+  smoke runs in both topologies.
+- Froze a parent-bound 576-run contract and a dedicated sharded runner so the
+  generic historical runner remains byte-identical.  Static expansion proves
+  that the only simulation setting change is `wifi.mcs_mode=adaptive` and
+  that two shards cover 288 runs each without splitting paired units.
+- Passed the wifi-streaming C++ suite, 144/144 unique configuration checks,
+  and focused/compatibility Python tests.  A broad 568-test run had one new
+  legacy-fixture incompatibility, now fixed; its remaining six setup errors
+  and one source-hash assertion are pre-existing frozen-source/local-artifact
+  closure failures.  Do not weaken those frozen contracts or rewrite
+  historical evidence for this campaign.
 
 ### 2026-08-07 - Analyze the deadline-correct repair replay
 

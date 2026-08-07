@@ -1,0 +1,14 @@
+extends: environment_generalization_closed_loop_qualification_v1.yaml
+
+name: environment-generalization-adaptive-mcs-qualification-v1
+output_root: results/environment_generalization_adaptive_mcs_qualification_v1/runs
+workers: 64
+
+runtime_contract:
+  id: environment-generalization-adaptive-mcs-qualification-v1
+  path: experiments/model-selection/environment-generalization-adaptive-mcs-qualification-v1.json
+  sha256: aaedf15300b40d221e526ee5c4f27a205510f49b793caa203aa5f7fe16f6dff7
+
+base:
+  wifi:
+    mcs_mode: adaptive

@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "environment-generalization-adaptive-mcs-qualification-v1",
+  "status": "frozen_before_adaptive_mcs_outcomes",
+  "purpose": "Repeat the complete held-out 576-run qualification as a single controlled fixed-to-adaptive target-MCS ablation.",
+  "parent_execution": {
+    "path": "experiments/model-selection/environment-generalization-qualification-execution-v1.json",
+    "sha256": "09b5e8de9033f6f0803e45b84a6b155f8ed1722710bb489a9fe19d01382554c9",
+    "archived_result": "key_experiment_results/17_environment_generalization_qualification_v1"
+  },
+  "controlled_change": {
+    "yaml_attribute": "wifi.mcs_mode",
+    "cli_attribute": "mcsMode",
+    "parent_value": "fixed",
+    "treatment_value": "adaptive",
+    "fixed_manager": "ns3::ConstantRateWifiManager with EhtMcs5",
+    "adaptive_manager": "ns3::MinstrelHtWifiManager",
+    "adaptive_update_interval_ms": 50,
+    "adaptive_use_latest_amendment_only": true,
+    "adaptive_manager_random_stream_base": 900000,
+    "randomness_isolation": "Target PHY, MAC, queue, background, propagation, source, placement, and application random streams retain their fixed-MCS assignments. Only adaptive station-manager random variables use the reserved disjoint stream range."
+  },
+  "campaign": {
+    "family_count": 6,
+    "scenario_count": 48,
+    "replicates_per_scenario": 4,
+    "paired_unit_count": 192,
+    "arm_count": 3,
+    "simulation_run_count": 576,
+    "distributed_shards": 2,
+    "runs_per_shard": 288,
+    "shard_selection": "paired_unit_round_robin_v1"
+  },
+  "unchanged_invariants": [
+    "All 48 scenario instances, seeds 21001 through 21192, ns-3 run numbers, and the three arm definitions are inherited unchanged.",
+    "STR MLO keeps NMaxInflights=1; V2 and distributional shadow T2 keep their frozen predictors, thresholds, actions, admission policies, and permanent airtime accounting.",
+    "The V2 and distributional conservative admission cost estimators remain the frozen EhtMcs5-derived estimators; they are not retrained or retuned for adaptive rates.",
+    "Workload, propagation, OBSS, background traffic, queues, aggregation, retry limit, channel layout, and all analysis weighting remain unchanged.",
+    "The two shards keep every scenario/seed/run unit and all three of its arms together."
+  ],
+  "analysis": {
+    "primary_comparison": "adaptive_mcs_minus_archived_fixed_mcs within identical scenario, seed, run, and arm units",
+    "primary_outcome": "deadline misses over all generated frames",
+    "secondary_outcomes": [
+      "deadline-censored latency CDF over all generated frames",
+      "completed-frame latency CDF and PDF with survivor-conditioning disclosure",
+      "completed-frame HF7 P99",
+      "sender PHY airtime",
+      "background throughput",
+      "miss-burst length"
+    ],
+    "weighting": "equal_family_then_equal_scenario_then_equal_replicate",
+    "stop_after_archive": true
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "distributional_portable_model": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+          "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+        },
+        "distributional_runtime_contract": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+          "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+        },
+        "distributional_shadow_reference": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+          "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+        },
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "parent_generalization_contract": {
+          "path": "experiments/model-selection/environment-generalization-v1.json",
+          "sha256": "d74f3826e0c624f3dfb91c9acee5934389d67aa6b94b39e493549c4d8ea659aa"
+        },
+        "qualification_base_config": {
+          "path": "experiments/configs/paired_value_t2_str_qualification_v1.yaml",
+          "sha256": "67612a496b9c60cc8d3efb017e42af307e87e608762aa006d72a676fde5330c5"
+        },
+        "scenario_catalog": {
+          "path": "experiments/model-selection/environment-generalization-scenarios-v1.json",
+          "sha256": "ed7cb32fc3fd7c08ddac296f9c7d7d3c532066305ca50e7c62a0971f9fd6d593"
+        },
+        "secondary_airtime_event_schema": {
+          "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+          "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+        },
+        "v2_runtime_contract": {
+          "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+          "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+        }
+      }
+    }
+  },
+  "stop_boundary": "After complete validation, fixed-versus-adaptive plots, simple analysis, archival, commit, and push, stop and wait for user discussion before any further experiment or policy iteration."
+}
