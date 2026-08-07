@@ -28,7 +28,17 @@ Preserved attempt file identities:
 | `resolved_config.json` | 7110 | `142e0338424614680e60c9bac2f1bc15b75e78364ed483de734c25956e0e4c91` |
 | `stdout.log` | 7796 | `2947919dba5005d2bcb9d6ba65964ac8d77abd807052737488539d4576d749c4` |
 
-Recovery is limited to one retry of the exact same run using the same clean
-simulation commit and executable.  A repeated deterministic assertion is not
-grounds for silently changing the seed or mixing a patched binary into the
-campaign.
+Recovery was limited to one retry of the exact same run using the same clean
+simulation commit and executable.  It aborted on the same assertion at the
+exact same simulated time, 29.947258708 s.  Its resolved configuration,
+partial `frames.csv`, and partial `policy_decisions.csv` are byte-identical to
+the first attempt.  Only the execution timestamp in `build_info.json` and the
+attempt PID embedded in `stdout.log` differ.
+
+The second attempt is preserved at
+`results/environment_generalization_adaptive_mcs_qualification_v1/shard1/.5663378425ecf42d9a21.attempt-26260`.
+Its `stdout.log` SHA-256 is
+`08dd2e4ecb2a611ee0db2905eb2ed7f4dfd672358409f965bdec277962465520`.
+No further retry, replacement seed, or mixed patched binary is admitted into
+this campaign.  Final analysis must label the run missing and exclude its
+three-arm unit from paired estimates.

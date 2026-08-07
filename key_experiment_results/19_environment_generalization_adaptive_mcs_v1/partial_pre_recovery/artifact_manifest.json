@@ -2,8 +2,8 @@
   "analysis": "environment-generalization-adaptive-mcs-partial-snapshot-v1",
   "artifacts": {
     "FAILURE_DIAGNOSTIC.md": {
-      "bytes": 1617,
-      "sha256": "e0b22d247cd548c8cc014b232a1588d0d59c207f7c3107e807de1848feeb6425"
+      "bytes": 2237,
+      "sha256": "be60a8ec26e69a83b7ed08531a684ccd46aa6a8b5299cde06ee6751988f01ec8"
     },
     "OBSERVATIONS.md": {
       "bytes": 1849,
