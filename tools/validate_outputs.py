@@ -725,6 +725,70 @@ PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS = (
     "static_association", "tid_to_link_mapping_ul", "str_mode", "multi_link_mode",
     "application_socket_count", "emlsr",
 )
+
+
+def _validate_target_mcs_config(config: dict[str, Any], label: str) -> str:
+    """Validate target rate-control provenance while accepting legacy fixed runs."""
+
+    wifi = config.get("wifi")
+    if wifi is None:
+        return "fixed"
+    _require(isinstance(wifi, dict), f"resolved_config.json: {label} Wi-Fi config is missing")
+    mcs_mode = wifi.get("mcs_mode", "fixed")
+    _require(
+        mcs_mode in {"fixed", "adaptive"},
+        f"resolved_config.json: {label} MCS mode is invalid",
+    )
+    if "mcs_mode" not in wifi:
+        return "fixed"
+
+    topology = config.get("topology")
+    link_count = 1 if topology == "single_link" else 2
+    common_expected = {
+        "adaptive_mcs_update_interval_ms": 50,
+        "adaptive_mcs_use_latest_amendment_only": True,
+        "adaptive_mcs_random_stream_base": 900000,
+    }
+    if mcs_mode == "adaptive":
+        expected = {
+            **common_expected,
+            "station_manager": "MinstrelHtWifiManager",
+            "data_mode": "manager_selected",
+            "control_mode": ",".join(["manager_selected"] * link_count),
+            "data_modes_per_link": ["manager_selected"] * link_count,
+            "adaptive_mcs_random_stream_count": 4 * link_count,
+        }
+    else:
+        standard_modes = {
+            "802.11n": "HtMcs5",
+            "802.11ac": "VhtMcs5",
+            "802.11ax": "HeMcs5",
+            "802.11be": "EhtMcs5",
+        }
+        data_mode = standard_modes.get(wifi.get("standard"))
+        _require(
+            data_mode is not None,
+            f"resolved_config.json: {label} fixed MCS standard is invalid",
+        )
+        expected = {
+            **common_expected,
+            "station_manager": "ConstantRateWifiManager",
+            "data_mode": data_mode,
+            "control_mode": (
+                "OfdmRate24Mbps"
+                if link_count == 1
+                else "ErpOfdmRate24Mbps,OfdmRate24Mbps"
+            ),
+            "data_modes_per_link": [data_mode] * link_count,
+            "adaptive_mcs_random_stream_count": 0,
+        }
+    _require(
+        all(wifi.get(key, "__MISSING__") == value for key, value in expected.items()),
+        f"resolved_config.json: {label} MCS provenance differs",
+    )
+    return mcs_mode
+
+
 PAIRED_VALUE_T2_SOURCE_FILES = {
     "tools/build_randomized_intervention_dataset.py": (
         "f365274a0a82a01cf23b390c52401bbaa6eaf5390c2c737a098e2a227c185cea"
@@ -2726,14 +2790,18 @@ def _validate_paired_temporal_t2_environment(
         not missing,
         f"resolved_config.json: {label} environment fields are missing",
     )
-    wifi = config.get("wifi")
-    _require(
-        isinstance(wifi, dict),
-        f"resolved_config.json: {label} Wi-Fi config is missing",
-    )
+    mcs_mode = _validate_target_mcs_config(config, label)
+    wifi = config["wifi"]
     shared_wifi = {
         key: wifi.get(key, "__MISSING__") for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
     }
+    if mcs_mode == "adaptive":
+        shared_wifi.update({
+            "station_manager": "ConstantRateWifiManager",
+            "data_mode": "EhtMcs5",
+            "control_mode": "ErpOfdmRate24Mbps,OfdmRate24Mbps",
+            "data_modes_per_link": ["EhtMcs5", "EhtMcs5"],
+        })
     _require(
         _canonical_json_sha256(shared_wifi, f"{label} shared target Wi-Fi")
         == PAIRED_VALUE_T2_SHARED_WIFI_SHA256,
@@ -9011,6 +9079,7 @@ def validate_run(
     },
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
+    _validate_target_mcs_config(config, "target")
     paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
         paired_value_profile = _validate_paired_value_t2_config(config)

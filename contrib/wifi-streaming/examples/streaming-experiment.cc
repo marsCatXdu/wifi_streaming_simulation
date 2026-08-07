@@ -250,6 +250,69 @@ StandardLabel(const std::string& name)
                            : "802.11ax";
 }
 
+int64_t
+AssignWifiStreamsWithoutStationManagers(const NetDeviceContainer& devices,
+                                        int64_t stream)
+{
+    int64_t currentStream = stream;
+    for (auto iterator = devices.Begin(); iterator != devices.End(); ++iterator)
+    {
+        auto wifi = DynamicCast<WifiNetDevice>(*iterator);
+        if (!wifi)
+        {
+            continue;
+        }
+        for (const auto& phy : wifi->GetPhys())
+        {
+            currentStream += phy->AssignStreams(currentStream);
+        }
+
+        auto mac = wifi->GetMac();
+        PointerValue pointer;
+        if (!mac->GetQosSupported())
+        {
+            mac->GetAttribute("Txop", pointer);
+            currentStream += pointer.Get<Txop>()->AssignStreams(currentStream);
+        }
+        else
+        {
+            for (const auto* attribute : {"VO_Txop", "VI_Txop", "BE_Txop", "BK_Txop"})
+            {
+                mac->GetAttribute(attribute, pointer);
+                currentStream += pointer.Get<QosTxop>()->AssignStreams(currentStream);
+            }
+        }
+        if (auto apMac = DynamicCast<ApWifiMac>(mac))
+        {
+            currentStream += apMac->AssignStreams(currentStream);
+        }
+        if (auto staMac = DynamicCast<StaWifiMac>(mac))
+        {
+            currentStream += staMac->AssignStreams(currentStream);
+        }
+    }
+    return currentStream - stream;
+}
+
+int64_t
+AssignStationManagerStreams(const NetDeviceContainer& devices, int64_t stream)
+{
+    int64_t currentStream = stream;
+    for (auto iterator = devices.Begin(); iterator != devices.End(); ++iterator)
+    {
+        auto wifi = DynamicCast<WifiNetDevice>(*iterator);
+        if (!wifi)
+        {
+            continue;
+        }
+        for (const auto& manager : wifi->GetRemoteStationManagers())
+        {
+            currentStream += manager->AssignStreams(currentStream);
+        }
+    }
+    return currentStream - stream;
+}
+
 uint8_t
 StandardRank(const std::string& name)
 {
@@ -494,6 +557,9 @@ main(int argc, char* argv[])
     uint32_t ulOfdmaMaxStations = 4;
     uint32_t ulOfdmaPsduSize = 1200;
     std::string wifiStandard = "eht";
+    std::string mcsMode = "fixed";
+    constexpr uint32_t adaptiveMcsUpdateIntervalMs = 50;
+    constexpr int64_t adaptiveMcsStreamBase = 900000;
     std::string backgroundStandard0 = "inherit";
     std::string backgroundStandard1 = "inherit";
     std::string backgroundProfile = "none";
@@ -735,7 +801,8 @@ main(int argc, char* argv[])
     command.AddValue("ulOfdmaPsduSize",
                      "Fallback solicited UL PSDU size in bytes",
                      ulOfdmaPsduSize);
-    command.AddValue("wifiStandard", "ht, vht, he, or eht (fixed PHY rate)", wifiStandard);
+    command.AddValue("wifiStandard", "ht, vht, he, or eht", wifiStandard);
+    command.AddValue("mcsMode", "Target MCS selection: fixed or adaptive", mcsMode);
     command.AddValue("backgroundProfile",
                      "none or legacy_mixed8 deterministic contention profile",
                      backgroundProfile);
@@ -1211,6 +1278,8 @@ main(int argc, char* argv[])
     }
     RngSeedManager::SetSeed(seed);
     RngSeedManager::SetRun(run);
+    NS_ABORT_MSG_IF(mcsMode != "fixed" && mcsMode != "adaptive",
+                    "mcsMode must be fixed or adaptive");
     NS_ABORT_MSG_IF(ulOfdmaScope != "target_aps" && ulOfdmaScope != "all_he_eht_aps",
                     "ulOfdmaScope must be target_aps or all_he_eht_aps");
     NS_ABORT_MSG_IF(ulOfdmaEnabled &&
@@ -1485,6 +1554,7 @@ main(int argc, char* argv[])
     WifiHelper wifi;
     const WifiStandard standard = ParseWifiStandard(wifiStandard);
     const std::string dataMode = DataModeForStandard(wifiStandard);
+    const bool adaptiveMcs = mcsMode == "adaptive";
     const auto controlModeForLink = [topology](uint32_t link) {
         return topology != "single_link" && link == 0 ? "ErpOfdmRate24Mbps"
                                                        : "OfdmRate24Mbps";
@@ -1582,15 +1652,31 @@ main(int argc, char* argv[])
         Ptr<MultiModelSpectrumChannel> channel = makeWifiChannel(referenceLossDb, link);
         wifiChannels[link] = channel;
 
-        wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
-                                     "DataMode",
-                                     StringValue(dataMode),
-                                     "ControlMode",
-                                     StringValue(controlModeForLink(link)),
-                                     "RtsCtsThreshold",
-                                     UintegerValue(rtsCtsThreshold),
-                                     "FragmentationThreshold",
-                                     UintegerValue(fragmentationThreshold));
+        if (adaptiveMcs)
+        {
+            wifi.SetRemoteStationManager(
+                "ns3::MinstrelHtWifiManager",
+                "UpdateStatistics",
+                TimeValue(MilliSeconds(adaptiveMcsUpdateIntervalMs)),
+                "UseLatestAmendmentOnly",
+                BooleanValue(true),
+                "RtsCtsThreshold",
+                UintegerValue(rtsCtsThreshold),
+                "FragmentationThreshold",
+                UintegerValue(fragmentationThreshold));
+        }
+        else
+        {
+            wifi.SetRemoteStationManager("ns3::ConstantRateWifiManager",
+                                         "DataMode",
+                                         StringValue(dataMode),
+                                         "ControlMode",
+                                         StringValue(controlModeForLink(link)),
+                                         "RtsCtsThreshold",
+                                         UintegerValue(rtsCtsThreshold),
+                                         "FragmentationThreshold",
+                                         UintegerValue(fragmentationThreshold));
+        }
 
         SpectrumWifiPhyHelper phy;
         phy.SetChannel(channel);
@@ -1696,27 +1782,36 @@ main(int argc, char* argv[])
             phy.Set("NotifyMacHdrRxEnd", BooleanValue(true));
         }
 
-        uint8_t link0 = 0;
-        wifi.SetRemoteStationManager(link0,
-                                     "ns3::ConstantRateWifiManager",
-                                     "DataMode",
-                                     StringValue("EhtMcs5"),
-                                     "ControlMode",
-                                     StringValue(controlModeForLink(0)),
-                                     "RtsCtsThreshold",
-                                     UintegerValue(rtsCtsThreshold),
-                                     "FragmentationThreshold",
-                                     UintegerValue(fragmentationThreshold));
-        wifi.SetRemoteStationManager(1,
-                                     "ns3::ConstantRateWifiManager",
-                                     "DataMode",
-                                     StringValue("EhtMcs5"),
-                                     "ControlMode",
-                                     StringValue(controlModeForLink(1)),
-                                     "RtsCtsThreshold",
-                                     UintegerValue(rtsCtsThreshold),
-                                     "FragmentationThreshold",
-                                     UintegerValue(fragmentationThreshold));
+        for (uint8_t link = 0; link < 2; ++link)
+        {
+            if (adaptiveMcs)
+            {
+                wifi.SetRemoteStationManager(
+                    link,
+                    "ns3::MinstrelHtWifiManager",
+                    "UpdateStatistics",
+                    TimeValue(MilliSeconds(adaptiveMcsUpdateIntervalMs)),
+                    "UseLatestAmendmentOnly",
+                    BooleanValue(true),
+                    "RtsCtsThreshold",
+                    UintegerValue(rtsCtsThreshold),
+                    "FragmentationThreshold",
+                    UintegerValue(fragmentationThreshold));
+            }
+            else
+            {
+                wifi.SetRemoteStationManager(link,
+                                             "ns3::ConstantRateWifiManager",
+                                             "DataMode",
+                                             StringValue("EhtMcs5"),
+                                             "ControlMode",
+                                             StringValue(controlModeForLink(link)),
+                                             "RtsCtsThreshold",
+                                             UintegerValue(rtsCtsThreshold),
+                                             "FragmentationThreshold",
+                                             UintegerValue(fragmentationThreshold));
+            }
+        }
         wifi.ConfigEhtOptions(
             "TidToLinkMappingNegSupport",
             EnumValue(WifiTidToLinkMappingNegSupport::ANY_LINK_SET),
@@ -1862,6 +1957,8 @@ main(int argc, char* argv[])
 
     std::string observedStationManager;
     std::string observedControlModes;
+    const std::string expectedManagerName =
+        adaptiveMcs ? "ns3::MinstrelHtWifiManager" : "ns3::ConstantRateWifiManager";
     for (uint32_t deviceIndex = 0; deviceIndex < stationDevices.GetN(); ++deviceIndex)
     {
         const auto wifiDevice = DynamicCast<WifiNetDevice>(stationDevices.Get(deviceIndex));
@@ -1869,21 +1966,33 @@ main(int argc, char* argv[])
         for (const auto& manager : wifiDevice->GetRemoteStationManagers())
         {
             const std::string managerName = manager->GetInstanceTypeId().GetName();
-            NS_ABORT_MSG_IF(managerName != "ns3::ConstantRateWifiManager",
+            NS_ABORT_MSG_IF(managerName != expectedManagerName,
                             "Unexpected target station manager: " << managerName);
-            observedStationManager = "ConstantRateWifiManager";
-            WifiModeValue controlMode;
-            manager->GetAttribute("ControlMode", controlMode);
+            observedStationManager =
+                adaptiveMcs ? "MinstrelHtWifiManager" : "ConstantRateWifiManager";
             if (!observedControlModes.empty())
             {
                 observedControlModes += ",";
             }
-            observedControlModes += controlMode.Get().GetUniqueName();
+            if (adaptiveMcs)
+            {
+                observedControlModes += "manager_selected";
+            }
+            else
+            {
+                WifiModeValue controlMode;
+                manager->GetAttribute("ControlMode", controlMode);
+                observedControlModes += controlMode.Get().GetUniqueName();
+            }
         }
     }
-    const std::string expectedControlModes =
-        topology == "single_link" ? "OfdmRate24Mbps"
-                                  : "ErpOfdmRate24Mbps,OfdmRate24Mbps";
+    const std::string expectedControlModes = adaptiveMcs
+                                                 ? (topology == "single_link"
+                                                        ? "manager_selected"
+                                                        : "manager_selected,manager_selected")
+                                                 : (topology == "single_link"
+                                                        ? "OfdmRate24Mbps"
+                                                        : "ErpOfdmRate24Mbps,OfdmRate24Mbps");
     NS_ABORT_MSG_IF(observedControlModes != expectedControlModes,
                     "Target station control modes are " << observedControlModes
                                                          << ", expected "
@@ -2300,11 +2409,19 @@ main(int argc, char* argv[])
         }
     }
     int64_t wifiStream = 2000;
-    wifiStream += WifiHelper::AssignStreams(stationDevices, wifiStream);
-    wifiStream += WifiHelper::AssignStreams(apWifiDevices, wifiStream);
+    wifiStream += AssignWifiStreamsWithoutStationManagers(stationDevices, wifiStream);
+    wifiStream += AssignWifiStreamsWithoutStationManagers(apWifiDevices, wifiStream);
     for (const auto& devices : backgroundDevices)
     {
         wifiStream += WifiHelper::AssignStreams(devices, wifiStream);
+    }
+    uint32_t adaptiveMcsStreamCount = 0;
+    if (adaptiveMcs)
+    {
+        int64_t managerStream = adaptiveMcsStreamBase;
+        managerStream += AssignStationManagerStreams(stationDevices, managerStream);
+        managerStream += AssignStationManagerStreams(apWifiDevices, managerStream);
+        adaptiveMcsStreamCount = managerStream - adaptiveMcsStreamBase;
     }
 
     NodeContainer all(station, accessPoint, edge);
@@ -2543,7 +2660,12 @@ main(int argc, char* argv[])
     resolved.nakagamiM2 = nakagamiM2;
     resolved.propagationStreamBase = propagationStreamBase;
     resolved.standard = StandardLabel(wifiStandard);
-    resolved.dataMode = dataMode;
+    resolved.mcsMode = mcsMode;
+    resolved.adaptiveMcsUpdateIntervalMs = adaptiveMcsUpdateIntervalMs;
+    resolved.adaptiveMcsUseLatestAmendmentOnly = true;
+    resolved.adaptiveMcsStreamBase = adaptiveMcsStreamBase;
+    resolved.adaptiveMcsStreamCount = adaptiveMcsStreamCount;
+    resolved.dataMode = adaptiveMcs ? "manager_selected" : dataMode;
     resolved.stationManager = observedStationManager;
     resolved.controlMode = observedControlModes;
     resolved.guardInterval = std::to_string(guardIntervalNs) + "ns";
@@ -2557,9 +2679,11 @@ main(int argc, char* argv[])
             ? std::vector<std::string>{"WIFI_SPECTRUM_5_GHZ"}
             : std::vector<std::string>{"WIFI_SPECTRUM_2_4_GHZ",
                                        "WIFI_SPECTRUM_5_GHZ"};
-    resolved.perLinkDataModes =
-        linkCount == 1 ? std::vector<std::string>{dataMode}
-                       : std::vector<std::string>{dataMode, dataMode};
+    const std::string perLinkDataMode = adaptiveMcs ? "manager_selected" : dataMode;
+    resolved.perLinkDataModes = linkCount == 1
+                                    ? std::vector<std::string>{perLinkDataMode}
+                                    : std::vector<std::string>{perLinkDataMode,
+                                                               perLinkDataMode};
     resolved.queueMaxPackets = queueMaxPackets;
     resolved.queueMaxDelayMs = queueMaxDelayMs;
     resolved.maxAmpduSizeBytes = maxAmpduSize;

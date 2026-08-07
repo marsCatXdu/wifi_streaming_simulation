@@ -67,7 +67,12 @@ struct StreamingRunConfig
     double nakagamiM2{0.75};
     int64_t propagationStreamBase{5000};
     std::string standard;
+    std::string mcsMode{"fixed"}; ///< Target rate selection: fixed or adaptive
     std::string stationManager{"ConstantRateWifiManager"};
+    uint32_t adaptiveMcsUpdateIntervalMs{50}; ///< Minstrel statistics update interval
+    bool adaptiveMcsUseLatestAmendmentOnly{true}; ///< Limit Minstrel to current standard
+    int64_t adaptiveMcsStreamBase{900000}; ///< First isolated adaptive-manager stream
+    uint32_t adaptiveMcsStreamCount{0};    ///< Streams consumed by adaptive managers
     std::string dataMode;
     std::string controlMode;
     std::vector<std::string> channelSettings;

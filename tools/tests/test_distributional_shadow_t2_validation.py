@@ -82,6 +82,25 @@ class DistributionalShadowT2ValidationTest(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "controller object exists|differs"):
             _validate_distributional_shadow_t2_config(changed_policy)
 
+    def test_accepts_only_exact_adaptive_mcs_ablation(self) -> None:
+        config = self.resolved_config()
+        config["wifi"].update({
+            "mcs_mode": "adaptive",
+            "station_manager": "MinstrelHtWifiManager",
+            "data_mode": "manager_selected",
+            "control_mode": "manager_selected,manager_selected",
+            "data_modes_per_link": ["manager_selected", "manager_selected"],
+            "adaptive_mcs_update_interval_ms": 50,
+            "adaptive_mcs_use_latest_amendment_only": True,
+            "adaptive_mcs_random_stream_base": 900000,
+            "adaptive_mcs_random_stream_count": 8,
+        })
+        _validate_distributional_shadow_t2_config(config)
+
+        config["wifi"]["adaptive_mcs_update_interval_ms"] = 51
+        with self.assertRaisesRegex(ValidationError, "MCS provenance differs"):
+            _validate_distributional_shadow_t2_config(config)
+
     def test_accepts_bounded_generalization_profile_and_rejects_bad_cadence(self) -> None:
         config = self.resolved_config()
         config["pairedTemporalT2FrameProfile"] = "environment_generalization_v1"

@@ -298,8 +298,17 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "  },\n"
            << "  \"wifi\": {\n"
            << "    \"standard\": \"" << JsonEscape(config.standard) << "\",\n"
+           << "    \"mcs_mode\": \"" << JsonEscape(config.mcsMode) << "\",\n"
            << "    \"station_manager\": \"" << JsonEscape(config.stationManager)
            << "\",\n"
+           << "    \"adaptive_mcs_update_interval_ms\": "
+           << config.adaptiveMcsUpdateIntervalMs << ",\n"
+           << "    \"adaptive_mcs_use_latest_amendment_only\": " << std::boolalpha
+           << config.adaptiveMcsUseLatestAmendmentOnly << ",\n"
+           << "    \"adaptive_mcs_random_stream_base\": "
+           << config.adaptiveMcsStreamBase << ",\n"
+           << "    \"adaptive_mcs_random_stream_count\": "
+           << config.adaptiveMcsStreamCount << ",\n"
            << "    \"data_mode\": \"" << JsonEscape(config.dataMode) << "\",\n"
            << "    \"control_mode\": \"" << JsonEscape(config.controlMode) << "\",\n"
            << "    \"guard_interval\": \"" << JsonEscape(config.guardInterval) << "\",\n"
