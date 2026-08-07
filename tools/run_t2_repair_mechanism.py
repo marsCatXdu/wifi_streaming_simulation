@@ -6,7 +6,10 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
+import hashlib
 import json
+import os
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -51,10 +54,184 @@ ARM_IDS = {
         "ideal_systematic_fec_12p5_t2",
     ("mlo_str", "fixed_link_0"): "str_mlo_nmaxinflights_1",
 }
+EXECUTABLE_DIRECTORY = ROOT / "build/contrib/wifi-streaming/examples"
+EXECUTABLE_GLOB = "ns3.*-streaming-experiment-*"
 
 
 def _unit_key(spec: dict[str, Any]) -> tuple[str, int, int]:
     return (spec["scenario"]["scenario_id"], spec["seed"], spec["run"])
+
+
+def _resolve_simulation_commit(requested: str | None, current: str) -> str:
+    """Resolve an explicitly continued simulation identity to a full ancestor."""
+    if requested is None:
+        return current
+    if not re.fullmatch(r"[0-9a-f]{40}", requested):
+        raise ValueError("simulation project commit must be a full lowercase SHA-1")
+    resolved = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{requested}^{{commit}}"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if resolved != requested:
+        raise ValueError("simulation project commit did not resolve exactly")
+    ancestor = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", requested, current],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if ancestor.returncode != 0:
+        raise ValueError("simulation project commit is not an ancestor of this runner")
+    return requested
+
+
+def _verify_streaming_executable(expected_sha256: str) -> dict[str, Any]:
+    """Require the exact binary used by a validator-only campaign continuation."""
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
+        raise ValueError("expected executable SHA-256 must be 64 lowercase hex digits")
+    candidates = sorted(
+        path
+        for path in EXECUTABLE_DIRECTORY.glob(EXECUTABLE_GLOB)
+        if path.is_file()
+    )
+    if len(candidates) != 1:
+        raise ValueError("expected exactly one built streaming-experiment executable")
+    path = candidates[0]
+    observed = sha256_file(path)
+    if observed != expected_sha256:
+        raise ValueError(
+            f"streaming-experiment binary hash drift: expected {expected_sha256}, "
+            f"observed {observed}"
+        )
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": observed}
+
+
+def _directory_tree_identity(path: Path) -> dict[str, Any]:
+    """Hash one completed attempt without changing any output bytes."""
+    digest = hashlib.sha256()
+    files = []
+    for item in sorted(
+        candidate for candidate in path.rglob("*") if candidate.is_file()
+    ):
+        if item.is_symlink():
+            raise ValueError(f"attempt contains a symbolic link: {item}")
+        relative = str(item.relative_to(path))
+        record = {
+            "relative_path": relative,
+            "bytes": item.stat().st_size,
+            "sha256": sha256_file(item),
+        }
+        digest.update((canonical_json(record) + "\n").encode())
+        files.append(record)
+    if not files:
+        raise ValueError(f"attempt directory is empty: {path}")
+    return {
+        "file_count": len(files),
+        "bytes": sum(item["bytes"] for item in files),
+        "tree_sha256": digest.hexdigest(),
+    }
+
+
+def recover_valid_attempts(
+    output_root: Path,
+    specs: list[dict[str, Any]],
+    simulation_project_commit: str,
+    validator_project_commit: str,
+    expected_count: int | None,
+) -> dict[str, Any]:
+    """Validate and atomically promote preserved attempts without rerunning them."""
+    report_path = output_root / "attempt_recovery.json"
+    if report_path.exists():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if (
+            report.get("schema_version") != 1
+            or report.get("simulation_project_commit") != simulation_project_commit
+        ):
+            raise ValueError("attempt recovery report identity differs")
+    else:
+        report = {
+            "schema_version": 1,
+            "simulation_project_commit": simulation_project_commit,
+            "validator_project_commit": validator_project_commit,
+            "ns3_upstream_commit": NS3_UPSTREAM_COMMIT,
+            "recovered": [],
+        }
+    recovered_by_id = {row["run_id"]: row for row in report["recovered"]}
+    specs_by_id = {spec["run_id"]: spec for spec in specs}
+    attempt_pattern = re.compile(r"^\.([0-9a-f]{20})\.attempt-[0-9]+$")
+    attempts: dict[str, list[Path]] = {}
+    for path in output_root.iterdir():
+        if not path.is_dir():
+            continue
+        match = attempt_pattern.fullmatch(path.name)
+        if not match:
+            continue
+        run_id = match.group(1)
+        if run_id not in specs_by_id:
+            raise ValueError(f"unknown preserved attempt: {path.name}")
+        attempts.setdefault(run_id, []).append(path)
+    if any(len(paths) != 1 for paths in attempts.values()):
+        raise ValueError("multiple preserved attempts exist for one run")
+
+    for run_id, spec in sorted(specs_by_id.items()):
+        final = output_root / run_id
+        previous = recovered_by_id.get(run_id)
+        if final.exists():
+            if previous is not None and previous.get("state") != "promoted":
+                validate_run(
+                    final,
+                    run_id,
+                    simulation_project_commit,
+                    NS3_UPSTREAM_COMMIT,
+                )
+                previous["state"] = "promoted"
+                atomic_json(report_path, report)
+            continue
+        candidates = attempts.get(run_id, [])
+        if not candidates:
+            continue
+        attempt = candidates[0]
+        validate_run(
+            attempt,
+            run_id,
+            simulation_project_commit,
+            NS3_UPSTREAM_COMMIT,
+        )
+        identity = _directory_tree_identity(attempt)
+        row = {
+            "run_id": run_id,
+            "arm_id": spec["arm_id"],
+            "attempt_directory": attempt.name,
+            **identity,
+            "state": "validated_attempt",
+        }
+        if previous is None:
+            report["recovered"].append(row)
+            report["recovered"].sort(key=lambda item: item["run_id"])
+            recovered_by_id[run_id] = row
+        elif canonical_json(
+            {**previous, "state": "validated_attempt"}
+        ) != canonical_json(row):
+            raise ValueError(f"attempt recovery evidence differs for {run_id}")
+        atomic_json(report_path, report)
+        os.replace(attempt, final)
+        recovered_by_id[run_id]["state"] = "promoted"
+        atomic_json(report_path, report)
+
+    if expected_count is not None and len(recovered_by_id) != expected_count:
+        raise ValueError(
+            f"recovered {len(recovered_by_id)} attempts; expected {expected_count}"
+        )
+    if any(row.get("state") != "promoted" for row in recovered_by_id.values()):
+        raise ValueError("attempt recovery did not reach the promoted state")
+    report["validator_project_commit"] = validator_project_commit
+    report["recovered_count"] = len(recovered_by_id)
+    report["all_recovered_attempts_strictly_validated"] = True
+    atomic_json(report_path, report)
+    return report
 
 
 def _contract_path(declaration: dict[str, Any], key: str) -> Path:
@@ -349,6 +526,21 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--no-build", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--simulation-project-commit",
+        help="continue an ancestor simulation identity after tooling-only fixes",
+    )
+    parser.add_argument(
+        "--expected-executable-sha256",
+        help="required binary identity for an ancestor-commit continuation",
+    )
+    parser.add_argument("--recover-attempts", action="store_true")
+    parser.add_argument("--expected-recovery-count", type=int)
+    parser.add_argument(
+        "--phase",
+        choices=("all", "recover-only", "oracle-only"),
+        default="all",
+    )
     args = parser.parse_args()
 
     config_path = args.config.resolve()
@@ -357,7 +549,24 @@ def main() -> None:
     workers = args.workers or int(document.get("workers", 1))
     if workers < 1:
         parser.error("workers must be positive")
-    commit = project_commit()
+    runner_commit = project_commit()
+    commit = _resolve_simulation_commit(
+        args.simulation_project_commit, runner_commit
+    )
+    if args.expected_recovery_count is not None and not args.recover_attempts:
+        parser.error("--expected-recovery-count requires --recover-attempts")
+    if args.expected_recovery_count is not None and args.expected_recovery_count < 0:
+        parser.error("--expected-recovery-count must be nonnegative")
+    if args.phase == "recover-only" and not args.recover_attempts:
+        parser.error("recover-only phase requires --recover-attempts")
+    if (
+        commit != runner_commit
+        and args.phase != "recover-only"
+        and args.expected_executable_sha256 is None
+    ):
+        parser.error(
+            "ancestor-commit execution requires --expected-executable-sha256"
+        )
     phase1, oracle, pairings = build_campaign_specs(
         document, commit, args.shard_index, args.shard_count
     )
@@ -386,14 +595,6 @@ def main() -> None:
     seen = {spec["run_id"] for spec in all_specs}
     if len(seen) != len(all_specs):
         raise ValueError("mechanism campaign derived duplicate run IDs")
-    for spec in all_specs:
-        completed = output_root / spec["run_id"]
-        if completed.exists():
-            validate_run(completed, spec["run_id"], commit, NS3_UPSTREAM_COMMIT)
-            if not args.resume:
-                raise FileExistsError(f"completed duplicate rejected: {spec['run_id']}")
-            spec["completed"] = True
-
     experiment = (
         f"{document['name']}-shard-{args.shard_index}-of-{args.shard_count}"
     )
@@ -411,12 +612,34 @@ def main() -> None:
         commit,
         seen,
     )
+    recovery = None
+    if args.recover_attempts:
+        recovery = recover_valid_attempts(
+            output_root,
+            all_specs,
+            commit,
+            runner_commit,
+            args.expected_recovery_count,
+        )
+    for spec in all_specs:
+        completed = output_root / spec["run_id"]
+        if completed.exists():
+            validate_run(completed, spec["run_id"], commit, NS3_UPSTREAM_COMMIT)
+            if not args.resume:
+                raise FileExistsError(f"completed duplicate rejected: {spec['run_id']}")
+            spec["completed"] = True
+
     write_experiment_description(document, all_specs, output_root)
-    if not args.no_build:
+    if not args.no_build and args.phase != "recover-only":
         subprocess.run(
             [str(ROOT / "ns3"), "build", "streaming-experiment"],
             cwd=ROOT,
             check=True,
+        )
+    executable = None
+    if args.expected_executable_sha256 is not None and args.phase != "recover-only":
+        executable = _verify_streaming_executable(
+            args.expected_executable_sha256
         )
     manifest = build_experiment_manifest(
         experiment,
@@ -429,22 +652,48 @@ def main() -> None:
     manifest["oracle_derivation_schema_version"] = DERIVATION_SCHEMA_VERSION
     manifest["shard"] = {"index": args.shard_index, "count": args.shard_count}
     manifest["pairings"] = pairings
+    if commit != runner_commit:
+        manifest["continuation"] = {
+            "simulation_project_commit": commit,
+            "orchestration_project_commit": runner_commit,
+            "expected_executable": executable,
+            "recovery_report": "attempt_recovery.json" if recovery else None,
+        }
     specs_by_id = {spec["run_id"]: spec for spec in all_specs}
     for item in manifest["runs"]:
         _decorate_manifest_run(item, specs_by_id)
     atomic_json(manifest_path, manifest)
 
-    print(f"PHASE1 {len(phase1)} runs", flush=True)
-    _execute_phase(
-        phase1,
-        output_root,
-        config_path.parent,
-        commit,
-        workers,
-        manifest,
-        manifest_path,
-        specs_by_id,
-    )
+    if args.phase == "recover-only":
+        print(
+            f"RECOVERED {recovery['recovered_count']} attempts",
+            flush=True,
+        )
+        print(f"MANIFEST {manifest_path}", flush=True)
+        return
+
+    if args.phase == "oracle-only":
+        missing_phase1 = [
+            spec["run_id"] for spec in phase1 if not spec.get("completed")
+        ]
+        if missing_phase1:
+            raise ValueError(
+                "oracle-only phase refuses to rerun missing phase-1 outputs: "
+                + ",".join(missing_phase1)
+            )
+        print(f"PHASE1_REUSED {len(phase1)} runs", flush=True)
+    else:
+        print(f"PHASE1 {len(phase1)} runs", flush=True)
+        _execute_phase(
+            phase1,
+            output_root,
+            config_path.parent,
+            commit,
+            workers,
+            manifest,
+            manifest_path,
+            specs_by_id,
+        )
     print(f"PHASE2_ORACLE {len(oracle)} runs", flush=True)
     _execute_phase(
         oracle,

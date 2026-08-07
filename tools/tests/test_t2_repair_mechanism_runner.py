@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +18,7 @@ if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 
 from run_experiments import cli_arguments, load_yaml  # noqa: E402
+import run_t2_repair_mechanism as runner  # noqa: E402
 from run_t2_repair_mechanism import (  # noqa: E402
     ARM_IDS,
     PHASE1_ARMS,
@@ -99,6 +104,65 @@ class T2RepairMechanismRunnerTest(unittest.TestCase):
         document = load_yaml(CONFIG)
         with self.assertRaisesRegex(ValueError, "invalid shard"):
             build_campaign_specs(document, "project-commit", 2, 2)
+
+    def test_recovery_validates_hashes_and_promotes_without_execution(self) -> None:
+        run_id = "0123456789abcdefabcd"
+        spec = {"run_id": run_id, "arm_id": "ideal_systematic_fec_12p5_t2"}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            attempt = root / f".{run_id}.attempt-123"
+            attempt.mkdir()
+            (attempt / "evidence.txt").write_text("complete\n", encoding="utf-8")
+            with mock.patch.object(runner, "validate_run") as validate:
+                report = runner.recover_valid_attempts(
+                    root,
+                    [spec],
+                    "a" * 40,
+                    "b" * 40,
+                    1,
+                )
+            validate.assert_called_once_with(
+                attempt,
+                run_id,
+                "a" * 40,
+                runner.NS3_UPSTREAM_COMMIT,
+            )
+            self.assertFalse(attempt.exists())
+            self.assertTrue((root / run_id / "evidence.txt").is_file())
+            self.assertEqual(report["recovered_count"], 1)
+            self.assertTrue(report["all_recovered_attempts_strictly_validated"])
+            row = report["recovered"][0]
+            self.assertEqual(row["state"], "promoted")
+            self.assertEqual(row["file_count"], 1)
+            persisted = json.loads(
+                (root / "attempt_recovery.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(persisted, report)
+
+    def test_recovery_rejects_attempt_outside_frozen_matrix(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".fedcba9876543210abcd.attempt-1").mkdir()
+            with self.assertRaisesRegex(ValueError, "unknown preserved attempt"):
+                runner.recover_valid_attempts(
+                    root,
+                    [],
+                    "a" * 40,
+                    "b" * 40,
+                    None,
+                )
+
+    def test_executable_hash_gate_requires_exact_binary(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            executable = root / "ns3.48-streaming-experiment-default"
+            executable.write_bytes(b"frozen executable")
+            expected = hashlib.sha256(executable.read_bytes()).hexdigest()
+            with mock.patch.object(runner, "EXECUTABLE_DIRECTORY", root):
+                identity = runner._verify_streaming_executable(expected)
+                self.assertEqual(identity["sha256"], expected)
+                with self.assertRaisesRegex(ValueError, "binary hash drift"):
+                    runner._verify_streaming_executable("0" * 64)
 
 
 if __name__ == "__main__":
