@@ -18,7 +18,7 @@ import struct
 from collections import Counter
 from fractions import Fraction
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from randomized_frame_assignment import ALGORITHM_ID, assign_frame
 
@@ -7393,6 +7393,40 @@ def _paired_value_t2_event_maximum_debt(
     return maximum_debt_us
 
 
+def _validate_mechanism_frame_completion(
+    frame: dict[str, str],
+    received_source_indices: set[int],
+    received_coded_indices: Sequence[int],
+    policy: str,
+) -> None:
+    """Reconcile one mechanism frame with its source and coded evidence."""
+    file_name = "frame_packet_outcomes.csv"
+    packet_count = _integer(frame, "packet_count", "frames.csv")
+    unique_count = _integer(frame, "unique_packets_received", "frames.csv")
+    incomplete = _flag(frame, "incomplete", "frames.csv")
+    _require(
+        unique_count == len(received_source_indices),
+        f"{file_name}: received source count differs from frames.csv",
+    )
+    evidence_count = len(received_source_indices)
+    if policy == "mechanism_systematic_fec_t2":
+        evidence_count += len(received_coded_indices)
+        if not incomplete and unique_count < packet_count:
+            _require(
+                frame["completion_mode"] == "coded_repair",
+                "frames.csv: coded completion lacks coded_repair mode",
+            )
+        if frame["completion_mode"] == "coded_repair":
+            _require(
+                not incomplete and bool(received_coded_indices),
+                "frames.csv: invalid coded_repair completion mode",
+            )
+    _require(
+        incomplete == (evidence_count < packet_count),
+        f"{file_name}: completion state differs from innovative packet evidence",
+    )
+
+
 def _validate_mechanism_experiment(
     run_dir: Path,
     config: dict[str, Any],
@@ -7648,11 +7682,18 @@ def _validate_mechanism_experiment(
         if policy == "mechanism_systematic_fec_t2":
             repair_count = (packet_count + 7) // 8
             _require(
-                all(packet_count <= index < packet_count + repair_count for index in coded),
+                len(coded) <= repair_count
+                and all(
+                    packet_count <= index < packet_count + repair_count
+                    for index in coded
+                ),
                 f"{file_name}: coded repair index is out of range",
             )
         else:
             _require(not coded, f"{file_name}: coded symbols exist for a non-FEC arm")
+        _validate_mechanism_frame_completion(
+            frames_by_id[frame_id], received, coded, policy
+        )
     _require(seen_outcomes == set(frames_by_id),
              "frame packet outcomes: frame coverage mismatch")
 
@@ -9178,7 +9219,18 @@ def validate_run(
             _require(bool(completion) and bool(latency), "frames.csv: complete frame lacks latency")
             _require(int(completion) - generation == int(latency),
                      "frames.csv: completion/latency invariant failed")
-            _require(unique == packets, "frames.csv: complete frame lacks unique packets")
+            coded_completion_enabled = (
+                config["policy"] == "mechanism_systematic_fec_t2"
+                and config.get("policy_settings", {}).get(
+                    "mechanism_telemetry_enabled", False
+                )
+                is True
+            )
+            if not coded_completion_enabled:
+                _require(
+                    unique == packets,
+                    "frames.csv: complete frame lacks unique packets",
+                )
         if is_miss:
             misses += 1
         if deadline and completion:
