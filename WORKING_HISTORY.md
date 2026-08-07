@@ -146,6 +146,10 @@ P99.
 | Analyze complete reliability | `565d9a2` | All-generated outcomes retained despite unsupported completed-P99 runs |
 | Plot complete reliability evidence | `694ce9a` | Ten visually reviewed statistical and historical figures |
 | Archive held-out qualification | `b0c7aad` | Complete result, exact recovery, checksums, partial evidence, and excluded supplement |
+| Analyze valid mechanism prefix | `e06796f` | Strict balanced four-arm pre-fix analysis over all 20 paired units |
+| Archive valid mechanism prefix | `cb42b50` | Seven-figure partial evidence and persistent failure diagnosis |
+| Validate coded frame completion | `280b18b` | Exact source-plus-innovative-symbol completion accounting and mutation tests |
+| Recover mechanism attempts | `fb26a4b` | Hash-bound no-rerun promotion and oracle-only continuation gates |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
@@ -316,10 +320,13 @@ to this held-out population, so no policy is promoted.
   prefix analyzer strictly validated and plotted the balanced 80-run,
   four-arm panel; compact evidence is under
   `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.  Next,
-  correct coded-completion validation, recover rather than rerun the 19 FEC
-  outputs, execute only the 20 oracle runs, then checksum, merge, plot,
-  analyze, and archive the six-arm result.  Stop before redesigning the action
-  or training a model.
+  Coded-completion validation is corrected at `280b18b`; all 19 preserved
+  attempts pass.  The hash-bound recovery/oracle-only runner at `fb26a4b` was
+  rehearsed on copies, then promoted 10 and 9 attempts in place without a
+  simulation rerun.  Each shard now contains all 50 phase-1 runs.  The 20
+  oracle runs are active as two persistent services.  When they finish,
+  checksum, fetch, strictly validate, merge, plot, analyze, and archive the
+  six-arm result.  Stop before redesigning the action or training a model.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
@@ -342,14 +349,33 @@ fixed that launch-lifetime defect.  Both VMs used clean commit `791bb2d` and
 identical executable SHA-256
 `ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`.
 
-The stable phase-1 evidence consists of 80/80 promoted non-FEC runs, one
-promoted FEC run that did not need coded completion, and 19 complete FEC
-attempts rejected by the old generic invariant `complete frame lacks unique
-packets`.  No oracle run launched.  The promoted data are locally retained
-under `results/t2_repair_mechanism_v1/remote_prefix`; the 19 attempt trees are
-under `results/t2_repair_mechanism_v1/failed_attempts`.  The balanced pre-fix
-analysis at clean commit `e06796f` is archived under
+The original stable phase-1 evidence consisted of 80/80 promoted non-FEC
+runs, one promoted FEC run that did not need coded completion, and 19 complete
+FEC attempts rejected by the old generic invariant `complete frame lacks
+unique packets`.  Those exact trees remain locally retained under
+`results/t2_repair_mechanism_v1/remote_prefix` and
+`results/t2_repair_mechanism_v1/failed_attempts`; the balanced pre-fix analysis
+at clean commit `e06796f` is archived under
 `key_experiment_results/18_t2_repair_mechanism_v1/partial_pre_fix`.
+
+Commit `280b18b` now requires `unique source receipts + innovative ideal-MDS
+symbols >= source packet count` for FEC completion, reconciles exact source
+counts with the packet-outcome sidecar, and retains the all-source-packets
+rule for every non-FEC arm.  All 19 untouched attempts, the promoted FEC run,
+51 relevant Python tests, and the C++ mechanism-controller suite pass.
+Commit `fb26a4b` adds transactional tree-hashed promotion, a phase-1-complete
+oracle-only gate, and an exact binary hash gate.  A byte-for-byte local
+rehearsal closed at 50 runs per shard.  The same tool then promoted 10 and 9
+attempts on the VMs; both recovery reports mark every row `promoted` and both
+manifests now contain all 50 phase-1 runs.
+
+Only the oracle phase is now active.  Services
+`wifi-t2-repair-oracle-shard0-fb26a4b.service` on `10.120.16.105:30022` and
+`wifi-t2-repair-oracle-shard1-fb26a4b.service` on `10.120.17.30:30022` run ten
+oracle simulations each.  Both clean checkouts are at `fb26a4b`, but derive
+and report the original simulation identity `791bb2d`; execution is permitted
+only after matching executable SHA-256
+`ad595359e594f12e238ab74aca1889c15b241fc3adf49e6ead95beb8485b507d`.
 
 The partial result confirms diversity but not resource viability.  STR has
 31.7556% all-generated misses.  Full T0 and T2 reduce this to 18.7972% and
@@ -909,6 +935,13 @@ Do not repeat an entry unless relevant code changed after it ran.
   T2 does not save airtime versus T0.  OBSS p17 remains a severe collapse
   regime even under full copy.  This prefix cannot answer the oracle
   equal-airtime question, so no action or predictor decision is made from it.
+- Corrected only the coded-completion interpretation in `280b18b`.  All 19
+  preserved attempts pass exact validation; non-FEC completion remains
+  unchanged and focused adversarial mutations are rejected.
+- Added and rehearsed no-rerun recovery at `fb26a4b`.  The in-place VM
+  recovery produced 50 phase-1 runs in each manifest and exact recovery counts
+  of 10 and 9.  Launched only the 20 pending oracle runs under persistent
+  services after both the complete-phase-1 and original-binary gates passed.
 
 ### 2026-08-07 - Launch the packet-repair mechanism gate
 
