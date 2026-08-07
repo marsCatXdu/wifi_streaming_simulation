@@ -809,8 +809,11 @@ def _render_plots(
     observations: Sequence[dict[str, Any]],
     grid: dict[tuple[str, int, int], dict[str, dict[str, Any]]],
     output: Path,
+    arm_labels: dict[str, str] | None = None,
+    repair_label: str = "Oracle",
 ) -> list[Path]:
     _, plt = _plot_modules()
+    labels_by_arm = ARM_LABELS if arm_labels is None else arm_labels
     artifacts: list[Path] = []
     scenarios = list(SCENARIO_LABELS)
     width = 0.13
@@ -826,7 +829,7 @@ def _render_plots(
             for scenario in scenarios
         ]
         axis.bar(x + (index - 2.5) * width, values, width,
-                 label=ARM_LABELS[arm], color=COLORS[arm])
+                 label=labels_by_arm[arm], color=COLORS[arm])
     axis.set_xticks(x, [SCENARIO_LABELS[value] for value in scenarios])
     axis.set_ylabel("All-generated deadline misses (%)")
     axis.set_title("Reliability by representative scenario")
@@ -840,7 +843,13 @@ def _render_plots(
         values = [value / 1000 for row in observations if row["arm_id"] == arm
                   for value in row["censored_latencies_us"]]
         xx, yy = _ecdf(values)
-        axis.step(xx, yy, where="post", label=ARM_LABELS[arm], color=COLORS[arm])
+        axis.step(
+            xx,
+            yy,
+            where="post",
+            label=labels_by_arm[arm],
+            color=COLORS[arm],
+        )
     axis.set_xlim(left=0)
     axis.set_ylim(0, 1.002)
     axis.set_xlabel("Deadline-censored frame latency (ms)")
@@ -857,7 +866,7 @@ def _render_plots(
         values = [min(value / 1000, bins[-1]) for row in observations
                   if row["arm_id"] == arm for value in row["censored_latencies_us"]]
         axis.hist(values, bins=bins, density=True, histtype="step", linewidth=1.5,
-                  label=ARM_LABELS[arm], color=COLORS[arm])
+                  label=labels_by_arm[arm], color=COLORS[arm])
     axis.set_xlabel("Deadline-censored frame latency (ms)")
     axis.set_ylabel("Density")
     axis.set_title("All-generated latency PDF (deadline spike retained)")
@@ -890,8 +899,10 @@ def _render_plots(
     )
     axis.axvline(1, color="black", linestyle="--", linewidth=1)
     axis.axhline(0, color="black", linestyle="--", linewidth=1)
-    axis.set_xlabel("Oracle / STR measured sender-airtime ratio")
-    axis.set_ylabel("Oracle - STR deadline misses (percentage points)")
+    axis.set_xlabel(f"{repair_label} / STR measured sender-airtime ratio")
+    axis.set_ylabel(
+        f"{repair_label} - STR deadline misses (percentage points)"
+    )
     axis.set_title("Decisive packet-repair mechanism frontier")
     axis.legend(fontsize=8, ncol=2)
     axis.grid(alpha=0.25)
@@ -903,7 +914,7 @@ def _render_plots(
                              if row["arm_id"] == arm) / 1000 for arm in ARM_ORDER]
     link1 = [statistics.fmean(row["airtime_link_1_us"] for row in observations
                              if row["arm_id"] == arm) / 1000 for arm in ARM_ORDER]
-    labels = [ARM_LABELS[arm] for arm in ARM_ORDER]
+    labels = [labels_by_arm[arm] for arm in ARM_ORDER]
     axis.bar(labels, link1, label="5 GHz / link 1", color="#4c78a8")
     axis.bar(labels, link0, bottom=link1, label="2.4 GHz / link 0", color="#f2cf5b")
     axis.set_ylabel("Mean target-sender PHY TX airtime (ms/run)")
@@ -926,7 +937,11 @@ def _render_plots(
              for item in row["snapshots"].get(field, [])]
             for arm in dual_arms
         ]
-        axis.boxplot(values, labels=[ARM_LABELS[arm] for arm in dual_arms], showfliers=False)
+        axis.boxplot(
+            values,
+            labels=[labels_by_arm[arm] for arm in dual_arms],
+            showfliers=False,
+        )
         axis.set_title(title)
         axis.tick_params(axis="x", rotation=28, labelsize=7)
         axis.set_ylabel("Packets")
@@ -941,7 +956,13 @@ def _render_plots(
                   for value in row["action_censored_latencies_us"]]
         if values:
             xx, yy = _ecdf(values)
-            axis.step(xx, yy, where="post", label=ARM_LABELS[arm], color=COLORS[arm])
+            axis.step(
+                xx,
+                yy,
+                where="post",
+                label=labels_by_arm[arm],
+                color=COLORS[arm],
+            )
     axis.set_xlabel("Action-to-copy/repair completion, deadline-censored (ms)")
     axis.set_ylabel("CDF over launched actions")
     axis.set_ylim(0, 1.002)
@@ -958,7 +979,13 @@ def _render_plots(
         if not values:
             values = [0]
         xx, yy = _ecdf(values)
-        axis.step(xx, yy, where="post", label=ARM_LABELS[arm], color=COLORS[arm])
+        axis.step(
+            xx,
+            yy,
+            where="post",
+            label=labels_by_arm[arm],
+            color=COLORS[arm],
+        )
     axis.set_xlabel("Consecutive deadline misses (frames)")
     axis.set_ylabel("CDF over miss bursts")
     axis.set_title("Deadline-miss burst length")
@@ -1004,7 +1031,7 @@ def _render_plots(
         axis.scatter([SCENARIO_LABELS[scenario]] * len(points), points,
                      color=family_colors[scenario], s=45)
     axis.axhline(0, color="black", linestyle="--", linewidth=1)
-    axis.set_ylabel("Oracle - STR misses (percentage points per unit)")
+    axis.set_ylabel(f"{repair_label} - STR misses (percentage points per unit)")
     axis.set_title("Paired unit reliability effects")
     axis.tick_params(axis="x", rotation=20)
     axis.grid(axis="y", alpha=0.25)
