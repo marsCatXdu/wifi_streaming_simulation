@@ -106,6 +106,9 @@ CLI_KEYS = {
     "prediction_polling_report_delay_us": "predictionPollingReportDelayUs",
     "prediction_event_log_enabled": "predictionEventLogEnabled",
     "prediction_oracle_features_enabled": "predictionOracleFeaturesEnabled",
+    "mechanism_telemetry_enabled": "mechanismTelemetryEnabled",
+    "mechanism_oracle_packet_outcome_file": "mechanismOraclePacketOutcomeFile",
+    "mechanism_systematic_repair_divisor": "mechanismSystematicRepairDivisor",
     "paired_value_t2_admission_profile": "pairedValueT2AdmissionProfile",
     "paired_temporal_t2_frame_profile": "pairedTemporalT2FrameProfile",
     "randomized_assignment_salt": "randomizedAssignmentSalt",
@@ -649,7 +652,9 @@ def cli_arguments(config: dict[str, Any], config_dir: Path) -> list[str]:
             if leaf not in CLI_KEYS:
                 raise ValueError(f"no C++ CLI translation for {dotted}")
             cli_key = CLI_KEYS[leaf]
-        if cli_key in {"traceFile", "correlationTrace"} and value:
+        if cli_key in {
+            "traceFile", "correlationTrace", "mechanismOraclePacketOutcomeFile",
+        } and value:
             path = Path(str(value))
             value = str((config_dir / path).resolve()) if not path.is_absolute() else str(path)
         if isinstance(value, bool):
@@ -746,6 +751,14 @@ def write_experiment_description(document: dict[str, Any],
     has_paired_value_t2 = any(
         policy == "paired_value_duplication_t2" for _, policy, _ in approaches
     )
+    has_mechanism_t2 = any(
+        policy in {
+            "mechanism_full_copy_t2",
+            "mechanism_oracle_repair_t2",
+            "mechanism_systematic_fec_t2",
+        }
+        for _, policy, _ in approaches
+    )
     has_deficit = any(policy == "adaptive_deficit_duplication"
                       for _, policy, _ in approaches)
     approach_lines: list[str] = []
@@ -806,6 +819,23 @@ def write_experiment_description(document: dict[str, Any],
                 "  5 GHz interface. At T2, the frozen primary-only temporal value",
                 "  model may launch a full 2.4 GHz copy under the fixed measured-",
                 "  airtime guard recorded by the runtime contract.",
+            ]
+        elif topology == "dual_interface" and policy == "mechanism_full_copy_t2":
+            approach_lines += [
+                "* ``Unconditional full copy at T2``: each frame starts on 5 GHz",
+                "  and its complete 2.4 GHz copy is launched 2000 us later.",
+            ]
+        elif topology == "dual_interface" and policy == "mechanism_oracle_repair_t2":
+            approach_lines += [
+                "* ``Privileged missing-packet repair at T2``: each frame starts on",
+                "  5 GHz. At T2, only source packet indexes absent by the deadline",
+                "  in the exact paired primary-only run are sent on 2.4 GHz.",
+            ]
+        elif topology == "dual_interface" and policy == "mechanism_systematic_fec_t2":
+            approach_lines += [
+                "* ``Ideal systematic repair at T2``: each frame starts on 5 GHz",
+                "  and ceil(k/8) ideal innovative repair symbols are sent on",
+                "  2.4 GHz at T2, with their complete padded cost accounted.",
             ]
         elif topology == "mlo_str":
             approach_lines += [
@@ -893,6 +923,12 @@ def write_experiment_description(document: dict[str, Any],
             "fixed model, frame-type, actionability, descriptor, and measured-airtime "
             "gates pass; receiver outcomes never enter the decision."
         )
+    if has_mechanism_t2:
+        action_sentences.append(
+            "The mechanism arms record exact paired T2 sender state. The oracle arm "
+            "uses privileged paired-run outcomes only as an action-space ceiling; the "
+            "full-copy and ideal-coded actions do not read receiver outcomes."
+        )
     if action_sentences:
         action_text = " ".join(action_sentences)
     else:
@@ -936,7 +972,7 @@ def write_experiment_description(document: dict[str, Any],
     if prediction.get("prediction_telemetry_enabled", False):
         snapshot_text = (
             "The sender records passive, receiver-independent paired-link causal"
-            if has_randomized or has_paired_value_t2
+            if has_randomized or has_paired_value_t2 or has_mechanism_t2
             else "The primary-link sender records passive, receiver-independent causal"
         )
         offsets = ", ".join(

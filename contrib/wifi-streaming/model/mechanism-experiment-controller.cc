@@ -10,6 +10,7 @@
 #include "ns3/simulator.h"
 
 #include <charconv>
+#include <iomanip>
 #include <limits>
 #include <locale>
 #include <set>
@@ -310,6 +311,10 @@ MechanismExperimentController::ProcessPair(uint64_t frameId, FrameState& state)
         SecondaryAirtimeReservation reservation;
         reservation.frameId = frameId;
         reservation.packetCount = descriptor->packetCount;
+        // The mechanism experiment has no admission budget, but retaining the
+        // complete nominal reservation makes the passive meter's settlement
+        // ledger independently reconcilable.
+        reservation.reservedAirtimeUs = nominalAirtimeUs;
         reservation.estimatedAirtimeUs = nominalAirtimeUs;
         reservation.nominalAirtimeUs = nominalAirtimeUs;
         reservation.deadlineTimeNs = descriptor->deadlineTimeNs;
@@ -479,7 +484,7 @@ MechanismExperimentController::WriteAction(
     m_actions << ',';
     if (descriptor)
     {
-        m_actions << nominalAirtimeUs;
+        m_actions << std::setprecision(12) << nominalAirtimeUs;
     }
     m_actions << ',' << primary.sampleTimeNs / 1000 << '\n';
     m_actions.flush();

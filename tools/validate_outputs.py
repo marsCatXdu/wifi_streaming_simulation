@@ -68,6 +68,38 @@ DEFICIT_DECISION_COLUMNS = {
     "frame_packet_count", "primary_acked_packets", "primary_acked_packet_indices",
     "secondary_packet_count", "secondary_packet_indices", "secondary_packet_order",
 }
+MECHANISM_T2_POLICIES = {
+    "mechanism_full_copy_t2",
+    "mechanism_oracle_repair_t2",
+    "mechanism_systematic_fec_t2",
+}
+MECHANISM_ACTION_BY_POLICY = {
+    "mechanism_full_copy_t2": "FULL_COPY_T2",
+    "mechanism_oracle_repair_t2": "ORACLE_EVENTUAL_MISSING_REPAIR_T2",
+    "mechanism_systematic_fec_t2": "IDEAL_SYSTEMATIC_REPAIR_T2",
+}
+MECHANISM_SNAPSHOT_COLUMNS = {
+    "schema_version", "run_id", "frame_id", "path_id", "copy_id",
+    "sample_time_ns", "source_packet_count", "frame_packets_tx_succeeded",
+    "frame_packets_pending_primary", "frame_packets_currently_queued",
+    "frame_mac_service_bytes_currently_queued", "mac_queue_packets",
+    "mac_queue_service_bytes", "packets_ahead_of_frame",
+    "mac_service_bytes_ahead_of_frame", "primary_ack_deficit_count",
+    "primary_ack_deficit_packet_indices",
+}
+MECHANISM_ACTION_COLUMNS = {
+    "schema_version", "run_id", "frame_id", "generation_time_ns", "action",
+    "requested", "launched", "reason", "source_packet_count",
+    "action_packet_count", "action_packet_indices", "expected_mac_service_bytes",
+    "nominal_airtime_us", "action_time_us",
+}
+FRAME_PACKET_OUTCOME_COLUMNS = {
+    "run_id", "frame_id", "source_packet_count",
+    "received_source_packet_indices", "missing_source_packet_indices",
+    "copy_0_source_packet_indices", "copy_1_source_packet_indices",
+    "link_0_source_packet_indices", "link_1_source_packet_indices",
+    "received_coded_repair_indices",
+}
 SECONDARY_AIRTIME_EVENT_COLUMNS = {
     "run_id", "time_ns", "path_id", "ppdu_duration_us", "tagged_mpdu_bytes",
     "frame_ids", "mixed_ppdu", "cumulative_tagged_airtime_us",
@@ -1063,6 +1095,29 @@ def _optional_number(row: dict[str, str], key: str, file_name: str) -> float | N
     if row.get(key, "") == "":
         return None
     return _number(row, key, file_name)
+
+
+def _index_list(
+    row: dict[str, str], key: str, file_name: str, *, upper_bound: int | None = None
+) -> list[int]:
+    """Parse one canonical, semicolon-delimited packet-index list."""
+    text = row.get(key, "")
+    tokens = [] if text == "" else text.split(";")
+    _require(
+        all(re.fullmatch(r"[0-9]+", token) for token in tokens),
+        f"{file_name}: malformed {key}",
+    )
+    values = [int(token) for token in tokens]
+    _require(
+        values == sorted(set(values)),
+        f"{file_name}: {key} is not a unique ascending index set",
+    )
+    if upper_bound is not None:
+        _require(
+            all(value < upper_bound for value in values),
+            f"{file_name}: {key} contains an out-of-range index",
+        )
+    return values
 
 
 def _optional_signed_number(row: dict[str, str], key: str, file_name: str) -> float | None:
@@ -7338,6 +7393,284 @@ def _paired_value_t2_event_maximum_debt(
     return maximum_debt_us
 
 
+def _validate_mechanism_experiment(
+    run_dir: Path,
+    config: dict[str, Any],
+    run_id: str,
+    frames: list[dict[str, str]],
+    duplicated_frame_ids: set[int],
+) -> tuple[dict[int, float], dict[int, float]]:
+    """Validate the frozen paired-T2 mechanism telemetry and action ledger."""
+    policy = config["policy"]
+    settings = config.get("policy_settings")
+    _require(
+        config.get("topology") == "dual_interface"
+        and isinstance(settings, dict)
+        and settings.get("mechanism_telemetry_enabled") is True
+        and settings.get("mechanism_systematic_repair_divisor") == 8,
+        "resolved_config.json: invalid mechanism experiment settings",
+    )
+    expected_action = MECHANISM_ACTION_BY_POLICY.get(policy, "OBSERVE")
+    _require(
+        policy in MECHANISM_T2_POLICIES | {"fixed_link_1", "full_duplication"}
+        and settings.get("mechanism_action") == expected_action,
+        "resolved_config.json: mechanism action/policy mismatch",
+    )
+    oracle_file = settings.get("mechanism_oracle_packet_outcome_file")
+    _require(
+        isinstance(oracle_file, str)
+        and bool(oracle_file) == (policy == "mechanism_oracle_repair_t2"),
+        "resolved_config.json: invalid mechanism oracle source",
+    )
+
+    snapshots_path = run_dir / "mechanism_t2_snapshots.csv"
+    actions_path = run_dir / "mechanism_t2_actions.csv"
+    outcomes_path = run_dir / "frame_packet_outcomes.csv"
+    for path in (snapshots_path, actions_path, outcomes_path):
+        _require(path.is_file(), f"missing mechanism file: {path.name}")
+    snapshots = _csv(snapshots_path, MECHANISM_SNAPSHOT_COLUMNS)
+    actions = _csv(actions_path, MECHANISM_ACTION_COLUMNS)
+    outcomes = _csv(outcomes_path, FRAME_PACKET_OUTCOME_COLUMNS)
+    _require(
+        len(snapshots) == 2 * len(frames)
+        and len(actions) == len(frames)
+        and len(outcomes) == len(frames),
+        "mechanism telemetry: frame cardinality mismatch",
+    )
+    frames_by_id = {_integer(row, "frame_id", "frames.csv"): row for row in frames}
+
+    snapshot_pairs: dict[int, dict[tuple[int, int], dict[str, str]]] = {}
+    optional_snapshot_fields = (
+        "frame_packets_tx_succeeded",
+        "frame_packets_pending_primary",
+        "frame_packets_currently_queued",
+        "frame_mac_service_bytes_currently_queued",
+        "mac_queue_packets",
+        "mac_queue_service_bytes",
+        "packets_ahead_of_frame",
+        "mac_service_bytes_ahead_of_frame",
+    )
+    for row in snapshots:
+        file_name = snapshots_path.name
+        _require(
+            row["run_id"] == run_id
+            and _integer(row, "schema_version", file_name) == 1,
+            f"{file_name}: identity mismatch",
+        )
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(frame_id in frames_by_id, f"{file_name}: unknown frame")
+        frame = frames_by_id[frame_id]
+        packet_count = _integer(frame, "packet_count", "frames.csv")
+        _require(
+            _integer(row, "source_packet_count", file_name) == packet_count
+            and _integer(row, "sample_time_ns", file_name) // 1000
+            == _integer(frame, "generation_time_us", "frames.csv") + 2000,
+            f"{file_name}: source count or T2 timestamp mismatch",
+        )
+        identity = (
+            _integer(row, "path_id", file_name),
+            _integer(row, "copy_id", file_name),
+        )
+        _require(
+            identity in {(1, 0), (0, 1)},
+            f"{file_name}: unexpected path/copy identity",
+        )
+        for field in optional_snapshot_fields:
+            _optional_integer(row, field, file_name)
+        deficit = _index_list(
+            row,
+            "primary_ack_deficit_packet_indices",
+            file_name,
+            upper_bound=packet_count,
+        )
+        _require(
+            len(deficit) == _integer(row, "primary_ack_deficit_count", file_name),
+            f"{file_name}: ACK-deficit count mismatch",
+        )
+        pair = snapshot_pairs.setdefault(frame_id, {})
+        _require(identity not in pair, f"{file_name}: duplicate frame/path row")
+        pair[identity] = row
+    _require(set(snapshot_pairs) == set(frames_by_id),
+             "mechanism snapshots: frame coverage mismatch")
+    for frame_id, pair in snapshot_pairs.items():
+        _require(
+            set(pair) == {(1, 0), (0, 1)}
+            and pair[(1, 0)]["primary_ack_deficit_count"]
+            == pair[(0, 1)]["primary_ack_deficit_count"]
+            and pair[(1, 0)]["primary_ack_deficit_packet_indices"]
+            == pair[(0, 1)]["primary_ack_deficit_packet_indices"],
+            f"mechanism snapshots: incomplete or inconsistent pair for frame {frame_id}",
+        )
+
+    stream = config.get("stream", {})
+    payload_size = stream.get("payload_size_bytes")
+    _require(
+        isinstance(payload_size, int) and not isinstance(payload_size, bool)
+        and payload_size > 0,
+        "resolved_config.json: mechanism payload size is invalid",
+    )
+    action_estimates: dict[int, float] = {}
+    action_nominals: dict[int, float] = {}
+    seen_actions: set[int] = set()
+    for row in actions:
+        file_name = actions_path.name
+        _require(
+            row["run_id"] == run_id
+            and _integer(row, "schema_version", file_name) == 1
+            and row["action"] == expected_action
+            and bool(row["reason"]),
+            f"{file_name}: identity or provenance mismatch",
+        )
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(
+            frame_id in frames_by_id and frame_id not in seen_actions,
+            f"{file_name}: duplicate or unknown frame",
+        )
+        seen_actions.add(frame_id)
+        frame = frames_by_id[frame_id]
+        packet_count = _integer(frame, "packet_count", "frames.csv")
+        generation_us = _integer(frame, "generation_time_us", "frames.csv")
+        generation_ns = _integer(row, "generation_time_ns", file_name)
+        _require(
+            generation_ns // 1000 == generation_us
+            and _integer(row, "source_packet_count", file_name) == packet_count
+            and _integer(row, "action_time_us", file_name) == generation_us + 2000,
+            f"{file_name}: frame metadata or T2 action time mismatch",
+        )
+        requested = _flag(row, "requested", file_name)
+        launched = _flag(row, "launched", file_name)
+        _require(requested == launched,
+                 f"{file_name}: a requested mechanism action failed to launch")
+        descriptor_fields = (
+            "action_packet_count", "action_packet_indices",
+            "expected_mac_service_bytes", "nominal_airtime_us",
+        )
+        if not requested:
+            _require(
+                all(row.get(field, "") == "" for field in descriptor_fields),
+                f"{file_name}: inactive row retains a descriptor",
+            )
+            continue
+        selected_count = _integer(row, "action_packet_count", file_name)
+        selected = _index_list(row, "action_packet_indices", file_name)
+        _require(
+            selected_count > 0 and len(selected) == selected_count,
+            f"{file_name}: selected packet count mismatch",
+        )
+        if policy == "mechanism_full_copy_t2":
+            _require(
+                selected == list(range(packet_count)),
+                f"{file_name}: full-copy packet set differs",
+            )
+            application_bytes = _integer(frame, "frame_size_bytes", "frames.csv")
+        elif policy == "mechanism_systematic_fec_t2":
+            repair_count = (packet_count + 7) // 8
+            _require(
+                selected == list(range(packet_count, packet_count + repair_count)),
+                f"{file_name}: systematic repair set differs",
+            )
+            application_bytes = repair_count * payload_size
+        else:
+            _require(
+                policy == "mechanism_oracle_repair_t2"
+                and all(index < packet_count for index in selected),
+                f"{file_name}: oracle repair packet set is invalid",
+            )
+            frame_size = _integer(frame, "frame_size_bytes", "frames.csv")
+            final_payload = frame_size - payload_size * (packet_count - 1)
+            _require(0 < final_payload <= payload_size,
+                     f"{file_name}: invalid final source-packet payload")
+            application_bytes = sum(
+                final_payload if index == packet_count - 1 else payload_size
+                for index in selected
+            )
+        expected_service_bytes = application_bytes + selected_count * (
+            ADAPTIVE_ESTIMATOR_STREAMING_HEADER_BYTES
+            + ADAPTIVE_ESTIMATOR_MAC_SERVICE_OVERHEAD_BYTES
+        )
+        nominal = _adaptive_nominal_airtime_us(
+            application_bytes, selected_count, 1.0
+        )
+        logged_nominal = _number(row, "nominal_airtime_us", file_name)
+        _require(
+            _integer(row, "expected_mac_service_bytes", file_name)
+            == expected_service_bytes
+            and logged_nominal == float(format(nominal, ".12g")),
+            f"{file_name}: descriptor bytes or canonical airtime differs",
+        )
+        action_estimates[frame_id] = logged_nominal
+        action_nominals[frame_id] = logged_nominal
+    _require(seen_actions == set(frames_by_id),
+             "mechanism actions: frame coverage mismatch")
+
+    seen_outcomes: set[int] = set()
+    for row in outcomes:
+        file_name = outcomes_path.name
+        _require(row["run_id"] == run_id, f"{file_name}: run_id mismatch")
+        frame_id = _integer(row, "frame_id", file_name)
+        _require(
+            frame_id in frames_by_id and frame_id not in seen_outcomes,
+            f"{file_name}: duplicate or unknown frame",
+        )
+        seen_outcomes.add(frame_id)
+        packet_count = _integer(frames_by_id[frame_id], "packet_count", "frames.csv")
+        _require(
+            _integer(row, "source_packet_count", file_name) == packet_count,
+            f"{file_name}: source packet count mismatch",
+        )
+        received = set(_index_list(
+            row, "received_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        missing = set(_index_list(
+            row, "missing_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        copy0 = set(_index_list(
+            row, "copy_0_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        copy1 = set(_index_list(
+            row, "copy_1_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        link0 = set(_index_list(
+            row, "link_0_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        link1 = set(_index_list(
+            row, "link_1_source_packet_indices", file_name, upper_bound=packet_count
+        ))
+        coded = _index_list(row, "received_coded_repair_indices", file_name)
+        _require(
+            received | missing == set(range(packet_count))
+            and not received & missing
+            and received == copy0 | copy1 == link0 | link1
+            and copy0 == link1
+            and copy1 == link0,
+            f"{file_name}: source packet sets do not reconcile",
+        )
+        if policy == "mechanism_systematic_fec_t2":
+            repair_count = (packet_count + 7) // 8
+            _require(
+                all(packet_count <= index < packet_count + repair_count for index in coded),
+                f"{file_name}: coded repair index is out of range",
+            )
+        else:
+            _require(not coded, f"{file_name}: coded symbols exist for a non-FEC arm")
+    _require(seen_outcomes == set(frames_by_id),
+             "frame packet outcomes: frame coverage mismatch")
+
+    launched_frames = set(action_estimates)
+    if policy in MECHANISM_T2_POLICIES:
+        _require(
+            launched_frames == duplicated_frame_ids,
+            "mechanism actions do not match duplicated frames",
+        )
+    elif policy == "fixed_link_1":
+        _require(not duplicated_frame_ids,
+                 "single-link mechanism observation duplicated a frame")
+    else:
+        _require(duplicated_frame_ids == set(frames_by_id),
+                 "full-copy T0 mechanism observation omitted a frame")
+    return action_estimates, action_nominals
+
+
 def _validate_secondary_airtime(
     events: list[dict[str, str]],
     settlements: list[dict[str, str]],
@@ -7368,6 +7701,7 @@ def _validate_secondary_airtime(
         "selective_duplication", "adaptive_airtime_duplication",
         "adaptive_deficit_duplication", "randomized_full_copy_exploration",
         PAIRED_VALUE_T2_POLICY, DISTRIBUTIONAL_SHADOW_T2_POLICY, "full_duplication",
+        *MECHANISM_T2_POLICIES,
     }, "secondary airtime meter enabled for an unsupported policy")
     expected_settlement_nominals = dict(action_nominal_airtimes or {})
     if policy == "adaptive_airtime_duplication" and adaptive_config is not None:
@@ -7578,13 +7912,14 @@ def _validate_secondary_airtime(
     reservation_policy = policy in {
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
         "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
-        DISTRIBUTIONAL_SHADOW_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY, *MECHANISM_T2_POLICIES,
     }
     if reservation_policy:
         if policy not in {
             "randomized_full_copy_exploration",
             PAIRED_VALUE_T2_POLICY,
             DISTRIBUTIONAL_SHADOW_T2_POLICY,
+            *MECHANISM_T2_POLICIES,
         }:
             _require(adaptive_config is not None,
                      "adaptive secondary airtime validation lacks controller config")
@@ -7647,9 +7982,9 @@ def _validate_secondary_airtime(
         expected_ratio = running_total / exact_estimate_total if exact_estimate_total else 0.0
         _require(meter_close(ratio, expected_ratio),
                  "secondary airtime summary: estimate ratio mismatch")
-        if policy == "randomized_full_copy_exploration":
+        if policy == "randomized_full_copy_exploration" or policy in MECHANISM_T2_POLICIES:
             _require(accounting_close(maximum_debt, 0.0),
-                     "secondary airtime summary: randomized policy has budget debt")
+                     "secondary airtime summary: non-budgeted policy has budget debt")
             for key in (
                 "budget_fraction", "initial_bucket_capacity_us", "finite_run_budget_us",
                 "budget_excess_us",
@@ -7752,7 +8087,7 @@ def _validate_prediction(
         "fixed_link_0", "fixed_link_1", "selective_duplication",
         "adaptive_airtime_duplication", "adaptive_deficit_duplication",
         "randomized_full_copy_exploration", PAIRED_VALUE_T2_POLICY,
-        DISTRIBUTIONAL_SHADOW_T2_POLICY,
+        DISTRIBUTIONAL_SHADOW_T2_POLICY, "full_duplication", *MECHANISM_T2_POLICIES,
     }, "prediction telemetry requires a supported primary-link policy")
     wifi = config.get("wifi", {})
     _require(wifi.get("standard") == "802.11be",
@@ -7798,10 +8133,13 @@ def _validate_prediction(
     _require(isinstance(oracle_enabled, bool),
              "resolved_config.json: invalid prediction oracle flag")
     randomized_policy = config["policy"] == "randomized_full_copy_exploration"
+    mechanism_policy = bool(
+        config.get("policy_settings", {}).get("mechanism_telemetry_enabled", False)
+    )
     paired_endpoint_policy = randomized_policy or config["policy"] in {
         PAIRED_VALUE_T2_POLICY,
         DISTRIBUTIONAL_SHADOW_T2_POLICY,
-    }
+    } or mechanism_policy
     _require(not paired_endpoint_policy or event_enabled is False,
              "paired-link telemetry requires disabled raw event logging")
     _require(samples_path.is_file(), "missing core file: prediction_samples.csv")
@@ -8919,6 +9257,9 @@ def validate_run(
     observed_budget_debt_us = 0.0
     paired_value_evidence: dict[str, Any] | None = None
     distributional_shadow_evidence: dict[str, Any] | None = None
+    mechanism_enabled = bool(
+        config.get("policy_settings", {}).get("mechanism_telemetry_enabled", False)
+    )
     decision_samples: dict[tuple[int, int], dict[str, str]] = {}
     if config["policy"] in {
         "selective_duplication", "adaptive_airtime_duplication",
@@ -9141,11 +9482,40 @@ def validate_run(
                 not (run_dir / forbidden).exists(),
                 f"{forbidden} exists for distributional-shadow policy",
             )
+    elif mechanism_enabled:
+        action_estimates, action_nominal_airtimes = _validate_mechanism_experiment(
+            run_dir,
+            config,
+            run_id,
+            frames,
+            duplicated_frame_ids,
+        )
+        for forbidden in (
+            "selective_duplication_decisions.csv",
+            "adaptive_airtime_decisions.csv",
+            "randomized_intervention_assignments.csv",
+            "randomized_intervention_executions.csv",
+        ):
+            _require(
+                not (run_dir / forbidden).exists(),
+                f"{forbidden} exists for a mechanism experiment arm",
+            )
     else:
         _require(not (run_dir / "selective_duplication_decisions.csv").exists(),
                  "selective decision output exists for a non-selective policy")
         _require(not (run_dir / "adaptive_airtime_decisions.csv").exists(),
                  "adaptive decision output exists for a non-adaptive policy")
+
+    if not mechanism_enabled:
+        for forbidden in (
+            "mechanism_t2_snapshots.csv",
+            "mechanism_t2_actions.csv",
+            "frame_packet_outcomes.csv",
+        ):
+            _require(
+                not (run_dir / forbidden).exists(),
+                f"{forbidden} exists outside a mechanism experiment arm",
+            )
 
     if config["policy"] != PAIRED_VALUE_T2_POLICY:
         _require("pairedValueDuplicationT2" not in config,
