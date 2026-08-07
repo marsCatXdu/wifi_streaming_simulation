@@ -197,6 +197,22 @@ def _complete_unit_keys(observations: Sequence[dict[str, Any]]) -> tuple[set[tup
     return complete_keys, excluded
 
 
+def _adaptive_rows(observations: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Normalize a nonempty strict adaptive prefix without asserting 576 runs."""
+
+    _require(bool(observations), "adaptive observation prefix is empty")
+    fields = (
+        "family_id", "scenario_id", "parameter_sample", "seed", "run", "arm_id",
+        "run_id", "run_dir", "generated_frame_count", "completed_frame_count",
+        "incomplete_frame_count", "deadline_miss_count",
+        "all_generated_deadline_miss_rate", "completed_frame_hf7_p99_supported",
+        "completed_frame_hf7_p99_us", "sender_airtime_us",
+        "background_throughput_mbps",
+    )
+    return [{"mode": "adaptive", **{key: source[key] for key in fields}}
+            for source in observations]
+
+
 def _summary(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     result = {}
     for mode in final.MODES:
@@ -293,7 +309,7 @@ def analyze(shard_roots: Sequence[Path], output: Path, workers: int) -> Path:
     observations = complete.collect_observations(jobs, workers)
     unit_keys, excluded_units = _complete_unit_keys(observations)
     adaptive = [
-        row for row in final.adaptive_rows(observations)
+        row for row in _adaptive_rows(observations)
         if (row["family_id"], row["scenario_id"], row["seed"], row["run"])
         in unit_keys
     ]
