@@ -19,6 +19,7 @@ from run_experiments import (  # noqa: E402
     load_yaml,
     validate_runtime_contract,
 )
+import analyze_scenario15_wmm_realism_matrix as analysis  # noqa: E402
 
 
 CONFIG = ROOT / "experiments/configs/scenario15_wmm_realism_matrix_v1.yaml"
@@ -41,6 +42,17 @@ ARMS = {
 
 
 class Scenario15WmmRealismMatrixTest(unittest.TestCase):
+    def test_analyzer_is_bound_to_the_frozen_contract(self) -> None:
+        contract = analysis._verify_contract()
+        self.assertEqual(contract["campaign"]["simulation_run_count"], 120)
+        self.assertEqual(
+            analysis.EXPECTED_PROJECT_COMMIT,
+            "d9867b13b7fac8df9b936e717855017a22e0b5fa",
+        )
+        indexes = analysis._bootstrap_indexes()
+        self.assertEqual(len(indexes), 10_000)
+        self.assertTrue(all(len(row) == 10 for row in indexes))
+
     def test_contract_and_full_matrix_are_closed(self) -> None:
         document = load_yaml(CONFIG)
         runtime_contract = validate_runtime_contract(document)
