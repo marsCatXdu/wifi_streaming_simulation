@@ -1,7 +1,7 @@
 # Key experiment results
 
 This directory is a compact, version-controlled snapshot of the principal
-experimental evidence generated through 2026-08-06. It intentionally excludes
+experimental evidence generated through 2026-08-08. It intentionally excludes
 raw per-run directories, packet traces, frame-score streams, and the 2 GB
 labelled dataset. Those artifacts remain under the ignored `results/` tree.
 
@@ -45,10 +45,14 @@ frame-independent 1 ms polling evidence is preserved under
 | `15_distributional_shadow_t2_str_engineering_v1` | Closed-loop distributional shadow T2 versus same-build STR and score-aware V2 | Strict 48-pair qualification, action and ledger diagnostics, exact V2 comparison, raw-archive identities, and qualification plus standard figures |
 | `16_environment_generalization_randomized_v1` | Six-family randomized T2 leave-one-family-out replay | Checksum-closed dataset/LOFO provenance, cross-fitted policy values, OOD and resource diagnostics, family values, and five reviewed figures |
 | `17_environment_generalization_qualification_v1` | Frozen six-family closed-loop V2/distributional/STR qualification | Complete 576-run strict reliability result, explicit unsupported-P99 boundary, exact recovery and supplementary audit, and ten reviewed figures |
+| `18_t2_repair_mechanism_v1` | Representative-scenario T2 action-mechanism gate | Protected factual panel, rejected V1 oracle audit, deadline-correct repair replay, resource sensitivity, and reviewed figures |
+| `19_environment_generalization_adaptive_mcs_v1` | Fixed-versus-adaptive target-MCS qualification | Complete 575-run adaptive evidence, 191 matched fixed/adaptive units, deterministic excluded failure, and ten reviewed figures |
+| `20_scenario15_wmm_comparison_v1` | WMM video-priority ablation in the neutral scenario-15 environment | Strict 288-run off/on comparison of STR, V2, and Distributional, twelve figure pairs, source manifests, and raw identities |
 
-## Current best neutral-environment STR result
+## Neutral-environment development results
 
-Score-aware temporal-T2 V2 is the first selective-duplication candidate in
+Under the historical CS0 / AC_BE target-stream mapping, score-aware temporal-T2
+V2 is the first selective-duplication candidate in
 this repository to pass all frozen engineering gates against STR MLO.  Across
 48 fresh matched pairs it records 0.5729% all-generated deadline misses versus
 0.7998% for STR, and 17.192 ms mean per-run completed-frame P99 versus
@@ -129,6 +133,10 @@ of the greater-than-50% objective.  Against V2 it uses 3,392 more actions for
 only 38 additional captured primary misses; the direct miss interval includes
 zero even though P99 improves.  V2 therefore remains the engineering
 champion.  See `15_distributional_shadow_t2_str_engineering_v1/README.md`.
+
+That champion statement applies only to the historical best-effort video
+mapping.  The later controlled WMM comparison below changes the overall
+neutral-scenario recommendation to prioritized STR MLO.
 
 ## Principal streaming results
 
@@ -338,6 +346,24 @@ of workload categories and interactions.  See
 `16_environment_generalization_randomized_v1/README.md` for the estimand
 boundary, sparse-run handling, family results, checksums, and next decision.
 
+## Neutral scenario with WMM video priority
+
+The strict 288-run scenario-15 ablation maps only target video traffic from
+CS0 / TID 0 / AC_BE to CS5 / TID 5 / AC_VI, leaving background traffic at
+AC_BE.  This reduces STR misses from 691/86,400 (0.7998%) to 2/86,400
+(0.0023%) and mean per-run P99 from 18.875 ms to 6.070 ms.  V2 and
+Distributional reach zero misses, but are about 2.22 ms slower than STR at P99
+and use 3.24% and 6.79% more sender airtime.  Their two-miss reliability
+advantage is not statistically resolved because both paired intervals end at
+zero.
+
+WMM is therefore the dominant mechanism in the old neutral environment, and
+prioritized STR is the overall engineering choice there.  Future STR
+comparisons should use an appropriate video access category unless the
+best-effort mapping itself is the declared treatment.  See
+`20_scenario15_wmm_comparison_v1/README.md` for semantics, paired intervals,
+all twelve figure pairs, and the small cross-build reproduction note.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -389,3 +415,7 @@ For online prediction:
     all-generated reliability.  Its completed-frame P99 gate is not
     assessable; completion CDF/PDF figures are survivor-conditioned and all
     observed misses are incomplete frames.
+13. In the WMM archive, `off` means the historical target CS0 / TID 0 / AC_BE
+    mapping and `on` means target CS5 / TID 5 / AC_VI.  EHT's QoS machinery is
+    present in both modes; the treatment is video access-category priority,
+    not literal removal of WMM support.

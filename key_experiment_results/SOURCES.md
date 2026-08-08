@@ -34,6 +34,9 @@ following ignored result roots:
 | `15_distributional_shadow_t2_str_engineering_v1` | `/home/jingweili/distributional_shadow_preliminary_e2c770b_run2` and `/home/jingweili/str_same_commit_e2c770b`, with exact raw-archive identities recorded in the snapshot README |
 | `16_environment_generalization_randomized_v1` | `results/environment_generalization_analysis_8c38753_916bb9a`, fetched from the VM as the complete checksum-bound archive recorded in the snapshot README |
 | `17_environment_generalization_qualification_v1` | `/home/jingweili/wifi_streaming_qualification_47e1996/results/environment_generalization_closed_loop_qualification_v1/runs`, fetched into `results/environment_generalization_closed_loop_qualification_v1_partial_47e1996/runs`; the historical local name now contains all 576 runs |
+| `18_t2_repair_mechanism_v1` | `results/t2_repair_mechanism_v1/complete_remote`, with protected pre-fix, factual, failed-oracle, and corrected-oracle analyses retained in the sibling result directories recorded by its README |
+| `19_environment_generalization_adaptive_mcs_v1` | `results/environment_generalization_adaptive_mcs_qualification_v1`, mirrored from the two documented experiment VMs and paired with the archived fixed-MCS evidence |
+| `20_scenario15_wmm_comparison_v1` | `results/scenario15_wmm_comparison_v1`; source runs are split under `raw/shard0` and `raw/shard1`, with compressed raw archives and exact identities retained under the same result root |
 
 The original 10% replay includes both frame and byte budgets. The separate 30%
 snapshot is frame-only and includes the complete budget grid through 30%

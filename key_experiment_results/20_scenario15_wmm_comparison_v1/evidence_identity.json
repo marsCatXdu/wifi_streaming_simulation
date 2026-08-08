@@ -1,0 +1,57 @@
+{
+  "analysis": {
+    "bootstrap_replications": 10000,
+    "bootstrap_seed": 20260808,
+    "strictly_validated_run_count": 288
+  },
+  "campaign": {
+    "binary_sha256": "498d2b235eb5ae54589a43084ec38709cc0b8327bcfbc565871a3a773f7af618",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "project_commit": "bb0bb6160ae7dd2ea312412b0b7dfc6bf36880d5",
+    "reserved_seed_range_used": false,
+    "runtime_contract_id": "scenario15-wmm-comparison-v1",
+    "runtime_contract_sha256": "e31dcff5d8642a3f4ee1b418fc22b728a7c277ab1ba9e18cb0b349d323d16e44",
+    "seed_first": 1251,
+    "seed_last": 1298,
+    "simulation_count": 288
+  },
+  "schema_version": 1,
+  "shards": [
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_comparison_v1/archives/scenario15_wmm_comparison_v1_shard0_bb0bb61.tar.zst",
+        "sha256": "c31ddf2e6c557f68a506243406b2b4540feebc93e26aaea08df574d8f1e176d8",
+        "size_bytes": 196358589
+      },
+      "experiment": "scenario15-wmm-comparison-v1-shard0",
+      "host": "jingweili@10.120.16.105:30022",
+      "manifest_sha256": "45e8bb473ca8e5d76a4c8eccc34eab79f2e58497ec8aaad7ee335498a7c63913",
+      "matrix_sha256": "d708128d0abb4dd6a60e1ac3848cbe92c7b13b491361e511698c43b282e888aa",
+      "raw_tree": {
+        "regular_file_count": 2258,
+        "sha256": "402814ed30026cea8e52e5d2d7f2aab7d671a623bce3483195e2f6140a63d267",
+        "size_bytes": 978409718
+      },
+      "run_count": 144,
+      "service": "wifi-scenario15-wmm-formal-shard0-bb0bb61-r1"
+    },
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_comparison_v1/archives/scenario15_wmm_comparison_v1_shard1_bb0bb61.tar.zst",
+        "sha256": "54d41e9f5a6e5bfaca423d9a1c424c3987a20efa4a4b9f5800bb9f9425077f89",
+        "size_bytes": 196917541
+      },
+      "experiment": "scenario15-wmm-comparison-v1-shard1",
+      "host": "jingweili@10.120.17.30:30022",
+      "manifest_sha256": "50e028aaf495aa812a9c4d2adf715dd4274a113b6b0f55174f9162071b23759e",
+      "matrix_sha256": "451582f751f15973979b0c1d30c9e9429364473c9d104bb7ab7704a11853fee8",
+      "raw_tree": {
+        "regular_file_count": 2258,
+        "sha256": "f6f016461fdab35f375d977eb68bcb3f75d3b733dd0f1321dd7a23a0ffabc915",
+        "size_bytes": 980735171
+      },
+      "run_count": 144,
+      "service": "wifi-scenario15-wmm-formal-shard1-bb0bb61-r1"
+    }
+  ]
+}

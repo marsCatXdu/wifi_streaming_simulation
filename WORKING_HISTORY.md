@@ -16,6 +16,11 @@ STR MLO in the unchanged neutral mixed-4x4 environment and demonstrates value
 across held-out environment families, then qualify the frozen candidate on
 untouched confirmation seeds.
 
+Unless access-category behavior is itself the declared treatment, compare
+against STR with target video mapped to the standard WMM video access category.
+The historical neutral campaigns used best-effort target traffic and must be
+labeled accordingly.
+
 The policy defeats STR MLO only if the paired campaign establishes all of the
 following:
 
@@ -45,6 +50,9 @@ P99.
 - Distributional shadow T2 reuses opened seeds `1251` through `1298` for its
   closed-loop mechanism test.  Its same-build STR arm is a new simulation at
   project commit `e2c770b`; it does not consume confirmation units.
+- The scenario-15 WMM ablation also reuses opened seeds `1251` through `1298`.
+  It compares all three arms in one current build with target CS0 / AC_BE and
+  target CS5 / AC_VI; background traffic remains CS0 / AC_BE.
 - Reserved final-confirmation seeds: `1301` through `1348`; do not consume
   them during engineering.
 - STR uses `NMaxInflights=1`.  Earlier results show MLO collapses at `2`, so it
@@ -156,6 +164,12 @@ P99.
 | Analyze deadline-correct repair | `0196788` | Mixed-source 120-run closure, paired uncertainty, resource gates, and eleven figures |
 | Bound repair subset resources | `65b2dbb` | Explicit post-result optimistic sensitivity without treating it as policy evidence |
 | Archive corrected mechanism gate | `fef14a6` | Checksum-bound replay, subset ceiling, durable conclusions, and stop boundary |
+| Add configurable target MCS | `ab05eaa` | Backward-compatible fixed mode and isolated adaptive Minstrel streams |
+| Archive adaptive-MCS qualification | `823ea7f` | Strict 575-run adaptive result and matched fixed/adaptive comparison |
+| Add target WMM video priority | `f08596e` | Configurable CS0/AC_BE and CS5/AC_VI target mappings with background unchanged |
+| Freeze and preflight WMM comparison | `bb0bb61` | Six-cell, 288-run opened-seed contract and same-build executable validation |
+| Analyze scenario-15 WMM comparison | `b2e5665` | Strict 288-run paired analysis, background accounting, and twelve figure pairs |
+| Refine scenario-15 WMM figures | `0be0c64` | Unobscured legends and visible isolated-miss burst evidence |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
@@ -370,47 +384,52 @@ to this held-out population, so no policy is promoted.
   The final report and ten PNG/PDF figure pairs are archived under
   `key_experiment_results/19_environment_generalization_adaptive_mcs_v1`
   through `823ea7f`.
+- [x] Add a controlled WMM video-priority treatment in the earlier neutral
+  scenario-15 environment.  Keep fixed MCS and every other scenario, policy,
+  seed, and resource setting unchanged; compare STR, V2, and Distributional
+  with target CS0 / TID 0 / AC_BE and target CS5 / TID 5 / AC_VI while
+  background remains AC_BE.  Both 144-run shards completed with no failures
+  or replacement seeds.  All 288 runs pass fresh strict validation and the
+  shared 10,000-by-48 paired bootstrap.  WMM reduces STR misses from 691 to 2
+  and P99 from 18.875 ms to 6.070 ms.  V2 and Distributional reach zero misses
+  but are about 2.22 ms slower than STR and use more airtime.  Archive the
+  source manifests, raw identities, reports, tables, and twelve figure pairs
+  under `key_experiment_results/20_scenario15_wmm_comparison_v1`, then stop
+  for user discussion.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The user explicitly superseded the prior post-mechanism pause with one
-controlled MCS experiment.  The active boundary is now
-`environment-generalization-adaptive-mcs-qualification-v1`.  The local
-implementation defaults to fixed `ConstantRateWifiManager`/EHT MCS 5 and
-selects `MinstrelHtWifiManager` only when `mcsMode=adaptive` is present.
-Minstrel uses a 50 ms update interval, the latest standard amendment, and a
-disjoint random-stream range beginning at 900000.
+The user superseded the adaptive-MCS pause with one controlled WMM comparison
+in the earlier neutral scenario-15 environment.  That comparison is complete.
+`wmmMode=off` preserves the historical target CS0 / TID 0 / AC_BE mapping;
+`wmmMode=on` maps only target traffic to CS5 / TID 5 / AC_VI.  EHT QoS remains
+enabled in both modes, and background/OBSS traffic remains AC_BE.
 
-Fixed-mode dual-interface and STR-MLO smoke outputs reproduce their pre-change
-summaries, MAC/link records, and normalized frame/decision rows exactly.
-Adaptive smoke runs complete in both topologies and each consumes exactly
-eight isolated manager streams.  The frozen matrix expands to the same 576
-scenario/seed/run/arm identities as the archived fixed campaign, with only
-`wifi.mcs_mode` added.  Its two shards contain 288 runs each without splitting
-paired units, and all 144 unique adaptive configurations pass executable
-configuration-only validation.
+Both documented VMs ran one intact 144-run shard at project commit `bb0bb61`
+with identical executable SHA-256
+`498d2b235eb5ae54589a43084ec38709cc0b8327bcfbc565871a3a773f7af618`.
+All 288 runs completed, were retrieved, matched their remote raw-tree
+identities, and passed fresh strict validation.  No replacement seed, outcome
+repair, or reserved seed `1301` through `1348` was used.
 
-The controlled ablation is complete.  Adaptive Minstrel raises misses from
-16.0437% to 17.7337% for STR, from 19.1306% to 23.1784% for V2, and from
-18.7584% to 22.4778% for Distributional.  All three adaptive-minus-fixed miss
-intervals exclude zero; point sender-airtime ratios are 1.0822, 1.0553, and
-1.0663.  V2 and Distributional remain 5.4447 and 4.7440 percentage points
-worse than adaptive STR.  Background throughput is unchanged, and every miss
-is an incomplete frame, so faster-looking completed-frame curves are survivor
-conditioning.
+WMM video priority is decisive.  STR falls from 691 misses (0.7998%) and
+18.875 ms P99 to 2 misses (0.0023%) and 6.070 ms P99.  V2 and Distributional
+fall to zero misses, but their two-miss advantage over STR is not statistically
+resolved; both are about 2.22 ms slower at P99 and consume 3.24% and 6.79%
+more sender airtime.  Background throughput is effectively unchanged.
+Distributional and V2 are equivalent under WMM on except that Distributional
+uses 3.44% more airtime.
 
-The final raw mirrors contain 4,514 and 4,508 regular files.  Their local and
-remote tree SHA-256 identities match at
-`123d344e857589e0c624b65a98b0937440e79f63e8c45473b35fc5babb816e20`
-and `a58c5bc000c321be6787fab1e08cd07a85e1e0cfbc7f5599d26e2dfcd009078f`.
-The result, partial pre-recovery checkpoint, deterministic-failure record,
-source manifests, reports, tables, and figures are all under
-`key_experiment_results/19_environment_generalization_adaptive_mcs_v1`.
-This boundary is closed.  Stop and wait for user discussion; do not begin a
-new predictor, action, dataset, retuning, or environment iteration.
+The complete reports, tables, source manifests, evidence identities, and
+twelve reviewed PNG/PDF figure pairs are under
+`key_experiment_results/20_scenario15_wmm_comparison_v1`.  In this environment
+the overall engineering choice is prioritized STR MLO.  The historical
+best-effort video result remains useful as an explicit ablation, not as the
+default STR baseline.  This boundary is closed: stop and wait for user
+discussion before any new predictor, action, dataset, retuning, or campaign.
 
 ### Superseded packet-repair boundary
 
@@ -1040,6 +1059,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-08 - Complete neutral scenario WMM comparison
+
+- Added target-stream `wmmMode=off|on` while keeping EHT QoS valid in both
+  modes.  Off is the historical CS0/TID0/AC_BE mapping; on is CS5/TID5/AC_VI.
+  Background and OBSS traffic remain CS0/AC_BE.  Implementation, frozen
+  contract, preflight, analyzer, and background accounting were committed and
+  pushed through `b2e5665`.
+- Ran 48 opened seeds across two modes and three arms as two persistent
+  144-run VM shards.  All 288 simulations completed and passed strict
+  promotion.  Retrieved both raw trees and compressed archives, verified exact
+  local/remote tree identities, and did not use replacement or reserved seeds.
+- Ran the predeclared shared 10,000-by-48 paired bootstrap and generated twelve
+  PNG/PDF figure pairs.  A visual review found and fixed clipped isolated-miss
+  evidence and overlapping legends in `0be0c64`; focused rendering tests pass.
+- Established that WMM nearly saturates the neutral reliability ceiling: STR
+  has 2 misses, V2 and Distributional have 0, but STR has 2.22 ms lower P99
+  and less sender airtime.  Background throughput is unchanged.  Prioritized
+  STR is the overall choice in this environment.
+- Archived the compact analysis, all figures, source manifests, frozen
+  contract, raw-tree identities, archive hashes, and the cross-build drift note
+  under `key_experiment_results/20_scenario15_wmm_comparison_v1`.  Stop before
+  any further experiment and wait for user discussion.
 
 ### 2026-08-08 - Complete adaptive target-MCS qualification
 
