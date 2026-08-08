@@ -24,6 +24,7 @@ from run_experiments import (  # noqa: E402
     validate_runtime_contract,
 )
 import analyze_scenario15_wmm_realism_bg150_matrix as analysis  # noqa: E402
+import plot_scenario15_wmm_realism_bg150_matrix as plot  # noqa: E402
 
 
 BASELINE = ROOT / "experiments/configs/scenario15_wmm_realism_matrix_v1.yaml"
@@ -208,6 +209,56 @@ class Scenario15WmmRealismBg150MatrixTest(unittest.TestCase):
                 "union missed despite an on-time primary copy",
             ):
                 analysis._primary_copy_diagnostic(run_dir, 3, 2)
+
+    def test_plotter_accepts_only_the_current_report_schema(self) -> None:
+        treatments = {
+            profile: {
+                arm: {"completed_frame_count": 10}
+                for arm in analysis.common.ARM_IDENTITIES
+            }
+            for profile in analysis.common.PROFILE_SPECS
+        }
+        series = {
+            f"{profile}:{arm}": {
+                "profile": profile,
+                "arm": arm,
+                "completed_frame_count": 10,
+            }
+            for profile in analysis.common.PROFILE_SPECS
+            for arm in analysis.common.ARM_IDENTITIES
+        }
+        report = {
+            "schema_version": analysis.SCHEMA_VERSION,
+            "analysis": analysis.ANALYSIS_ID,
+            "campaign_checks": {
+                "strictly_validated_run_count": 120,
+                "freshly_validated_baseline_run_count": 120,
+            },
+            "treatments": treatments,
+            "baseline_treatments": treatments,
+        }
+        plot_data = {
+            "schema_version": 1,
+            "analysis": analysis.PLOT_DATA_ID,
+            "series": series,
+            "baseline_series": series,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            report_path = directory / "report.json"
+            plot_path = directory / "plot.json"
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            plot_path.write_text(json.dumps(plot_data), encoding="utf-8")
+            loaded, _ = plot._load_inputs(report_path, plot_path)
+            self.assertEqual(loaded["schema_version"], analysis.SCHEMA_VERSION)
+
+            report["schema_version"] = analysis.SCHEMA_VERSION - 1
+            report_path.write_text(json.dumps(report), encoding="utf-8")
+            with self.assertRaisesRegex(
+                analysis.common.AnalysisError,
+                "plot inputs are not the formal load repeat",
+            ):
+                plot._load_inputs(report_path, plot_path)
 
 
 if __name__ == "__main__":

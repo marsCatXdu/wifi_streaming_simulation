@@ -27,7 +27,7 @@ def _load_inputs(
     report = common._read_json(report_path)
     plot_data = common._read_json(plot_data_path)
     if (
-        report.get("schema_version") != 1
+        report.get("schema_version") != analysis.SCHEMA_VERSION
         or report.get("analysis") != analysis.ANALYSIS_ID
         or report.get("campaign_checks", {}).get("strictly_validated_run_count") != 120
         or report.get("campaign_checks", {}).get("freshly_validated_baseline_run_count")
