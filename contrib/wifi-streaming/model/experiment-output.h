@@ -93,6 +93,9 @@ struct StreamingRunConfig
     uint32_t frameRetryLimit{0};
     uint32_t rtsCtsThresholdBytes{0};
     uint32_t fragmentationThresholdBytes{0};
+    std::string wmmMode{"off"}; ///< Streaming WMM prioritization: off or on
+    uint8_t streamIpTos{0};      ///< IPv4 ToS used by streaming sockets
+    uint8_t streamTid{0};        ///< QoS TID derived from the streaming ToS
     uint32_t txopLimitUs{0};
     std::string accessCategory;
     bool blockAckEnabled{false};

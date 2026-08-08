@@ -57,6 +57,7 @@ CLI_KEYS = {
     "ul_ofdma_psdu_size": "ulOfdmaPsduSize",
     "max_ampdu_size": "maxAmpduSize", "max_amsdu_size": "maxAmsduSize",
     "frame_retry_limit": "frameRetryLimit", "txop_limit_us": "txopLimitUs",
+    "wmm_mode": "wmmMode",
     "rts_cts_threshold": "rtsCtsThreshold",
     "fragmentation_threshold": "fragmentationThreshold",
     "guard_interval_ns": "guardIntervalNs", "static_link_0_score": "staticLink0Score",

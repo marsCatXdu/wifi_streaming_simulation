@@ -59,11 +59,20 @@ Native STR mode requires `--wifiStandard=eht` and installs one two-link
 maps link 0 to its own 2.4 GHz `MultiModelSpectrumChannel` and link 1 to its
 own 5 GHz channel; both links use explicit 20 MHz `ChannelSettings` and fixed
 `EhtMcs5`. `WifiStaticSetupHelper` performs deterministic MLD association and
-installs bidirectional TID-0 Block Ack agreements when A-MPDU is enabled.
-Uplink TID 0 is mapped to the set `{0,1}`, leaving queueing and link selection
-to the native ns-3 MLO MAC. The application creates one UDP socket, one IP
-interface, and one application copy. Explicit routes replace global routing,
-which cannot query a single channel from a multi-channel MLD.
+installs bidirectional Block Ack agreements for the selected streaming TID
+when A-MPDU is enabled. Uplink streaming traffic is mapped to the set `{0,1}`,
+leaving queueing and link selection to the native ns-3 MLO MAC. The
+application creates one UDP socket, one IP interface, and one application
+copy. Explicit routes replace global routing, which cannot query a single
+channel from a multi-channel MLD.
+
+EHT MACs always use 802.11e/WMM-style QoS in ns-3. The `--wmmMode=off`
+default preserves the historical target-stream marking (CS0, TID 0, and
+`AC_BE`). `--wmmMode=on` marks only target streaming sockets as CS5, selecting
+TID 5 and `AC_VI` with the standard EDCA parameters. Background and OBSS
+traffic remain CS0/`AC_BE`. The selected TID is used consistently for native
+MLO TID-to-link mapping, static Block Ack, prediction telemetry queue binding,
+and resolved configuration output.
 
 Native EMLSR mode reuses that two-link MLD and one-copy application path, with
 `NMaxInflights=1`. Static setup is deliberately ordered as association, EMLSR

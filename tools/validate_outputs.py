@@ -726,6 +726,42 @@ PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS = (
     "application_socket_count", "emlsr",
 )
 
+WMM_STREAM_PROFILES = {
+    "off": {"stream_ip_tos": 0, "stream_tid": 0, "access_category": "AC_BE"},
+    "on": {"stream_ip_tos": 160, "stream_tid": 5, "access_category": "AC_VI"},
+}
+
+
+def _validate_wmm_config(config: dict[str, Any], label: str) -> str:
+    """Validate the target-stream WMM marking and queue-selection contract."""
+
+    wifi = config.get("wifi")
+    _require(isinstance(wifi, dict), f"resolved_config.json: {label} Wi-Fi config is missing")
+    mode = wifi.get("wmm_mode", "off")
+    _require(mode in WMM_STREAM_PROFILES,
+             f"resolved_config.json: {label} WMM mode is invalid")
+    profile = WMM_STREAM_PROFILES[mode]
+    explicit_fields = {"wmm_mode", "stream_ip_tos", "stream_tid"}
+    present = explicit_fields & wifi.keys()
+    if present:
+        _require(
+            present == explicit_fields
+            and all(wifi.get(key) == value for key, value in profile.items()),
+            f"resolved_config.json: {label} WMM stream profile differs",
+        )
+    else:
+        _require(
+            mode == "off" and wifi.get("access_category") == "AC_BE",
+            f"resolved_config.json: {label} legacy WMM profile differs",
+        )
+    expected_mapping = f"{profile['stream_tid']} 0,1"
+    if config.get("topology") in {"mlo_str", "mlo_emlsr"}:
+        _require(
+            wifi.get("tid_to_link_mapping_ul") == expected_mapping,
+            f"resolved_config.json: {label} WMM TID-to-link mapping differs",
+        )
+    return mode
+
 
 def _validate_target_mcs_config(config: dict[str, Any], label: str) -> str:
     """Validate target rate-control provenance while accepting legacy fixed runs."""
@@ -2791,10 +2827,15 @@ def _validate_paired_temporal_t2_environment(
         f"resolved_config.json: {label} environment fields are missing",
     )
     mcs_mode = _validate_target_mcs_config(config, label)
+    wmm_mode = _validate_wmm_config(config, label)
     wifi = config["wifi"]
     shared_wifi = {
         key: wifi.get(key, "__MISSING__") for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
     }
+    if wmm_mode == "on":
+        # Preserve the frozen model/environment projection while admitting the
+        # explicit WMM queue-selection treatment as a separate experiment factor.
+        shared_wifi["access_category"] = "AC_BE"
     if mcs_mode == "adaptive":
         shared_wifi.update({
             "station_manager": "ConstantRateWifiManager",
@@ -9080,6 +9121,7 @@ def validate_run(
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
     _validate_target_mcs_config(config, "target")
+    wmm_mode = _validate_wmm_config(config, "target")
     paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
         paired_value_profile = _validate_paired_value_t2_config(config)
@@ -9099,7 +9141,8 @@ def validate_run(
                  "resolved_config.json: EMLSR requires one maximum inflight")
         _require(wifi.get("block_ack_enabled") is True and
                  wifi.get("static_association") is True and
-                 wifi.get("tid_to_link_mapping_ul") == "0 0,1" and
+                 wifi.get("tid_to_link_mapping_ul") ==
+                     ("5 0,1" if wmm_mode == "on" else "0 0,1") and
                  wifi.get("str_mode") == "not_applicable" and
                  wifi.get("multi_link_mode") == "EMLSR" and
                  wifi.get("application_socket_count") == 1 and

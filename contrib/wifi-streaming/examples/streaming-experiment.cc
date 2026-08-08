@@ -545,6 +545,7 @@ main(int argc, char* argv[])
     uint32_t maxAmsduSize = 0;
     uint32_t frameRetryLimit = 7;
     uint32_t txopLimitUs = 0;
+    std::string wmmMode = "off";
     uint32_t rtsCtsThreshold = 4692480;
     uint32_t fragmentationThreshold = 65535;
     uint32_t guardIntervalNs = 800;
@@ -777,6 +778,9 @@ main(int argc, char* argv[])
     command.AddValue("maxAmsduSize", "BE A-MSDU maximum bytes (0 disables)", maxAmsduSize);
     command.AddValue("frameRetryLimit", "MAC frame transmission attempt limit", frameRetryLimit);
     command.AddValue("txopLimitUs", "BE TXOP limit in microseconds", txopLimitUs);
+    command.AddValue("wmmMode",
+                     "Streaming WMM prioritization: off (CS0/AC_BE) or on (CS5/AC_VI)",
+                     wmmMode);
     command.AddValue("rtsCtsThreshold", "RTS/CTS PSDU threshold bytes", rtsCtsThreshold);
     command.AddValue("fragmentationThreshold",
                      "Fragmentation PSDU threshold bytes",
@@ -908,6 +912,16 @@ main(int argc, char* argv[])
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
+    NS_ABORT_MSG_IF(wmmMode != "off" && wmmMode != "on",
+                    "wmmMode must be off or on");
+    const bool wmmVideoEnabled = wmmMode == "on";
+    const uint8_t streamIpTos = wmmVideoEnabled ? 0xa0 : 0x00;
+    const uint8_t streamTid = wmmVideoEnabled ? 5 : 0;
+    const AcIndex streamAccessCategory = wmmVideoEnabled ? AC_VI : AC_BE;
+    const std::string streamAccessCategoryName =
+        wmmVideoEnabled ? "AC_VI" : "AC_BE";
+    const std::string streamTidToLinkMapping =
+        std::to_string(streamTid) + " 0,1";
     NS_ABORT_MSG_IF((predictionEventLogEnabled || predictionOracleFeaturesEnabled) &&
                         !predictionTelemetryEnabled,
                     "Prediction event and oracle options require prediction telemetry");
@@ -1816,7 +1830,7 @@ main(int argc, char* argv[])
             "TidToLinkMappingNegSupport",
             EnumValue(WifiTidToLinkMappingNegSupport::ANY_LINK_SET),
             "TidToLinkMappingUl",
-            StringValue("0 0,1"));
+            StringValue(streamTidToLinkMapping));
 
         WifiMacHelper mac;
         if (emlsrMlo)
@@ -1950,8 +1964,12 @@ main(int argc, char* argv[])
         }
         if (maxAmpduSize > 0)
         {
-            WifiStaticSetupHelper::SetStaticBlockAck(targetApMld, targetStaMld, 0);
-            WifiStaticSetupHelper::SetStaticBlockAck(targetStaMld, targetApMld, 0);
+            WifiStaticSetupHelper::SetStaticBlockAck(targetApMld,
+                                                     targetStaMld,
+                                                     streamTid);
+            WifiStaticSetupHelper::SetStaticBlockAck(targetStaMld,
+                                                     targetApMld,
+                                                     streamTid);
         }
     }
 
@@ -2697,7 +2715,7 @@ main(int argc, char* argv[])
     resolved.ulOfdmaPsduSizeBytes = ulOfdmaPsduSize;
     resolved.blockAckEnabled = maxAmpduSize > 0;
     resolved.staticAssociation = nativeMlo;
-    resolved.tidToLinkMapping = nativeMlo ? "0 0,1" : "not_applicable";
+    resolved.tidToLinkMapping = nativeMlo ? streamTidToLinkMapping : "not_applicable";
     resolved.strMode = topology == "mlo_str" ? "STR" : "not_applicable";
     resolved.multiLinkMode =
         nativeMlo ? (emlsrMlo ? "EMLSR" : "STR") : "not_applicable";
@@ -2757,8 +2775,11 @@ main(int argc, char* argv[])
     resolved.frameRetryLimit = frameRetryLimit;
     resolved.rtsCtsThresholdBytes = rtsCtsThreshold;
     resolved.fragmentationThresholdBytes = fragmentationThreshold;
+    resolved.wmmMode = wmmMode;
+    resolved.streamIpTos = streamIpTos;
+    resolved.streamTid = streamTid;
     resolved.txopLimitUs = txopLimitUs;
-    resolved.accessCategory = "AC_BE";
+    resolved.accessCategory = streamAccessCategoryName;
     resolved.staticLink0Score = staticLink0Score;
     resolved.staticLink1Score = staticLink1Score;
     resolved.packetEventLogsEnabled = false;
@@ -2932,14 +2953,17 @@ main(int argc, char* argv[])
         predictionTelemetry->BindWifiPath(selectedPath,
                                           stationDevices.Get(selectedPath),
                                           0,
-                                          AC_BE);
+                                          streamAccessCategory);
         if (policyName == "randomized_full_copy_exploration" ||
             pairedTemporalT2Control || mechanismObservation)
         {
             // Bind the hypothetical secondary after the primary so T0 path
             // history is initialized in the same explicit causal order used
             // for frame-copy registration and snapshot callbacks.
-            predictionTelemetry->BindWifiPath(0, stationDevices.Get(0), 0, AC_BE);
+            predictionTelemetry->BindWifiPath(0,
+                                              stationDevices.Get(0),
+                                              0,
+                                              streamAccessCategory);
         }
     }
 
@@ -3003,6 +3027,7 @@ main(int argc, char* argv[])
     for (uint32_t path = 0; path < stationDevices.GetN(); ++path)
     {
         Ptr<Socket> socket = Socket::CreateSocket(station.Get(0), UdpSocketFactory::GetTypeId());
+        socket->SetIpTos(streamIpTos);
         NS_ABORT_MSG_IF(socket->Bind(InetSocketAddress(stationAddresses[path], 0)) < 0,
                         "Sender bind failed for path " << path);
         sender->AddPath(path, socket, stationDevices.Get(path));
