@@ -24,6 +24,7 @@ from analyze_scenario15_wmm_realism_matrix import (
 )
 
 
+ROOT = Path(__file__).resolve().parents[1]
 COLORS = {
     "str_mlo": "#6f6f6f",
     "score_aware_t2_v2": "#4c78a8",
