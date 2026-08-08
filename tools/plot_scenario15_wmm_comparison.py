@@ -91,7 +91,6 @@ def _save(
     stem: str,
     files: dict[str, dict[str, Any]],
 ) -> None:
-    figure.tight_layout()
     for suffix in ("png", "pdf"):
         path = output_directory / f"{stem}.{suffix}"
         figure.savefig(path, dpi=180 if suffix == "png" else None)
@@ -133,7 +132,7 @@ def _curve_figure(
     handles, labels = axes[1].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=4, fontsize="small")
     figure.suptitle(title + "\nMedian per-run curve with 10th-90th percentile run band")
-    figure.subplots_adjust(bottom=0.17)
+    figure.tight_layout(rect=(0, 0.11, 1, 0.90))
     return figure
 
 
@@ -164,7 +163,7 @@ def _pdf_figure(series: dict[str, Any], field: str, title: str) -> plt.Figure:
     handles, labels = axes[1].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=4, fontsize="small")
     figure.suptitle(title + "\nMedian per-run density with 10th-90th percentile run band")
-    figure.subplots_adjust(bottom=0.17)
+    figure.tight_layout(rect=(0, 0.11, 1, 0.90))
     return figure
 
 
@@ -214,7 +213,9 @@ def _headline_bar_figure(
     axis.set_xticks(positions, [ARM_LABELS[arm] for arm in ARM_IDENTITIES])
     axis.set_ylabel(ylabel)
     axis.set_title(title + "\nCell means and 95% whole-run bootstrap intervals")
-    axis.legend(fontsize="small")
+    handles, labels = axis.get_legend_handles_labels()
+    figure.legend(handles, labels, loc="lower center", ncol=2, fontsize="small")
+    figure.tight_layout(rect=(0, 0.08, 1, 1))
     _finish_axis(axis)
     return figure
 
@@ -247,6 +248,7 @@ def _paired_effects_figure(report: dict[str, Any]) -> plt.Figure:
         axis.invert_yaxis()
         _finish_axis(axis)
     figure.suptitle("Paired WMM effect: on minus off\n95% paired whole-run bootstrap intervals")
+    figure.tight_layout(rect=(0, 0, 1, 0.91))
     return figure
 
 
@@ -285,6 +287,7 @@ def _within_mode_figure(report: dict[str, Any]) -> plt.Figure:
         axis.invert_yaxis()
         _finish_axis(axis)
     figure.suptitle("Selective duplication compared with STR MLO\nNegative latency deltas favor selective duplication")
+    figure.tight_layout(rect=(0, 0, 1, 0.91))
     return figure
 
 
@@ -298,17 +301,25 @@ def _burst_figure(series: dict[str, Any]) -> plt.Figure:
             )
             if lengths.size:
                 probability = np.arange(1, lengths.size + 1) / lengths.size
-                axis.step(lengths, probability, where="post", color=COLORS[arm], label=ARM_LABELS[arm])
+                axis.step(
+                    lengths,
+                    probability,
+                    where="post",
+                    color=COLORS[arm],
+                    marker="o",
+                    markersize=3,
+                    label=ARM_LABELS[arm],
+                )
         axis.set_title(MODE_LABELS[mode])
         axis.set_xlabel("Consecutive deadline-missed frames")
         axis.set_xscale("log", base=2)
-        axis.set_xlim(left=1)
+        axis.set_xlim(left=0.8)
         _finish_axis(axis)
     axes[0].set_ylabel("CDF across miss bursts")
-    handles, labels = axes[1].get_legend_handles_labels()
+    handles, labels = axes[0].get_legend_handles_labels()
     figure.legend(handles, labels, loc="lower center", ncol=3, fontsize="small")
     figure.suptitle("Deadline-miss burst length")
-    figure.subplots_adjust(bottom=0.17)
+    figure.tight_layout(rect=(0, 0.10, 1, 0.93))
     return figure
 
 
