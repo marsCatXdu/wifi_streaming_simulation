@@ -28,7 +28,7 @@ from run_experiments import (
 ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_ID = "scenario15_wmm_realism_bg150_matrix_v1"
 PLOT_DATA_ID = "scenario15_wmm_realism_bg150_plot_data_v1"
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 EXPECTED_PROJECT_COMMIT = "460d4222a80916132631e2f3fa259630cca3c922"
 BASELINE_PROJECT_COMMIT = "d9867b13b7fac8df9b936e717855017a22e0b5fa"
 RUNTIME_CONTRACT_ID = "scenario15-wmm-realism-bg150-matrix-v1"
@@ -73,6 +73,13 @@ COMPACT_FIELDS = (
     "measured_secondary_airtime_us",
     "action_count",
     "max_deadline_miss_burst",
+    "primary_copy_deadline_miss_count",
+    "acted_primary_copy_deadline_miss_count",
+    "rescued_primary_copy_deadline_miss_count",
+    "residual_acted_deadline_miss_count",
+    "nonacted_primary_copy_deadline_miss_count",
+    "startup_deadline_miss_count",
+    "steady_deadline_miss_count",
 )
 
 
@@ -191,6 +198,70 @@ def _manifest_jobs(
     }, jobs
 
 
+def _primary_copy_diagnostic(
+    run_dir: Path,
+    expected_action_count: int,
+    expected_final_miss_count: int,
+) -> dict[str, Any]:
+    """Reconstruct the selective policy's factual primary-copy outcome."""
+    frames = common._read_csv(run_dir / "frames.csv")
+    primary_misses: set[int] = set()
+    acted: set[int] = set()
+    final_misses: set[int] = set()
+    acted_primary_misses: set[int] = set()
+    rescued_primary_misses: set[int] = set()
+    residual_acted_misses: set[int] = set()
+    nonacted_primary_misses: set[int] = set()
+    for row in frames:
+        frame_id = int(row["frame_id"])
+        duplicated = row["duplicated"] == "1"
+        final_miss = row["deadline_miss"] == "1"
+        primary_completion = row["copy_0_completion_us"]
+        primary_miss = not primary_completion or (
+            float(primary_completion) - float(row["generation_time_us"])
+            > float(row["deadline_us"])
+        )
+        if duplicated:
+            acted.add(frame_id)
+        if final_miss:
+            final_misses.add(frame_id)
+        if primary_miss:
+            primary_misses.add(frame_id)
+            if duplicated:
+                acted_primary_misses.add(frame_id)
+                if final_miss:
+                    residual_acted_misses.add(frame_id)
+                else:
+                    rescued_primary_misses.add(frame_id)
+            else:
+                nonacted_primary_misses.add(frame_id)
+        elif final_miss:
+            raise common.AnalysisError(
+                f"{run_dir}: union missed despite an on-time primary copy"
+            )
+    if (
+        len(acted) != expected_action_count
+        or len(final_misses) != expected_final_miss_count
+        or primary_misses != acted_primary_misses | nonacted_primary_misses
+        or acted_primary_misses
+        != rescued_primary_misses | residual_acted_misses
+        or final_misses != nonacted_primary_misses | residual_acted_misses
+    ):
+        raise common.AnalysisError(f"{run_dir}: primary-copy decomposition differs")
+    return {
+        "primary_copy_deadline_miss_count": len(primary_misses),
+        "acted_primary_copy_deadline_miss_count": len(acted_primary_misses),
+        "rescued_primary_copy_deadline_miss_count": len(rescued_primary_misses),
+        "residual_acted_deadline_miss_count": len(residual_acted_misses),
+        "nonacted_primary_copy_deadline_miss_count": len(nonacted_primary_misses),
+        "startup_deadline_miss_count": sum(frame_id < 8 for frame_id in final_misses),
+        "steady_deadline_miss_count": sum(frame_id >= 8 for frame_id in final_misses),
+        "primary_copy_deadline_miss_frame_ids": tuple(sorted(primary_misses)),
+        "acted_frame_ids": tuple(sorted(acted)),
+        "final_deadline_miss_frame_ids": tuple(sorted(final_misses)),
+    }
+
+
 def _observe(job: dict[str, Any]) -> dict[str, Any]:
     row = common._observe(job)
     index = 1 if job["load"] == "bg150" else 0
@@ -203,6 +274,18 @@ def _observe(job: dict[str, Any]) -> dict[str, Any]:
                 f"{job['run_dir']}: resolved background rate {field} differs"
             )
     row["load"] = job["load"]
+    if row["arm"] != "str_mlo":
+        row.update(
+            _primary_copy_diagnostic(
+                Path(job["run_dir"]),
+                row["action_count"],
+                row["deadline_miss_count"],
+            )
+        )
+    else:
+        for field in COMPACT_FIELDS:
+            if field.endswith("_deadline_miss_count") and field not in row:
+                row[field] = None
     return row
 
 
@@ -332,6 +415,119 @@ def _group(rows: Sequence[dict[str, Any]]) -> dict[tuple[str, str], list[dict[st
     return grouped
 
 
+def _frame_identity_set(
+    rows: Sequence[dict[str, Any]], field: str
+) -> set[tuple[int, int]]:
+    return {
+        (int(row["seed"]), int(frame_id))
+        for row in rows
+        for frame_id in row[field]
+    }
+
+
+def _set_overlap(left: set[Any], right: set[Any]) -> dict[str, Any]:
+    union = left | right
+    return {
+        "left_count": len(left),
+        "right_count": len(right),
+        "intersection_count": len(left & right),
+        "left_only_count": len(left - right),
+        "right_only_count": len(right - left),
+        "jaccard": len(left & right) / len(union) if union else 1.0,
+    }
+
+
+def _copy_rescue_diagnostics(
+    grouped: dict[tuple[str, str], list[dict[str, Any]]]
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    selective_arms = ("score_aware_t2_v2", "distributional_shadow_t2")
+    count_fields = (
+        "primary_copy_deadline_miss_count",
+        "acted_primary_copy_deadline_miss_count",
+        "rescued_primary_copy_deadline_miss_count",
+        "residual_acted_deadline_miss_count",
+        "nonacted_primary_copy_deadline_miss_count",
+        "startup_deadline_miss_count",
+        "steady_deadline_miss_count",
+    )
+    for profile in common.PROFILE_SPECS:
+        str_rows = grouped[(profile, "str_mlo")]
+        generated = sum(row["generated_frame_count"] for row in str_rows)
+        str_misses = sum(row["deadline_miss_count"] for row in str_rows)
+        str_airtime = statistics.mean(row["sender_airtime_us"] for row in str_rows)
+        arms: dict[str, Any] = {}
+        for arm in selective_arms:
+            rows = grouped[(profile, arm)]
+            counts = {
+                field: sum(int(row[field]) for row in rows) for field in count_fields
+            }
+            actions = sum(row["action_count"] for row in rows)
+            acted_primary_misses = counts[
+                "acted_primary_copy_deadline_miss_count"
+            ]
+            rescued = counts["rescued_primary_copy_deadline_miss_count"]
+            primary_misses = counts["primary_copy_deadline_miss_count"]
+            final_misses = sum(row["deadline_miss_count"] for row in rows)
+            secondary_airtime = statistics.mean(
+                row["measured_secondary_airtime_us"] for row in rows
+            )
+            total_airtime_overhead = (
+                statistics.mean(row["sender_airtime_us"] for row in rows)
+                - str_airtime
+            )
+            arms[arm] = {
+                **counts,
+                "generated_frame_count": generated,
+                "action_count": actions,
+                "str_deadline_miss_count": str_misses,
+                "final_deadline_miss_count": final_misses,
+                "primary_copy_deadline_miss_rate": primary_misses / generated,
+                "final_deadline_miss_rate": final_misses / generated,
+                "str_deadline_miss_rate": str_misses / generated,
+                "action_primary_miss_precision": (
+                    acted_primary_misses / actions if actions else None
+                ),
+                "acted_primary_miss_rescue_efficiency": (
+                    rescued / acted_primary_misses if acted_primary_misses else None
+                ),
+                "rescued_fraction_of_primary_misses": (
+                    rescued / primary_misses if primary_misses else None
+                ),
+                "mean_measured_secondary_airtime_us": secondary_airtime,
+                "mean_sender_airtime_overhead_vs_str_us": total_airtime_overhead,
+                "total_overhead_to_measured_secondary_airtime_ratio": (
+                    total_airtime_overhead / secondary_airtime
+                    if secondary_airtime
+                    else None
+                ),
+            }
+        left = grouped[(profile, selective_arms[0])]
+        right = grouped[(profile, selective_arms[1])]
+        result[profile] = {
+            "arms": arms,
+            "v2_vs_distributional_overlap": {
+                "primary_copy_deadline_misses": _set_overlap(
+                    _frame_identity_set(
+                        left, "primary_copy_deadline_miss_frame_ids"
+                    ),
+                    _frame_identity_set(
+                        right, "primary_copy_deadline_miss_frame_ids"
+                    ),
+                ),
+                "actions": _set_overlap(
+                    _frame_identity_set(left, "acted_frame_ids"),
+                    _frame_identity_set(right, "acted_frame_ids"),
+                ),
+                "final_deadline_misses": _set_overlap(
+                    _frame_identity_set(left, "final_deadline_miss_frame_ids"),
+                    _frame_identity_set(right, "final_deadline_miss_frame_ids"),
+                ),
+            },
+        }
+    return result
+
+
 def _standard_comparisons(
     grouped: dict[tuple[str, str], list[dict[str, Any]]],
     indexes: Sequence[Sequence[int]],
@@ -417,6 +613,37 @@ def _render_markdown(report: dict[str, Any]) -> str:
                 f"{item['background_throughput_mbps']['estimate']:.3f} Mbps | "
                 f"{item['action_count']:,} |"
             )
+    lines.extend(
+        [
+            "",
+            "## Selective primary-copy and rescue decomposition",
+            "",
+            "The primary-copy reconstruction is factual under each selective "
+            "topology, including its concurrent repair traffic. It is not a "
+            "counterfactual no-redundancy baseline.",
+            "",
+            "| Profile | Approach | Primary-copy misses | Acted primary misses | "
+            "Rescued | Rescue efficiency | Final misses | STR misses |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
+        ]
+    )
+    for profile, specification in common.PROFILE_SPECS.items():
+        diagnostics = report["primary_copy_diagnostics_bg150"][profile]
+        for arm in ("score_aware_t2_v2", "distributional_shadow_t2"):
+            item = diagnostics["arms"][arm]
+            efficiency = item["acted_primary_miss_rescue_efficiency"]
+            efficiency_text = (
+                f"{efficiency * 100:.2f}%" if efficiency is not None else "n/a"
+            )
+            lines.append(
+                f"| {specification['label']} | {common.ARM_LABELS[arm]} | "
+                f"{item['primary_copy_deadline_miss_count']:,} | "
+                f"{item['acted_primary_copy_deadline_miss_count']:,} | "
+                f"{item['rescued_primary_copy_deadline_miss_count']:,} | "
+                f"{efficiency_text} | "
+                f"{item['final_deadline_miss_count']:,} | "
+                f"{item['str_deadline_miss_count']:,} |"
+            )
     lines.extend(["", "## 1.5x minus 1.0x paired effects", ""])
     for profile in common.PROFILE_SPECS:
         lines.append(f"### {common.PROFILE_SPECS[profile]['label']}")
@@ -478,6 +705,7 @@ def analyze(
     load_pairing = _verify_load_pairing(treatment_rows, baseline_rows)
     treatment_grouped = _group(treatment_rows)
     baseline_grouped = _group(baseline_rows)
+    primary_copy_diagnostics = _copy_rescue_diagnostics(treatment_grouped)
     indexes = common._bootstrap_indexes()
     treatments = {
         profile: {
@@ -535,6 +763,7 @@ def analyze(
         },
         "treatments": treatments,
         "baseline_treatments": baseline_treatments,
+        "primary_copy_diagnostics_bg150": primary_copy_diagnostics,
         "within_profile_comparisons": within,
         "profile_effects_vs_be_be": profile_effects,
         "competitor_effects_with_target_vi": competitor_effects,

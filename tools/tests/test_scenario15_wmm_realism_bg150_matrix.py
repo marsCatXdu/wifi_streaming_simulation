@@ -4,8 +4,10 @@
 from __future__ import annotations
 
 import copy
+import csv
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -153,6 +155,59 @@ class Scenario15WmmRealismBg150MatrixTest(unittest.TestCase):
             set(analysis.RESOLVED_RATE_FIELDS)
             <= set(original["background"]["obss"])
         )
+
+    def test_primary_copy_diagnostic_reconciles_rescue_outcomes(self) -> None:
+        fields = (
+            "frame_id",
+            "duplicated",
+            "deadline_miss",
+            "copy_0_completion_us",
+            "generation_time_us",
+            "deadline_us",
+        )
+        rows = [
+            [0, 0, 0, 50, 0, 100],
+            [8, 0, 1, "", 0, 100],
+            [9, 1, 0, "", 0, 100],
+            [10, 1, 1, 150, 0, 100],
+            [11, 1, 0, 50, 0, 100],
+        ]
+        with tempfile.TemporaryDirectory() as temporary:
+            run_dir = Path(temporary)
+            with (run_dir / "frames.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as stream:
+                writer = csv.writer(stream)
+                writer.writerow(fields)
+                writer.writerows(rows)
+            result = analysis._primary_copy_diagnostic(run_dir, 3, 2)
+            self.assertEqual(result["primary_copy_deadline_miss_count"], 3)
+            self.assertEqual(
+                result["acted_primary_copy_deadline_miss_count"], 2
+            )
+            self.assertEqual(
+                result["rescued_primary_copy_deadline_miss_count"], 1
+            )
+            self.assertEqual(result["residual_acted_deadline_miss_count"], 1)
+            self.assertEqual(
+                result["nonacted_primary_copy_deadline_miss_count"], 1
+            )
+            self.assertEqual(result["startup_deadline_miss_count"], 0)
+            self.assertEqual(result["steady_deadline_miss_count"], 2)
+            self.assertEqual(result["primary_copy_deadline_miss_frame_ids"], (8, 9, 10))
+
+            rows[1][3] = 50
+            with (run_dir / "frames.csv").open(
+                "w", newline="", encoding="utf-8"
+            ) as stream:
+                writer = csv.writer(stream)
+                writer.writerow(fields)
+                writer.writerows(rows)
+            with self.assertRaisesRegex(
+                analysis.common.AnalysisError,
+                "union missed despite an on-time primary copy",
+            ):
+                analysis._primary_copy_diagnostic(run_dir, 3, 2)
 
 
 if __name__ == "__main__":

@@ -477,6 +477,42 @@ clean commit and retained the executable checksum above.  The two formal
 workers each.  The analyzer is bound to execution commit `460d422` while the
 original frozen treatment contract remains checksum-identical.
 
+Both formal services exited successfully with 60/60 promoted runs.  Their
+checksum-matched local raw trees contain 942 files apiece; all 120 treatment
+runs and all 120 retained 1.0x runs pass fresh strict validation.  The exact
+paired audit compares 579,996 generated rate periods with matching identities
+and timing; the maximum 1.5x rate serialization error remains
+`5.5001336818349955e-11` Mbps.  Sixteen PNG/PDF figure pairs were generated.
+
+The result is regime-dependent.  With a VI target and all competitors VI,
+Distributional reduces misses from 212 (1.1778%) to 46 (0.2556%), a 78.30%
+reduction; its paired miss delta is -0.9222 percentage points, 95% interval
+[-1.2222, -0.6222].  P99 improves by 3.290 ms, interval [-5.485, -1.246],
+and sender airtime is 1.1072 times STR, interval [1.0740, 1.1309].  It beats
+V2 by seven misses and 1.102 ms P99 while using 1.0159 times V2 airtime.
+However, it reduces competing OBSS goodput by 8.55% versus STR, interval
+[3.49%, 14.15%], so it fails the current 1% fairness gate.
+
+With both target and competitors BE, the selective designs fail: STR has 902
+misses (5.0111%), V2 has 1,359 (7.5500%), and Distributional has 1,333
+(7.4056%).  The selective-minus-STR miss intervals are strictly positive,
+and their sender-airtime ratios are 1.2471 and 1.2706, both above the 1.20
+target.  In the two low-contention VI-target profiles, every arm has only two
+or three misses while selective duplication makes P99 about 2 ms worse and
+adds about 10% airtime.
+
+The factual primary-copy decomposition shows that repair is not broken.  In
+BE/BE, V2 and Distributional reconstruct 1,860 and 1,859 primary-copy misses
+and rescue 501/526 with 95.25%/93.59% acted-miss efficiency, but still finish
+above STR's 902 misses.  In all-VI, both selective policies have the exact same
+69 primary-miss frames; Distributional rescues 23 and V2 rescues 16, producing
+46 versus 53 final misses.  Because 69 primary-copy misses already beat STR's
+212, most of the all-VI advantage precedes repair selection.  This factual
+primary outcome includes concurrent repair traffic and is not a no-redundancy
+counterfactual.  A single-primary/no-redundancy arm is therefore required to
+separate topology/scheduling value from prediction and secondary repair before
+another model or controller iteration.
+
 ### Superseded packet-repair boundary
 
 The user reviewed the failed held-out qualification and authorized one small
@@ -1137,6 +1173,17 @@ Do not repeat an entry unless relevant code changed after it ran.
   exact clean commit to both VMs, and rechecked the identical executable
   SHA-256 plus campaign/policy closure tests.  Formal shard 0 and shard 1 are
   active with 60 workers apiece; the analysis boundary now names `460d422`.
+- Completed both formal shards at 60/60 with service exit status zero.  The
+  local checksum-matched archives are about 90.6 and 90.4 MB; extracted raw
+  trees contain 942 files and 60 manifest runs each.
+- Freshly validated all 120 new and 120 baseline runs, paired all 579,996
+  generated rate periods, and generated 16 familiar and load-comparison figure
+  pairs.  Distributional wins all-VI miss/P99/airtime gates but fails the
+  background-throughput gate; both selective schemes lose under BE/BE.
+- Added an exact primary-copy rescue decomposition.  It proves high rescue
+  efficiency in BE/BE despite the overall loss and shows that the all-VI
+  selective primary path already has 69 misses versus STR's 212; isolate that
+  topology effect with a no-redundancy arm before changing the predictor.
 
 ### 2026-08-08 - Complete WMM realism matrix
 
