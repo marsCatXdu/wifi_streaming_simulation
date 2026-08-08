@@ -1,0 +1,17 @@
+extends: scenario15_wmm_realism_matrix_v1.yaml
+
+name: scenario15-wmm-realism-bg150-matrix-v1
+output_root: results/scenario15_wmm_realism_bg150_matrix_v1/runs
+workers: 64
+
+runtime_contract:
+  id: scenario15-wmm-realism-bg150-matrix-v1
+  path: experiments/model-selection/scenario15-wmm-realism-bg150-matrix-v1.json
+  sha256: a74cd5678e68d4152ced46c1b0b664c5d8005b5854cee8fb7d73d0fef656d80e
+
+base:
+  obss:
+    obss_ul_min_rate_mbps: 0.75
+    obss_ul_max_rate_mbps: 4.5
+    obss_dl_min_rate_mbps: 3
+    obss_dl_max_rate_mbps: 12

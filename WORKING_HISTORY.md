@@ -411,38 +411,42 @@ to this held-out population, so no policy is promoted.
   rows for the four residual events are identical, unacted startup frames.
   Archive the raw identities, reports, tables, diagnostic, and thirteen figure
   pairs under `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`.
+- [ ] Repeat that exact 120-run WMM realism matrix with 1.5 times the OBSS
+  offered traffic.  Multiply every ON-period UL rate bound from 0.5--3 to
+  0.75--4.5 Mbps and every DL bound from 2--8 to 3--12 Mbps while preserving
+  the 32 flows, ON/OFF timing, RNG streams, seeds, fixed MCS, WMM profiles,
+  policies, models, and resource accounting.  Run the 12-cell full-workload
+  preflight, then one intact 60-run shard on each VM.  Retrieve and strictly
+  validate all runs; compare each arm with STR at 1.5x load and compare every
+  cell directly with the identical-seed 1.0x result.  Plot, archive, document,
+  commit, and push the result without using seeds 1301 through 1348.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The requested scenario-15 WMM realism matrix is complete.  The implementation
-adds an explicit AF41 / TID 4 / AC_VI target mode and deterministic competitor
-profiles without changing the historical `off` or `on` behavior.  Both VMs
-ran intact 60-run shards at project commit `d9867b1`; all 120 simulations
-completed, matched their retrieved raw identities, and passed fresh strict
-validation.  Both executables have SHA-256
-`14cb5d6e1553775f958e579834cd36f7fe0be2b33b6269485fc4d667d8b8307b`.
-No replacement or reserved seed was used.
+The user authorized one direct load-sensitivity repeat of the completed WMM
+realism matrix.  The new frozen contract is
+`experiments/model-selection/scenario15-wmm-realism-bg150-matrix-v1.json`,
+SHA-256 `a74cd5678e68d4152ced46c1b0b664c5d8005b5854cee8fb7d73d0fef656d80e`.
+It reuses the same four WMM profiles, three arms, seeds 1251--1260, fixed MCS,
+models, topology, flow count, duty cycle, geometry, and random streams.
 
-One VI competitor per channel does not materially disturb the favorable WMM
-case: all three arms retain zero misses.  When every latency-sensitive
-competitor is VI, STR records 33 misses and V2 and Distributional each record
-4, an 87.88% reduction.  Their sender-airtime ratios are 1.0896 and 1.1130,
-with both upper interval endpoints below 1.20.  P99 remains statistically
-equivalent to STR, so the project's full defeat definition is not yet met.
-Distributional gains no reliability over V2 and costs another 2.15% airtime;
-V2 is the better engineering choice in this screen.
+The sole simulation treatment is 1.5 times the offered ON-period rate for
+every OBSS flow: UL Uniform(0.5, 3) becomes Uniform(0.75, 4.5) Mbps and DL
+Uniform(2, 8) becomes Uniform(3, 12) Mbps.  This means 50% more offered
+traffic, not a promise of 50% more achieved goodput after contention.  A
+closure test proves that all 120 expanded configurations differ from the
+completed baseline only in those four rate bounds.  The 12-run preflight and
+two 60-run shard configurations preserve complete paired units and do not use
+reserved seeds 1301--1348.
 
-All four residual policy misses occur within the first eight frames, are
-identical under V2 and Distributional, and were not duplicated.  This points
-to the known no-history startup gate rather than a steady-state ranking or
-admission failure.  The compact evidence and thirteen reviewed figure pairs
-are under `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`; the
-checksum-bound raw archives remain under the ignored `results/` tree.  This
-is a ten-seed opened-data screen, not final confirmation.  Stop for user
-discussion before adding a startup fallback or launching another campaign.
+Next, commit this frozen boundary, deploy the exact commit to both VMs, and
+run the full-workload preflight.  In addition to strict output validation,
+verify that its per-period generated rates are exactly 1.5 times the retained
+same-seed baseline before launching the formal shards.  No outcome has been
+observed for the new treatment yet.
 
 ### Superseded packet-repair boundary
 
@@ -1072,6 +1076,18 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-08 - Freeze 1.5x-background WMM repeat
+
+- Interpreted 50% more background traffic as 1.5 times every OBSS flow's
+  offered ON-period rate, preserving flow count and duty cycle so the treatment
+  remains a clean paired load scaling.
+- Froze the four-profile, three-arm, ten-seed contract and separate preflight
+  and two-shard matrices.  The full matrix has 120 runs and the preflight has
+  one complete 12-cell seed.
+- Added a closure test proving the original and new expanded matrices are
+  identical after removing only the four UL/DL rate bounds.  All existing WMM
+  matrix and mapping tests remain green.  No new outcome has been observed.
 
 ### 2026-08-08 - Complete WMM realism matrix
 
