@@ -44,6 +44,11 @@ RandomRateOnOffApplication::GetTypeId()
                           UintegerValue(1200),
                           MakeUintegerAccessor(&RandomRateOnOffApplication::m_packetSize),
                           MakeUintegerChecker<uint32_t>(1))
+            .AddAttribute("IpTos",
+                          "IPv4 type-of-service byte used by the UDP socket.",
+                          UintegerValue(0),
+                          MakeUintegerAccessor(&RandomRateOnOffApplication::m_ipTos),
+                          MakeUintegerChecker<uint8_t>())
             .AddAttribute("MinDataRate",
                           "Minimum data rate selected for an ON period.",
                           DataRateValue(DataRate("1Mbps")),
@@ -99,6 +104,19 @@ RandomRateOnOffApplication::SetPacketSize(uint32_t bytes)
 }
 
 void
+RandomRateOnOffApplication::SetIpTos(uint8_t ipTos)
+{
+    NS_ABORT_MSG_IF(m_running, "Cannot change the IP ToS while the application is running");
+    m_ipTos = ipTos;
+}
+
+uint8_t
+RandomRateOnOffApplication::GetIpTos() const
+{
+    return m_ipTos;
+}
+
+void
 RandomRateOnOffApplication::SetRateRange(DataRate minimum, DataRate maximum)
 {
     NS_ABORT_MSG_IF(minimum.GetBitRate() == 0, "Minimum data rate must be positive");
@@ -151,6 +169,7 @@ RandomRateOnOffApplication::StartApplication()
 
     CancelEvents();
     m_socket = Socket::CreateSocket(GetNode(), UdpSocketFactory::GetTypeId());
+    m_socket->SetIpTos(m_ipTos);
     const int bindResult = m_local.IsInvalid() ? m_socket->Bind() : m_socket->Bind(m_local);
     NS_ABORT_MSG_IF(bindResult < 0, "Random-rate ON/OFF UDP bind failed");
     NS_ABORT_MSG_IF(m_socket->Connect(m_remote) < 0,

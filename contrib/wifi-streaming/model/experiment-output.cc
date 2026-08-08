@@ -491,8 +491,23 @@ ExperimentOutput::WriteResolvedConfig(const std::string& outputDir,
            << "    \"random_on_mean_ms\": " << config.randomOnMeanMs << ",\n"
            << "    \"random_off_mean_ms\": " << config.randomOffMeanMs << ",\n"
            << "    \"obss\": {\n"
-           << "      \"profile\": \"" << JsonEscape(config.obssProfile) << "\",\n"
-           << "      \"stations_per_bss\": " << config.obssStationsPerBss << ",\n"
+           << "      \"profile\": \"" << JsonEscape(config.obssProfile) << "\",\n";
+    if (config.obssWmmProfile != "legacy")
+    {
+        output << "      \"wmm_profile\": \""
+               << JsonEscape(config.obssWmmProfile) << "\",\n"
+               << "      \"vi_ip_tos\": " << +config.obssViIpTos << ",\n"
+               << "      \"vi_tid\": " << +config.obssViTid << ",\n"
+               << "      \"vi_access_category\": \""
+               << JsonEscape(config.obssViAccessCategory) << "\",\n"
+               << "      \"vi_flow_ordinals\": [";
+        for (std::size_t index = 0; index < config.obssViFlowOrdinals.size(); ++index)
+        {
+            output << (index == 0 ? "" : ", ") << config.obssViFlowOrdinals[index];
+        }
+        output << "],\n";
+    }
+    output << "      \"stations_per_bss\": " << config.obssStationsPerBss << ",\n"
            << "      \"min_rate_mbps\": " << config.obssMinRateMbps << ",\n"
            << "      \"max_rate_mbps\": " << config.obssMaxRateMbps << ",\n"
            << "      \"ul_min_rate_mbps\": " << config.obssUlMinRateMbps << ",\n"

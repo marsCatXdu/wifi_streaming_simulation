@@ -5036,6 +5036,8 @@ class RandomRateOnOffApplicationTestCase : public TestCase
         application->SetRemote(InetSocketAddress(interfaces.GetAddress(1), 9002));
         application->SetLocal(InetSocketAddress(interfaces.GetAddress(0), 0));
         application->SetPacketSize(200);
+        application->SetIpTos(0x88);
+        NS_TEST_ASSERT_MSG_EQ(application->GetIpTos(), 0x88, "Wrong IPv4 ToS byte");
         application->SetRateRange(DataRate("1Mbps"), DataRate("50Mbps"));
         application->SetMeans(MilliSeconds(5), MilliSeconds(5));
         NS_TEST_ASSERT_MSG_EQ(application->AssignStreams(71), 3, "Wrong RNG stream count");

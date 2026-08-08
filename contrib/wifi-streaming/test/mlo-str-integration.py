@@ -18,6 +18,7 @@ def main() -> None:
         for wmm_mode, stream_tos, stream_tid, access_category in (
             ("off", 0, 0, "AC_BE"),
             ("on", 160, 5, "AC_VI"),
+            ("af41", 136, 4, "AC_VI"),
         ):
             output = temporary / wmm_mode
             subprocess.run(

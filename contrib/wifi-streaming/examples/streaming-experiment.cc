@@ -586,6 +586,7 @@ main(int argc, char* argv[])
     double randomOnMeanMs = 100;
     double randomOffMeanMs = 100;
     std::string obssProfile = "none";
+    std::string obssWmmProfile = "legacy";
     uint32_t obssStationsPerBss = 4;
     double obssUlMinRateMbps = 0.5;
     double obssUlMaxRateMbps = 3.0;
@@ -779,7 +780,8 @@ main(int argc, char* argv[])
     command.AddValue("frameRetryLimit", "MAC frame transmission attempt limit", frameRetryLimit);
     command.AddValue("txopLimitUs", "BE TXOP limit in microseconds", txopLimitUs);
     command.AddValue("wmmMode",
-                     "Streaming WMM prioritization: off (CS0/AC_BE) or on (CS5/AC_VI)",
+                     "Streaming WMM prioritization: off (CS0/TID0), on (CS5/TID5), "
+                     "or af41 (AF41/TID4)",
                      wmmMode);
     command.AddValue("rtsCtsThreshold", "RTS/CTS PSDU threshold bytes", rtsCtsThreshold);
     command.AddValue("fragmentationThreshold",
@@ -872,6 +874,9 @@ main(int argc, char* argv[])
                      "Per-station exponential OFF mean for udp_random_onoff",
                      randomOffMeanMs);
     command.AddValue("obssProfile", "none or mixed4x4 overlapping-BSS profile", obssProfile);
+    command.AddValue("obssWmmProfile",
+                     "OBSS WMM assignment: legacy, be, one_vi_per_channel, or all_vi",
+                     obssWmmProfile);
     command.AddValue("obssStationsPerBss", "Stations in each overlapping BSS", obssStationsPerBss);
     command.AddValue("obssUlMinRateMbps", "Minimum OBSS uplink ON-period rate", obssUlMinRateMbps);
     command.AddValue("obssUlMaxRateMbps", "Maximum OBSS uplink ON-period rate", obssUlMaxRateMbps);
@@ -912,11 +917,11 @@ main(int argc, char* argv[])
     command.Parse(argc, argv);
     NS_ABORT_MSG_IF(seed == 0, "seed must be positive");
     NS_ABORT_MSG_IF(run == 0, "run must be positive");
-    NS_ABORT_MSG_IF(wmmMode != "off" && wmmMode != "on",
-                    "wmmMode must be off or on");
-    const bool wmmVideoEnabled = wmmMode == "on";
-    const uint8_t streamIpTos = wmmVideoEnabled ? 0xa0 : 0x00;
-    const uint8_t streamTid = wmmVideoEnabled ? 5 : 0;
+    NS_ABORT_MSG_IF(wmmMode != "off" && wmmMode != "on" && wmmMode != "af41",
+                    "wmmMode must be off, on, or af41");
+    const bool wmmVideoEnabled = wmmMode != "off";
+    const uint8_t streamIpTos = wmmMode == "on" ? 0xa0 : wmmMode == "af41" ? 0x88 : 0x00;
+    const uint8_t streamTid = wmmMode == "on" ? 5 : wmmMode == "af41" ? 4 : 0;
     const AcIndex streamAccessCategory = wmmVideoEnabled ? AC_VI : AC_BE;
     const std::string streamAccessCategoryName =
         wmmVideoEnabled ? "AC_VI" : "AC_BE";
@@ -1317,6 +1322,12 @@ main(int argc, char* argv[])
     NS_ABORT_MSG_IF(obssProfile != "none" && obssProfile != "mixed4x4",
                     "obssProfile must be none or mixed4x4");
     const bool obssEnabled = obssProfile == "mixed4x4";
+    NS_ABORT_MSG_IF(obssWmmProfile != "legacy" && obssWmmProfile != "be" &&
+                        obssWmmProfile != "one_vi_per_channel" &&
+                        obssWmmProfile != "all_vi",
+                    "obssWmmProfile must be legacy, be, one_vi_per_channel, or all_vi");
+    NS_ABORT_MSG_IF(!obssEnabled && obssWmmProfile != "legacy",
+                    "An explicit obssWmmProfile requires an enabled OBSS profile");
     NS_ABORT_MSG_IF(obssEnabled && obssStationsPerBss != 4,
                     "mixed4x4 requires obssStationsPerBss=4");
     NS_ABORT_MSG_IF(obssEnabled && propagationModel == "fixed_rss",
@@ -2885,6 +2896,10 @@ main(int argc, char* argv[])
     resolved.randomOnMeanMs = randomOnMeanMs;
     resolved.randomOffMeanMs = randomOffMeanMs;
     resolved.obssProfile = obssProfile;
+    resolved.obssWmmProfile = obssWmmProfile;
+    resolved.obssViIpTos = 0x88;
+    resolved.obssViTid = 4;
+    resolved.obssViAccessCategory = "AC_VI";
     resolved.obssStationsPerBss = obssEnabled ? obssStationsPerBss : 0;
     resolved.obssMinRateMbps = std::min(obssUlMinRateMbps, obssDlMinRateMbps);
     resolved.obssMaxRateMbps = std::max(obssUlMaxRateMbps, obssDlMaxRateMbps);
@@ -3491,6 +3506,17 @@ main(int argc, char* argv[])
                 source->SetRemote(InetSocketAddress(destination, obssPort));
                 source->SetLocal(InetSocketAddress(sourceAddress, 0));
                 source->SetPacketSize(obssPacketSize);
+                const bool firstUplinkOnLink =
+                    uplink && index == 0 &&
+                    (bss == 0 || obssLinks[bss] != obssLinks[bss - 1]);
+                const bool videoPriority =
+                    obssWmmProfile == "all_vi" ||
+                    (obssWmmProfile == "one_vi_per_channel" && firstUplinkOnLink);
+                source->SetIpTos(videoPriority ? 0x88 : 0x00);
+                if (videoPriority)
+                {
+                    resolved.obssViFlowOrdinals.push_back(obssFlowOrdinal);
+                }
                 const double minimumRateMbps =
                     uplink ? obssUlMinRateMbps : obssDlMinRateMbps;
                 const double maximumRateMbps =

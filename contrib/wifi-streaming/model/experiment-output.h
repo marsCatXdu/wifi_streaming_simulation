@@ -93,7 +93,7 @@ struct StreamingRunConfig
     uint32_t frameRetryLimit{0};
     uint32_t rtsCtsThresholdBytes{0};
     uint32_t fragmentationThresholdBytes{0};
-    std::string wmmMode{"off"}; ///< Streaming WMM prioritization: off or on
+    std::string wmmMode{"off"}; ///< Streaming WMM prioritization mode
     uint8_t streamIpTos{0};      ///< IPv4 ToS used by streaming sockets
     uint8_t streamTid{0};        ///< QoS TID derived from the streaming ToS
     uint32_t txopLimitUs{0};
@@ -219,6 +219,11 @@ struct StreamingRunConfig
     double randomOnMeanMs{0};
     double randomOffMeanMs{0};
     std::string obssProfile{"none"};
+    std::string obssWmmProfile{"legacy"}; ///< OBSS WMM assignment profile.
+    uint8_t obssViIpTos{0}; ///< IPv4 ToS used by priority OBSS flows.
+    uint8_t obssViTid{0}; ///< QoS TID selected by priority OBSS flows.
+    std::string obssViAccessCategory{"AC_BE"}; ///< Priority OBSS access category.
+    std::vector<uint32_t> obssViFlowOrdinals; ///< Priority OBSS flow ordinals.
     uint32_t obssStationsPerBss{0};
     double obssMinRateMbps{0};
     double obssMaxRateMbps{0};

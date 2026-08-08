@@ -69,10 +69,17 @@ channel from a multi-channel MLD.
 EHT MACs always use 802.11e/WMM-style QoS in ns-3. The `--wmmMode=off`
 default preserves the historical target-stream marking (CS0, TID 0, and
 `AC_BE`). `--wmmMode=on` marks only target streaming sockets as CS5, selecting
-TID 5 and `AC_VI` with the standard EDCA parameters. Background and OBSS
-traffic remain CS0/`AC_BE`. The selected TID is used consistently for native
+TID 5 and `AC_VI` with the standard EDCA parameters. `--wmmMode=af41` instead
+uses the standards-oriented AF41 marking, TID 4, and the same `AC_VI` EDCA
+category. The selected TID is used consistently for native
 MLO TID-to-link mapping, static Block Ack, prediction telemetry queue binding,
 and resolved configuration output.
+
+OBSS traffic remains historical CS0/`AC_BE` under the default
+`--obssWmmProfile=legacy`. Explicit realism treatments can select `be`,
+`one_vi_per_channel`, or `all_vi`. The latter two mark, respectively, the
+first uplink flow on each channel or every OBSS flow as AF41/TID 4/`AC_VI`.
+The exact selected flow ordinals are recorded in `resolved_config.json`.
 
 Native EMLSR mode reuses that two-link MLD and one-copy application path, with
 `NMaxInflights=1`. Static setup is deliberately ordered as association, EMLSR

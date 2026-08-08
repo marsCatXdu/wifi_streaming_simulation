@@ -81,6 +81,7 @@ CLI_KEYS = {
     "random_on_mean_ms": "randomOnMeanMs",
     "random_off_mean_ms": "randomOffMeanMs",
     "obss_profile": "obssProfile",
+    "obss_wmm_profile": "obssWmmProfile",
     "obss_stations_per_bss": "obssStationsPerBss",
     "obss_ul_min_rate_mbps": "obssUlMinRateMbps",
     "obss_ul_max_rate_mbps": "obssUlMaxRateMbps",

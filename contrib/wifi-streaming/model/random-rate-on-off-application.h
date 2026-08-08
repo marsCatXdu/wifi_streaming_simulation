@@ -77,6 +77,18 @@ class RandomRateOnOffApplication : public Application
     void SetPacketSize(uint32_t bytes);
 
     /**
+     * @brief Set the IPv4 type-of-service byte used by the UDP socket.
+     * @param ipTos IPv4 type-of-service byte.
+     */
+    void SetIpTos(uint8_t ipTos);
+
+    /**
+     * @brief Get the configured IPv4 type-of-service byte.
+     * @return IPv4 type-of-service byte.
+     */
+    uint8_t GetIpTos() const;
+
+    /**
      * @brief Set the interval from which ON-period rates are sampled.
      * @param minimum Minimum data rate.
      * @param maximum Maximum data rate.
@@ -124,6 +136,7 @@ class RandomRateOnOffApplication : public Application
     Address m_remote; //!< UDP destination.
     Address m_local;  //!< Local bind address.
     uint32_t m_packetSize{1200}; //!< UDP payload size in bytes.
+    uint8_t m_ipTos{0}; //!< IPv4 type-of-service byte used by the UDP socket.
     DataRate m_minRate{"1Mbps"}; //!< Minimum ON-period rate.
     DataRate m_maxRate{"10Mbps"}; //!< Maximum ON-period rate.
     Time m_onMean{Seconds(1)}; //!< Mean ON duration.

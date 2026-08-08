@@ -729,6 +729,7 @@ PAIRED_VALUE_T2_TOPOLOGY_WIFI_KEYS = (
 WMM_STREAM_PROFILES = {
     "off": {"stream_ip_tos": 0, "stream_tid": 0, "access_category": "AC_BE"},
     "on": {"stream_ip_tos": 160, "stream_tid": 5, "access_category": "AC_VI"},
+    "af41": {"stream_ip_tos": 136, "stream_tid": 4, "access_category": "AC_VI"},
 }
 
 
@@ -761,6 +762,50 @@ def _validate_wmm_config(config: dict[str, Any], label: str) -> str:
             f"resolved_config.json: {label} WMM TID-to-link mapping differs",
         )
     return mode
+
+
+def _validate_obss_wmm_config(config: dict[str, Any], label: str) -> str:
+    """Validate explicit competitor WMM assignment and its flow provenance."""
+
+    obss = config.get("background", {}).get("obss", {})
+    _require(isinstance(obss, dict),
+             f"resolved_config.json: {label} OBSS config is missing")
+    profile = obss.get("wmm_profile", "legacy")
+    _require(profile in {"legacy", "be", "one_vi_per_channel", "all_vi"},
+             f"resolved_config.json: {label} OBSS WMM profile is invalid")
+    if profile == "legacy":
+        return profile
+    _require(obss.get("profile") != "none",
+             f"resolved_config.json: {label} explicit OBSS WMM profile has no OBSS")
+    _require(
+        obss.get("vi_ip_tos") == 136
+        and obss.get("vi_tid") == 4
+        and obss.get("vi_access_category") == "AC_VI",
+        f"resolved_config.json: {label} OBSS VI marking differs",
+    )
+    stations = obss.get("stations_per_bss")
+    bsses = obss.get("bsses")
+    _require(isinstance(stations, int) and stations > 0 and isinstance(bsses, list),
+             f"resolved_config.json: {label} OBSS layout is invalid")
+    flow_count = len(bsses) * stations * 2
+    if profile == "be":
+        expected_ordinals: list[int] = []
+    elif profile == "all_vi":
+        expected_ordinals = list(range(flow_count))
+    else:
+        expected_ordinals = []
+        seen_links: set[int] = set()
+        for bss_index, descriptor in enumerate(bsses):
+            _require(isinstance(descriptor, dict) and
+                     isinstance(descriptor.get("link_id"), int),
+                     f"resolved_config.json: {label} OBSS BSS descriptor is invalid")
+            link_id = descriptor["link_id"]
+            if link_id not in seen_links:
+                expected_ordinals.append(bss_index * stations * 2)
+                seen_links.add(link_id)
+    _require(obss.get("vi_flow_ordinals") == expected_ordinals,
+             f"resolved_config.json: {label} OBSS VI flow assignment differs")
+    return profile
 
 
 def _validate_target_mcs_config(config: dict[str, Any], label: str) -> str:
@@ -2832,7 +2877,7 @@ def _validate_paired_temporal_t2_environment(
     shared_wifi = {
         key: wifi.get(key, "__MISSING__") for key in PAIRED_VALUE_T2_SHARED_WIFI_KEYS
     }
-    if wmm_mode == "on":
+    if wmm_mode in {"on", "af41"}:
         # Preserve the frozen model/environment projection while admitting the
         # explicit WMM queue-selection treatment as a separate experiment factor.
         shared_wifi["access_category"] = "AC_BE"
@@ -2867,6 +2912,11 @@ def _validate_paired_temporal_t2_environment(
         obss = environment.get("background", {}).get("obss")
         if isinstance(obss, dict):
             obss.pop("bsses", None)
+            for key in (
+                "wmm_profile", "vi_ip_tos", "vi_tid", "vi_access_category",
+                "vi_flow_ordinals",
+            ):
+                obss.pop(key, None)
         _require(
             _canonical_json_sha256(environment, f"{label} neutral environment")
             == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
@@ -9122,6 +9172,7 @@ def validate_run(
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
     _validate_target_mcs_config(config, "target")
     wmm_mode = _validate_wmm_config(config, "target")
+    _validate_obss_wmm_config(config, "target")
     paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
         paired_value_profile = _validate_paired_value_t2_config(config)
@@ -9142,7 +9193,7 @@ def validate_run(
         _require(wifi.get("block_ack_enabled") is True and
                  wifi.get("static_association") is True and
                  wifi.get("tid_to_link_mapping_ul") ==
-                     ("5 0,1" if wmm_mode == "on" else "0 0,1") and
+                     f"{WMM_STREAM_PROFILES[wmm_mode]['stream_tid']} 0,1" and
                  wifi.get("str_mode") == "not_applicable" and
                  wifi.get("multi_link_mode") == "EMLSR" and
                  wifi.get("application_socket_count") == 1 and
