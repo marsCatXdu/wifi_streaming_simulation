@@ -1,0 +1,30 @@
+extends: scenario15_wmm_comparison_v1.yaml
+
+name: scenario15-wmm-comparison-v1-shard0
+output_root: results/scenario15_wmm_comparison_v1/shard0
+
+seeds:
+  - 1251
+  - 1252
+  - 1253
+  - 1254
+  - 1255
+  - 1256
+  - 1257
+  - 1258
+  - 1259
+  - 1260
+  - 1261
+  - 1262
+  - 1263
+  - 1264
+  - 1265
+  - 1266
+  - 1267
+  - 1268
+  - 1269
+  - 1270
+  - 1271
+  - 1272
+  - 1273
+  - 1274

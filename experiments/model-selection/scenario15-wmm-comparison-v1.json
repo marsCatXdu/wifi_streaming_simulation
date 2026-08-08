@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "scenario15-wmm-comparison-v1",
+  "status": "frozen_before_wmm_outcomes",
+  "purpose": "Measure standard video-access WMM prioritization for STR MLO, score-aware T2 V2, and distributional-shadow T2 in the opened-seed neutral scenario archived as key result 15.",
+  "implementation_commit": "f08596e26d614a97e35b91aa1960d5c40c2ae4f1",
+  "experiment_factor": {
+    "cli_attribute": "wmmMode",
+    "off": {
+      "meaning": "historical target-stream marking without video prioritization",
+      "ipv4_tos": 0,
+      "diffserv": "CS0",
+      "tid": 0,
+      "access_category": "AC_BE"
+    },
+    "on": {
+      "meaning": "target streaming marked for standard video access",
+      "ipv4_tos": 160,
+      "diffserv": "CS5",
+      "tid": 5,
+      "access_category": "AC_VI"
+    },
+    "unchanged_traffic": "Same-BSS background and OBSS traffic remain CS0/TID 0/AC_BE.",
+    "standards_note": "EHT MACs remain QoS capable in both modes; off/on means target video prioritization off/on, not removal of mandatory 802.11e QoS machinery."
+  },
+  "campaign": {
+    "scenario": "unchanged_neutral_mixed4x4",
+    "frame_profile": "canonical_v1",
+    "mcs_mode": "fixed",
+    "seed_first": 1251,
+    "seed_last": 1298,
+    "seed_count": 48,
+    "run": 1,
+    "wmm_mode_count": 2,
+    "arm_count": 3,
+    "simulation_run_count": 288,
+    "reserved_confirmation_seeds_used": false
+  },
+  "arms": [
+    {
+      "arm_id": "str_mlo",
+      "topology": "mlo_str",
+      "policy": "fixed_link_0"
+    },
+    {
+      "arm_id": "score_aware_t2_v2",
+      "topology": "dual_interface",
+      "policy": "paired_value_duplication_t2",
+      "admission_profile": "score_aware_emergency_v2"
+    },
+    {
+      "arm_id": "distributional_shadow_t2",
+      "topology": "dual_interface",
+      "policy": "distributional_shadow_duplication_t2"
+    }
+  ],
+  "analysis": {
+    "paired_unit": "seed_run",
+    "primary_metrics": [
+      "all_generated_deadline_miss_rate",
+      "completed_frame_p99_us",
+      "sender_phy_airtime_us"
+    ],
+    "required_comparisons": [
+      "each_selective_arm_minus_str_within_wmm_mode",
+      "wmm_on_minus_off_within_each_arm",
+      "distributional_minus_v2_within_wmm_mode"
+    ],
+    "plots": [
+      "completion_cdf",
+      "completion_pdf",
+      "deadline_miss_rate",
+      "completed_p99",
+      "sender_airtime",
+      "paired_wmm_effects"
+    ]
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "distributional_portable_model": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+          "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+        },
+        "distributional_runtime_contract": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+          "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+        },
+        "distributional_shadow_reference": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+          "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+        },
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "secondary_airtime_event_schema": {
+          "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+          "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+        },
+        "v2_runtime_contract": {
+          "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+          "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+        }
+      }
+    }
+  },
+  "interpretation_limits": [
+    "This is opened-seed engineering evidence and does not consume seeds 1301 through 1348.",
+    "The frozen predictors were trained under the historical AC_BE environment and are not retrained for AC_VI.",
+    "WMM is applied identically to all three competing approaches; it is not a policy-specific advantage."
+  ]
+}
