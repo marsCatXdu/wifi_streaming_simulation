@@ -55,6 +55,9 @@ from validate_outputs import (  # noqa: E402
     PREDICTION_ROLLING_PREFIXES,
     SECONDARY_AIRTIME_EVENT_V2_COLUMNS,
     SECONDARY_AIRTIME_EVENT_V2_ORDERED_COLUMNS,
+    SCENARIO15_WMM_BG150_CONTRACT_ID,
+    SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+    SCENARIO15_WMM_BG150_RESOLVED_RATES,
     ValidationError,
     _adaptive_nominal_airtime_us,
     _csv,
@@ -2069,6 +2072,27 @@ class PairedValueT2ValidationTest(unittest.TestCase):
         conflicting_controller["selectiveDuplication"] = {}
         with self.assertRaisesRegex(ValidationError, "another controller"):
             _validate_paired_value_t2_config(conflicting_controller)
+
+        bg150_config = copy.deepcopy(score_aware_config)
+        for field, (_, treatment) in SCENARIO15_WMM_BG150_RESOLVED_RATES.items():
+            bg150_config["background"]["obss"][field] = treatment
+        with self.assertRaisesRegex(ValidationError, "neutral environment projection"):
+            _validate_paired_value_t2_config(bg150_config)
+        bg150_contract = (
+            SCENARIO15_WMM_BG150_CONTRACT_ID,
+            SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+        )
+        profile = _validate_paired_value_t2_config(bg150_config, bg150_contract)
+        self.assertTrue(profile["score_aware"])
+        nearby_bg150 = copy.deepcopy(bg150_config)
+        nearby_bg150["background"]["obss"]["ul_min_rate_mbps"] = 0.750001
+        with self.assertRaisesRegex(ValidationError, "1.5x background rates differ"):
+            _validate_paired_value_t2_config(nearby_bg150, bg150_contract)
+        with self.assertRaisesRegex(ValidationError, "identity differs"):
+            _validate_paired_value_t2_config(
+                bg150_config,
+                (SCENARIO15_WMM_BG150_CONTRACT_ID, "0" * 64),
+            )
 
         generalization_config = copy.deepcopy(score_aware_config)
         generalization_config["pairedTemporalT2FrameProfile"] = (

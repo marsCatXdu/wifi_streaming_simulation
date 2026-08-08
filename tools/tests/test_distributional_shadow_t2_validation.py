@@ -31,6 +31,9 @@ from validate_outputs import (  # noqa: E402
     PAIRED_TEMPORAL_T2_GENERALIZATION_FRAME_PROFILE,
     PAIRED_VALUE_T2_METER_CONFIG,
     PAIRED_VALUE_T2_PREDICTION_CONFIG,
+    SCENARIO15_WMM_BG150_CONTRACT_ID,
+    SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+    SCENARIO15_WMM_BG150_RESOLVED_RATES,
     ValidationError,
     _distributional_shadow_t2_descriptor_cost_matches_profile,
     _distributional_shadow_t2_distribution,
@@ -81,6 +84,21 @@ class DistributionalShadowT2ValidationTest(unittest.TestCase):
         ] = 1.250001
         with self.assertRaisesRegex(ValidationError, "controller object exists|differs"):
             _validate_distributional_shadow_t2_config(changed_policy)
+
+    def test_accepts_exact_contract_bound_1_5x_background_rates(self) -> None:
+        config = self.resolved_config()
+        for field, (_, treatment) in SCENARIO15_WMM_BG150_RESOLVED_RATES.items():
+            config["background"]["obss"][field] = treatment
+        with self.assertRaisesRegex(ValidationError, "neutral environment projection"):
+            _validate_distributional_shadow_t2_config(config)
+        contract = (
+            SCENARIO15_WMM_BG150_CONTRACT_ID,
+            SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+        )
+        _validate_distributional_shadow_t2_config(config, contract)
+        config["background"]["obss"]["dl_max_rate_mbps"] = 12.000001
+        with self.assertRaisesRegex(ValidationError, "1.5x background rates differ"):
+            _validate_distributional_shadow_t2_config(config, contract)
 
     def test_accepts_only_exact_adaptive_mcs_ablation(self) -> None:
         config = self.resolved_config()

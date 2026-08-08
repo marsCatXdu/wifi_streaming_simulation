@@ -285,6 +285,12 @@ def _observe(job: dict[str, Any]) -> dict[str, Any]:
             expected_run_id=job["run_id"],
             expected_project_commit=job["project_commit"],
             expected_ns3_commit=NS3_UPSTREAM_COMMIT,
+            expected_experiment_runtime_contract_id=job.get(
+                "experiment_runtime_contract_id"
+            ),
+            expected_experiment_runtime_contract_sha256=job.get(
+                "experiment_runtime_contract_sha256"
+            ),
         )
     except ValidationError as error:
         raise AnalysisError(f"{run_dir}: strict validation failed: {error}") from error

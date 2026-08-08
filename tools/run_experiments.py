@@ -1087,12 +1087,33 @@ def load_yaml(path: Path, seen: set[Path] | None = None) -> dict[str, Any]:
     return _merge_yaml(load_yaml(parent, visited), value)
 
 
-def run_one(spec: dict[str, Any], output_root: Path, config_dir: Path,
-            project_git_commit: str) -> dict[str, Any]:
+def run_one(
+    spec: dict[str, Any],
+    output_root: Path,
+    config_dir: Path,
+    project_git_commit: str,
+    runtime_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     run_id = spec["run_id"]
     final = output_root / run_id
+    runtime_validation = (
+        {
+            "expected_experiment_runtime_contract_id":
+                runtime_contract["runtime_contract_id"],
+            "expected_experiment_runtime_contract_sha256":
+                runtime_contract["runtime_contract_sha256"],
+        }
+        if runtime_contract is not None
+        else {}
+    )
     if final.exists():
-        validate_run(final, run_id, project_git_commit, NS3_UPSTREAM_COMMIT)
+        validate_run(
+            final,
+            run_id,
+            project_git_commit,
+            NS3_UPSTREAM_COMMIT,
+            **runtime_validation,
+        )
         raise FileExistsError(f"completed duplicate rejected: {run_id}")
     for stale in output_root.glob(f".{run_id}.attempt-*"):
         shutil.rmtree(stale)
@@ -1119,7 +1140,13 @@ def run_one(spec: dict[str, Any], output_root: Path, config_dir: Path,
             raise RuntimeError(
                 f"run {run_id} failed ({process.returncode}); see {failure_log}"
             )
-        validate_run(attempt, run_id, project_git_commit, NS3_UPSTREAM_COMMIT)
+        validate_run(
+            attempt,
+            run_id,
+            project_git_commit,
+            NS3_UPSTREAM_COMMIT,
+            **runtime_validation,
+        )
         os.replace(attempt, final)
     finally:
         if log_path.exists():
@@ -1163,7 +1190,22 @@ def main() -> None:
         seen.add(spec["run_id"])
         completed = output_root / spec["run_id"]
         if completed.exists():
-            validate_run(completed, spec["run_id"], commit, NS3_UPSTREAM_COMMIT)
+            validate_run(
+                completed,
+                spec["run_id"],
+                commit,
+                NS3_UPSTREAM_COMMIT,
+                expected_experiment_runtime_contract_id=(
+                    runtime_contract["runtime_contract_id"]
+                    if runtime_contract is not None
+                    else None
+                ),
+                expected_experiment_runtime_contract_sha256=(
+                    runtime_contract["runtime_contract_sha256"]
+                    if runtime_contract is not None
+                    else None
+                ),
+            )
             if not args.resume:
                 raise FileExistsError(f"completed duplicate rejected: {spec['run_id']}")
             spec["completed"] = True
@@ -1194,7 +1236,14 @@ def main() -> None:
     failures = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {
-            executor.submit(run_one, spec, output_root, args.config.resolve().parent, commit): spec
+            executor.submit(
+                run_one,
+                spec,
+                output_root,
+                args.config.resolve().parent,
+                commit,
+                runtime_contract,
+            ): spec
             for spec in specs
             if not spec.get("completed")
         }

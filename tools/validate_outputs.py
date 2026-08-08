@@ -486,6 +486,22 @@ PAIRED_VALUE_T2_NEUTRAL_SOURCE_SHA256 = (
 PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256 = (
     "5d1774e3b38f27908de3d845953cad825e3f4207d738996952315e63097382dc"
 )
+SCENARIO15_WMM_BG150_CONTRACT_ID = "scenario15-wmm-realism-bg150-matrix-v1"
+SCENARIO15_WMM_BG150_CONTRACT_SHA256 = (
+    "a74cd5678e68d4152ced46c1b0b664c5d8005b5854cee8fb7d73d0fef656d80e"
+)
+SCENARIO15_WMM_BG150_CONTRACT_PATH = (
+    PAIRED_VALUE_T2_REPOSITORY_ROOT
+    / "experiments/model-selection/scenario15-wmm-realism-bg150-matrix-v1.json"
+)
+SCENARIO15_WMM_BG150_RESOLVED_RATES = {
+    "min_rate_mbps": (0.5, 0.75),
+    "max_rate_mbps": (8, 12),
+    "ul_min_rate_mbps": (0.5, 0.75),
+    "ul_max_rate_mbps": (3, 4.5),
+    "dl_min_rate_mbps": (2, 3),
+    "dl_max_rate_mbps": (8, 12),
+}
 PAIRED_VALUE_T2_DUAL_INTERFACE_WIFI_SHA256 = (
     "26698328ca7dde07a6ad283e05f84ad8406de4b1f50d0d8863da500f14140c90"
 )
@@ -2849,8 +2865,41 @@ def _validate_paired_value_t2_source_files() -> None:
                  f"paired-value runtime contract: source drifted {relative_path}")
 
 
+def _is_scenario15_wmm_bg150_contract(
+    experiment_runtime_contract: tuple[str, str] | None,
+) -> bool:
+    """Validate and identify the one canonical 1.5x-load experiment contract."""
+    if experiment_runtime_contract is None:
+        return False
+    contract_id, contract_sha256 = experiment_runtime_contract
+    if (
+        contract_id != SCENARIO15_WMM_BG150_CONTRACT_ID
+        and contract_sha256 != SCENARIO15_WMM_BG150_CONTRACT_SHA256
+    ):
+        return False
+    _require(
+        experiment_runtime_contract
+        == (
+            SCENARIO15_WMM_BG150_CONTRACT_ID,
+            SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+        ),
+        "experiment runtime contract: 1.5x-background identity differs",
+    )
+    _require(
+        _sha256_file(
+            SCENARIO15_WMM_BG150_CONTRACT_PATH,
+            "1.5x-background runtime contract",
+        )
+        == SCENARIO15_WMM_BG150_CONTRACT_SHA256,
+        "experiment runtime contract: 1.5x-background bytes differ",
+    )
+    return True
+
+
 def _validate_paired_temporal_t2_environment(
-    config: dict[str, Any], label: str
+    config: dict[str, Any],
+    label: str,
+    experiment_runtime_contract: tuple[str, str] | None = None,
 ) -> None:
     """Validate the canonical or held-out temporal-T2 environment envelope."""
 
@@ -2917,6 +2966,18 @@ def _validate_paired_temporal_t2_environment(
                 "vi_flow_ordinals",
             ):
                 obss.pop(key, None)
+            if _is_scenario15_wmm_bg150_contract(experiment_runtime_contract):
+                for key, (baseline, treatment) in (
+                    SCENARIO15_WMM_BG150_RESOLVED_RATES.items()
+                ):
+                    actual = obss.get(key)
+                    _require(
+                        isinstance(actual, (int, float))
+                        and not isinstance(actual, bool)
+                        and float(actual) == treatment,
+                        f"resolved_config.json: {label} 1.5x background rates differ",
+                    )
+                    obss[key] = baseline
         _require(
             _canonical_json_sha256(environment, f"{label} neutral environment")
             == PAIRED_VALUE_T2_NEUTRAL_ENVIRONMENT_SHA256,
@@ -2993,7 +3054,10 @@ def _validate_paired_temporal_t2_environment(
     )
 
 
-def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
+def _validate_paired_value_t2_config(
+    config: dict[str, Any],
+    experiment_runtime_contract: tuple[str, str] | None = None,
+) -> dict[str, Any]:
     """Validate the frozen resolved configuration and source closure."""
     paired = config.get("pairedValueDuplicationT2")
     _require(isinstance(paired, dict),
@@ -3141,7 +3205,11 @@ def _validate_paired_value_t2_config(config: dict[str, Any]) -> dict[str, Any]:
     _require(config.get("topology") == "dual_interface" and
              config.get("policy") == PAIRED_VALUE_T2_POLICY,
              "resolved_config.json: paired-value policy/topology mismatch")
-    _validate_paired_temporal_t2_environment(config, "paired-value")
+    _validate_paired_temporal_t2_environment(
+        config,
+        "paired-value",
+        experiment_runtime_contract,
+    )
 
     _require(isinstance(paired, dict) and
              _canonical_json_sha256(paired, "pairedValueDuplicationT2") ==
@@ -3218,7 +3286,10 @@ def _validate_distributional_shadow_t2_source_files() -> None:
         )
 
 
-def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
+def _validate_distributional_shadow_t2_config(
+    config: dict[str, Any],
+    experiment_runtime_contract: tuple[str, str] | None = None,
+) -> None:
     """Validate the frozen controller, telemetry, and neutral environment."""
     _require(
         _sha256_file(
@@ -3240,7 +3311,11 @@ def _validate_distributional_shadow_t2_config(config: dict[str, Any]) -> None:
         },
         "resolved_config.json: distributional-shadow identity differs",
     )
-    _validate_paired_temporal_t2_environment(config, "distributional-shadow")
+    _validate_paired_temporal_t2_environment(
+        config,
+        "distributional-shadow",
+        experiment_runtime_contract,
+    )
     _require(
         isinstance(controller, dict)
         and _canonical_json_sha256(controller, "distributionalShadowDuplicationT2")
@@ -9151,6 +9226,9 @@ def validate_run(
     expected_run_id: str | None = None,
     expected_project_commit: str | None = None,
     expected_ns3_commit: str | None = None,
+    *,
+    expected_experiment_runtime_contract_id: str | None = None,
+    expected_experiment_runtime_contract_sha256: str | None = None,
 ) -> dict[str, Any]:
     run_dir = Path(run_dir)
     missing = sorted(name for name in CORE_FILES if not (run_dir / name).is_file())
@@ -9170,14 +9248,34 @@ def validate_run(
     },
              "resolved_config.json: invalid topology")
     _require(isinstance(config.get("stream"), dict), "resolved_config.json: missing stream")
+    _require(
+        (expected_experiment_runtime_contract_id is None)
+        == (expected_experiment_runtime_contract_sha256 is None),
+        "experiment runtime contract: id and SHA-256 must be provided together",
+    )
+    experiment_runtime_contract = (
+        (
+            expected_experiment_runtime_contract_id,
+            expected_experiment_runtime_contract_sha256,
+        )
+        if expected_experiment_runtime_contract_id is not None
+        and expected_experiment_runtime_contract_sha256 is not None
+        else None
+    )
     _validate_target_mcs_config(config, "target")
     wmm_mode = _validate_wmm_config(config, "target")
     _validate_obss_wmm_config(config, "target")
     paired_value_profile: dict[str, Any] | None = None
     if config.get("policy") == PAIRED_VALUE_T2_POLICY:
-        paired_value_profile = _validate_paired_value_t2_config(config)
+        paired_value_profile = _validate_paired_value_t2_config(
+            config,
+            experiment_runtime_contract,
+        )
     elif config.get("policy") == DISTRIBUTIONAL_SHADOW_T2_POLICY:
-        _validate_distributional_shadow_t2_config(config)
+        _validate_distributional_shadow_t2_config(
+            config,
+            experiment_runtime_contract,
+        )
     wifi = config.get("wifi", {})
     max_inflights = int(wifi.get("sta_max_inflights", 1))
     _require(1 <= max_inflights <= 15,
@@ -9961,10 +10059,16 @@ def main() -> None:
     parser.add_argument("run_dirs", nargs="+", type=Path)
     parser.add_argument("--project-commit")
     parser.add_argument("--ns3-commit")
+    parser.add_argument("--experiment-runtime-contract-id")
+    parser.add_argument("--experiment-runtime-contract-sha256")
     args = parser.parse_args()
     for directory in args.run_dirs:
         result = validate_run(directory, expected_project_commit=args.project_commit,
-                              expected_ns3_commit=args.ns3_commit)
+                              expected_ns3_commit=args.ns3_commit,
+                              expected_experiment_runtime_contract_id=
+                                  args.experiment_runtime_contract_id,
+                              expected_experiment_runtime_contract_sha256=
+                                  args.experiment_runtime_contract_sha256)
         print(f"VALID {result['run_id']} frames={result['frame_count']}")
 
 

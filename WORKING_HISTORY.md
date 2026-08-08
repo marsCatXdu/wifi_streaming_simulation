@@ -442,11 +442,36 @@ completed baseline only in those four rate bounds.  The 12-run preflight and
 two 60-run shard configurations preserve complete paired units and do not use
 reserved seeds 1301--1348.
 
-Next, commit this frozen boundary, deploy the exact commit to both VMs, and
-run the full-workload preflight.  In addition to strict output validation,
-verify that its per-period generated rates are exactly 1.5 times the retained
-same-seed baseline before launching the formal shards.  No outcome has been
-observed for the new treatment yet.
+The exact frozen commit is `2d56f6c`; both VMs checked it out cleanly and use
+the unchanged executable SHA-256
+`14cb5d6e1553775f958e579834cd36f7fe0be2b33b6269485fc4d667d8b8307b`.
+The first full-workload preflight simulated all 12 cells.  All four STR cells
+promoted, while all eight selective-policy runs were rejected after simulation
+because the existing controller validators require the original neutral
+environment rate projection.  This is a validator contract boundary, not an
+ns-3 crash.
+
+Before any fix or rerun, the complete 82 MiB pre-fix tree was retrieved under
+`results/scenario15_wmm_realism_bg150_matrix_preflight_v1`; its four-entry
+manifest SHA-256 is
+`fe93c97235ae2976b9d377bcda12bdd20aaed49ed4636ee855f5c031c9d7f6b8`.
+All four promoted STR runs freshly pass strict validation.  Their descriptive
+seed-1251 comparison and PNG/PDF plot are under `pre_fix_valid_analysis`.
+At 1.5x load, misses are 150, 1, 1, and 6 across the four ordered WMM profiles,
+versus 23, 0, 0, and 6 at 1.0x.  This one-seed STR prefix is preservation
+evidence only and cannot support a load or policy conclusion.
+
+The validator was then amended narrowly so only this checksum-bound runtime
+contract can project the declared 1.5x rates; historical and unbound runs keep
+their exact old checks.  All eight retained selective-policy attempts now pass
+full strict validation against their original run IDs and build identity.  A
+read-only paired audit of all 12 preflight cells compared 57,480 generated
+rate periods with the retained 1.0x cells: every period identity and timing
+matches, every resolved configuration differs only in the six derived rate
+fields, and the maximum absolute 1.5x serialization error is
+`5.5001336818349955e-11` Mbps.  Because the complete retained data now passes
+both gates, another simulation preflight would add no evidence.  Next, commit
+and deploy the validator boundary and launch the two formal 60-run shards.
 
 ### Superseded packet-repair boundary
 
@@ -1088,6 +1113,22 @@ Do not repeat an entry unless relevant code changed after it ran.
 - Added a closure test proving the original and new expanded matrices are
   identical after removing only the four UL/DL rate bounds.  All existing WMM
   matrix and mapping tests remain green.  No new outcome has been observed.
+- Deployed exact commit `2d56f6c` and ran the 12-cell full-workload preflight.
+  All simulations finished; four STR runs promoted and eight selective runs
+  hit the old-rate neutral-environment validator boundary.  Retrieved the
+  complete pre-fix tree before changing anything.
+- Freshly validated and plotted the four promoted STR cells under
+  `results/scenario15_wmm_realism_bg150_matrix_preflight_v1/pre_fix_valid_analysis`.
+  The one-seed prefix is explicitly non-inferential and no rejected selective
+  outcome is used.
+- Added a fail-closed validator exception for the exact 1.5x-load runtime
+  contract and propagated its ID/checksum through the runner and analyzers.
+  All eight retained selective attempts pass full validation; nearby rates,
+  missing binding, and a wrong contract checksum are rejected by tests.
+- Audited all 12 preflight cells against their exact seed-1251 baseline pairs.
+  All 57,480 generated rate periods have identical identities/timing and are
+  1.5x in rate within `5.5001336818349955e-11` Mbps.  This closes the preflight
+  launch gate without rerunning already-complete simulations.
 
 ### 2026-08-08 - Complete WMM realism matrix
 

@@ -175,6 +175,8 @@ def _manifest_jobs(
                 "run": spec["run"],
                 "scenario": spec["scenario"],
                 "load": load,
+                "experiment_runtime_contract_id": expected_contract_id,
+                "experiment_runtime_contract_sha256": expected_contract_sha256,
             }
         )
     if seen != set(specs):
