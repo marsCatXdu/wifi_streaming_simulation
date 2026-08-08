@@ -170,6 +170,9 @@ P99.
 | Freeze and preflight WMM comparison | `bb0bb61` | Six-cell, 288-run opened-seed contract and same-build executable validation |
 | Analyze scenario-15 WMM comparison | `b2e5665` | Strict 288-run paired analysis, background accounting, and twelve figure pairs |
 | Refine scenario-15 WMM figures | `0be0c64` | Unobscured legends and visible isolated-miss burst evidence |
+| Add explicit OBSS WMM profiles | `29417c4` | AF41 target mapping and deterministic BE, one-VI-per-channel, and all-VI competitor profiles |
+| Freeze WMM realism matrix | `d9867b1` | Four-profile, three-arm, 120-run opened-seed screen split across both VMs |
+| Analyze WMM realism matrix | `bccb287`, `72b21fa` | Strict paired analysis, thirteen figure pairs, and corrected figure-manifest provenance |
 
 The latest post-outcome validator correction is `5ca913a`.  Event schema V2
 still replays exact per-frame tagged bytes and binary64 allocations without a
@@ -396,40 +399,50 @@ to this held-out population, so no policy is promoted.
   source manifests, raw identities, reports, tables, and twelve figure pairs
   under `key_experiment_results/20_scenario15_wmm_comparison_v1`, then stop
   for user discussion.
+- [x] Run the four-case WMM realism matrix requested after that favorable
+  ablation: target BE versus BE; target AF41/VI versus BE; target AF41/VI with
+  one deterministic VI competitor per channel; and target AF41/VI with all
+  latency-sensitive competitors VI.  Compare STR, V2, and Distributional on
+  ten identical opened seeds while preserving fixed MCS and every non-WMM
+  setting.  Both 60-run shards completed without failures or replacement
+  seeds, and all 120 runs passed fresh strict validation.  In the all-VI case,
+  V2 and Distributional each reduce STR's 33 misses to 4 at 1.090x and 1.113x
+  sender airtime, but neither has an obviously lower P99.  All eight policy
+  rows for the four residual events are identical, unacted startup frames.
+  Archive the raw identities, reports, tables, diagnostic, and thirteen figure
+  pairs under `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`.
 
 Do not replace this checklist with nested planning lists.  Add a new top-level
 item only when the research objective genuinely changes.
 
 ## Current work boundary
 
-The user superseded the adaptive-MCS pause with one controlled WMM comparison
-in the earlier neutral scenario-15 environment.  That comparison is complete.
-`wmmMode=off` preserves the historical target CS0 / TID 0 / AC_BE mapping;
-`wmmMode=on` maps only target traffic to CS5 / TID 5 / AC_VI.  EHT QoS remains
-enabled in both modes, and background/OBSS traffic remains AC_BE.
+The requested scenario-15 WMM realism matrix is complete.  The implementation
+adds an explicit AF41 / TID 4 / AC_VI target mode and deterministic competitor
+profiles without changing the historical `off` or `on` behavior.  Both VMs
+ran intact 60-run shards at project commit `d9867b1`; all 120 simulations
+completed, matched their retrieved raw identities, and passed fresh strict
+validation.  Both executables have SHA-256
+`14cb5d6e1553775f958e579834cd36f7fe0be2b33b6269485fc4d667d8b8307b`.
+No replacement or reserved seed was used.
 
-Both documented VMs ran one intact 144-run shard at project commit `bb0bb61`
-with identical executable SHA-256
-`498d2b235eb5ae54589a43084ec38709cc0b8327bcfbc565871a3a773f7af618`.
-All 288 runs completed, were retrieved, matched their remote raw-tree
-identities, and passed fresh strict validation.  No replacement seed, outcome
-repair, or reserved seed `1301` through `1348` was used.
+One VI competitor per channel does not materially disturb the favorable WMM
+case: all three arms retain zero misses.  When every latency-sensitive
+competitor is VI, STR records 33 misses and V2 and Distributional each record
+4, an 87.88% reduction.  Their sender-airtime ratios are 1.0896 and 1.1130,
+with both upper interval endpoints below 1.20.  P99 remains statistically
+equivalent to STR, so the project's full defeat definition is not yet met.
+Distributional gains no reliability over V2 and costs another 2.15% airtime;
+V2 is the better engineering choice in this screen.
 
-WMM video priority is decisive.  STR falls from 691 misses (0.7998%) and
-18.875 ms P99 to 2 misses (0.0023%) and 6.070 ms P99.  V2 and Distributional
-fall to zero misses, but their two-miss advantage over STR is not statistically
-resolved; both are about 2.22 ms slower at P99 and consume 3.24% and 6.79%
-more sender airtime.  Background throughput is effectively unchanged.
-Distributional and V2 are equivalent under WMM on except that Distributional
-uses 3.44% more airtime.
-
-The complete reports, tables, source manifests, evidence identities, and
-twelve reviewed PNG/PDF figure pairs are under
-`key_experiment_results/20_scenario15_wmm_comparison_v1`.  In this environment
-the overall engineering choice is prioritized STR MLO.  The historical
-best-effort video result remains useful as an explicit ablation, not as the
-default STR baseline.  This boundary is closed: stop and wait for user
-discussion before any new predictor, action, dataset, retuning, or campaign.
+All four residual policy misses occur within the first eight frames, are
+identical under V2 and Distributional, and were not duplicated.  This points
+to the known no-history startup gate rather than a steady-state ranking or
+admission failure.  The compact evidence and thirteen reviewed figure pairs
+are under `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`; the
+checksum-bound raw archives remain under the ignored `results/` tree.  This
+is a ten-seed opened-data screen, not final confirmation.  Stop for user
+discussion before adding a startup fallback or launching another campaign.
 
 ### Superseded packet-repair boundary
 
@@ -1059,6 +1072,29 @@ Do not repeat an entry unless relevant code changed after it ran.
   result checksum set verify.  All ten PNG/PDF figures were visually reviewed.
 
 ## Work log
+
+### 2026-08-08 - Complete WMM realism matrix
+
+- Added explicit AF41 target and OBSS BE, one-VI-per-channel, and all-VI
+  profiles while preserving legacy output and target-WMM semantics.  Froze a
+  120-run, ten-seed contract across STR, V2, and Distributional through
+  `d9867b1`.
+- Ran a full 12-cell workload preflight, followed by one 60-run persistent
+  shard on each documented VM.  All simulations completed and passed fresh
+  strict validation; retrieved trees exactly match the recorded remote
+  identities.  No replacement or reserved seed was used.
+- Ran the predeclared 10,000-replication paired bootstrap and generated
+  thirteen PNG/PDF figure pairs through `bccb287`; fixed the figure-manifest
+  root in the separate tested commit `72b21fa`.
+- Found that one VI competitor per channel leaves every arm at zero misses.
+  With all competitors VI, V2 and Distributional each cut STR misses from 33
+  to 4 while staying below 1.20 sender airtime, but P99 is indistinguishable.
+  V2 uses less airtime and remains the engineering choice.
+- Traced every residual selective miss to the first eight frames with no
+  duplication action.  Archived this diagnostic, reports, raw identities,
+  and all figures under
+  `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`.  Stop before
+  testing a startup fallback.
 
 ### 2026-08-08 - Complete neutral scenario WMM comparison
 

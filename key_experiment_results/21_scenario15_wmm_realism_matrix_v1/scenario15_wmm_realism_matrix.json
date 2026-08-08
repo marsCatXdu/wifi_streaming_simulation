@@ -1,0 +1,2448 @@
+{
+  "analysis": "scenario15_wmm_realism_matrix_v1",
+  "bootstrap": {
+    "index_matrix_sha256": "e89fb4360cd4c45607727d2437967e0fcd1ff7ea9856b5483c8861a63aa650f1",
+    "paired_unit_count": 10,
+    "replications": 10000,
+    "seed": 20260808
+  },
+  "campaign_checks": {
+    "build_identity": {
+      "build_profile": "debug",
+      "compiler": "13.3.0",
+      "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+      "ns3_version": "ns-3.48",
+      "project_git_commit": "d9867b13b7fac8df9b936e717855017a22e0b5fa"
+    },
+    "exact_ten_paired_seeds": true,
+    "exact_twelve_treatment_cells": true,
+    "formal_shards": [
+      {
+        "completed_run_count": 60,
+        "experiment": "scenario15-wmm-realism-matrix-v1-shard0",
+        "matrix_sha256": "58dcf966e45547c704cadd5bdec3af740f0c4955cf7a704c47bfe72d5ff4b32a",
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/scenario15_wmm_realism_matrix_v1/shard0/experiment_manifest.json",
+        "project_commit": "d9867b13b7fac8df9b936e717855017a22e0b5fa",
+        "sha256": "38ebf035ee1e55c4ecde411d4144e729dce1d43259003ccea3d693efb21bd441"
+      },
+      {
+        "completed_run_count": 60,
+        "experiment": "scenario15-wmm-realism-matrix-v1-shard1",
+        "matrix_sha256": "e16bf83f9f79c2c8bdf6719cad393d941da1fb630c9d3aa5ece3457b74f4f30c",
+        "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/scenario15_wmm_realism_matrix_v1/shard1/experiment_manifest.json",
+        "project_commit": "d9867b13b7fac8df9b936e717855017a22e0b5fa",
+        "sha256": "7dcc7385b117606cb74fabee3cfe7df153de5d934a287c881f48cdbfd1ad62f0"
+      }
+    ],
+    "merged_run_count": 120,
+    "paired_obss_realizations_match": true,
+    "reserved_confirmation_seeds_used": false,
+    "single_build_identity": true,
+    "strictly_validated_run_count": 120
+  },
+  "competitor_effects_with_target_vi": {
+    "af41_vi_all_vi": {
+      "distributional_shadow_t2": {
+        "background_throughput_loss": {
+          "ci95_high": 0.03653168474257519,
+          "ci95_low": 9.467978578875387e-05,
+          "estimate": 0.017692731421976138,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 3578.9506749999982,
+          "ci95_low": 2485.2561999999984,
+          "estimate": 2997.3439999999987,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 482.2878833333333,
+          "ci95_low": 353.4264527777777,
+          "estimate": 416.61738888888885,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 7,
+          "worse": 3
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0005,
+          "ci95_low": 0.0,
+          "estimate": 0.00022222222222222223,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 132051.287,
+          "ci95_low": 57059.60100000002,
+          "estimate": 86514.80000000002,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0893682985106683,
+          "ci95_low": 1.0664482595379903,
+          "estimate": 1.077846766578524,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 0.03994825281561148,
+          "ci95_low": 0.004627056676441315,
+          "estimate": 0.021547646087782146,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 3003.9148749999968,
+          "ci95_low": 2502.1690999999996,
+          "estimate": 2771.0649999999987,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 466.6693888888888,
+          "ci95_low": 355.8198388888888,
+          "estimate": 410.51611111111106,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 7,
+          "worse": 3
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0005,
+          "ci95_low": 0.0,
+          "estimate": 0.00022222222222222223,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 151591.91599999997,
+          "ci95_low": 79711.958,
+          "estimate": 114388.84000000001,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0980130080789035,
+          "ci95_low": 1.0800788954822715,
+          "estimate": 1.0890999543623567,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.06087310402107675,
+          "ci95_low": 0.004744535130096903,
+          "estimate": 0.029039186895613023,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 6211.603374999991,
+          "ci95_low": 4682.7030249999925,
+          "estimate": 5453.19999999999,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 608.0421847222221,
+          "ci95_low": 484.81189861111113,
+          "estimate": 548.8805,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 1,
+          "worse": 9
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0027222222222222222,
+          "ci95_low": 0.001,
+          "estimate": 0.0018333333333333333,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0580268209157242,
+          "ci95_low": 1.023293360742532,
+          "estimate": 1.0414142947567335,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "af41_vi_one_vi_per_channel": {
+      "distributional_shadow_t2": {
+        "background_throughput_loss": {
+          "ci95_high": 4.0101504245990124e-05,
+          "ci95_low": -6.321995519750211e-05,
+          "estimate": -1.1326972741310115e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 239.10472499999906,
+          "ci95_low": -644.1125000000017,
+          "estimate": -186.72200000000095,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 29.41184999999997,
+          "ci95_low": 0.9173319444446333,
+          "estimate": 16.269500000000015,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 9594.876000000002,
+          "ci95_low": -2395.1689999999858,
+          "estimate": 3146.640000000014,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0063120734770565,
+          "ci95_low": 0.9986963725103505,
+          "estimate": 1.0025909243226951,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 4.4952681166710025e-05,
+          "ci95_low": -8.701674831132489e-05,
+          "estimate": -1.6096349169325563e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 283.8362999999996,
+          "ci95_low": -573.9931750000001,
+          "estimate": -127.47500000000036,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 29.944441666666613,
+          "ci95_low": 1.02763194444448,
+          "estimate": 16.758111111111113,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 23327.740999999987,
+          "ci95_low": 3998.885000000006,
+          "estimate": 13752.680000000004,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0099033802330468,
+          "ci95_low": 1.0011182711870872,
+          "estimate": 1.005762981331998,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": -1.2640142313519177e-05,
+          "ci95_low": -0.00011863775525555731,
+          "estimate": -6.259601782021562e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 235.5585999999997,
+          "ci95_low": -49.2195249999997,
+          "estimate": 93.99100000000007,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 34.09550277777764,
+          "ci95_low": -0.2817013888890509,
+          "estimate": 16.616444444444323,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0092674997322415,
+          "ci95_low": 0.9969745848773169,
+          "estimate": 1.002963132489144,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    }
+  },
+  "contract": {
+    "path": "experiments/model-selection/scenario15-wmm-realism-matrix-v1.json",
+    "sha256": "252fae821e78892f46addddf29f6ab919afce880a48b4f6d9815bdf97fa51d6e",
+    "status": "frozen_before_outcomes"
+  },
+  "evidence_role": "opened-seed WMM realism mechanism screen",
+  "profile_effects_vs_be_be": {
+    "af41_vi_all_vi": {
+      "distributional_shadow_t2": {
+        "background_throughput_loss": {
+          "ci95_high": 0.036445384246458566,
+          "ci95_low": -1.3819864673303428e-05,
+          "estimate": 0.017621281948857925,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -2101.2099749999916,
+          "ci95_low": -8121.090049999995,
+          "estimate": -5178.310999999995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -494.58421111111153,
+          "ci95_low": -1559.6518333333333,
+          "estimate": -1038.6362777777779,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 7,
+          "tie": 3,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0023888888888888887,
+          "ci95_low": -0.007833333333333335,
+          "estimate": -0.005055555555555555,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 54603.78599999999,
+          "ci95_low": 1773.0390000000134,
+          "estimate": 27064.960000000003,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.9578947368421052,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9831620298154924,
+          "ci95_low": 0.8791621710382798,
+          "estimate": 0.9245884011529449,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 0.03986033268963202,
+          "ci95_low": 0.0045137968259536315,
+          "estimate": 0.02147180923274683,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -3238.238350000001,
+          "ci95_low": -8251.274850000023,
+          "estimate": -5841.8550000000105,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -557.3150652777781,
+          "ci95_low": -1557.1589319444442,
+          "estimate": -1069.7289999999998,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 2,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0026666666666666666,
+          "ci95_low": -0.007666666666666667,
+          "estimate": -0.005166666666666667,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 165417.45399999994,
+          "ci95_low": 29681.121000000003,
+          "estimate": 92247.36,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.9587628865979382,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0080920099548136,
+          "ci95_low": 0.8789247549361136,
+          "estimate": 0.9336996936547203,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.060913755264168215,
+          "ci95_low": 0.004750228573198035,
+          "estimate": 0.029061182346415304,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -5073.303750000003,
+          "ci95_low": -9719.250100000017,
+          "estimate": -7470.971000000006,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -638.8348680555555,
+          "ci95_low": -1311.4221305555554,
+          "estimate": -982.2422777777778,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 0,
+          "worse": 2
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.002277777777777778,
+          "ci95_low": -0.006833333333333334,
+          "estimate": -0.004611111111111111,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.7155172413793103,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0100174349633906,
+          "ci95_low": 0.9548083171327889,
+          "estimate": 0.9805459387726136,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "af41_vi_be": {
+      "distributional_shadow_t2": {
+        "background_throughput_loss": {
+          "ci95_high": -2.1531273862618334e-05,
+          "ci95_low": -0.00013145438705682854,
+          "estimate": -7.273637832461155e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -5139.054825000006,
+          "ci95_low": -11093.370099999996,
+          "estimate": -8175.654999999994,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -864.2233486111114,
+          "ci95_low": -2023.6562194444448,
+          "estimate": -1455.2536666666667,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 7,
+          "tie": 3,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0025,
+          "ci95_low": -0.00811111111111111,
+          "estimate": -0.005277777777777778,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": -26871.816000000006,
+          "ci95_low": -95371.55700000002,
+          "estimate": -59449.84000000001,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9140195493576728,
+          "ci95_low": 0.813846780939843,
+          "estimate": 0.8578106181901194,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": -2.21478024398647e-05,
+          "ci95_low": -0.00014613597270754508,
+          "estimate": -7.750694730535024e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -6072.506400000007,
+          "ci95_low": -10955.295500000026,
+          "estimate": -8612.92000000001,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -924.5236986111115,
+          "ci95_low": -2011.4142402777775,
+          "estimate": -1480.2451111111109,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 2,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.002777777777777778,
+          "ci95_low": -0.007944444444444445,
+          "estimate": -0.005388888888888889,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 20869.307999999986,
+          "ci95_low": -62917.38500000001,
+          "estimate": -22141.480000000003,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.924344702743167,
+          "ci95_low": 0.8068851380819521,
+          "estimate": 0.8573131326604272,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 5.228742970211641e-05,
+          "ci95_low": -7.752011945250104e-06,
+          "estimate": 2.2653283742624097e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -10373.709574999986,
+          "ci95_low": -15119.007425000007,
+          "estimate": -12924.170999999995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -1135.5906319444446,
+          "ci95_low": -1906.3972847222221,
+          "estimate": -1531.1227777777776,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 9,
+          "tie": 1,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.004222222222222223,
+          "ci95_low": -0.008666666666666666,
+          "estimate": -0.0064444444444444445,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9827658162992932,
+          "ci95_low": 0.9072817079692524,
+          "estimate": 0.9415522176999326,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "af41_vi_one_vi_per_channel": {
+      "distributional_shadow_t2": {
+        "background_throughput_loss": {
+          "ci95_high": -3.322591496336405e-05,
+          "ci95_low": -0.00013646158310078315,
+          "estimate": -8.406417494888352e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -5280.563850000005,
+          "ci95_low": -11384.564349999993,
+          "estimate": -8362.376999999995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -852.4979569444451,
+          "ci95_low": -2004.0356847222224,
+          "estimate": -1438.9841666666669,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 7,
+          "tie": 3,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0025,
+          "ci95_low": -0.00811111111111111,
+          "estimate": -0.005277777777777778,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": -25514.609000000015,
+          "ci95_low": -89750.04200000002,
+          "estimate": -56303.2,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9158649032583991,
+          "ci95_low": 0.8162672662032493,
+          "estimate": 0.8600331405850544,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": -2.8041769000886066e-05,
+          "ci95_low": -0.00015849415596090323,
+          "estimate": -9.360454405338281e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -6129.865075000015,
+          "ci95_low": -11147.149950000014,
+          "estimate": -8740.39500000001,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -910.3320680555557,
+          "ci95_low": -1993.177161111111,
+          "estimate": -1463.4869999999999,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 2,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.002777777777777778,
+          "ci95_low": -0.007944444444444445,
+          "estimate": -0.005388888888888889,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 34341.66599999999,
+          "ci95_low": -47173.69200000001,
+          "estimate": -8388.8,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9290848017339677,
+          "ci95_low": 0.8125621135227631,
+          "estimate": 0.8622538122396259,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 9.605225242514948e-06,
+          "ci95_low": -8.916481772039963e-05,
+          "estimate": -3.994131607232276e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -10378.28187499999,
+          "ci95_low": -14943.163574999997,
+          "estimate": -12830.179999999995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -1123.6829902777781,
+          "ci95_low": -1888.188244444445,
+          "estimate": -1514.5063333333333,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 9,
+          "tie": 1,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.004222222222222223,
+          "ci95_low": -0.008666666666666666,
+          "estimate": -0.0064444444444444445,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 1.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 0.9855101656688855,
+          "ci95_low": 0.9093160758765914,
+          "estimate": 0.9443421616664247,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "treatments": {
+    "af41_vi_all_vi": {
+      "distributional_shadow_t2": {
+        "action_count": 1867,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0005,
+          "ci95_low": 0.0,
+          "estimate": 0.00022222222222222223
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 26.8470412,
+          "ci95_low": 25.830736,
+          "estimate": 26.363744
+        },
+        "completed_frame_count": 17996,
+        "completed_frame_p99_us": {
+          "ci95_high": 12640.874374999998,
+          "ci95_low": 10507.005,
+          "estimate": 11542.500999999998
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2921.631161111111,
+          "ci95_low": 2515.9918680555556,
+          "estimate": 2725.369333333333
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 12723.425549999998,
+          "ci95_low": 10531.740899999999,
+          "estimate": 11600.088999999998
+        },
+        "deadline_miss_count": 4,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 4,
+        "max_deadline_miss_burst": 1,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 458195.407,
+          "ci95_low": 392774.24,
+          "estimate": 425915.64
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4781041.1225000005,
+          "ci95_low": 4307048.9725,
+          "estimate": 4549095.5
+        }
+      },
+      "score_aware_t2_v2": {
+        "action_count": 1554,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0005,
+          "ci95_low": 0.0,
+          "estimate": 0.00022222222222222223
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 26.732304,
+          "ci95_low": 25.766043999999997,
+          "estimate": 26.260080000000002
+        },
+        "completed_frame_count": 17996,
+        "completed_frame_p99_us": {
+          "ci95_high": 12211.179049999997,
+          "ci95_low": 10526.019124999999,
+          "estimate": 11324.770999999997
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2907.6408194444443,
+          "ci95_low": 2520.1586763888886,
+          "estimate": 2720.4030555555555
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 12474.503749999998,
+          "ci95_low": 10568.772374999997,
+          "estimate": 11464.750999999998
+        },
+        "deadline_miss_count": 4,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 4,
+        "max_deadline_miss_burst": 1,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 374775.66500000004,
+          "ci95_low": 299159.43299999996,
+          "estimate": 342129.24
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4725575.9625,
+          "ci95_low": 4157650.645,
+          "estimate": 4453512.9
+        }
+      },
+      "str_mlo": {
+        "action_count": 0,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0027222222222222222,
+          "ci95_low": 0.001,
+          "estimate": 0.0018333333333333333
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 26.7161144,
+          "ci95_low": 25.249515199999998,
+          "estimate": 26.059392
+        },
+        "completed_frame_count": 17967,
+        "completed_frame_p99_us": {
+          "ci95_high": 12409.881249999988,
+          "ci95_low": 10536.220849999998,
+          "estimate": 11481.093999999988
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2858.6180944444445,
+          "ci95_low": 2571.683101388889,
+          "estimate": 2719.777
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 13733.310649999996,
+          "ci95_low": 11060.436999999998,
+          "estimate": 12418.790999999997
+        },
+        "deadline_miss_count": 33,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 33,
+        "max_deadline_miss_burst": 2,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4256086.48,
+          "ci95_low": 3911548.8375,
+          "estimate": 4087201.4
+        }
+      }
+    },
+    "af41_vi_be": {
+      "distributional_shadow_t2": {
+        "action_count": 1741,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.086761600000003,
+          "ci95_low": 26.5782968,
+          "estimate": 26.838592
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 9409.122299999999,
+          "ci95_low": 7744.6759999999995,
+          "estimate": 8545.157
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2449.2141555555554,
+          "ci95_low": 2157.5660000000003,
+          "estimate": 2308.7519444444442
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 9409.122299999999,
+          "ci95_low": 7744.6759999999995,
+          "estimate": 8545.157
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 370834.985,
+          "ci95_low": 302813.17699999997,
+          "estimate": 339400.83999999997
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4427340.655,
+          "ci95_low": 3991690.8325,
+          "estimate": 4220540.1
+        }
+      },
+      "score_aware_t2_v2": {
+        "action_count": 1189,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.0866504,
+          "ci95_low": 26.5780908,
+          "estimate": 26.838383999999998
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 9422.538999999999,
+          "ci95_low": 7752.593,
+          "estimate": 8553.705999999998
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2449.1753333333336,
+          "ci95_low": 2159.844111111111,
+          "estimate": 2309.8869444444445
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 9422.538999999999,
+          "ci95_low": 7752.593,
+          "estimate": 8553.705999999998
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 284008.86,
+          "ci95_low": 167319.849,
+          "estimate": 227740.4
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4342462.1575,
+          "ci95_low": 3817454.335,
+          "estimate": 4089168.2
+        }
+      },
+      "str_mlo": {
+        "action_count": 0,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.086752800000003,
+          "ci95_low": 26.5787196,
+          "estimate": 26.838767999999998
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 6343.688549999999,
+          "ci95_low": 5693.292149999999,
+          "estimate": 6027.893999999999
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2256.5352152777778,
+          "ci95_low": 2080.5756583333336,
+          "estimate": 2170.8965
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 6343.688549999999,
+          "ci95_low": 5693.292149999999,
+          "estimate": 6027.893999999999
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4040204.7249999996,
+          "ci95_low": 3801261.68,
+          "estimate": 3924664.2
+        }
+      }
+    },
+    "af41_vi_one_vi_per_channel": {
+      "distributional_shadow_t2": {
+        "action_count": 1751,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.0866732,
+          "ci95_low": 26.5783644,
+          "estimate": 26.838896
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 9162.944249999997,
+          "ci95_low": 7604.285624999998,
+          "estimate": 8358.434999999998
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2470.0075,
+          "ci95_low": 2171.1537500000004,
+          "estimate": 2325.0214444444446
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 9162.944249999997,
+          "ci95_low": 7604.285624999998,
+          "estimate": 8358.434999999998
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 370982.11499999993,
+          "ci95_low": 310781.948,
+          "estimate": 342547.48
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4436964.744999999,
+          "ci95_low": 4005619.78,
+          "estimate": 4231475.2
+        }
+      },
+      "score_aware_t2_v2": {
+        "action_count": 1257,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.0864516,
+          "ci95_low": 26.5781216,
+          "estimate": 26.838816
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 9198.956324999997,
+          "ci95_low": 7687.809799999999,
+          "estimate": 8426.230999999998
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2470.3699944444447,
+          "ci95_low": 2173.4807833333334,
+          "estimate": 2326.6450555555557
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 9198.956324999997,
+          "ci95_low": 7687.809799999999,
+          "estimate": 8426.230999999998
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 295079.422,
+          "ci95_low": 182157.706,
+          "estimate": 241493.08000000002
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4365644.3625,
+          "ci95_low": 3837861.2975,
+          "estimate": 4112734.0
+        }
+      },
+      "str_mlo": {
+        "action_count": 0,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.0890916,
+          "ci95_low": 26.57968,
+          "estimate": 26.840448
+        },
+        "completed_frame_count": 18000,
+        "completed_frame_p99_us": {
+          "ci95_high": 6476.658574999999,
+          "ci95_low": 5749.205999999999,
+          "estimate": 6121.884999999999
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 2274.326891666667,
+          "ci95_low": 2098.3220652777777,
+          "estimate": 2187.512944444444
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 6476.658574999999,
+          "ci95_low": 5749.205999999999,
+          "estimate": 6121.884999999999
+        },
+        "deadline_miss_count": 0,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 0,
+        "max_deadline_miss_burst": 0,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4053267.69,
+          "ci95_low": 3818203.4,
+          "estimate": 3936293.5
+        }
+      }
+    },
+    "be_be": {
+      "distributional_shadow_t2": {
+        "action_count": 1791,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.00811111111111111,
+          "ci95_low": 0.0025,
+          "estimate": 0.005277777777777778
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.084721200000004,
+          "ci95_low": 26.577136000000003,
+          "estimate": 26.83664
+        },
+        "completed_frame_count": 17905,
+        "completed_frame_p99_us": {
+          "ci95_high": 20361.41012500001,
+          "ci95_low": 12957.0976,
+          "estimate": 16720.811999999994
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 4467.5778875,
+          "ci95_low": 3027.2603708333336,
+          "estimate": 3764.005611111111
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 26925.42039999999,
+          "ci95_low": 14959.896924999997,
+          "estimate": 21014.902
+        },
+        "deadline_miss_count": 95,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 95,
+        "max_deadline_miss_burst": 6,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 447931.464,
+          "ci95_low": 353665.338,
+          "estimate": 398850.68
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 5425630.672499999,
+          "ci95_low": 4387780.052499999,
+          "estimate": 4920130.4
+        }
+      },
+      "score_aware_t2_v2": {
+        "action_count": 1172,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.007944444444444445,
+          "ci95_low": 0.002777777777777778,
+          "estimate": 0.005388888888888889
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.084752,
+          "ci95_low": 26.5766196,
+          "estimate": 26.836304000000002
+        },
+        "completed_frame_count": 17903,
+        "completed_frame_p99_us": {
+          "ci95_high": 20208.03167500001,
+          "ci95_low": 13903.727999999997,
+          "estimate": 17166.626000000007
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 4457.361097222222,
+          "ci95_low": 3086.353561111111,
+          "estimate": 3790.1320555555553
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 27680.65802499999,
+          "ci95_low": 16333.193649999996,
+          "estimate": 22114.846999999994
+        },
+        "deadline_miss_count": 97,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 97,
+        "max_deadline_miss_burst": 6,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 337008.01,
+          "ci95_low": 156686.227,
+          "estimate": 249881.88
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 5357482.1225000005,
+          "ci95_low": 4143178.7525,
+          "estimate": 4769748.7
+        }
+      },
+      "str_mlo": {
+        "action_count": 0,
+        "all_generated_deadline_miss_rate": {
+          "ci95_high": 0.008666666666666666,
+          "ci95_low": 0.004222222222222223,
+          "estimate": 0.0064444444444444445
+        },
+        "background_throughput_mbps": {
+          "ci95_high": 27.087284,
+          "ci95_low": 26.5793412,
+          "estimate": 26.839376
+        },
+        "completed_frame_count": 17884,
+        "completed_frame_p99_us": {
+          "ci95_high": 21406.046775000003,
+          "ci95_low": 16151.826949999988,
+          "estimate": 18952.064999999995
+        },
+        "deadline_censored_mean_us": {
+          "ci95_high": 4160.05412361111,
+          "ci95_low": 3225.4945944444444,
+          "estimate": 3702.019277777778
+        },
+        "deadline_censored_p99_us": {
+          "ci95_high": 28619.88529999999,
+          "ci95_low": 19835.647999999994,
+          "estimate": 24418.948999999993
+        },
+        "deadline_miss_count": 116,
+        "generated_frame_count": 18000,
+        "incomplete_frame_count": 116,
+        "max_deadline_miss_burst": 11,
+        "measured_secondary_airtime_us": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0
+        },
+        "run_count": 10,
+        "sender_airtime_us": {
+          "ci95_high": 4448450.6450000005,
+          "ci95_low": 3881263.4349999996,
+          "estimate": 4168291.6
+        }
+      }
+    }
+  },
+  "within_profile_comparisons": {
+    "af41_vi_all_vi": {
+      "distributional_shadow_t2_minus_score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 3.664996110799012e-05,
+          "ci95_low": -0.011980125023552878,
+          "estimate": -0.003947588887771802,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 617.0511750000011,
+          "ci95_low": -122.84390000000073,
+          "estimate": 217.7300000000003,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 17.48533333333321,
+          "ci95_low": -7.020343055555702,
+          "estimate": 4.966277777777714,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 142865.4,
+          "ci95_low": 35165.198,
+          "estimate": 83786.4,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.0,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0388108627481392,
+          "ci95_low": 1.0084495330437997,
+          "estimate": 1.0214622932831292,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "distributional_shadow_t2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": -4.4223031102097555e-05,
+          "ci95_low": -0.03079527860690194,
+          "estimate": -0.011679167342047103,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 1383.7169000000085,
+          "ci95_low": -1228.569349999989,
+          "estimate": 61.40700000000943,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 128.58858333333322,
+          "ci95_low": -122.8485666666667,
+          "estimate": 5.592333333333272,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 2,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0007777777777777778,
+          "ci95_low": -0.0025555555555555557,
+          "estimate": -0.0016111111111111111,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 458195.407,
+          "ci95_low": 392774.24,
+          "estimate": 425915.64,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.8787878787878788,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.1290671223817677,
+          "ci95_low": 1.0954742568849438,
+          "estimate": 1.11300987027456,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.007800415747836534,
+          "ci95_low": -0.02750314873990683,
+          "estimate": -0.007701177372058554,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 1011.8520000000059,
+          "ci95_low": -1259.08257499999,
+          "estimate": -156.32299999999086,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 114.0740263888889,
+          "ci95_low": -119.83255277777776,
+          "estimate": 0.6260555555555584,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 8,
+          "tie": 2,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": -0.0007777777777777778,
+          "ci95_low": -0.0025555555555555557,
+          "estimate": -0.0016111111111111111,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 374775.66500000004,
+          "ci95_low": 299159.43299999996,
+          "estimate": 342129.24,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.8787878787878788,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.1191437949093317,
+          "ci95_low": 1.055442254164895,
+          "estimate": 1.0896240395689825,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "af41_vi_be": {
+      "distributional_shadow_t2_minus_score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 1.0735218784996279e-05,
+          "ci95_low": -3.085211310099867e-05,
+          "estimate": -7.750094044522982e-06,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 3.4070000000006986,
+          "ci95_low": -21.387549999999624,
+          "estimate": -8.548999999999705,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 0.38572916666652635,
+          "ci95_low": -2.745733333333454,
+          "estimate": -1.1350000000001046,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 161494.6439999999,
+          "ci95_low": 63522.73499999999,
+          "estimate": 111660.43999999999,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.049096838419286,
+          "ci95_low": 1.0173475390029654,
+          "estimate": 1.0321268027076997,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "distributional_shadow_t2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 6.167186276461177e-05,
+          "ci95_low": -4.6623461107259116e-05,
+          "estimate": 6.5576780573506355e-06,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 3210.891525,
+          "ci95_low": 1866.4839750000006,
+          "estimate": 2517.2630000000004,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 223.1974041666666,
+          "ci95_low": 44.824340277777615,
+          "estimate": 137.85544444444434,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 370834.985,
+          "ci95_low": 302813.17699999997,
+          "estimate": 339400.83999999997,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.1055956351704033,
+          "ci95_low": 1.040227239653557,
+          "estimate": 1.0753888447322446,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 7.692468725448985e-05,
+          "ci95_low": -4.171560525010887e-05,
+          "estimate": 1.4307661216017564e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 3223.678,
+          "ci95_low": 1872.6677250000005,
+          "estimate": 2525.812,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 223.41619583333335,
+          "ci95_low": 46.81083333333336,
+          "estimate": 138.99044444444445,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 284008.86,
+          "ci95_low": 167319.849,
+          "estimate": 227740.4,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0850036653796304,
+          "ci95_low": 0.9930034206029322,
+          "estimate": 1.041915433172601,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "af41_vi_one_vi_per_channel": {
+      "distributional_shadow_t2_minus_score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 1.5439588771601344e-05,
+          "ci95_low": -2.1593557553278853e-05,
+          "estimate": -2.9807574222218136e-06,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -1.2936249999998148,
+          "ci95_low": -177.4382250000013,
+          "estimate": -67.79600000000028,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": -0.015369444444548037,
+          "ci95_low": -3.368487500000148,
+          "estimate": -1.6236111111111995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 148159.25099999996,
+          "ci95_low": 53073.264999999985,
+          "estimate": 101054.4,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0450001382572693,
+          "ci95_low": 1.0143351943866579,
+          "estimate": 1.0288715973364677,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "distributional_shadow_t2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.00011942051870356405,
+          "ci95_low": -2.973112343029882e-06,
+          "estimate": 5.782317791414027e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 2749.127624999999,
+          "ci95_low": 1724.122275,
+          "estimate": 2236.5499999999993,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 226.76662638888885,
+          "ci95_low": 40.05644444444456,
+          "estimate": 137.50850000000005,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 370982.11499999993,
+          "ci95_low": 310781.948,
+          "estimate": 342547.48,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.105426065429616,
+          "ci95_low": 1.0390265849611615,
+          "estimate": 1.074989758766718,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.00013056941638764637,
+          "ci95_low": -5.9424939407026756e-06,
+          "estimate": 6.080375409522887e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 2814.4759999999997,
+          "ci95_low": 1778.5664499999993,
+          "estimate": 2304.3459999999995,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 227.8004333333334,
+          "ci95_low": 41.81572222222244,
+          "estimate": 139.13211111111124,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 0,
+          "tie": 10,
+          "worse": 0
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0,
+          "ci95_low": 0.0,
+          "estimate": 0.0,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 295079.422,
+          "ci95_low": 182157.706,
+          "estimate": 241493.08000000002,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": null,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.088172731652665,
+          "ci95_low": 0.995730484520595,
+          "estimate": 1.044824020363319,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    },
+    "be_be": {
+      "distributional_shadow_t2_minus_score_aware_t2_v2": {
+        "background_throughput_loss": {
+          "ci95_high": 9.532372489426398e-06,
+          "ci95_low": -3.530880241529033e-05,
+          "estimate": -1.2520353026124198e-05,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 610.0293999999842,
+          "ci95_low": -1448.1671750000223,
+          "estimate": -445.814000000015,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 72.78030555555564,
+          "ci95_low": -107.00620833333319,
+          "estimate": -26.126444444444246,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 6,
+          "tie": 2,
+          "worse": 2
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0009444444444444446,
+          "ci95_low": -0.0010555555555555557,
+          "estimate": -0.00011111111111111104,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 256467.706,
+          "ci95_low": 51273.97099999998,
+          "estimate": 148968.8,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.020618556701030966,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.0617658343634913,
+          "ci95_low": 1.0097499673800205,
+          "estimate": 1.0315282228600429,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "distributional_shadow_t2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.00014890431940508265,
+          "ci95_low": 5.4591704111150996e-05,
+          "estimate": 0.00010193977684136435,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": -117.30152499997556,
+          "ci95_low": -4615.947100000011,
+          "estimate": -2231.2530000000006,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 434.950811111111,
+          "ci95_low": -331.2257708333332,
+          "estimate": 61.986333333333505,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 6,
+          "tie": 1,
+          "worse": 3
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.001,
+          "ci95_low": -0.003111111111111111,
+          "estimate": -0.0011666666666666665,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 447931.464,
+          "ci95_low": 353665.338,
+          "estimate": 398850.68,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.18103448275862066,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.2329253535684064,
+          "ci95_low": 1.1171627629138747,
+          "estimate": 1.1803709702075547,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      },
+      "score_aware_t2_v2_minus_str_mlo": {
+        "background_throughput_loss": {
+          "ci95_high": 0.00017688434379648784,
+          "ci95_low": 5.889237040285489e-05,
+          "estimate": 0.0001144586968042649,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "one minus left/right mean OBSS throughput ratio"
+        },
+        "completed_frame_p99_delta_us": {
+          "ci95_high": 173.950650000011,
+          "ci95_low": -4123.2556249999725,
+          "estimate": -1785.4389999999858,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right completed-frame HF7 P99"
+        },
+        "deadline_censored_mean_delta_us": {
+          "ci95_high": 404.2199930555553,
+          "ci95_low": -276.0269513888889,
+          "estimate": 88.11277777777775,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated censored mean latency"
+        },
+        "deadline_miss_direction_counts": {
+          "better": 6,
+          "tie": 0,
+          "worse": 4
+        },
+        "deadline_miss_rate_delta": {
+          "ci95_high": 0.0004999999999999998,
+          "ci95_low": -0.0025,
+          "estimate": -0.0010555555555555557,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right all-generated deadline-miss rate"
+        },
+        "measured_secondary_airtime_delta_us": {
+          "ci95_high": 337008.01,
+          "ci95_low": 156686.227,
+          "estimate": 249881.88,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "mean paired left-minus-right tagged secondary airtime"
+        },
+        "relative_deadline_miss_reduction": 0.1637931034482758,
+        "sender_airtime_ratio": {
+          "ci95_high": 1.2209224650280797,
+          "ci95_low": 1.0525036792235294,
+          "estimate": 1.1442934318702656,
+          "method": "deterministic paired whole-run percentile bootstrap",
+          "paired_unit_count": 10,
+          "replications": 10000,
+          "seed": 20260808,
+          "statistic": "ratio of left and right mean sender PHY airtime"
+        }
+      }
+    }
+  }
+}

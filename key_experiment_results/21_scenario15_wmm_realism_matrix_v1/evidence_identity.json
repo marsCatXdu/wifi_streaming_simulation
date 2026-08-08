@@ -1,0 +1,66 @@
+{
+  "analysis": {
+    "analysis_commit": "bccb287236828d8f0a01ba7a89818f94b15d86e3",
+    "bootstrap_replications": 10000,
+    "bootstrap_seed": 20260808,
+    "figure_manifest_fix_commit": "72b21fa9ad8e41e244cd59c4f3faa6f9d49211f5",
+    "strictly_validated_run_count": 120
+  },
+  "campaign": {
+    "analysis_run_count": 120,
+    "binary_sha256": "14cb5d6e1553775f958e579834cd36f7fe0be2b33b6269485fc4d667d8b8307b",
+    "implementation_commit": "29417c40324857a5a6e29fddfdc7ee8c3648da4e",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "project_commit": "d9867b13b7fac8df9b936e717855017a22e0b5fa",
+    "reserved_seed_range_used": false,
+    "runtime_contract_id": "scenario15-wmm-realism-matrix-v1",
+    "runtime_contract_sha256": "252fae821e78892f46addddf29f6ab919afce880a48b4f6d9815bdf97fa51d6e",
+    "seed_first": 1251,
+    "seed_last": 1260,
+    "simulation_count": 120
+  },
+  "preflight": {
+    "manifest_sha256": "8d5c92db91c5dafb4ada309470074edc489100551f5e17e98f996b7ebd5fb4c8",
+    "run_count": 12
+  },
+  "raw_tree_hash_method": "SHA-256 of sha256sum lines over lexicographically NUL-sorted regular-file paths, including the shard directory name",
+  "schema_version": 1,
+  "shards": [
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_realism_matrix_v1/archives/scenario15_wmm_realism_matrix_v1_shard0_d9867b1.tar.zst",
+        "sha256": "0f1ddae476d7ff9a287f879e6387ff14b332a19ce78a7c66cc841136ae328c12",
+        "size_bytes": 72889503
+      },
+      "experiment": "scenario15-wmm-realism-matrix-v1-shard0",
+      "host": "jingweili@10.120.16.105:30022",
+      "manifest_sha256": "38ebf035ee1e55c4ecde411d4144e729dce1d43259003ccea3d693efb21bd441",
+      "matrix_sha256": "58dcf966e45547c704cadd5bdec3af740f0c4955cf7a704c47bfe72d5ff4b32a",
+      "raw_tree": {
+        "regular_file_count": 942,
+        "sha256": "2cd8a62d09708e71e9c622b608a2724987048b41552570e49dbc89fdc0746ecc",
+        "size_bytes": 412196775
+      },
+      "run_count": 60,
+      "service": "wifi-wmm-realism-shard0-v1.service"
+    },
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_realism_matrix_v1/archives/scenario15_wmm_realism_matrix_v1_shard1_d9867b1.tar.zst",
+        "sha256": "983586d5e235fb660bd45e93d179d79a83cdb99cb4d3f29186efe12760672ff7",
+        "size_bytes": 72205336
+      },
+      "experiment": "scenario15-wmm-realism-matrix-v1-shard1",
+      "host": "jingweili@10.120.17.30:30022",
+      "manifest_sha256": "7dcc7385b117606cb74fabee3cfe7df153de5d934a287c881f48cdbfd1ad62f0",
+      "matrix_sha256": "e16bf83f9f79c2c8bdf6719cad393d941da1fb630c9d3aa5ece3457b74f4f30c",
+      "raw_tree": {
+        "regular_file_count": 942,
+        "sha256": "8f43e83ac5e0c7e76065a029e192eb58b2c49b5b53ba2ced943e875abd20702a",
+        "size_bytes": 409518136
+      },
+      "run_count": 60,
+      "service": "wifi-wmm-realism-shard1-v1.service"
+    }
+  ]
+}

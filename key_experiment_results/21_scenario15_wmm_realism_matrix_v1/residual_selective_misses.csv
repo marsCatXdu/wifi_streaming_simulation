@@ -1,0 +1,9 @@
+profile,arm,seed,run_id,frame_id,frame_type,duplicated,incomplete,unique_packets_received
+af41_vi_all_vi,score_aware_t2_v2,1251,a65f60793edb350949fd,5,P_FRAME,0,1,1
+af41_vi_all_vi,distributional_shadow_t2,1251,6a04fa97372d4ca056a8,5,P_FRAME,0,1,1
+af41_vi_all_vi,score_aware_t2_v2,1257,f4a00f6914984d3b7ff0,3,P_FRAME,0,1,5
+af41_vi_all_vi,distributional_shadow_t2,1257,16afc6fd078b4f04001c,3,P_FRAME,0,1,5
+af41_vi_all_vi,score_aware_t2_v2,1258,287c8ad3719434ff9cfe,2,P_FRAME,0,1,1
+af41_vi_all_vi,score_aware_t2_v2,1258,287c8ad3719434ff9cfe,4,P_FRAME,0,1,1
+af41_vi_all_vi,distributional_shadow_t2,1258,a464b38516ae6dec6b03,2,P_FRAME,0,1,1
+af41_vi_all_vi,distributional_shadow_t2,1258,a464b38516ae6dec6b03,4,P_FRAME,0,1,1

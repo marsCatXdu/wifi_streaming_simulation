@@ -48,6 +48,7 @@ frame-independent 1 ms polling evidence is preserved under
 | `18_t2_repair_mechanism_v1` | Representative-scenario T2 action-mechanism gate | Protected factual panel, rejected V1 oracle audit, deadline-correct repair replay, resource sensitivity, and reviewed figures |
 | `19_environment_generalization_adaptive_mcs_v1` | Fixed-versus-adaptive target-MCS qualification | Complete 575-run adaptive evidence, 191 matched fixed/adaptive units, deterministic excluded failure, and ten reviewed figures |
 | `20_scenario15_wmm_comparison_v1` | WMM video-priority ablation in the neutral scenario-15 environment | Strict 288-run off/on comparison of STR, V2, and Distributional, twelve figure pairs, source manifests, and raw identities |
+| `21_scenario15_wmm_realism_matrix_v1` | WMM access-category realism screen in scenario 15 | Strict 120-run four-profile comparison of STR, V2, and Distributional, startup-miss diagnostic, thirteen figure pairs, source manifests, and raw identities |
 
 ## Neutral-environment development results
 
@@ -364,6 +365,24 @@ best-effort mapping itself is the declared treatment.  See
 `20_scenario15_wmm_comparison_v1/README.md` for semantics, paired intervals,
 all twelve figure pairs, and the small cross-build reproduction note.
 
+## WMM access-category realism screen
+
+The follow-up screen keeps the target in AF41 / TID 4 / AC_VI and progressively
+adds VI competitors.  One VI competitor per channel leaves all three arms at
+zero misses.  When all 32 competing streams are VI, STR has 33/18,000 misses
+(0.1833%), while V2 and Distributional each have 4/18,000 (0.0222%).  This is
+an 87.88% reduction with sender-airtime ratios of 1.0896 and 1.1130.  Both
+paired miss intervals favor the selective policies and both airtime upper
+endpoints remain below 1.20.
+
+P99 is indistinguishable from STR, so this is not yet a complete victory under
+the project's definition.  Distributional adds no reliability over V2 and
+uses 2.15% more airtime.  All four residual selective misses are identical,
+unacted frames within the first eight frames, isolating the known startup
+history gap as the next small hypothesis.  See
+`21_scenario15_wmm_realism_matrix_v1/README.md` for all four profiles,
+intervals, diagnostics, and thirteen figure pairs.
+
 ## Figure guide
 
 For the streaming experiments:
@@ -419,3 +438,6 @@ For online prediction:
     mapping and `on` means target CS5 / TID 5 / AC_VI.  EHT's QoS machinery is
     present in both modes; the treatment is video access-category priority,
     not literal removal of WMM support.
+14. The WMM realism matrix uses only ten opened seeds per treatment cell.  Its
+    all-VI result is preliminary directional evidence, not reserved-seed final
+    qualification; completed-frame P99 remains survivor-conditioned.

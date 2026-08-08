@@ -1,0 +1,194 @@
+{
+  "schema_version": 1,
+  "runtime_contract_id": "scenario15-wmm-realism-matrix-v1",
+  "status": "frozen_before_outcomes",
+  "purpose": "Screen whether the scenario-15 WMM result survives progressively more realistic access-category competition for STR MLO, score-aware T2 V2, and distributional-shadow T2.",
+  "implementation_commit": "29417c40324857a5a6e29fddfdc7ee8c3648da4e",
+  "fixed_environment": {
+    "scenario": "unchanged_neutral_mixed4x4",
+    "frame_profile": "canonical_v1",
+    "mcs_mode": "fixed",
+    "duration_s": 60,
+    "fps": 30,
+    "deadline_us": 33333,
+    "obss_bss_count": 4,
+    "obss_stations_per_bss": 4,
+    "obss_flow_count": 32,
+    "obss_flows_per_channel": 16,
+    "unchanged_from_key_result": "15_distributional_shadow_t2_str_engineering_v1"
+  },
+  "profiles": [
+    {
+      "profile_id": "be_be",
+      "target": {
+        "wmm_mode": "off",
+        "ipv4_tos": 0,
+        "diffserv": "CS0",
+        "tid": 0,
+        "access_category": "AC_BE"
+      },
+      "competitors": {
+        "obss_wmm_profile": "be",
+        "be_flow_count": 32,
+        "vi_flow_count": 0,
+        "vi_flow_ordinals": []
+      }
+    },
+    {
+      "profile_id": "af41_vi_be",
+      "target": {
+        "wmm_mode": "af41",
+        "ipv4_tos": 136,
+        "diffserv": "AF41",
+        "tid": 4,
+        "access_category": "AC_VI"
+      },
+      "competitors": {
+        "obss_wmm_profile": "be",
+        "be_flow_count": 32,
+        "vi_flow_count": 0,
+        "vi_flow_ordinals": []
+      }
+    },
+    {
+      "profile_id": "af41_vi_one_vi_per_channel",
+      "target": {
+        "wmm_mode": "af41",
+        "ipv4_tos": 136,
+        "diffserv": "AF41",
+        "tid": 4,
+        "access_category": "AC_VI"
+      },
+      "competitors": {
+        "obss_wmm_profile": "one_vi_per_channel",
+        "be_flow_count": 30,
+        "vi_flow_count": 2,
+        "vi_flow_ordinals": [0, 16],
+        "selection": "first uplink flow on the first OBSS BSS of each channel"
+      }
+    },
+    {
+      "profile_id": "af41_vi_all_vi",
+      "target": {
+        "wmm_mode": "af41",
+        "ipv4_tos": 136,
+        "diffserv": "AF41",
+        "tid": 4,
+        "access_category": "AC_VI"
+      },
+      "competitors": {
+        "obss_wmm_profile": "all_vi",
+        "be_flow_count": 0,
+        "vi_flow_count": 32,
+        "vi_flow_ordinals": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31],
+        "interpretation": "Every OBSS ON/OFF flow is treated as latency-sensitive in this stress case."
+      }
+    }
+  ],
+  "historical_case_note": "The earlier WMM-on campaign used CS5/TID 5. The af41_vi_be profile reproduces its AC_VI-versus-AC_BE contention relationship but intentionally uses AF41/TID 4, so it is not a bit-identical rerun.",
+  "campaign": {
+    "seeds": [1251, 1252, 1253, 1254, 1255, 1256, 1257, 1258, 1259, 1260],
+    "run": 1,
+    "profile_count": 4,
+    "arm_count": 3,
+    "simulation_run_count": 120,
+    "paired_unit": "profile_seed_run",
+    "evidence_class": "opened-seed preliminary mechanism screen",
+    "reserved_confirmation_seeds_used": false
+  },
+  "arms": [
+    {
+      "arm_id": "str_mlo",
+      "topology": "mlo_str",
+      "policy": "fixed_link_0"
+    },
+    {
+      "arm_id": "score_aware_t2_v2",
+      "topology": "dual_interface",
+      "policy": "paired_value_duplication_t2",
+      "admission_profile": "score_aware_emergency_v2"
+    },
+    {
+      "arm_id": "distributional_shadow_t2",
+      "topology": "dual_interface",
+      "policy": "distributional_shadow_duplication_t2"
+    }
+  ],
+  "analysis": {
+    "bootstrap": {
+      "method": "paired whole-run nonparametric bootstrap",
+      "replicates": 10000,
+      "seed": 20260808,
+      "interval": "two-sided percentile 95%"
+    },
+    "primary_metrics": [
+      "all_generated_deadline_miss_rate",
+      "deadline_censored_all_generated_latency_distribution",
+      "sender_phy_airtime_us"
+    ],
+    "secondary_metrics": [
+      "completed_frame_p99_us",
+      "miss_burst_length",
+      "obss_goodput_mbps",
+      "selective_action_count",
+      "selective_secondary_airtime_us"
+    ],
+    "required_comparisons": [
+      "each_selective_arm_minus_str_within_profile",
+      "each_competitor_profile_minus_be_be_within_arm",
+      "distributional_minus_v2_within_profile"
+    ]
+  },
+  "runtime_outputs": {
+    "controller_summary_json": {
+      "required_source_artifacts_exact": {
+        "canonical_candidates": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_policy_candidates.csv",
+          "sha256": "7cbd5c622838df0a2f752c3bf9f4c54f333f7d280a9240cb80eda19efb1c28bb"
+        },
+        "canonical_fit_manifest": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/artifact_manifest.json",
+          "sha256": "b3af02b647c7671a631f3d43ebece75781989889358c845335d4003610a8208f"
+        },
+        "canonical_metrics": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_training_metrics.json",
+          "sha256": "35929f0638b03ec79f2f3967dd947265c3d73b7fa51f487299cc1d96a555a014"
+        },
+        "canonical_model_pickle": {
+          "path": "results/randomized_full_copy_exploration_collection_v1/temporal_t2_primary_only_two_objective_v1/temporal_t2_value_models.pkl",
+          "sha256": "dff01b0f8319320489709c4039d97011f35439aa92adedbe167fe61b9de7bcb8"
+        },
+        "distributional_portable_model": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-model-v1.json.xz",
+          "sha256": "03e9e36f6dbec6457a25768571cb71a4dd860e737c406a92ddf2de00024a08a6"
+        },
+        "distributional_runtime_contract": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-v1.json",
+          "sha256": "33b16c62848d0b724d347b791650e805c0fe2611eaf44ac4079b93cb59b5f4fa"
+        },
+        "distributional_shadow_reference": {
+          "path": "experiments/model-selection/temporal-t2-shadow-borrow-runtime-reference-v1.json.xz",
+          "sha256": "f73ca45c059653448d1006f4250ec114538aaa645482a11140849025436b5502"
+        },
+        "frozen_selection": {
+          "path": "experiments/model-selection/temporal-t2-primary-only-two-objective-v1.json",
+          "sha256": "c7f886a4ca1a29b9fbd2e25d19d78f994d7136ecdea4f6a16db77eacacf5ce9f"
+        },
+        "secondary_airtime_event_schema": {
+          "path": "experiments/model-selection/secondary-airtime-event-schema-v2.json",
+          "sha256": "4450adc2394662d22b5ccd9c9af4e490d880beb13192c7060b962a4489b6edf5"
+        },
+        "v2_runtime_contract": {
+          "path": "experiments/model-selection/paired-value-duplication-t2-score-aware-emergency-v2.json",
+          "sha256": "bdc5b2a944475d1cc31749100e333a2eb2059e106eaf86d918855b721ab3fcda"
+        }
+      }
+    }
+  },
+  "interpretation_limits": [
+    "Ten paired seeds provide a fast directional result, not a final qualification claim.",
+    "Completed-frame P99 is survivor-conditioned and is secondary to all-generated deadline misses and deadline-censored latency.",
+    "The frozen predictors were trained under the historical AC_BE target and competitor environment and are not retrained for these WMM treatments.",
+    "No seed from the reserved 1301 through 1348 confirmation range may be used."
+  ]
+}

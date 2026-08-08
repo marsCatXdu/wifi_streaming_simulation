@@ -1,0 +1,120 @@
+{
+  "analysis": "scenario15_wmm_realism_figures_v1",
+  "figure_count": 13,
+  "files": {
+    "all_generated_censored_latency_cdf.pdf": {
+      "sha256": "90ee55f7c1d70c22a0e61df4db73cecbb7b0c0c2d8e6bbfbd5bbc39a498d60c5",
+      "size_bytes": 416651
+    },
+    "all_generated_censored_latency_cdf.png": {
+      "sha256": "b08339fbeefe7a61432b53417855f17b6122f571ef7862690564f272432c2632",
+      "size_bytes": 218476
+    },
+    "all_generated_censored_latency_pdf.pdf": {
+      "sha256": "c5caf9a0f261f5b1f800a53bc0d3127bf10982d9edcd5b1bf6a17e93344e5848",
+      "size_bytes": 30520
+    },
+    "all_generated_censored_latency_pdf.png": {
+      "sha256": "c74287045395979117da3bea7be3db47e5dd79920d9c24c107fcae01c034d39d",
+      "size_bytes": 229410
+    },
+    "background_throughput.pdf": {
+      "sha256": "17142faaa5f0cf7aea956aee3ffea9f4dd4e506a76dad17e2c88264b0bb09635",
+      "size_bytes": 19432
+    },
+    "background_throughput.png": {
+      "sha256": "d122b1cfa20afd9becb87c5dfafb7d533acc06f876c1e0dbaeb7b9273c285cd7",
+      "size_bytes": 85617
+    },
+    "completed_p99.pdf": {
+      "sha256": "11e550e1b7a4f2351badf59a6c83fb8fff2951e0159628961e000d91ede9789f",
+      "size_bytes": 20338
+    },
+    "completed_p99.png": {
+      "sha256": "672b6dd137168e68443889b79a4dc10a9e40fac963303cafb39fc719017269ea",
+      "size_bytes": 98361
+    },
+    "deadline_censored_mean.pdf": {
+      "sha256": "97c0603ef38c1ca6872283d923ef8e631eacd2fbedd6aa9eaa64e1cc3a90d943",
+      "size_bytes": 19889
+    },
+    "deadline_censored_mean.png": {
+      "sha256": "fc7e0cba535a3e5b609f85fa5199db6328bf47de32ad517d12646c2dc186e0a1",
+      "size_bytes": 89630
+    },
+    "deadline_miss.pdf": {
+      "sha256": "d788770e9013bf9e9043f92da6bb653466be81b398a4377d797e7c417ae7f710",
+      "size_bytes": 19200
+    },
+    "deadline_miss.png": {
+      "sha256": "43c979cc7027695393ebf10aa22e303d19434e25a69cd474f8d14f71cd1076e1",
+      "size_bytes": 86967
+    },
+    "deadline_miss_burst_cdf.pdf": {
+      "sha256": "d7a6fcb967c6686a6a25d5686b34d53308b752a92f70ba90feaece7a20dda6fc",
+      "size_bytes": 20551
+    },
+    "deadline_miss_burst_cdf.png": {
+      "sha256": "a00f13e377a8597bdd392f8b41df11048a0ab893c0398c2da13ce5517c00b75d",
+      "size_bytes": 130570
+    },
+    "latency_cdf.pdf": {
+      "sha256": "d0c86151e6b0f836292211a67b87e6effac2d938f76707a8d7a7bde75b0117b0",
+      "size_bytes": 428903
+    },
+    "latency_cdf.png": {
+      "sha256": "ac00559087183c02baa2fb7e3ce834b86d9e111f30a14a3d46268d15b25e48f9",
+      "size_bytes": 214213
+    },
+    "latency_pdf.pdf": {
+      "sha256": "e25366c8654594f79490d13a2f0695f32494eeba29c1f959e9b279918ea2edba",
+      "size_bytes": 31761
+    },
+    "latency_pdf.png": {
+      "sha256": "d92eeed43e76f3a0a55c325bafd09e78f6641977b9e829f29789ac5e08cf425c",
+      "size_bytes": 225721
+    },
+    "latency_tail_cdf.pdf": {
+      "sha256": "defb5c184e327c32fb5781146583e9fd9427f3ad2cf8ad58f5c942d179606573",
+      "size_bytes": 448765
+    },
+    "latency_tail_cdf.png": {
+      "sha256": "ab1d5b833e37e8793e1da5774491afafbd400366f71578e3c1cb9b3d78518605",
+      "size_bytes": 298480
+    },
+    "policy_vs_str.pdf": {
+      "sha256": "96a3b27326b20842ae144a25899d3cd20bde10b7be390f3c9d14ebbb63e9735d",
+      "size_bytes": 22120
+    },
+    "policy_vs_str.png": {
+      "sha256": "1d246c3e736881317a6d1b14eccfc8ccc146d29c118bd077c53dc817f5f5d91c",
+      "size_bytes": 182713
+    },
+    "sender_airtime.pdf": {
+      "sha256": "f43bd8828f646055959cb66c1ac039b6ae4efa8c9cfd1ce2fe9dafb0df12e605",
+      "size_bytes": 20107
+    },
+    "sender_airtime.png": {
+      "sha256": "d3307db779599bf4192e85c07cf93bbb5a2bbf69d6ac382107373eeeaff07231",
+      "size_bytes": 87285
+    },
+    "vi_competitor_effect.pdf": {
+      "sha256": "c1d9771e1998a6f52b92bd909e9ce210c1872bea0c8669d1dad0c906bbf9a37b",
+      "size_bytes": 21337
+    },
+    "vi_competitor_effect.png": {
+      "sha256": "c09cf4d842fbad1970a1645da77c62d470b40ff5aa01d0d04e8128d0b7387931",
+      "size_bytes": 141058
+    }
+  },
+  "generator": "tools/plot_scenario15_wmm_realism_matrix.py",
+  "schema_version": 1,
+  "source_plot_data": {
+    "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/scenario15_wmm_realism_matrix_v1/analysis/plot_data.json",
+    "sha256": "709346a776a0a6e419a9114dfd014f7c1484292aa0c4bdfb6653d0afdce7e7e0"
+  },
+  "source_report": {
+    "path": "/home/lijingwei/Desktop/work/wifi_streaming_simulation/results/scenario15_wmm_realism_matrix_v1/analysis/scenario15_wmm_realism_matrix.json",
+    "sha256": "e5a327ad3993c8b089e99b46b11332ba3a4c15a8fe1af987dde23059c5f96076"
+  }
+}
