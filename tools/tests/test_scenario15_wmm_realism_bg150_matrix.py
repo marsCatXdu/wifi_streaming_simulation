@@ -21,6 +21,7 @@ from run_experiments import (  # noqa: E402
     load_yaml,
     validate_runtime_contract,
 )
+import analyze_scenario15_wmm_realism_bg150_matrix as analysis  # noqa: E402
 
 
 BASELINE = ROOT / "experiments/configs/scenario15_wmm_realism_matrix_v1.yaml"
@@ -56,6 +57,15 @@ def identity(spec: dict) -> tuple:
 
 
 class Scenario15WmmRealismBg150MatrixTest(unittest.TestCase):
+    def test_analyzer_is_bound_to_the_frozen_execution_boundary(self) -> None:
+        contract = analysis._verify_contract()
+        self.assertEqual(contract["campaign"]["simulation_run_count"], 120)
+        self.assertEqual(
+            analysis.EXPECTED_PROJECT_COMMIT,
+            "2d56f6cbc4abe55491bb1beb85da1da913ffd2f2",
+        )
+        self.assertEqual(analysis.BASELINE_PROJECT_COMMIT, analysis.common.EXPECTED_PROJECT_COMMIT)
+
     def test_contract_declares_only_the_offered_load_treatment(self) -> None:
         contract = json.loads(CONTRACT.read_text(encoding="utf-8"))
         self.assertEqual(
@@ -119,6 +129,30 @@ class Scenario15WmmRealismBg150MatrixTest(unittest.TestCase):
             for spec in specs:
                 for field, (_, expected) in RATE_FIELDS.items():
                     self.assertEqual(spec["config"]["obss"][field], expected)
+
+    def test_resolved_config_comparison_removes_only_load_and_run_identity(self) -> None:
+        original = {
+            "run_id": "example",
+            "same": 7,
+            "background": {
+                "obss": {
+                    **{
+                        field: values[0]
+                        for field, values in analysis.RESOLVED_RATE_FIELDS.items()
+                    },
+                    "same": 9,
+                }
+            },
+        }
+        self.assertEqual(
+            analysis._config_without_load(original),
+            {"same": 7, "background": {"obss": {"same": 9}}},
+        )
+        self.assertIn("run_id", original)
+        self.assertTrue(
+            set(analysis.RESOLVED_RATE_FIELDS)
+            <= set(original["background"]["obss"])
+        )
 
 
 if __name__ == "__main__":
