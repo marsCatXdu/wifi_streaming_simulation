@@ -25,6 +25,9 @@ SHARDS = (
     ROOT / "experiments/configs/scenario15_wmm_comparison_v1_shard0.yaml",
     ROOT / "experiments/configs/scenario15_wmm_comparison_v1_shard1.yaml",
 )
+PREFLIGHT = (
+    ROOT / "experiments/configs/scenario15_wmm_comparison_preflight_v1.yaml"
+)
 
 
 class Scenario15WmmCampaignTest(unittest.TestCase):
@@ -127,6 +130,15 @@ class Scenario15WmmCampaignTest(unittest.TestCase):
         right = {identity(spec) for spec in shard_specs[1]}
         self.assertFalse(left & right)
         self.assertEqual(left | right, full)
+
+    def test_preflight_contains_one_complete_six_arm_unit(self) -> None:
+        specs = expand_config(load_yaml(PREFLIGHT))
+        self.assertEqual(len(specs), 6)
+        self.assertEqual({spec["seed"] for spec in specs}, {1251})
+        self.assertEqual(
+            Counter(spec["config"]["wifi"]["wmm_mode"] for spec in specs),
+            {"off": 3, "on": 3},
+        )
 
 
 if __name__ == "__main__":

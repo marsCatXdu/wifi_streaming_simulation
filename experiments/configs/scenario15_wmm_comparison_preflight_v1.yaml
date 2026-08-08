@@ -1,0 +1,7 @@
+extends: scenario15_wmm_comparison_v1.yaml
+
+name: scenario15-wmm-comparison-preflight-v1
+output_root: results/scenario15_wmm_comparison_preflight_v1/runs
+workers: 6
+
+seeds: [1251]
