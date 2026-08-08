@@ -1,0 +1,39 @@
+extends: scenario15_wmm_realism_matrix_v1.yaml
+
+name: scenario15-wmm-realism-matrix-preflight-v1
+output_root: results/scenario15_wmm_realism_matrix_preflight_v1/runs
+workers: 12
+
+scenario_instances:
+  - scenario_id: be_be
+    family_id: scenario15_wmm_realism
+    parameter_sample: 0
+    seeds: [1251]
+    runs: [1]
+    config:
+      wifi.wmm_mode: "off"
+      obss.obss_wmm_profile: be
+  - scenario_id: af41_vi_be
+    family_id: scenario15_wmm_realism
+    parameter_sample: 1
+    seeds: [1251]
+    runs: [1]
+    config:
+      wifi.wmm_mode: af41
+      obss.obss_wmm_profile: be
+  - scenario_id: af41_vi_one_vi_per_channel
+    family_id: scenario15_wmm_realism
+    parameter_sample: 2
+    seeds: [1251]
+    runs: [1]
+    config:
+      wifi.wmm_mode: af41
+      obss.obss_wmm_profile: one_vi_per_channel
+  - scenario_id: af41_vi_all_vi
+    family_id: scenario15_wmm_realism
+    parameter_sample: 3
+    seeds: [1251]
+    runs: [1]
+    config:
+      wifi.wmm_mode: af41
+      obss.obss_wmm_profile: all_vi
