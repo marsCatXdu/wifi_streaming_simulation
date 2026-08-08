@@ -1,0 +1,94 @@
+{
+  "analysis": {
+    "analysis_commit": "74c5e4dc0f063c33ab51478c65baaa66e3ebb682",
+    "baseline_run_count": 120,
+    "bootstrap_replications": 10000,
+    "bootstrap_seed": 20260808,
+    "figure_count": 16,
+    "figure_manifest_sha256": "90b0b8d016d1c5caa4c108f9c1ec7b4fa89816758858589a0c9b5ea5ec17ee37",
+    "plot_data_sha256": "bc496fb69899203ef4926ed90f1a5572fdbb3b45429dcdc3e2c5373cb6fd7c88",
+    "plotter_schema_commit": "27310e5f2dd2173de6ebaebae5df8aacfaafa63b",
+    "report_schema_version": 2,
+    "report_sha256": "439719ca94bb1db07bd1a05dd50fba181d0c91dd61b841fdc2998c4f810e0d40",
+    "treatment_run_count": 120
+  },
+  "baseline": {
+    "key_result": "key_experiment_results/21_scenario15_wmm_realism_matrix_v1",
+    "project_commit": "d9867b13b7fac8df9b936e717855017a22e0b5fa",
+    "runtime_contract_id": "scenario15-wmm-realism-matrix-v1",
+    "runtime_contract_sha256": "252fae821e78892f46addddf29f6ab919afce880a48b4f6d9815bdf97fa51d6e"
+  },
+  "campaign": {
+    "analysis_run_count": 120,
+    "binary_sha256": "14cb5d6e1553775f958e579834cd36f7fe0be2b33b6269485fc4d667d8b8307b",
+    "freeze_commit": "2d56f6cbc4abe55491bb1beb85da1da913ffd2f2",
+    "implementation_commit": "29417c40324857a5a6e29fddfdc7ee8c3648da4e",
+    "ns3_upstream_commit": "d2add90b452d600cfb4859baed8e9ea633519447",
+    "project_commit": "460d4222a80916132631e2f3fa259630cca3c922",
+    "reserved_seed_range_used": false,
+    "runtime_contract_id": "scenario15-wmm-realism-bg150-matrix-v1",
+    "runtime_contract_sha256": "a74cd5678e68d4152ced46c1b0b664c5d8005b5854cee8fb7d73d0fef656d80e",
+    "seed_first": 1251,
+    "seed_last": 1260,
+    "simulation_count": 120,
+    "validator_commit": "460d4222a80916132631e2f3fa259630cca3c922"
+  },
+  "load_pairing": {
+    "compared_rate_period_count": 579996,
+    "maximum_absolute_rate_error_mbps": 5.5001336818349955e-11,
+    "paired_run_count": 120,
+    "rate_period_identities_match": true,
+    "rate_scale": 1.5,
+    "resolved_configs_differ_only_in_rate_fields": true
+  },
+  "preflight": {
+    "later_strictly_validated_attempt_count": 8,
+    "manifest_entry_count_before_validator_fix": 4,
+    "manifest_sha256": "fe93c97235ae2976b9d377bcda12bdd20aaed49ed4636ee855f5c031c9d7f6b8",
+    "paired_rate_period_count": 57480,
+    "project_commit": "2d56f6cbc4abe55491bb1beb85da1da913ffd2f2",
+    "promoted_str_run_count_before_validator_fix": 4,
+    "simulated_run_count": 12,
+    "valid_prefix_archive": "key_experiment_results/22_scenario15_wmm_realism_bg150_matrix_v1/preflight_pre_fix"
+  },
+  "raw_tree_hash_method": "SHA-256 of sha256sum lines over lexicographically NUL-sorted regular-file paths, including the shard directory name",
+  "schema_version": 1,
+  "shards": [
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_realism_bg150_matrix_v1/archives/scenario15_wmm_realism_bg150_matrix_v1_shard0_460d422.tar.zst",
+        "sha256": "c5663dd95d24718fa510709ed688d645b7581a9c5920adcd91b22a48ef9a04eb",
+        "size_bytes": 90593774
+      },
+      "experiment": "scenario15-wmm-realism-bg150-matrix-v1-shard0",
+      "host": "jingweili@10.120.16.105:30022",
+      "manifest_sha256": "52fbcf4fdb24b4e96c4aa06c2460d2a322789d767f028ba804ce7cbfd5e733db",
+      "matrix_sha256": "410de91f693843cc75a8512b9271fe88e151681668b1a1e8d72dd6b98ab5bba5",
+      "raw_tree": {
+        "regular_file_count": 942,
+        "sha256": "a55d5eba6a6dbd5dabfa6e4d24836d082304d3a08f30dc907c6d454bf3c965d1",
+        "size_bytes": 422625970
+      },
+      "run_count": 60,
+      "service": "wifi-wmm-bg150-shard0-460d422.service"
+    },
+    {
+      "archive": {
+        "path": "results/scenario15_wmm_realism_bg150_matrix_v1/archives/scenario15_wmm_realism_bg150_matrix_v1_shard1_460d422.tar.zst",
+        "sha256": "d50294de7a4d44774bb638bdfa44315deeb89ea7436cee6d6e535963367fa8dc",
+        "size_bytes": 90374095
+      },
+      "experiment": "scenario15-wmm-realism-bg150-matrix-v1-shard1",
+      "host": "jingweili@10.120.17.30:30022",
+      "manifest_sha256": "c675e886fc4616e2f89b8478e4f50bd91d077d0b4ca846c3742be988644ebda9",
+      "matrix_sha256": "15b6592fbc90cbe0b9e67b1f1be7a6edd7efe4ba78e058ac0255872456d61dc4",
+      "raw_tree": {
+        "regular_file_count": 942,
+        "sha256": "6d1110363f15bd1fc97e9714f9160ed6ca43673ce93a616893f112585960530e",
+        "size_bytes": 420920451
+      },
+      "run_count": 60,
+      "service": "wifi-wmm-bg150-shard1-460d422.service"
+    }
+  ]
+}

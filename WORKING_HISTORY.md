@@ -411,7 +411,7 @@ to this held-out population, so no policy is promoted.
   rows for the four residual events are identical, unacted startup frames.
   Archive the raw identities, reports, tables, diagnostic, and thirteen figure
   pairs under `key_experiment_results/21_scenario15_wmm_realism_matrix_v1`.
-- [ ] Repeat that exact 120-run WMM realism matrix with 1.5 times the OBSS
+- [x] Repeat that exact 120-run WMM realism matrix with 1.5 times the OBSS
   offered traffic.  Multiply every ON-period UL rate bound from 0.5--3 to
   0.75--4.5 Mbps and every DL bound from 2--8 to 3--12 Mbps while preserving
   the 32 flows, ON/OFF timing, RNG streams, seeds, fixed MCS, WMM profiles,
@@ -512,6 +512,15 @@ primary outcome includes concurrent repair traffic and is not a no-redundancy
 counterfactual.  A single-primary/no-redundancy arm is therefore required to
 separate topology/scheduling value from prediction and secondary repair before
 another model or controller iteration.
+
+The schema-v2 report, 240-run compact metrics, paired comparisons, exact
+diagnostic, 16 PNG/PDF figure pairs, formal and baseline manifests, pre-fix
+preflight prefix, runtime contract, and raw evidence identities are archived
+under `key_experiment_results/22_scenario15_wmm_realism_bg150_matrix_v1`.
+The two ignored formal raw archives total about 181 MB and their local hashes
+match the VM originals.  This iteration is complete.  Do not start the proposed
+no-redundancy mechanism gate or another predictor iteration until discussing
+the regime-dependent result with the user.
 
 ### Superseded packet-repair boundary
 
@@ -1184,6 +1193,10 @@ Do not repeat an entry unless relevant code changed after it ran.
   efficiency in BE/BE despite the overall loss and shows that the all-VI
   selective primary path already has 69 misses versus STR's 212; isolate that
   topology effect with a no-redundancy arm before changing the predictor.
+- Archived the schema-v2 report, compact tables, 16 figure pairs, manifests,
+  runtime contract, pre-fix preflight prefix, and raw-tree/archive identities
+  under `key_experiment_results/22_scenario15_wmm_realism_bg150_matrix_v1`.
+  Stop here for review; no follow-up campaign has been launched.
 
 ### 2026-08-08 - Complete WMM realism matrix
 

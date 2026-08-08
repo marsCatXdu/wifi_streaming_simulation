@@ -1,0 +1,75 @@
+{
+  "analysis": "scenario15_wmm_bg150_pre_fix_valid_str_prefix_v1",
+  "conclusions": [
+    "All four STR cells completed, promoted, and pass fresh strict validation.",
+    "No selective-policy attempt is used because those eight runs were rejected by the original-rate neutral-environment validator.",
+    "One seed per WMM profile cannot support a performance conclusion; this prefix is preserved only to avoid losing valid evidence before the validator amendment."
+  ],
+  "evidence_role": "four promoted STR preflight cells only; non-inferential",
+  "project_commit": "2d56f6cbc4abe55491bb1beb85da1da913ffd2f2",
+  "rejected_selective_attempt_count": 8,
+  "rows": [
+    {
+      "background_goodput_mbps": 40.4704,
+      "baseline_background_goodput_mbps": 26.85488,
+      "baseline_completed_p99_us": 23461.440000000002,
+      "baseline_deadline_miss_count": 23,
+      "baseline_deadline_miss_rate": 0.012777777777777779,
+      "baseline_sender_airtime_us": 4685060.0,
+      "completed_p99_us": 30654.51,
+      "deadline_miss_count": 150,
+      "deadline_miss_rate": 0.08333333333333333,
+      "profile": "be_be",
+      "run_id": "e45a38d5e6ed6030225c",
+      "seed": 1251,
+      "sender_airtime_us": 5758581.0
+    },
+    {
+      "background_goodput_mbps": 40.47472,
+      "baseline_background_goodput_mbps": 26.85536,
+      "baseline_completed_p99_us": 6874.899999999999,
+      "baseline_deadline_miss_count": 0,
+      "baseline_deadline_miss_rate": 0.0,
+      "baseline_sender_airtime_us": 4145573.0,
+      "completed_p99_us": 7895.939999999997,
+      "deadline_miss_count": 1,
+      "deadline_miss_rate": 0.0005555555555555556,
+      "profile": "af41_vi_be",
+      "run_id": "4f25aca7f33b34ae3c03",
+      "seed": 1251,
+      "sender_airtime_us": 4355714.0
+    },
+    {
+      "background_goodput_mbps": 40.47536,
+      "baseline_background_goodput_mbps": 26.85552,
+      "baseline_completed_p99_us": 6861.0599999999995,
+      "baseline_deadline_miss_count": 0,
+      "baseline_deadline_miss_rate": 0.0,
+      "baseline_sender_airtime_us": 4120338.0,
+      "completed_p99_us": 7966.0999999999985,
+      "deadline_miss_count": 1,
+      "deadline_miss_rate": 0.0005555555555555556,
+      "profile": "af41_vi_one_vi_per_channel",
+      "run_id": "0e01f10d6b894c5c39ba",
+      "seed": 1251,
+      "sender_airtime_us": 4380413.0
+    },
+    {
+      "background_goodput_mbps": 29.11568,
+      "baseline_background_goodput_mbps": 25.63008,
+      "baseline_completed_p99_us": 13219.899999999963,
+      "baseline_deadline_miss_count": 6,
+      "baseline_deadline_miss_rate": 0.0033333333333333335,
+      "baseline_sender_airtime_us": 4332898.0,
+      "completed_p99_us": 11023.059999999947,
+      "deadline_miss_count": 6,
+      "deadline_miss_rate": 0.0033333333333333335,
+      "profile": "af41_vi_all_vi",
+      "run_id": "41138a9f5ba361bb3bee",
+      "seed": 1251,
+      "sender_airtime_us": 4265235.0
+    }
+  ],
+  "schema_version": 1,
+  "strictly_validated_run_count": 4
+}
