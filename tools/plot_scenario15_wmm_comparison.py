@@ -330,6 +330,7 @@ def generate(
         ("deadline_miss", lambda: _headline_bar_figure(report, "all_generated_deadline_miss_rate", 100.0, "Deadline miss rate (%)", "Deadline misses over all generated frames")),
         ("completed_p99", lambda: _headline_bar_figure(report, "completed_frame_p99_us", 0.001, "Mean per-run P99 (ms)", "Completed-frame P99 latency")),
         ("sender_airtime", lambda: _headline_bar_figure(report, "sender_airtime_us", 1e-6, "Mean sender PHY airtime (s/run)", "Target sender airtime")),
+        ("background_throughput", lambda: _headline_bar_figure(report, "background_throughput_mbps", 1.0, "Mean background throughput (Mbps)", "Background throughput")),
         ("paired_wmm_effects", lambda: _paired_effects_figure(report)),
         ("policy_vs_str", lambda: _within_mode_figure(report)),
         ("deadline_miss_burst_cdf", lambda: _burst_figure(series)),

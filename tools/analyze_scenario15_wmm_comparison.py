@@ -639,8 +639,8 @@ def _render_markdown(report: dict[str, Any]) -> str:
         "WMM off means historical CS0/TID 0/AC_BE streaming; WMM on means "
         "CS5/TID 5/AC_VI streaming with standard EDCA defaults.",
         "",
-        "| WMM | Approach | Misses | Miss rate | Mean per-run P99 | Sender airtime | Actions |",
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        "| WMM | Approach | Misses | Miss rate | Mean per-run P99 | Sender airtime | Background | Actions |",
+        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for mode in ("off", "on"):
         for arm in ARM_IDENTITIES:
@@ -650,6 +650,7 @@ def _render_markdown(report: dict[str, Any]) -> str:
                 f"{item['all_generated_deadline_miss_rate']['estimate'] * 100:.4f}% | "
                 f"{item['completed_frame_p99_us']['estimate'] / 1000:.3f} ms | "
                 f"{item['sender_airtime_us']['estimate'] / 1_000_000:.3f} s/run | "
+                f"{item['background_throughput_mbps']['estimate']:.3f} Mbps | "
                 f"{item['action_count']:,} |"
             )
     lines.extend(["", "## Paired WMM effect (on minus off)", ""])

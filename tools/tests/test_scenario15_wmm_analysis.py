@@ -127,6 +127,7 @@ class Scenario15WmmAnalysisTest(unittest.TestCase):
                     "all_generated_deadline_miss_rate": _interval(miss, 0.0005),
                     "completed_frame_p99_us": _interval(18_000 + 500 * arm_index, 100),
                     "sender_airtime_us": _interval(200_000 + 10_000 * arm_index, 1_000),
+                    "background_throughput_mbps": _interval(25 - 0.1 * arm_index, 0.01),
                 }
         comparison = {
             "deadline_miss_rate_delta": _interval(-0.001, 0.0005),
@@ -160,8 +161,8 @@ class Scenario15WmmAnalysisTest(unittest.TestCase):
             report_path.write_text(json.dumps(report), encoding="utf-8")
             plot_path.write_text(json.dumps(plot_data), encoding="utf-8")
             manifest = plotting.generate(report_path, plot_path, root / "figures")
-            self.assertEqual(manifest["figure_count"], 11)
-            self.assertEqual(len(manifest["files"]), 22)
+            self.assertEqual(manifest["figure_count"], 12)
+            self.assertEqual(len(manifest["files"]), 24)
             self.assertTrue(all(item["size_bytes"] > 1000 for item in manifest["files"].values()))
 
 
