@@ -62,7 +62,7 @@ class Scenario15WmmRealismBg150MatrixTest(unittest.TestCase):
         self.assertEqual(contract["campaign"]["simulation_run_count"], 120)
         self.assertEqual(
             analysis.EXPECTED_PROJECT_COMMIT,
-            "2d56f6cbc4abe55491bb1beb85da1da913ffd2f2",
+            "460d4222a80916132631e2f3fa259630cca3c922",
         )
         self.assertEqual(analysis.BASELINE_PROJECT_COMMIT, analysis.common.EXPECTED_PROJECT_COMMIT)
 

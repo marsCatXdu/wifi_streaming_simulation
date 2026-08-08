@@ -470,8 +470,12 @@ rate periods with the retained 1.0x cells: every period identity and timing
 matches, every resolved configuration differs only in the six derived rate
 fields, and the maximum absolute 1.5x serialization error is
 `5.5001336818349955e-11` Mbps.  Because the complete retained data now passes
-both gates, another simulation preflight would add no evidence.  Next, commit
-and deploy the validator boundary and launch the two formal 60-run shards.
+both gates, another simulation preflight would add no evidence.  The validator
+boundary was committed and pushed as `460d422`; both VMs checked out that exact
+clean commit and retained the executable checksum above.  The two formal
+60-run shards were launched concurrently as persistent user services with 60
+workers each.  The analyzer is bound to execution commit `460d422` while the
+original frozen treatment contract remains checksum-identical.
 
 ### Superseded packet-repair boundary
 
@@ -1129,6 +1133,10 @@ Do not repeat an entry unless relevant code changed after it ran.
   All 57,480 generated rate periods have identical identities/timing and are
   1.5x in rate within `5.5001336818349955e-11` Mbps.  This closes the preflight
   launch gate without rerunning already-complete simulations.
+- Committed and pushed the validator boundary as `460d422`, deployed that
+  exact clean commit to both VMs, and rechecked the identical executable
+  SHA-256 plus campaign/policy closure tests.  Formal shard 0 and shard 1 are
+  active with 60 workers apiece; the analysis boundary now names `460d422`.
 
 ### 2026-08-08 - Complete WMM realism matrix
 
